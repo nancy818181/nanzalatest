@@ -1,7 +1,7 @@
 """Purchases & Expenses tab and the purchases page (moved out of desktop_stage3.py in 2.9.42, unchanged)."""
 from __future__ import annotations
 from desktop_common import search_arrows  # 2.9.78
-from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag  # 2.9.113
+from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as place_tick  # 2.9.113
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -98,7 +98,7 @@ class PurchasesMixin:
         use_box.bind("<<ComboboxSelected>>", lambda _e: self.purchase_amounts_changed("use"))
         tk.Label(r3, text="Mixed prorates input VAT by taxable / total use.", bg=LIGHT, fg=MUTED).pack(side="left", padx=4)
         tk.Checkbutton(r3, text="Reverse charge", variable=f["reverse"], bg=LIGHT).pack(side="left")
-        f["not_deductible"] = tk.BooleanVar(value=False); tax_tick(r3, f["not_deductible"], LIGHT).pack(side="left", padx=(10, 0))
+        f["not_deductible"] = tk.BooleanVar(value=False); place_tick(tax_tick(r3, f["not_deductible"], LIGHT), side="left", padx=(10, 0))
         find = tk.Frame(page, bg=LIGHT); find.pack(fill="x", padx=8, pady=(0, 2), before=box); f["find"] = tk.StringVar()
         tk.Label(find, text="Find purchase (No., supplier, date)", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
         f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=48); f["find_box"].pack(side="left", padx=6)

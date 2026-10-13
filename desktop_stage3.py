@@ -1,6 +1,6 @@
 """Stage 3 screens (version 1.16): Import from Excel or PDF, Payment & Receipt, Purchases & Expenses."""
 from __future__ import annotations
-from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag  # 2.9.113
+from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as place_tick  # 2.9.113
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -589,7 +589,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         box = tk.LabelFrame(page, text="Customer Receipt (RV)" if kind == "customer_receipt" else "Supplier Payment (PV)", bg=LIGHT, padx=8, pady=6); box.pack(fill="x", padx=8, pady=6)
         row = tk.Frame(box, bg=LIGHT); row.pack(fill="x")
         form["not_deductible"] = tk.BooleanVar(value=False)
-        tax_tick(box, form["not_deductible"], LIGHT).pack(side="bottom", anchor="w")  # 2.9.113 (bank commission / expense lines)
+        place_tick(tax_tick(box, form["not_deductible"], LIGHT), side="bottom", anchor="w")  # 2.9.113 (bank commission / expense lines)
         tk.Label(row, text="Number", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
         tk.Entry(row, textvariable=v["number"], width=16, state="readonly", readonlybackground="white", font=("Segoe UI", 10, "bold")).pack(side="left", padx=(4, 10))
         tk.Label(row, text="Date", bg=LIGHT).pack(side="left"); self.date_entry(row, v["date"], 11).pack(side="left", padx=(4, 10))

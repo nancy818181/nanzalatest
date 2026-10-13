@@ -3,7 +3,7 @@ Balance des Comptes panel used by both the Trial Balance and the Statement of Ac
 from __future__ import annotations
 from desktop_common import add_search_bar  # 2.9.78
 from desktop_common import search_arrows  # 2.9.78
-from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag  # 2.9.113
+from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as place_tick  # 2.9.113
 import logging
 
 from desktop_brains_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -222,7 +222,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
         header = tk.Frame(page, bg=LIGHT); header.pack(fill="x", padx=10, pady=6)
         self.manual_type = tk.StringVar(value=VOUCHER_TYPES[0]); self.manual_no = tk.StringVar(); self.manual_date = tk.StringVar(value=self.fiscal_today())
         self.manual_currency = tk.StringVar(value="USD"); self.manual_find = tk.StringVar()
-        self.manual_not_deductible = tk.BooleanVar(value=False); tax_tick(header, self.manual_not_deductible, LIGHT).pack(side="right", padx=6)
+        self.manual_not_deductible = tk.BooleanVar(value=False); place_tick(tax_tick(header, self.manual_not_deductible, LIGHT), side="right", padx=6)
         tk.Label(header, text="Type", bg=LIGHT).pack(side="left")
         self.manual_type_box=ttk.Combobox(header, textvariable=self.manual_type, values=VOUCHER_TYPES, state="readonly", width=17)
         self.manual_type_box.pack(side="left", padx=(4, 8))

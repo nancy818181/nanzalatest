@@ -33,6 +33,10 @@ class TaxFlagEverywhereTest(unittest.TestCase):
             self.assertEqual(db.tax_flag_ids("journal_voucher"), [])
             self.assertAlmostEqual(class6(tax_basis=True), 380)
             with self.assertRaises(ValueError): db.set_tax_flag("sale", 1, True)
+            db.set_tax_flag("journal_voucher", entry_id, True)
+            db.save_settings({"show_tax_tick": "0"}, 1)  # Settings hides the tick: the saved tick and its effect stay
+            self.assertEqual(db.settings().get("show_tax_tick"), "0")
+            self.assertAlmostEqual(class6(tax_basis=True), 300)
             db.release()
 
 

@@ -190,6 +190,9 @@ class SettingsMixin:
         vat_boxes=tk.Frame(general,bg=LIGHT); vat_boxes.grid(row=11,column=3,padx=6,pady=7,sticky="w")
         self.vat_currency_box=ttk.Combobox(vat_boxes,textvariable=self.company_vat_currency,values=self.currency_codes,state="readonly",width=7); self.vat_currency_box.pack(side="left")
         self.vat_second_box=ttk.Combobox(vat_boxes,textvariable=self.company_vat_second,values=self.currency_codes,state="readonly",width=7); self.vat_second_box.pack(side="left",padx=(6,0))
+        self.show_tax_tick=tk.BooleanVar(master=self,value=True)  # 2.9.113
+        tk.Checkbutton(general,text="Show the tick \"Not deductible for income tax | غير مقبول ضريبياً\" on the entry screens",variable=self.show_tax_tick,
+                       bg=LIGHT).grid(row=12,column=2,columnspan=2,padx=14,pady=7,sticky="w")
         self.action_button(general,"Save Settings",self.save_general_settings).grid(row=12,column=0,columnspan=2,pady=14)
         import desktop_layout  # 2.9.60: menu style, kept on this computer
         tk.Label(general,text="Screen layout (this computer)",bg=LIGHT,font=("Segoe UI",9,"bold")).grid(row=13,column=0,padx=14,pady=7,sticky="w")
@@ -208,6 +211,9 @@ class SettingsMixin:
             for box in (getattr(self,"base_currency_box",None),getattr(self,"second_currency_box",None)):
                 if box is not None: box.configure(values=self.currency_codes)
             for key,var in self.company_fields.items(): var.set(settings.get(key,"Saber for Audit" if key=="company_name" else ""))
+            if hasattr(self,"show_tax_tick"):  # 2.9.113
+                import desktop_tax_flag; shown=str(settings.get("show_tax_tick","1") or "1")!="0"
+                self.show_tax_tick.set(shown); desktop_tax_flag.set_visible(shown)
             self.company_vat_registered.set(settings.get("company_vat_registered","Yes") or "Yes"); self.company_vat_date.set(settings.get("company_vat_date","") or "")
             if hasattr(self,"company_vat_rate"):
                 self.company_vat_rate.set(settings.get("vat_rate") or "11"); self.company_vat_currency.set(settings.get("vat_currency") or "LBP"); self.company_vat_second.set(settings.get("vat_second_currency") or "USD")
@@ -445,10 +451,13 @@ class SettingsMixin:
         payload={"base_currency":self.base_currency.get(),"second_currency":self.second_currency.get(),"backup_interval_hours":self.backup_hours.get()}
         payload.update({key:var.get().strip() for key,var in self.company_fields.items()})
         payload["company_vat_registered"]=self.company_vat_registered.get(); payload["company_vat_date"]=self.company_vat_date.get().strip()
+        if hasattr(self,"show_tax_tick"): payload["show_tax_tick"]="1" if self.show_tax_tick.get() else "0"  # 2.9.113
         if hasattr(self,"company_vat_rate"):  # 2.9.72
             if self.company_vat_currency.get()==self.company_vat_second.get(): return messagebox.showwarning("Settings","The two VAT return currencies must be different")
             payload.update(vat_rate=self.company_vat_rate.get().strip(),vat_currency=self.company_vat_currency.get(),vat_second_currency=self.company_vat_second.get())
         try: self.client.save_settings(payload)
         except Exception as exc: return messagebox.showerror("Settings",str(exc))
         self._main_currency_cache=None  # 2.9.71: new documents use the new main currencies at once
+        if hasattr(self,"show_tax_tick"):
+            import desktop_tax_flag; desktop_tax_flag.set_visible(self.show_tax_tick.get())  # 2.9.113: at once on every screen
         messagebox.showinfo("Settings","Settings saved successfully")

@@ -38,8 +38,8 @@ class ExpensesMixin:
             entry.bind("<KeyRelease>", lambda e, k=key: self.expense_amounts_changed(k))
         f["total"] = tk.Label(r2, text="Total: 0.00", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold")); f["total"].pack(side="left", padx=6)
         tk.Checkbutton(r2, text="VAT not deductible", variable=f["non_deductible"], bg=LIGHT).pack(side="left", padx=8)
-        tk.Checkbutton(r2, text="Not deductible for income tax (no official invoice) | غير مقبول ضريبياً", variable=f["tax_non_deductible"],
-                       bg=LIGHT, fg="#8B1E1E").pack(side="left", padx=8)
+        from desktop_tax_flag import tax_tick, place as place_tick  # 2.9.113: Settings can hide it
+        place_tick(tax_tick(r2, f["tax_non_deductible"], LIGHT), side="left", padx=8)
         r3 = tk.Frame(box, bg=LIGHT); r3.pack(fill="x", pady=(5, 0))
         for label, key in (("Expense A/C (626-69)", "account"), ("No-VAT A/C", "no_vat_account"), ("VAT A/C", "vat_account"), ("Paid from", "payment_account")):
             tk.Label(r3, text=label, bg=LIGHT).pack(side="left")

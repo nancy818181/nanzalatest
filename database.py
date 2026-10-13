@@ -1026,7 +1026,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
     def save_settings(self, values, user_id):
         allowed={"base_currency","second_currency","vat_rate","vat_currency","vat_second_currency","backup_interval_hours","company_name","company_address",
                 "company_phone","company_mof","company_nssf","company_email","company_website","company_logo","company_vat_registered","company_vat_date",
-                "vat_ratio_method","company_name_ar","company_address_ar","company_trade_name","company_cr_number","company_cr_place"}
+                "vat_ratio_method","company_name_ar","company_address_ar","company_trade_name","company_cr_number","company_cr_place",
+                "show_tax_tick"}
         if str(values.get("base_currency") or "USD") not in self.currency_codes(): raise ValueError("Invalid base currency")
         if "vat_ratio_method" in values and str(values["vat_ratio_method"]).strip().lower() not in ("quarter","annual"):  # 2.9.83
             raise ValueError("VAT ratio method must be quarter or annual")

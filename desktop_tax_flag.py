@@ -8,9 +8,36 @@ log = logging.getLogger("saber")
 LABEL = "Not deductible for income tax (no official invoice) | غير مقبول ضريبياً"
 
 
+_TICKS = []          # every tick on the screens, with how it is packed (Settings can hide them all)
+_STATE = {"show": True}
+
+
 def tax_tick(parent, variable, background):
     """The tick, the same wording on every screen."""
     return tk.Checkbutton(parent, text=LABEL, variable=variable, bg=background, fg="#9A3412", anchor="w")
+
+
+def place(widget, **pack):
+    """Pack a tick (when Settings shows it) and remember it for Settings > "Show the tick"."""
+    _TICKS.append((widget, pack))
+    if _STATE["show"]: widget.pack(**pack)
+    return widget
+
+
+def set_visible(show):
+    """2.9.113: Settings > show / hide the tick on every entry screen. Hiding never changes a tick already saved:
+    the ticked entries stay in the add-back report and out of the P&L on the tax basis."""
+    _STATE["show"] = bool(show)
+    for widget, pack in list(_TICKS):
+        try:
+            if show and not widget.winfo_manager(): widget.pack(**pack)
+            elif not show: widget.pack_forget()
+        except tk.TclError:
+            _TICKS.remove((widget, pack))  # the screen was closed
+
+
+def visible():
+    return _STATE["show"]
 
 
 def save_tax_flag(client, source_type, source_id, variable):
