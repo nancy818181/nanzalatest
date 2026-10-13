@@ -1,0 +1,5 @@
+
+# test-setup links (Linux): never part of the program
+/assets
+Assets/Assets
+__pycache__/

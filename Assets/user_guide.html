@@ -1,0 +1,1509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nanza Accounting - User Guide</title>
+<style>
+  :root { --navy:#102A43; --gold:#B78B45; --light:#F4F7FA; --text:#1f2933; --muted:#5f6b76; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Segoe UI",Tahoma,Arial,sans-serif; color:var(--text); background:var(--light); line-height:1.55; }
+  header { background:var(--navy); color:#fff; padding:18px 24px; }
+  header h1 { margin:0; font-size:22px; } header p { margin:4px 0 0; color:var(--gold); font-weight:600; }
+  nav { background:#fff; border-bottom:1px solid #dde3ea; padding:10px 24px; display:flex; gap:14px; flex-wrap:wrap; position:sticky; top:0; }
+  nav a { color:var(--navy); text-decoration:none; font-weight:600; font-size:14px; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  section { background:#fff; border-radius:8px; padding:14px 18px; margin:14px 0; border:1px solid #e4e9ef; }
+  h2 { color:var(--navy); margin:0 0 8px; font-size:18px; border-bottom:2px solid var(--gold); padding-bottom:4px; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  .ar { direction:rtl; text-align:right; font-family:"Segoe UI","Amiri",Tahoma,sans-serif; }
+  .path { background:#eef2f6; border-radius:4px; padding:1px 6px; font-family:Consolas,monospace; font-size:13px; white-space:nowrap; }
+  .tip { color:var(--muted); font-size:13px; }
+  ol,ul { padding-inline-start:20px; margin:6px 0; }
+  @media (max-width:760px){ .pair{ grid-template-columns:1fr; } }
+
+  body { display:flex; flex-direction:column; min-height:100vh; }
+  header { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  header .grow { flex:1; }
+  #q { width:340px; max-width:100%; padding:9px 12px; border-radius:6px; border:0; font-size:15px; }
+  #count { color:var(--gold); font-weight:600; font-size:13px; min-width:110px; }
+  .layout { display:flex; flex:1; min-height:0; }
+  aside { width:230px; background:var(--navy); flex-shrink:0; padding:8px 0; position:sticky; top:0; align-self:flex-start; max-height:100vh; overflow:auto; }
+  aside button { display:block; width:100%; text-align:left; background:none; border:0; color:#fff; padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer; }
+  aside button span { display:block; color:#c9d3dd; font-weight:400; font-size:12px; direction:rtl; text-align:left; }
+  aside button:hover { background:#1c3d5c; }
+  aside button.on { background:var(--gold); color:var(--navy); }
+  aside button.on span { color:var(--navy); }
+  .content { flex:1; min-width:0; }
+  .tab { display:none; } .tab.on { display:block; }
+  .toc { background:#fff; border:1px solid #e4e9ef; border-radius:8px; padding:10px 16px; margin:14px 0; columns:2; }
+  .toc a { display:block; color:var(--navy); text-decoration:none; padding:2px 0; font-size:14px; }
+  .toc a:hover { color:var(--gold); }
+  .toc a.subl { padding-left:16px; font-size:13px; color:var(--muted); }
+  section.topic h3 { color:var(--navy); margin:0 0 4px; font-size:18px; border-bottom:2px solid var(--gold); padding-bottom:4px; }
+  section.topic h3 .parent { color:var(--muted); font-weight:500; font-size:15px; }
+  section.topic.sub { margin-left:22px; border-left:4px solid var(--gold); }
+  section.topic h4 { color:var(--navy); margin:12px 0 4px; font-size:15px; }
+  .where { color:var(--muted); font-size:13px; margin-bottom:6px; }
+  p.lead { margin:10px 0 2px; color:var(--navy); }
+  mark { background:#ffe58a; padding:0 1px; }
+  #results { display:none; }
+  #results.on { display:block; }
+  #results .hit { background:#fff; border:1px solid #e4e9ef; border-radius:8px; padding:10px 14px; margin:8px 0; cursor:pointer; }
+  #results .hit:hover { border-color:var(--gold); }
+  #results .hit b.t { color:var(--navy); } #results .hit small { color:var(--muted); display:block; }
+  .empty { color:var(--muted); padding:20px 4px; }
+  @media (max-width:760px){ aside{ width:100%; position:static; max-height:none; } .layout{ flex-direction:column; } .toc{ columns:1; } }
+  @media print { aside, header input, #count { display:none; } .tab { display:block; } }
+</style>
+</head>
+<body>
+<header><div class="grow"><h1>Nanza Accounting — User Guide · دليل الاستخدام</h1><p>Saber for Audit · every screen, button and report</p></div>
+<input id="q" type="search" placeholder="Search the guide · ابحث في الدليل (Ctrl+F)" autocomplete="off" autofocus><span id="count"></span></header>
+<div class="layout">
+<aside><button data-tab='start' class='on'>Start here<span>ابدأ هنا</span></button><button data-tab='home' class=''>Home<span>الرئيسية</span></button><button data-tab='sales' class=''>Sales<span>المبيعات</span></button><button data-tab='purchases-cash' class=''>Purchases & Cash<span>المشتريات والصندوق</span></button><button data-tab='inventory' class=''>Inventory<span>المخزون</span></button><button data-tab='accounting' class=''>Accounting<span>المحاسبة</span></button><button data-tab='payroll-vat' class=''>Payroll & VAT<span>الرواتب والضريبة</span></button><button data-tab='settings' class=''>Settings<span>الإعدادات</span></button></aside>
+<main class="content"><div id="results"></div>
+<div class='tab on' id='tab-start'><h2 style='margin-top:14px'>Start here · ابدأ هنا</h2><nav class='toc'><a href='#start' data-jump='start' class=''>1. Start · البداية</a><a href='#sales' data-jump='sales' class=''>2. Invoices and entries · الفواتير والقيود</a><a href='#import' data-jump='import' class=''>3. Importing PDF invoices · استيراد فواتير PDF</a><a href='#payroll' data-jump='payroll' class=''>4. Payroll · الرواتب</a><a href='#vat' data-jump='vat' class=''>5. Quarterly VAT · الضريبة على القيمة المضافة</a><a href='#production' data-jump='production' class=''>6. Production · الإنتاج</a><a href='#close' data-jump='close' class=''>7. Closing the books · إقفال الفترة</a><a href='#backup' data-jump='backup' class=''>8. Backups · النسخ الاحتياطية</a><a href='#help' data-jump='help' class=''>9. Problems and updates · المشاكل والتحديثات</a><a href='#start-sign-in-company-and-the-top-bar' data-jump='start-sign-in-company-and-the-top-bar' class=''>Sign-in, company and the top bar</a><a href='#start-sign-in-company-and-the-top-bar-sign-in-screen-saber-for-aud' data-jump='start-sign-in-company-and-the-top-bar-sign-in-screen-saber-for-aud' class='subl'>Sign-in screen (&quot;SABER FOR AUDIT / PROFESSIONAL ACCOUNTING&quot;)</a><a href='#start-sign-in-company-and-the-top-bar-select-company-fiscal-year' data-jump='start-sign-in-company-and-the-top-bar-select-company-fiscal-year' class='subl'>Select Company &amp; Fiscal Year</a><a href='#start-sign-in-company-and-the-top-bar-top-bar-always-visible' data-jump='start-sign-in-company-and-the-top-bar-top-bar-always-visible' class='subl'>Top bar (always visible)</a><a href='#start-sign-in-company-and-the-top-bar-under-the-top-bar' data-jump='start-sign-in-company-and-the-top-bar-under-the-top-bar' class='subl'>Under the top bar</a><a href='#start-sign-in-company-and-the-top-bar-side-menu' data-jump='start-sign-in-company-and-the-top-bar-side-menu' class='subl'>Side menu</a><a href='#start-tables-searching-and-account-boxes' data-jump='start-tables-searching-and-account-boxes' class=''>Tables, searching and account boxes</a></nav>
+
+<section class='topic' id='start'><h2>1. Start · البداية</h2><div class="pair">
+<div><ol>
+<li>Open <b>Nanza Accounting</b>. The first time, create the admin password (at least 10 characters) and keep it safe.</li>
+<li>Sign in. Leave the <b>Server</b> field as it is, unless you use a shared server on the network.</li>
+<li>Choose the <b>company</b> and the <b>fiscal year</b>, then <b>Open Company</b>. To change later: <span class="path">Switch Company / Year</span> at the top.</li>
+<li>Fill the company details once in <span class="path">Settings &gt; General Settings</span> (name, MOF and NSSF numbers, address). They are used on all reports and official forms.</li>
+</ol><p class="tip">Only one copy of Saber opens at a time; opening it again brings the open window to the front.</p></div>
+<div class="ar"><ol>
+<li>افتح <b>Nanza Accounting</b>. في المرة الأولى، أنشئ كلمة سر المدير (10 أحرف على الأقل) واحتفظ بها.</li>
+<li>سجّل الدخول. اترك خانة <b>Server</b> كما هي، إلا إذا كنت تستعمل خادماً مشتركاً على الشبكة.</li>
+<li>اختر <b>الشركة</b> و<b>السنة المالية</b> ثم <b>Open Company</b>. للتغيير لاحقاً: <span class="path">Switch Company / Year</span> في الأعلى.</li>
+<li>املأ معلومات الشركة مرة واحدة في <span class="path">Settings &gt; General Settings</span> (الاسم، رقم المالية ورقم الضمان، العنوان). تُستعمل في كل التقارير والنماذج الرسمية.</li>
+</ol><p class="tip">يُفتح البرنامج مرة واحدة فقط؛ فتحه مرة ثانية يُظهر النافذة المفتوحة.</p></div>
+</div></section>
+
+<section class='topic' id='sales'><h2>2. Invoices and entries · الفواتير والقيود</h2><div class="pair">
+<div><ul>
+<li><b>Sales Invoice</b> tab: choose the customer, date, currency and VAT treatment, add the lines, then save. The journal entry is made automatically.</li>
+<li><b>Purchases &amp; Expenses</b>: supplier invoices and expenses, with deductible / non-deductible VAT.</li>
+<li><b>Payment &amp; Receipt</b>: money received from customers and paid to suppliers.</li>
+<li><b>Journal Voucher</b>: manual entries. Debit must equal Credit, otherwise the voucher is refused. This rule protects every entry, from every screen and import. <span class="path">General Journal &gt; Check Balance</span> lists entries saved unbalanced by older versions.</li>
+<li><b>Customers / Suppliers</b>: accounts, statements and ageing.</li>
+<li><b>Return</b> (Return Selected Invoice): goods come back and the stock moves. A <b>Credit Note</b> or <b>Debit Note</b> is a discount or price adjustment: no stock moves.</li>
+<li>When stock would go below zero, Saber warns you; choose Yes to save anyway (the stock shows negative until goods are received).</li>
+</ul><p class="tip">Press F2 in an account field to search the chart of accounts.</p></div>
+<div class="ar"><ul>
+<li>تبويب <b>Sales Invoice</b>: اختر الزبون والتاريخ والعملة ونوع الضريبة، أضف البنود ثم احفظ. يُنشأ القيد تلقائياً.</li>
+<li><b>Purchases &amp; Expenses</b>: فواتير الموردين والمصاريف، مع الضريبة القابلة وغير القابلة للحسم.</li>
+<li><b>Payment &amp; Receipt</b>: المقبوضات من الزبائن والمدفوعات للموردين.</li>
+<li><b>Journal Voucher</b>: القيود اليدوية. يجب أن يتساوى المدين والدائن وإلا يُرفض القيد. هذه القاعدة تحمي كل قيد، من كل شاشة وكل استيراد. <span class="path">General Journal &gt; Check Balance</span> يعرض القيود غير المتوازنة التي حُفظت بنسخ أقدم.</li>
+<li><b>Customers / Suppliers</b>: الحسابات وكشوفات الحساب وأعمار الديون.</li>
+<li><b>Return</b> (مرتجع): ترجع البضاعة ويتحرك المخزون. <b>Credit Note</b> أو <b>Debit Note</b> حسم أو تعديل سعر: لا يتحرك المخزون.</li>
+<li>إذا كان المخزون سيصبح سالباً يظهر تنبيه؛ اختر Yes للحفظ (يبقى المخزون سالباً حتى استلام البضاعة).</li>
+</ul><p class="tip">اضغط F2 في خانة الحساب للبحث في دليل الحسابات.</p></div>
+</div></section>
+
+<section class='topic' id='import'><h2>3. Importing PDF invoices · استيراد فواتير PDF</h2><div class="pair">
+<div><ol>
+<li>Open the <b>Import</b> tab and choose the PDF files (scanned files are read with the built-in OCR, English and Arabic).</li>
+<li>Check each row in the preview. Select a row to read its full <b>Check</b> note under the buttons.</li>
+<li>Correct what is wrong, then import. Always compare the totals with the paper invoice.</li>
+</ol></div>
+<div class="ar"><ol>
+<li>افتح تبويب <b>Import</b> واختر ملفات PDF (الملفات الممسوحة تُقرأ بالـ OCR المدمج، إنكليزي وعربي).</li>
+<li>راجع كل سطر في المعاينة. اختر السطر لقراءة ملاحظة <b>Check</b> كاملة تحت الأزرار.</li>
+<li>صحّح الخطأ ثم استورد. قارن دائماً المجاميع مع الفاتورة الورقية.</li>
+</ol></div>
+</div></section>
+
+<section class='topic' id='payroll'><h2>4. Payroll · الرواتب</h2><div class="pair">
+<div><ol>
+<li><span class="path">Payroll &gt; Employees</span>: add each employee (including <b>Sex</b> for the official forms, NSSF and MOF numbers, family).</li>
+<li><span class="path">Payroll &gt; Payroll Entry</span>: choose the employee and month, <b>Calculate</b>, check, then <b>Save Payroll</b> and <b>Post Payroll</b>.</li>
+<li><span class="path">Payroll Reports &amp; Worksheets (R5 / R6 / R10)</span>: official reports for employees and managers, in Excel or PDF.</li>
+<li><span class="path">Payroll Entry &gt; Monthly Payroll Sheet</span>: all employees of the month in one table, with every allowance (taxable or not, by R6 line). Calculate All, Save All, Post All, Export Excel.</li>
+<li>Reports R5_BOXES, R10_BOXES, R6_LINES, AUDIT, MOVEMENT, REGISTER and LEAVERS follow the official declaration layout.</li>
+<li><b>NSSF - Contributions table</b>: one line per employee for the month, quarter or year; ceilings that change during the period are applied month by month.</li>
+<li><span class="path">Payroll &gt; NSSF &amp; MOF Forms (Excel)</span>: CNSS 190A, 351, 386, 2AA, 41A, leaving notice, MOF R3 and R3-1, filled automatically.</li>
+</ol><p class="tip">Rates and ceilings: <span class="path">Payroll &gt; Tax &amp; NSSF Settings</span>.</p></div>
+<div class="ar"><ol>
+<li><span class="path">Payroll &gt; Employees</span>: أضف كل موظف (مع <b>الجنس</b> للنماذج الرسمية، ورقم الضمان ورقم المالية، والعائلة).</li>
+<li><span class="path">Payroll &gt; Payroll Entry</span>: اختر الموظف والشهر، <b>Calculate</b>، راجع ثم <b>Save Payroll</b> و<b>Post Payroll</b>.</li>
+<li><span class="path">Payroll Reports &amp; Worksheets (R5 / R6 / R10)</span>: التقارير الرسمية للأجراء والمدراء، Excel أو PDF.</li>
+<li><span class="path">Payroll Entry &gt; Monthly Payroll Sheet</span>: كل موظفي الشهر في جدول واحد مع كل البدلات (خاضعة أو غير خاضعة، حسب سطر ر6). Calculate All وSave All وPost All وExport Excel.</li>
+<li>التقارير R5_BOXES وR10_BOXES وR6_LINES وAUDIT وMOVEMENT وREGISTER وLEAVERS على شكل التصاريح الرسمية.</li>
+<li><b>NSSF - Contributions table</b>: سطر لكل موظف عن الشهر أو الفصل أو السنة؛ السقوف التي تتغير خلال الفترة تُطبّق شهراً بشهر.</li>
+<li><span class="path">Payroll &gt; NSSF &amp; MOF Forms (Excel)</span>: نماذج الضمان 190A و351 و386 و2AA و41A وترك العمل، ونموذجا المالية ر3 ور3-1، تُملأ تلقائياً.</li>
+</ol><p class="tip">النسب والسقوف: <span class="path">Payroll &gt; Tax &amp; NSSF Settings</span>.</p></div>
+</div></section>
+
+<section class='topic' id='vat'><h2>5. Quarterly VAT · الضريبة على القيمة المضافة</h2><div class="pair">
+<div><ol>
+<li>Open <b>Quarterly VAT</b>, choose the year and quarter.</li>
+<li>Check the <b>Lebanese VAT Report</b> and the <b>VAT Return</b> (credit brought forward is taken from the previous quarter).</li>
+<li>Press <b>Save Return (lock quarter)</b>; it then appears in <b>Saved Returns</b>. Export it for filing.</li>
+</ol></div>
+<div class="ar"><ol>
+<li>افتح <b>Quarterly VAT</b> واختر السنة والفصل.</li>
+<li>راجع <b>Lebanese VAT Report</b> و<b>VAT Return</b> (الفائض المدوّر يؤخذ من الفصل السابق).</li>
+<li>اضغط <b>Save Return (lock quarter)</b>؛ يظهر بعدها في <b>Saved Returns</b>. صدّره للتقديم.</li>
+</ol></div>
+</div></section>
+
+<section class='topic' id='production'><h2>6. Production · الإنتاج</h2><div class="pair">
+<div><ol>
+<li><span class="path">Inventory &gt; Production &gt; Recipes</span>: choose the product, enter how many units the recipe makes, the materials and their quantities, and an extra cost per unit (labour, energy...). Press <b>Save Recipe</b>. A material can itself have a recipe.</li>
+<li><span class="path">Production Orders</span>: choose the product and the quantity; the materials are calculated from the recipe. For a special order change <b>Qty Used</b> or add / delete materials: only this order changes, the recipe stays as it is. Red = not enough in stock, amber = different from the recipe.</li>
+<li><b>Save Production</b>: the materials leave the "Materials from" warehouse and the product enters the "Product into" warehouse. Its cost = materials at their real cost (average or FIFO) + extra cost. If a purchase is entered later with an earlier date, the cost is updated by itself.</li>
+<li>No journal entry is needed: the stock (37) is valued at the year end with the products at their production cost. <span class="path">Production Report</span> shows what was made and what was used.</li>
+</ol></div>
+<div class="ar"><ol>
+<li><span class="path">Inventory &gt; Production &gt; Recipes</span>: اختر المنتج، وأدخل عدد الوحدات التي تنتجها الوصفة، والمواد وكمياتها، وكلفة إضافية لكل وحدة (يد عاملة، طاقة...). اضغط <b>Save Recipe</b>. يمكن أن يكون للمادة نفسها وصفة.</li>
+<li><span class="path">Production Orders</span>: اختر المنتج والكمية، فتُحسب المواد من الوصفة. لطلبية خاصة غيّر <b>Qty Used</b> أو أضف / احذف مواد: يتغيّر هذا الأمر فقط وتبقى الوصفة كما هي. الأحمر = المخزون غير كافٍ، والبرتقالي = مختلف عن الوصفة.</li>
+<li><b>Save Production</b>: تخرج المواد من مستودع "Materials from" ويدخل المنتج إلى مستودع "Product into". كلفته = المواد بكلفتها الفعلية (المتوسط أو FIFO) + الكلفة الإضافية. إذا أُدخلت فاتورة شراء لاحقاً بتاريخ أقدم، تتحدّث الكلفة تلقائياً.</li>
+<li>لا حاجة لقيد محاسبي: يُقيَّم المخزون (37) في آخر السنة والمنتجات بكلفة إنتاجها. <span class="path">Production Report</span> يعرض ما أُنتج وما استُهلك.</li>
+</ol></div>
+</div></section>
+
+<section class='topic' id='close'><h2>7. Closing the books · إقفال الفترة</h2><div class="pair">
+<div><p>After filing a period: <span class="path">Settings &gt; Backup &amp; Restore &gt; Close the books</span>, enter the last date (for example 31-03-2026) and press <b>Lock</b>. Nothing dated on or before it can be added, changed or deleted. Only the administrator can <b>Unlock</b>. A backup is made before each lock and unlock.</p></div>
+<div class="ar"><p>بعد تقديم فترة: <span class="path">Settings &gt; Backup &amp; Restore &gt; Close the books</span>، أدخل آخر تاريخ (مثلاً 31-03-2026) واضغط <b>Lock</b>. لا يمكن إضافة أو تعديل أو حذف أي شيء بتاريخ قبله. المدير فقط يستطيع <b>Unlock</b>. تُنشأ نسخة احتياطية قبل كل إقفال وفتح.</p></div>
+</div></section>
+
+<section class='topic' id='backup'><h2>8. Backups · النسخ الاحتياطية</h2><div class="pair">
+<div><ul>
+<li>A backup is made automatically every day when a company is opened (the newest 30 are kept).</li>
+<li>Every new backup is checked at once; the <b>Checked</b> column shows <b>ok</b>. If a check fails you are told immediately.</li>
+<li>Keep a copy outside the computer: <b>Save Backup As... (USB / Drive)</b>, at least once a week.</li>
+<li><b>Restore Selected</b> (administrator) replaces the data with the chosen backup; a safety copy of the current data is made first.</li>
+</ul></div>
+<div class="ar"><ul>
+<li>تُنشأ نسخة احتياطية تلقائياً كل يوم عند فتح الشركة (تُحفظ آخر 30 نسخة).</li>
+<li>كل نسخة جديدة تُفحص فوراً؛ عمود <b>Checked</b> يُظهر <b>ok</b>. إذا فشل الفحص يظهر تنبيه مباشرة.</li>
+<li>احتفظ بنسخة خارج الكمبيوتر: <b>Save Backup As... (USB / Drive)</b>، مرة في الأسبوع على الأقل.</li>
+<li><b>Restore Selected</b> (للمدير) يستبدل البيانات بالنسخة المختارة؛ تُحفظ نسخة أمان من البيانات الحالية أولاً.</li>
+</ul></div>
+</div></section>
+
+<section class='topic' id='help'><h2>9. Problems and updates · المشاكل والتحديثات</h2><div class="pair">
+<div><ul>
+<li>When something goes wrong, the details are written to the log: <span class="path">Settings &gt; Backup &amp; Restore &gt; Open Log Folder</span>. Send <b>saber.log</b> to support.</li>
+<li>When a new version exists, a gold button <b>New version … available</b> appears at the top. Make a backup, download <b>SaberAccountingSetup.exe</b> and run it; your data is kept.</li>
+<li>If Windows shows “Windows protected your PC” for the installer: <b>More info &gt; Run anyway</b> — only for an installer you received from Saber for Audit.</li>
+</ul></div>
+<div class="ar"><ul>
+<li>عند حدوث مشكلة تُكتب التفاصيل في السجل: <span class="path">Settings &gt; Backup &amp; Restore &gt; Open Log Folder</span>. أرسل ملف <b>saber.log</b> للدعم.</li>
+<li>عند صدور نسخة جديدة يظهر زر ذهبي <b>New version … available</b> في الأعلى. اعمل نسخة احتياطية، نزّل <b>SaberAccountingSetup.exe</b> وشغّله؛ بياناتك تبقى.</li>
+<li>إذا ظهر “Windows protected your PC” عند التثبيت: <b>More info &gt; Run anyway</b> — فقط لملف تثبيت استلمته من Saber for Audit.</li>
+</ul></div>
+</div></section>
+
+<section class='topic' id='start-sign-in-company-and-the-top-bar' data-title='Sign-in, company and the top bar'><h3>Sign-in, company and the top bar</h3>
+<p>## Before the main screen</p>
+</section>
+<section class='topic sub' id='start-sign-in-company-and-the-top-bar-sign-in-screen-saber-for-aud' data-title='Sign-in, company and the top bar › Sign-in screen (&quot;SABER FOR AUDIT / PROFESSIONAL ACCOUNTING&quot;)'><h3><span class='parent'>Sign-in, company and the top bar ›</span> Sign-in screen ("SABER FOR AUDIT / PROFESSIONAL ACCOUNTING")</h3>
+<ul>
+<li>Fields: Username, Password, <b>Language</b> (en / ar / fr).</li>
+<li>Button: <b>Sign in</b>.</li>
+<li>If the licence has expired, a <b>Licence</b> window opens. It shows the Installation ID and has a Licence code box, with <b>Apply Code and Sign in</b> and <b>Close</b>.</li>
+<li>You are signed out automatically after 30 minutes without activity.</li>
+</ul>
+</section>
+<section class='topic sub' id='start-sign-in-company-and-the-top-bar-select-company-fiscal-year' data-title='Sign-in, company and the top bar › Select Company &amp; Fiscal Year'><h3><span class='parent'>Sign-in, company and the top bar ›</span> Select Company &amp; Fiscal Year</h3>
+<ul>
+<li>Fields: <b>Company</b>, <b>Fiscal Year</b>.</li>
+<li>Button: <b>Open Company</b>.</li>
+<li>Administrator only:</li>
+<ul>
+<li><b>Create Company</b> opens a window with: Company Name, Opening Fiscal Year, Address, Phone, MOF / VAT Number, Email, Website, Main Currency 1 (base), Main Currency 2, VAT Rate %, VAT Return Currency 1 / 2. Button: <b>Create Company</b>.</li>
+<li><b>Manage Selected</b> opens a window with: Company Name, Active, New Fiscal Year. Buttons: <b>Save Company</b> and <b>Create Separate Year</b>.</li>
+</ul>
+</ul>
+</section>
+<section class='topic sub' id='start-sign-in-company-and-the-top-bar-top-bar-always-visible' data-title='Sign-in, company and the top bar › Top bar (always visible)'><h3><span class='parent'>Sign-in, company and the top bar ›</span> Top bar (always visible)</h3>
+<ul>
+<li>Logo and title.</li>
+<li>Company name and year.</li>
+<li><b>Document Alerts</b>: opens "Legal Document Alerts" with columns Status / Customer / Supplier / Document / Expiry Date / Days / File, and a <b>Close</b> button. It also opens by itself at start-up when there are alerts.</li>
+<li><b>Switch Company / Year</b>.</li>
+<li><b>Help / مساعدة</b>: opens the user guide.</li>
+<li>A gold label showing "11% VAT | currencies".</li>
+<li>A "New version … available" button appears when an update exists.</li>
+</ul>
+</section>
+<section class='topic sub' id='start-sign-in-company-and-the-top-bar-under-the-top-bar' data-title='Sign-in, company and the top bar › Under the top bar'><h3><span class='parent'>Sign-in, company and the top bar ›</span> Under the top bar</h3>
+<ul>
+<li>The page title (SECTION › Screen).</li>
+<li><b>Show currency</b> (All Currencies or one currency). This filters the Dashboard, Uploaded Data, General Journal, Profit &amp; Loss and Financial Reports.</li>
+</ul>
+</section>
+<section class='topic sub' id='start-sign-in-company-and-the-top-bar-side-menu' data-title='Sign-in, company and the top bar › Side menu'><h3><span class='parent'>Sign-in, company and the top bar ›</span> Side menu</h3>
+<ul>
+<li>Groups can be folded by clicking their heading.</li>
+<li>Screens hidden in Settings &gt; Accounting Settings do not appear.</li>
+<li><b>Payroll</b> appears only with "Payroll access"; <b>Quarterly VAT</b> only with "VAT access".</li>
+<li>An option in Settings &gt; General Settings switches back to the old row of buttons above the pages.</li>
+</ul>
+</section><section class='topic' id='start-tables-searching-and-account-boxes' data-title='Tables, searching and account boxes'><h3>Tables, searching and account boxes</h3>
+<ul>
+<li>Dates are typed as DD-MM-YYYY everywhere.</li>
+<li><b>Standard table bar.</b> Most lists have a <b>Search:</b> box (Ctrl+F; it searches every column) and a <b>Clear</b> button. Click a column heading to sort it. Right-click gives <b>Search…</b> and <b>Clear search</b>. Select several rows with Ctrl or Shift, or by dragging, and their totals show above the table.</li>
+<li><b>Standard report viewer.</b> Many reports show their result in a grid underneath the filters. Their export buttons (Print Preview, Print, Excel, PDF) are listed under each report.</li>
+<li><b>Account boxes.</b> Type a number or a name, or press <b>F2</b> (or right-click) to open <b>Find or Create Account - F2</b>. That window has:</li>
+<ul>
+<li>a search box: "Find by number or name (English / Arabic / French)";</li>
+<li>columns Account Number / Account Name / Arabic Name / Type;</li>
+<li>a section "Create account here (number assigned automatically)" with <b>4-digit parent</b>, <b>New account name</b>, <b>Type</b> and the button <b>Create &amp; Select</b>.</li>
+</ul>
+</ul>
+</section></div><div class='tab' id='tab-home'><h2 style='margin-top:14px'>Home · الرئيسية</h2><nav class='toc'><a href='#home-dashboard' data-jump='home-dashboard' class=''>Dashboard</a></nav><section class='topic' id='home-dashboard' data-title='Dashboard'><h3>Dashboard</h3><div class='where'>Home &gt; Dashboard</div>
+<p>A company overview with quick actions, things that need attention, and charts.</p>
+<p class='lead'><b>Top bar</b></p>
+<ul>
+<li>"Company overview".</li>
+<li><b>Refresh</b>.</li>
+<li><b>Base currency</b> (All Currencies / USD / LBP / EUR / AED).</li>
+<li><b>Convert to</b> (Original / USD / LBP / EUR / AED).</li>
+<li><b>Apply</b>.</li>
+<li><b>Export Excel</b>, <b>Export PDF</b>, <b>Print</b>. The export has the columns Currency, Sales, Purchases, Expenses, Net Profit, Receivables, Payables, Overdue.</li>
+</ul>
+<p><b>Quick actions</b> (each opens a screen)</p>
+<ul>
+<li><b>+ Sales Invoice</b></li>
+<li><b>+ Purchase / Expense</b></li>
+<li><b>Import Excel / PDF</b></li>
+<li><b>Journal Voucher</b></li>
+<li><b>Statement of Account</b></li>
+<li><b>Financial Reports</b></li>
+</ul>
+<p><b>Needs attention</b> (coloured lines, each with its own button)</p>
+<ul>
+<li>Overdue invoices: <b>Open invoices</b>.</li>
+<li>Legal documents expired or expiring within 30 days: <b>Show</b>.</li>
+<li>Unbalanced journal entries: <b>Check</b>.</li>
+<li>Accounts off budget: <b>Budget vs Actual</b>.</li>
+<li>Last backup: <b>Back up now</b>. This line is not shown to viewers.</li>
+</ul>
+<p><b>Currency cards</b> (one per currency)</p>
+<ul>
+<li>Sales, Purchases, Expenses, Net profit, Receivables, Payables, Overdue invoices.</li>
+</ul>
+<p><b>Charts</b> ("Year … – charts in" USD / LBP)</p>
+<ul>
+<li>Sales vs purchases &amp; expenses by month (HT)</li>
+<li>Receivables by age</li>
+<li>Top 5 clients (TTC)</li>
+<li>Cash and bank balances</li>
+</ul>
+</section></div><div class='tab' id='tab-sales'><h2 style='margin-top:14px'>Sales · المبيعات</h2><nav class='toc'><a href='#sales-sales-invoice' data-jump='sales-sales-invoice' class=''>Sales Invoice</a><a href='#sales-uploaded-data' data-jump='sales-uploaded-data' class=''>Uploaded Data</a><a href='#sales-customers-suppliers' data-jump='sales-customers-suppliers' class=''>Customers / Suppliers</a></nav><section class='topic' id='sales-sales-invoice' data-title='Sales Invoice'><h3>Sales Invoice</h3><div class='where'>Sales &gt; Sales Invoice</div>
+<p>Create, edit, return or delete customer invoices, credit notes and debit notes.</p>
+<p class='lead'><b>Find invoice bar</b></p>
+<ul>
+<li>A search box: type just the number, e.g. 12 finds SAL-…-000012.</li>
+<li><b>◀ Previous</b>, <b>Next ▶</b>.</li>
+</ul>
+<p class='lead'><b>Tab: Invoice details</b></p>
+<ul>
+<li>Document type: Invoice / Return / Credit Note / Debit Note.</li>
+<li><b>Invoice No.</b> (automatic).</li>
+<li><b>Customer</b>.</li>
+<li><b>Client Account</b>.</li>
+<li><b>Currency</b>.</li>
+<li><b>Date</b>.</li>
+<li><b>Sales Type</b>: Goods / Products / Services. The Space bar cycles through them, and the choice sets the revenue account.</li>
+<li><b>Payment Mode</b>: On Account (Not Cash) / Cash / Bank Transfer / Cheque / Card / Other.</li>
+<li><b>Due Date</b>.</li>
+<li><b>Department</b>, <b>Project</b>.</li>
+<li><b>Branch</b>.</li>
+<li><b>Amount Paid</b>.</li>
+<li><b>Paid into</b> (account).</li>
+<li><b>VAT Treatment</b>: Taxable (standard rate) / Zero-rated (export) / Exempt (Art. 16-17) / Out of scope.</li>
+<li>A status badge: NEW INVOICE, EDITING … (POSTED / DRAFT) or COPY OF ….</li>
+</ul>
+<p class='lead'><b>Tab: Posting accounts</b></p>
+<ul>
+<li><b>Client Account</b>, <b>VAT Account</b> and <b>Revenue Account</b>, each with a D - Debit / C - Credit side.</li>
+<li>The Revenue Account label changes to "Returns Account" or "Discount Account" for returns and credit notes.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>New</b></li>
+<li><b>Add Line</b>, <b>Delete Line</b></li>
+<li><b>Save</b> (posts the invoice)</li>
+<li><b>Delete</b> (marks it DELETED; the number stays and the journal entry is removed)</li>
+<li><b>Return (goods back)</b></li>
+<li><b>Duplicate</b></li>
+<li><b>Print Preview</b>, <b>PDF</b>, <b>Print</b> (branded invoice)</li>
+<li><b>Excel</b> (the lines of the entry)</li>
+<li><b>Import Excel</b>, <b>Import PDF</b></li>
+<li><b>Free PDF Read</b> (reads a PDF locally)</li>
+</ul>
+<p><b>Lines grid</b> (double-click a cell to edit; F2 or an item code fills in the item)</p>
+<ul>
+<li>Item, Description, Qty, Unit, Unit Price, Total Amount, Discount %, VAT %, Net.</li>
+</ul>
+<p class='lead'><b>Totals</b></p>
+<ul>
+<li>Total, Discount, Total HT, VAT x%, TOTAL TTC.</li>
+<li><b>Discount %</b> or <b>amount</b> for the whole invoice.</li>
+<li>The amount in words, in English and Arabic.</li>
+</ul>
+</section>
+<section class='topic' id='sales-uploaded-data' data-title='Uploaded Data'><h3>Uploaded Data</h3><div class='where'>Sales &gt; Uploaded Data</div>
+<p>The list of every invoice (sales, purchases, expenses, assets, whether imported or entered), with editing and VAT tools.</p>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li><b>Branch:</b> and <b>Type:</b> (tick lists).</li>
+<li><b>D</b> and <b>C</b> ticks (show debit and/or credit rows).</li>
+<li><b>Sort By:</b> Date / Invoice Number / Customer / Supplier / Account / Amount / Currency, then Ascending / Descending.</li>
+<li><b>Refresh</b>.</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>Invoice No., Status, Date, Customer/Supplier, Branch, Type, Currency, Deductible, Non-Deductible, Total, Payment Method, Paid Amount, LBP Eq., USD Eq., D, C, VAT Deductible.</li>
+<li>Branch, Type, D and C can be shown or hidden.</li>
+</ul>
+<p class='lead'><b>EDIT row</b></p>
+<ul>
+<li><b>Edit Selected</b> (or double-click). Opens "Edit Invoice":</li>
+<ul>
+<li>Fields: Invoice Number, Date, Description, Branch, Customer / Supplier, Type, Currency, Status (posted / review), Due Date.</li>
+<li>"Accounts and amounts" lines: VAT, Sales (or Purchases / Expenses) with VAT, Without VAT (non-deductible), Customer / Supplier. Each has an account, D / C and an amount, plus a <b>Find</b> button.</li>
+<li>Payment method.</li>
+<li>Buttons: <b>Save Update</b>, <b>Cancel</b>.</li>
+</ul>
+<li><b>Add Invoice Row</b> (manual row: fields plus <b>Save Invoice</b>).</li>
+<li><b>Add Item</b> (adds a line to the selected invoice; button <b>Add Item</b>).</li>
+<li><b>Duplicate</b>.</li>
+<li><b>Create Return (goods back)</b>. Enter the quantities and the "Return date", then <b>Post Return / Credit Note</b> or <b>Cancel</b>.</li>
+<li><b>Approve Selected</b>.</li>
+<li><b>Cancel Invoice</b> (asks for a reason; <b>Confirm Cancellation</b>).</li>
+<li><b>Delete Selected</b>.</li>
+</ul>
+<p class='lead'><b>ACCOUNTS &amp; VAT row</b></p>
+<ul>
+<li><b>One Account for Selected...</b>: choose the account to change and the new account, then <b>Apply to Selected</b> or <b>Cancel</b>.</li>
+<li><b>Check Sales Accounts...</b>: lists sales posted to wrong accounts. Buttons: <b>Correct Selected</b>, <b>Correct All</b>, <b>Close</b>.</li>
+<li><b>VAT Deductible / Non-Deductible</b>: switches the selected invoice between the two.</li>
+<li><b>VAT Treatment</b>:</li>
+<ul>
+<li>For a sale: "Sale type (Law 379/2001)".</li>
+<li>For a purchase: "Input VAT used for", plus a tick "Service from abroad - reverse charge (Art. 40)".</li>
+</ul>
+<li><b>Create Missing Payment Entries</b>: makes the cash or bank entry for paid invoices that do not have one.</li>
+</ul>
+<p class='lead'><b>DOCUMENTS row</b></p>
+<ul>
+<li><b>Save Data</b></li>
+<li><b>Export Excel</b></li>
+<li><b>Branded Invoice PDF</b></li>
+<li><b>Attach PDF / Image</b></li>
+<li><b>Attachments</b>: opens a window with <b>View</b>, <b>Open in PDF reader</b>, <b>Download</b>.</li>
+<li><b>History</b>: "Invoice Modification History", with columns date / user / action / details.</li>
+</ul>
+</section>
+<section class='topic' id='sales-customers-suppliers' data-title='Customers / Suppliers'><h3>Customers / Suppliers</h3><div class='where'>Sales &gt; Customers / Suppliers</div>
+<p>The file of customers and suppliers, with their legal documents.</p>
+<p class='lead'><b>Form "Customer / Supplier File"</b></p>
+<ul>
+<li><b>Account Number</b>: type the first 4 digits (4111 client, 4011 supplier) and the 9-digit number fills in.</li>
+<li><b>Type</b>: client / supplier / asset_supplier / other_payable.</li>
+<li><b>Name</b>, <b>Currency</b>.</li>
+<li><b>Tax Number</b>, <b>MOF Number</b>, <b>Address</b>, <b>Contact Number</b>.</li>
+<li><b>Due days from invoice</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>New</b></li>
+<li><b>Save</b> (warns about duplicate or similar names)</li>
+<li><b>Edit Selected</b></li>
+<li><b>Legal Documents</b>: opens "Legal Documents - name":</li>
+<ul>
+<li>Fields: Document (MOF / VAT Certificate, Commercial Registration, ID / Passport, NSSF Document, Contract, Other), <b>Applies</b>, Issue, Expiry, Notes.</li>
+<li>Buttons: <b>New</b>, <b>Save</b>, <b>Attach / Replace File…</b>, <b>Download File</b>.</li>
+<li>Columns: Document Type, Applies, Status, Issue Date, Expiry Date, File, Notes.</li>
+</ul>
+<li><b>Customer / Supplier Ageing</b>: opens Inventory &gt; Ageing Report.</li>
+<li><b>Client Items: Qty &amp; Value</b>: opens that Business Report.</li>
+</ul>
+<p class='lead'><b>List columns</b></p>
+<ul>
+<li>ID, 9-Digit Account, Name, Type, Tax Number, MOF Number, Address, Contact, Currency, Due Days.</li>
+</ul>
+</section></div><div class='tab' id='tab-purchases-cash'><h2 style='margin-top:14px'>Purchases & Cash · المشتريات والصندوق</h2><nav class='toc'><a href='#purchases-cash-purchases-expenses' data-jump='purchases-cash-purchases-expenses' class=''>Purchases &amp; Expenses</a><a href='#purchases-cash-purchases-expenses-purchase-invoice' data-jump='purchases-cash-purchases-expenses-purchase-invoice' class='subl'>Purchase Invoice</a><a href='#purchases-cash-purchases-expenses-cost-on-purchase' data-jump='purchases-cash-purchases-expenses-cost-on-purchase' class='subl'>Cost on Purchase</a><a href='#purchases-cash-purchases-expenses-assets-depreciation' data-jump='purchases-cash-purchases-expenses-assets-depreciation' class='subl'>Assets &amp; Depreciation</a><a href='#purchases-cash-purchases-expenses-expenses' data-jump='purchases-cash-purchases-expenses-expenses' class='subl'>Expenses</a><a href='#purchases-cash-payment-receipt' data-jump='purchases-cash-payment-receipt' class=''>Payment &amp; Receipt</a><a href='#purchases-cash-payment-receipt-add-customer-receipt-add-supplier-payment' data-jump='purchases-cash-payment-receipt-add-customer-receipt-add-supplier-payment' class='subl'>Add Customer Receipt / Add Supplier Payment</a><a href='#purchases-cash-payment-receipt-bank-reconciliation' data-jump='purchases-cash-payment-receipt-bank-reconciliation' class='subl'>Bank Reconciliation</a><a href='#purchases-cash-import' data-jump='purchases-cash-import' class=''>Import</a></nav><section class='topic' id='purchases-cash-purchases-expenses' data-title='Purchases &amp; Expenses'><h3>Purchases &amp; Expenses</h3><div class='where'>Purchases &amp; Cash &gt; Purchases &amp; Expenses</div>
+<p>Four sub-tabs.</p>
+</section>
+<section class='topic sub' id='purchases-cash-purchases-expenses-purchase-invoice' data-title='Purchases &amp; Expenses › Purchase Invoice'><h3><span class='parent'>Purchases &amp; Expenses ›</span> Purchase Invoice</h3>
+<p>Records supplier invoices, returns, credit notes and debit notes, with item lines and optional payment.</p>
+<p class='lead'><b>Find bar</b></p>
+<ul>
+<li><b>Find purchase (No., supplier, date)</b>.</li>
+<li><b>Import Excel</b>, <b>Excel Template</b>.</li>
+</ul>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li><b>Supplier</b>, <b>Supplier Invoice No.</b>, <b>Date</b>, <b>Due</b>.</li>
+<li>Currency.</li>
+<li>Type: Purchases / Assets.</li>
+<li>Document: Invoice / Return / Credit Note / Debit Note.</li>
+<li><b>Cost / Asset A/C</b>, <b>VAT A/C</b>.</li>
+<li><b>Paid</b> (On Account (Not Cash) / Cash / Bank Transfer / Cheque / Card) and <b>from A/C</b>. If left empty, 531 cash or 512 bank is used.</li>
+<li><b>Department</b>, <b>Project</b>.</li>
+<li><b>VAT use</b>: Mixed (partial deduction) / Taxable sales only (100%) / Exempt sales only (0%).</li>
+<li><b>Reverse charge</b> tick.</li>
+</ul>
+<p><b>Items grid</b> ("Purchase Invoice Items · F2 to find an item · double-click a cell to edit")</p>
+<ul>
+<li><b>Warehouse</b>, <b>Add Item Line</b>, <b>Delete Line</b>.</li>
+<li>Columns: #, Item, Description, Qty, Unit, Unit Price, Discount %, VAT (Yes/No), Net.</li>
+</ul>
+<p class='lead'><b>Purchase totals</b></p>
+<ul>
+<li>Taxable Amount, Exempt Amount, VAT %, VAT, Total.</li>
+<li>Total before discount, <b>Discount %</b> or <b>amount</b>, Total HT, TOTAL TTC.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>New</b></li>
+<li><b>Auto Calculate</b></li>
+<li><b>Save Purchase</b></li>
+<li><b>Delete</b></li>
+<li><b>Cancel Purchase</b>: posts a reversing entry. Asks for a Reason; <b>Confirm Cancellation</b> or <b>Keep the purchase</b>.</li>
+<li><b>Return (goods back)</b></li>
+<li><b>Upload PDF</b>, <b>Free PDF Read</b>, <b>Attachments</b></li>
+<li>Tick <b>Save automatically after upload</b></li>
+</ul>
+</section>
+<section class='topic sub' id='purchases-cash-purchases-expenses-cost-on-purchase' data-title='Purchases &amp; Expenses › Cost on Purchase'><h3><span class='parent'>Purchases &amp; Expenses ›</span> Cost on Purchase</h3>
+<p>Adds customs, freight and insurance to the selected purchase.</p>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li>Freight, Insurance, Broker Fees, Other, Import VAT.</li>
+<li><b>Customs per item</b>: goes only to items marked "Subject to customs".</li>
+<li><b>Customs fees</b>: goes to all items.</li>
+<li><b>Declaration No.</b>, <b>Paid to</b> (default "Lebanese Customs").</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Add Cost on Purchase</b></li>
+<li><b>Edit Cost Accounts</b>: edit the default accounts; <b>Restore defaults</b>, <b>Done</b>.</li>
+<li><b>Import Customs Excel</b></li>
+<li><b>Attach Customs PDF</b></li>
+</ul>
+</section>
+<section class='topic sub' id='purchases-cash-purchases-expenses-assets-depreciation' data-title='Purchases &amp; Expenses › Assets &amp; Depreciation'><h3><span class='parent'>Purchases &amp; Expenses ›</span> Assets &amp; Depreciation</h3>
+<p>Three numbered sub-tabs.</p>
+<p class='lead'><b>1. Asset Accounts &amp; Depreciation %</b></p>
+<ul>
+<li>Fields: Asset account No., Name (category), Depreciation % / year, Depreciation expense account, Accumulated depreciation account.</li>
+<li>Buttons: <b>Save Account</b>, <b>New</b>, <b>Delete</b>. Double-click a line to edit it.</li>
+<li>Columns: Asset Account, Name, Depreciation %, Useful Life, Expense Account, Accumulated Account.</li>
+</ul>
+<p class='lead'><b>2. Asset Data Entry</b></p>
+<ul>
+<li><b>Asset account (category)</b> selector: fills in the accounts, rate and life.</li>
+<li>"Asset" fields: Asset code, Description, Currency, Purchase date, Purchase value, Residual value, Depreciation start, Purchase invoice No./ID, Booked before Saber up to.</li>
+<li>"Depreciation" fields: Rate % / year, Useful life (months), Post (monthly / yearly), Asset account, Expense account, Accumulated account.</li>
+<li>Buttons:</li>
+<ul>
+<li><b>Save</b>, <b>New</b>, <b>Delete</b></li>
+<li><b>Fill from PDF</b>: opens a "Review PDF fixed asset" window with a verification tick; <b>Create register item</b> or <b>Cancel</b>.</li>
+<li><b>PDF Attachments</b>: <b>View</b>, <b>Attach / Retry PDF</b>, <b>Download selected</b>, <b>Open in PDF reader</b>, <b>Refresh</b>, <b>Close</b>.</li>
+<li><b>Schedule of this asset</b>: a window with columns date / amount / accumulated / net / status, and <b>Post selected period</b>.</li>
+<li><b>Record Asset Purchase</b>: opens Purchase Invoice with Type set to Assets.</li>
+</ul>
+<li>Register columns: Asset, Description, Purchase date, Purchase value, Currency, Old deprec., This year, Total deprec., Net value.</li>
+</ul>
+<p class='lead'><b>3. Monthly Depreciation Table</b></p>
+<ul>
+<li>Filters: <b>Month (any date of the month)</b>, <b>Account</b> (All accounts or one).</li>
+<li>Buttons:</li>
+<ul>
+<li><b>Show</b></li>
+<li><b>Post Entry for Selected Account</b>, <b>Post All Accounts</b> (one entry per account: Dr expense / Cr accumulated)</li>
+<li><b>Print Preview</b>, <b>Excel</b>, <b>PDF</b></li>
+<li><b>Annual Rollforward</b>: a window titled "Fixed Asset Register &amp; Depreciation Rollforward — year". Columns: Asset code, Description, Currency, Opening cost, Additions, Closing cost, Opening accumulated depreciation, Depreciation posted, Closing accumulated depreciation, Closing net book value, Unposted schedule. Buttons: <b>Export Excel</b>, <b>Export PDF</b>, <b>Close</b>.</li>
+</ul>
+<li>Columns: Asset / Account, Name, Purchase Date, Value, Old Deprec., Deprec. (month), Total Deprec., Net Value, Entry.</li>
+</ul>
+</section>
+<section class='topic sub' id='purchases-cash-purchases-expenses-expenses' data-title='Purchases &amp; Expenses › Expenses'><h3><span class='parent'>Purchases &amp; Expenses ›</span> Expenses</h3>
+<p>Records paid expenses.</p>
+<p class='lead'><b>Find bar</b></p>
+<ul>
+<li><b>Find expense (No., description, date)</b>.</li>
+</ul>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li><b>Date</b>, <b>Description</b>, <b>Category</b>, currency, <b>Reference</b>.</li>
+<li><b>With VAT (before VAT)</b>, <b>Without VAT</b>, <b>VAT</b>, Total.</li>
+<li><b>VAT not deductible</b> tick.</li>
+<li><b>Expense A/C (626-69)</b>, <b>No-VAT A/C</b>, <b>VAT A/C</b>, <b>Paid from</b>.</li>
+<li><b>Department</b>, <b>Project</b>.</li>
+<li><b>VAT used for</b> (same three choices as Purchase Invoice).</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Suggest A/C</b>, <b>AI Suggest A/C</b></li>
+<li><b>New</b></li>
+<li><b>Save Expense</b></li>
+<li><b>Delete</b></li>
+<li><b>Upload PDF</b></li>
+<li><b>Attachments</b></li>
+<li><b>Import Expenses Excel</b></li>
+</ul>
+</section>
+<section class='topic' id='purchases-cash-payment-receipt' data-title='Payment &amp; Receipt'><h3>Payment &amp; Receipt</h3><div class='where'>Purchases &amp; Cash &gt; Payment &amp; Receipt</div>
+<p>Three sub-tabs.</p>
+</section>
+<section class='topic sub' id='purchases-cash-payment-receipt-add-customer-receipt-add-supplier-payment' data-title='Payment &amp; Receipt › Add Customer Receipt / Add Supplier Payment'><h3><span class='parent'>Payment &amp; Receipt ›</span> Add Customer Receipt / Add Supplier Payment</h3>
+<p>The same form on both tabs, titled "Customer Receipt (RV)" or "Supplier Payment (PV)".</p>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li><b>Number</b> (automatic), <b>Date</b>.</li>
+<li><b>Customer</b> or <b>Supplier</b>, with <b>Type</b> (All / client / supplier / asset_supplier / other_payable).</li>
+<li><b>Currency</b>, <b>Amount</b>.</li>
+<li><b>Method</b>: Cash / Cheque / Bank Transfer / Card / Other.</li>
+<li><b>Cash / Bank Account</b>.</li>
+<li><b>Ref. / Cheque</b>, <b>Description</b>.</li>
+<li><b>Bank Commission</b> and its account (<b>on A/C</b>).</li>
+<li><b>Exchange Difference (+ / -)</b>, <b>Exchange Gain A/C</b>, <b>Exchange Loss A/C</b>.</li>
+<li><b>Department</b>, <b>Project</b>.</li>
+<li>An entry preview, and the party's balance ("+ owes you / - you owe").</li>
+</ul>
+<p><b>Allocation section</b> (which invoices this receipt or payment settles)</p>
+<ul>
+<li><b>Auto Allocate (oldest first)</b>, <b>Clear Allocation</b>.</li>
+<li>Grid: #, Document, Date, Type, Cur., Total, Open, Allocate (the Allocate cell can be edited).</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>New</b>, <b>Save</b>, <b>Delete</b>.</li>
+<li><b>Find</b> box with <b>Clear</b>.</li>
+</ul>
+<p class='lead'><b>List columns</b></p>
+<ul>
+<li>Number, Date, Customer/Supplier, Currency, Amount, Method, Cash / Bank, Reference, Description, Dep. / Project.</li>
+<li>Double-click a line to edit it.</li>
+</ul>
+</section>
+<section class='topic sub' id='purchases-cash-payment-receipt-bank-reconciliation' data-title='Payment &amp; Receipt › Bank Reconciliation'><h3><span class='parent'>Payment &amp; Receipt ›</span> Bank Reconciliation</h3>
+<p>Matches bank statement lines against the book entries.</p>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li><b>Bank account</b> (accounts 511 / 512 / 519 / 53), currency.</li>
+<li><b>From</b>, <b>To</b>.</li>
+<li><b>Statement ending balance</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Show</b></li>
+<li><b>Report</b> (preview)</li>
+<li><b>Import Statement (Excel / CSV / PDF)</b></li>
+<li><b>Auto Match</b>, <b>Match Selected</b>, <b>Unmatch</b></li>
+<li><b>Delete Statement Line</b></li>
+<li><b>Book to</b> (default 6739 - Bank Commissions…) with <b>Post Line</b></li>
+</ul>
+<p class='lead'><b>Panes</b></p>
+<ul>
+<li>"Bank statement": Date, Reference, Description, Amount, Matched.</li>
+<li>"Books (account movements)": Date, Voucher, Description, Amount, Matched.</li>
+<li>The info line shows Book balance, Expected bank balance, how many lines are matched, and the DIFFERENCE.</li>
+</ul>
+</section>
+<section class='topic' id='purchases-cash-import' data-title='Import'><h3>Import</h3><div class='where'>Purchases &amp; Cash &gt; Import</div>
+<p>Bulk import of invoices from Excel (one invoice per row) or from PDF files (one invoice per file, which is attached to it).</p>
+<p class='lead'><b>Bar</b></p>
+<ul>
+<li><b>Default Type</b>: Purchases / Sales / Expenses / Assets.</li>
+<li><b>Default currency</b>.</li>
+<li><b>Choose Excel File</b>, <b>Choose PDF Invoice(s)</b>.</li>
+<li><b>Show</b> (currency) with <b>Apply</b>.</li>
+</ul>
+<p><b>Preview grid</b> (editable; F2 in account cells)</p>
+<ul>
+<li>#, Invoice No., Date, Customer / Supplier, Type (review), Currency, Before VAT, VAT, VAT A/C, Total, Party / Paid A/C, Cost / Revenue A/C, No-VAT A/C, Source, Check.</li>
+<li>Select a row to read its full "Check" note in the yellow bar.</li>
+</ul>
+<p class='lead'><b>Bottom</b></p>
+<ul>
+<li>Tick <b>Replace ALL previous invoices (a safety backup is made first)</b>.</li>
+<li><b>Apply VAT A/C to selected</b> (with an account box).</li>
+<li><b>Remove Row</b>.</li>
+<li>Tick <b>Save automatically after reading</b>.</li>
+<li><b>Auto Calculate Totals</b>.</li>
+<li><b>Review &amp; Save Import</b>.</li>
+</ul>
+</section></div><div class='tab' id='tab-inventory'><h2 style='margin-top:14px'>Inventory · المخزون</h2><nav class='toc'><a href='#inventory-inventory' data-jump='inventory-inventory' class=''>Inventory</a><a href='#inventory-inventory-items' data-jump='inventory-inventory-items' class='subl'>Items</a><a href='#inventory-inventory-categories-units' data-jump='inventory-inventory-categories-units' class='subl'>Categories &amp; Units</a><a href='#inventory-inventory-stock-in-stock-out' data-jump='inventory-inventory-stock-in-stock-out' class='subl'>Stock In / Stock Out</a><a href='#inventory-inventory-stock-documents' data-jump='inventory-inventory-stock-documents' class='subl'>Stock Documents</a><a href='#inventory-inventory-production' data-jump='inventory-inventory-production' class='subl'>Production</a><a href='#inventory-inventory-physical-inventory' data-jump='inventory-inventory-physical-inventory' class='subl'>Physical Inventory</a><a href='#inventory-inventory-inventory-reports' data-jump='inventory-inventory-inventory-reports' class='subl'>Inventory Reports</a><a href='#inventory-inventory-ageing-report-customers-and-suppliers' data-jump='inventory-inventory-ageing-report-customers-and-suppliers' class='subl'>Ageing Report (customers and suppliers)</a><a href='#inventory-inventory-warehouses-settings' data-jump='inventory-inventory-warehouses-settings' class='subl'>Warehouses &amp; Settings</a></nav><section class='topic' id='inventory-inventory' data-title='Inventory'><h3>Inventory</h3><div class='where'>Inventory &gt; Inventory</div>
+<p>Nine sub-tabs. Brand, Warehouse, Project and Branch can be hidden in Warehouses &amp; Settings.</p>
+</section>
+<section class='topic sub' id='inventory-inventory-items' data-title='Inventory › Items'><h3><span class='parent'>Inventory ›</span> Items</h3>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li>Item Code (auto if blank), Item Name, Unit, Category, Subcategory, Brand, Supplier.</li>
+<li>Sales Price, Default VAT (company rate / 0%), Reorder Level.</li>
+<li>Location (shelf), Barcode, Notes.</li>
+<li>Stock Account, Cost Account (linked).</li>
+<li><b>Customs</b>: No customs / Subject to customs.</li>
+<li><b>Active</b> tick.</li>
+<li>A clickable link "Cost price (average of purchases): …" opens the Stock Card.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>New</b>, <b>Save</b>, <b>Stock Card</b>.</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>Item Code, Item, Category, Subcategory, Brand, Supplier, Unit, On Hand, Cost Price (avg), Stock Value, Sales Price, Status (OK / Reorder / Inactive).</li>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-categories-units' data-title='Inventory › Categories &amp; Units'><h3><span class='parent'>Inventory ›</span> Categories &amp; Units</h3>
+<ul>
+<li>"Categories and subcategories":</li>
+<ul>
+<li><b>New category</b> with <b>Add Category</b>.</li>
+<li><b>New subcategory … in</b> (parent) with <b>Add Subcategory</b>.</li>
+<li>A tree with columns Name / Level.</li>
+</ul>
+<li>"Units": a unit box with <b>Add Unit</b>.</li>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-stock-in-stock-out' data-title='Inventory › Stock In / Stock Out'><h3><span class='parent'>Inventory ›</span> Stock In / Stock Out</h3>
+<p>Quick stock movements at average cost.</p>
+<ul>
+<li>Fields: Stock In (add) / Stock Out (remove), <b>Date</b>, <b>Warehouse</b>, <b>Reason</b>.</li>
+<li>Buttons: <b>Transfer Between Warehouses</b>, <b>Add Line</b>, <b>Delete Line</b>, <b>Save</b>.</li>
+<li>Grid: #, Item Code, Item, Unit, On Hand, Quantity, Unit Cost (average), Value.</li>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-stock-documents' data-title='Inventory › Stock Documents'><h3><span class='parent'>Inventory ›</span> Stock Documents</h3>
+<p>Formal stock documents.</p>
+<ul>
+<li><b>Type</b>: Opening Stock / Stock Receipt / Stock Issue / Adjustment + / Adjustment - / Transfer.</li>
+<li><b>Number</b>, <b>Date</b>.</li>
+<li><b>Warehouse</b> (labelled "From" for a transfer), and <b>To</b> (transfer only).</li>
+<li><b>Find</b>.</li>
+<li><b>Customer / Supplier</b>, <b>Reference (invoice / PO)</b>, <b>Notes</b>, <b>Project</b>, <b>Branch</b>.</li>
+<li>Buttons: <b>New</b>, <b>New Warehouse Transfer</b>, <b>Add Line</b>, <b>Delete Line</b>, <b>Save</b>, <b>Delete Document</b>.</li>
+<li>Grid: #, Item Code, Item, Unit, Quantity, Unit Cost, Value, On Hand.</li>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-production' data-title='Inventory › Production'><h3><span class='parent'>Inventory ›</span> Production</h3>
+<p>Three sub-tabs.</p>
+<p class='lead'><b>Production Orders</b></p>
+<ul>
+<li>Fields: <b>Order</b>, <b>Date</b>, <b>Product</b>, <b>Quantity</b>, <b>Find</b>, <b>Materials from</b>, <b>Product into</b>, <b>Extra cost (total)</b>, <b>Reference / client order</b>, <b>Notes</b>.</li>
+<li>Buttons: <b>New</b>, <b>Materials from Recipe</b>, <b>Add Material</b>, <b>Delete Line</b>, <b>Save Production</b>, <b>Delete Order</b>.</li>
+<li>Grid: #, Item Code, Material, Unit, Recipe Qty, Qty Used, On Hand, Unit Cost, Value, with a cost total.</li>
+</ul>
+<p class='lead'><b>Recipes (materials per product)</b></p>
+<ul>
+<li>List "Recipes saved": Product, Name, Makes, Materials.</li>
+<li>Fields: <b>Product made</b>, "The materials below make [quantity] unit(s)", <b>Extra cost per unit (labour, energy...)</b>, <b>Notes</b>.</li>
+<li>Buttons: <b>New</b>, <b>Add Material</b>, <b>Delete Line</b>, <b>Save Recipe</b>, <b>Delete Recipe</b>.</li>
+<li>Grid: #, Item Code, Material, Unit, Quantity, Average Cost.</li>
+</ul>
+<p class='lead'><b>Production Report</b></p>
+<ul>
+<li>Filters: <b>From</b>, <b>To</b>.</li>
+<li>Buttons: <b>Show</b>, <b>Print</b>, <b>Excel</b>, <b>PDF</b>.</li>
+<li>Sections:</li>
+<ul>
+<li>"Production orders": Date, Order, Product, Name, Quantity, Unit Cost, Extra Cost, Total Cost.</li>
+<li>"Products made": Product, Name, Unit, Quantity, Average Unit Cost, Value.</li>
+</ul>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-physical-inventory' data-title='Inventory › Physical Inventory'><h3><span class='parent'>Inventory ›</span> Physical Inventory</h3>
+<ul>
+<li>Fields: <b>Count date</b>, <b>Warehouse</b>, <b>Open count</b> (to reopen a saved count).</li>
+<li>Buttons:</li>
+<ul>
+<li><b>Load Stock on Hand</b>, <b>Add Item</b></li>
+<li><b>Save Count</b></li>
+<li><b>Apply Count to Stock + Journal</b></li>
+<li><b>Print / PDF</b></li>
+<li><b>Excel Count Sheet</b></li>
+<li><b>Upload Counts (Excel)</b></li>
+</ul>
+<li>Grid: #, Item Code, Item, Location, Unit, Stock on Hand, Physical Count (editable), Difference, Difference Value.</li>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-inventory-reports' data-title='Inventory › Inventory Reports'><h3><span class='parent'>Inventory ›</span> Inventory Reports</h3>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li>Report.</li>
+<li><b>From Date</b>, <b>To Date / As of</b>.</li>
+<li><b>Warehouse</b>.</li>
+<li><b>Costing</b>: Company setting / Weighted average / FIFO.</li>
+<li><b>Item From</b>, <b>Item To</b>.</li>
+<li><b>Category</b>, <b>Subcategory</b>, <b>Unit</b>, <b>Supplier</b>, <b>Brand</b>, <b>Project</b>, <b>Branch</b>: multi-select lists.</li>
+<li><b>Slow-moving days</b> (default 90).</li>
+<li><b>Include zero stock</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Show</b>, <b>Print</b>, <b>Excel</b>, <b>PDF</b>.</li>
+</ul>
+<p class='lead'><b>The 15 reports</b></p>
+<ol>
+<li><b>Inventory Summary</b></li>
+<ul>
+<li>Key figures: items in stock, value at cost, value at sales price, potential margin, items at or below reorder level, slow-moving value, old-stock value and share.</li>
+<li>Value by category; value by warehouse; Top 10 items by value; ageing; items to reorder.</li>
+</ul>
+<li><b>Stock by Brand &amp; Warehouse</b>: Brand, Warehouse, Items, Quantity, Value, Items below zero.</li>
+<li><b>Stock Ageing</b></li>
+<ul>
+<li>Summary: Age of stock, Value, % of stock value, Items.</li>
+<li>By item: Item Code, Item, Category, Unit, On Hand, Value, Avg Age (days), Oldest Receipt, Last Issue, the age buckets, % over N days.</li>
+<li>A list of stock older than the threshold.</li>
+</ul>
+<li><b>Inventory Analysis (3D)</b></li>
+<ul>
+<li>Extra options: <b>Rows</b>, <b>Columns</b>, <b>Layers (3rd)</b> and <b>Measure</b> (Quantity / Value). The dimensions are Item, Category, Subcategory, Brand, Supplier, Unit, Warehouse, Month, Project, Branch.</li>
+<li>Button <b>3D Chart</b>.</li>
+<li>Result: a pivot table with totals.</li>
+</ul>
+<li><b>Inventory Health</b></li>
+<ul>
+<li>Action summary: Issue, Items, Stock Value.</li>
+<li>Items to review: Issue, Item Code, Item, Category, On Hand, Reorder Level, Value, Last Issue.</li>
+<li>The issues are: Negative stock, Reorder, Missing unit cost, No supplier, No issue in N days.</li>
+</ul>
+<li><b>Stock Valuation</b></li>
+<ul>
+<li>Item Code, Item, Category, Unit, Quantity, Unit Cost, Stock Value, Sales Price, Value at Sales Price, Reorder Level, Status.</li>
+<li>Plus value by warehouse and total quantity by unit.</li>
+</ul>
+<li><b>Stock Card</b> (needs Item From; Item To gives several cards): Date, Document, Type, Warehouse, Party / Reference, In, Out, Unit Cost, Value, Balance Qty, Balance Value.</li>
+<li><b>Stock Movements</b>: Date, Document, Type, Item Code, Item, Warehouse, Party, Quantity (+in / -out), Unit Cost, Value.</li>
+<li><b>Stock Turnover</b>: Item Code, Item, Unit, Issued, On Hand, Coverage Days, On-hand Value.</li>
+<li><b>Stock by Supplier</b>: Supplier, Item Code, Item, Unit, On Hand, Value.</li>
+<li><b>Physical Count Variances</b>: Count, Date, Warehouse, Item Code, Item, Stock on Hand, Counted, Difference, Variance, Status.</li>
+<li><b>Sales Margin (COGS)</b>: Item Code, Item, Quantity Sold, Sales, Cost of Goods Sold, Gross Margin, Margin %.</li>
+<li><b>Reorder Report</b>: Item Code, Item, Unit, On Hand, Reorder Level, Suggested Order, Unit Cost.</li>
+<li><b>Slow-moving Stock</b>: Item Code, Item, Unit, On Hand, Value, Last Issue.</li>
+<li><b>Stock vs Ledger</b>: Stock account, Items, Valuation, Ledger, Difference, Variation accounts, plus a "How to read it" note.</li>
+</ol>
+</section>
+<section class='topic sub' id='inventory-inventory-ageing-report-customers-and-suppliers' data-title='Inventory › Ageing Report (customers and suppliers)'><h3><span class='parent'>Inventory ›</span> Ageing Report (customers and suppliers)</h3>
+<p>Customers / Suppliers &gt; Customer / Supplier Ageing also opens it.</p>
+<ul>
+<li>Filters: <b>Show</b> (Customers &amp; Suppliers / Customers / Suppliers), <b>As of</b>, <b>Account / Name From</b>, <b>To</b>.</li>
+<li>Button: <b>Apply</b>.</li>
+<li>Columns: Type, Customer / Supplier, Invoice, Due Date, Currency, Outstanding, Days Overdue, Aging Bucket.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+</ul>
+</section>
+<section class='topic sub' id='inventory-inventory-warehouses-settings' data-title='Inventory › Warehouses &amp; Settings'><h3><span class='parent'>Inventory ›</span> Warehouses &amp; Settings</h3>
+<p class='lead'><b>"Inventory settings"</b></p>
+<ul>
+<li><b>Stock valued in</b> (currency).</li>
+<li><b>Costing method</b>: Weighted average / FIFO.</li>
+<li><b>Save Settings</b>.</li>
+<li><b>Post Stock Variation [year]</b>.</li>
+<li><b>Month (MM-YYYY)</b> with <b>Post Monthly Variation</b>.</li>
+</ul>
+<p class='lead'><b>"Show in the inventory screens"</b></p>
+<ul>
+<li>Ticks: Brand, Warehouse, Project, Branch.</li>
+</ul>
+<p class='lead'><b>"New item on a purchase: ask for"</b></p>
+<ul>
+<li>Ticks: Category, Subcategory, Brand.</li>
+</ul>
+<p class='lead'><b>"Warehouses"</b></p>
+<ul>
+<li>Fields: <b>Code (blank = automatic)</b>, <b>Name</b>, <b>Active</b>.</li>
+<li>Buttons: <b>New</b>, <b>Save Warehouse</b>.</li>
+<li>List: Code, Warehouse, Active.</li>
+</ul>
+</section></div><div class='tab' id='tab-accounting'><h2 style='margin-top:14px'>Accounting · المحاسبة</h2><nav class='toc'><a href='#accounting-journal-voucher' data-jump='accounting-journal-voucher' class=''>Journal Voucher</a><a href='#accounting-general-journal' data-jump='accounting-general-journal' class=''>General Journal</a><a href='#accounting-accounts-statements' data-jump='accounting-accounts-statements' class=''>Accounts &amp; Statements</a><a href='#accounting-accounts-statements-trial-balance-and-statement-of-account' data-jump='accounting-accounts-statements-trial-balance-and-statement-of-account' class='subl'>Trial Balance and Statement of Account</a><a href='#accounting-accounts-statements-lebanese-chart-of-accounts' data-jump='accounting-accounts-statements-lebanese-chart-of-accounts' class='subl'>Lebanese Chart of Accounts</a><a href='#accounting-profit-loss' data-jump='accounting-profit-loss' class=''>Profit &amp; Loss</a><a href='#accounting-financial-reports' data-jump='accounting-financial-reports' class=''>Financial Reports</a></nav><section class='topic' id='accounting-journal-voucher' data-title='Journal Voucher'><h3>Journal Voucher</h3><div class='where'>Accounting &gt; Journal Voucher</div>
+<p>Manual vouchers with lines in several currencies.</p>
+<p><b>Bar</b> ("General Voucher")</p>
+<ul>
+<li>Navigation: <b>|&lt;</b>, <b>&lt;</b>, <b>&gt;</b>, <b>&gt;|</b>.</li>
+<li><b>New</b></li>
+<li><b>Edit...</b>: opens "Open a voucher to edit" with a search box, <b>Open to edit</b> and <b>Close</b>.</li>
+<li><b>Save</b></li>
+<li><b>Automatic DOE</b>: see below.</li>
+<li><b>Delete</b></li>
+<li><b>Add Line</b>, <b>New Account</b>, <b>Insert Line</b>, <b>Delete Line</b></li>
+<li><b>Show Rates</b></li>
+<li><b>Excel</b>, <b>PDF</b>, <b>Print</b></li>
+</ul>
+<p><b>Automatic DOE</b> window ("DOE - Automatic Exchange Difference")</p>
+<ul>
+<li>Fields: <b>DOE posting date</b>, <b>Revalue in</b>, <b>Currencies</b>, plus the DOE date rates.</li>
+<li>Buttons: <b>Load balances</b>, <b>Preview</b>, <b>Post DOE vouchers</b>.</li>
+<li>Columns: Currency, Class 4/5 account, Account name, Balance, Carrying, At DOE rate, Difference, Gain / Loss A/C.</li>
+</ul>
+<p class='lead'><b>Header</b></p>
+<ul>
+<li><b>Type</b>: 01 - General Voucher, 02 - Receipt Voucher, 03 - Payment Voucher, 04 - Opening Voucher, 05 - Closing Voucher, 06 - Adjustment, 07 - DOE (Difference of Exchange).</li>
+<li><b>Number</b>, <b>Date</b>, <b>Currency</b>, <b>Branch</b>, <b>Find</b>.</li>
+</ul>
+<p class='lead'><b>Lines grid</b></p>
+<ul>
+<li>#, Account No. - Name, Line Detail, Currency, D/C, Amount (Account Currency), Amount LBP, Amount USD, Due Date, Reference, Dep., Project.</li>
+<li>Rate LBP and Rate USD appear with Show Rates.</li>
+</ul>
+<p class='lead'><b>Totals</b></p>
+<ul>
+<li>Debit, Credit and Balance, each in LBP, USD and the voucher currency.</li>
+</ul>
+</section>
+<section class='topic' id='accounting-general-journal' data-title='General Journal'><h3>General Journal</h3><div class='where'>Accounting &gt; General Journal</div>
+<p>Every journal line.</p>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li><b>View Year:</b>, <b>From Date:</b>, <b>To Date:</b>.</li>
+<li><b>Sort By:</b> Date / Voucher Number / Account Number / Account Name / Customer / Supplier / Debit / Credit / Currency, then Ascending / Descending.</li>
+<li>Section: All Sections / Payroll / Expenses / Purchases / Sales / Journal Vouchers / Opening / Closing.</li>
+<li><b>Apply</b>.</li>
+<li><b>Find voucher No.</b>, <b>Find in details</b>, with <b>Find</b> and <b>Clear</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Print Preview</b>, <b>PDF</b>, <b>Print</b> (the filtered list)</li>
+<li><b>Refresh</b></li>
+<li><b>Export Excel</b>, <b>Export PDF</b>, <b>Print</b></li>
+<li><b>Check Balance</b></li>
+<li><b>Edit Selected Entry</b> (or double-click): opens the source document</li>
+<li><b>Delete Selected Voucher</b></li>
+<li>A Debit / Credit totals label</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>Entry No., Date, Description, Source, Reference, Currency, Account, Account Name, Customer / Supplier, Debit, Credit, Balance.</li>
+</ul>
+</section>
+<section class='topic' id='accounting-accounts-statements' data-title='Accounts &amp; Statements'><h3>Accounts &amp; Statements</h3><div class='where'>Accounting &gt; Accounts &amp; Statements</div>
+<p>Three tabs.</p>
+</section>
+<section class='topic sub' id='accounting-accounts-statements-trial-balance-and-statement-of-account' data-title='Accounts &amp; Statements › Trial Balance and Statement of Account'><h3><span class='parent'>Accounts &amp; Statements ›</span> Trial Balance and Statement of Account</h3>
+<p>Both tabs use the same options form, titled "Balance des Comptes - options" or "Statement of Account - options".</p>
+<p><b>Customer / Supplier</b> (Statement of Account only)</p>
+<ul>
+<li>Choosing one fills the account range.</li>
+</ul>
+<p class='lead'><b>Account range</b></p>
+<ul>
+<li><b>Account From</b>, <b>Account To</b>, with the account name shown beside each.</li>
+<li><b>Same as From &gt;</b>.</li>
+</ul>
+<p class='lead'><b>Dates and status</b></p>
+<ul>
+<li><b>Date From</b>, <b>To</b>, <b>Print Date</b>.</li>
+<li><b>Branch</b> (multi-select).</li>
+<li>Posting: Posted only / Posted + Review / Review only.</li>
+</ul>
+<p class='lead'><b>Option groups</b></p>
+<ul>
+<li><b>Lines</b>: Summary (Resume), By Due Date, Reference, With Branch.</li>
+<li><b>Accounts</b>: Detailed Account (statement), All accounts, Order by Description, Non-zero Balances only.</li>
+<li><b>Grouping</b>: Chapters (class), Sub-chapters, Balance Sheet (1-5), Profit &amp; Loss (6-7), <b>Summary digits</b> (1–6).</li>
+<li><b>Format</b>: Format Balance (Dr / Cr balance), With Carry Forward (opening), Monthly, Without Opening entries, Without Closing entries.</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li><b>1st Column</b> and <b>2nd Column</b>: Account Currency, any currency, or None (2nd only).</li>
+</ul>
+<p class='lead'><b>Dimensions</b></p>
+<ul>
+<li><b>Department</b> and <b>Project</b> (multi-select).</li>
+<li>Ticks: Show Department / Project, Split by Department, Split by Project, Compare with Budget.</li>
+<li><b>Currencies</b> ticks.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Show</b>: each Show opens its own result tab.</li>
+<li><b>Print</b>, <b>Excel</b>, <b>PDF</b>.</li>
+<li>On a result tab: <b>&lt; Options</b>, <b>Print Preview</b>, <b>Print</b>, <b>Excel</b>, <b>PDF</b>, <b>Close Tab</b>.</li>
+</ul>
+<p class='lead'><b>Using the results</b></p>
+<ul>
+<li>Double-click a trial-balance line to open that account's statement.</li>
+<li>Double-click a statement line to open the transaction. The transaction window has <b>Edit this entry</b> and <b>Close (Esc)</b>.</li>
+<li>Escape steps back one level.</li>
+</ul>
+<p class='lead'><b>Result columns</b></p>
+<ul>
+<li>Trial balance: Account, Account Name, then per currency Opening, Debit (period), Credit (period), Balance (or Debit Balance / Credit Balance). With the budget option: Budget, Actual (period), Variance, Used %.</li>
+<li>Statement / Detailed: Date, Voucher, Description, optional Reference / Due Date / Branch / Department / Project, then Debit, Credit, Balance. It starts with "Opening balance (carried forward)".</li>
+</ul>
+</section>
+<section class='topic sub' id='accounting-accounts-statements-lebanese-chart-of-accounts' data-title='Accounts &amp; Statements › Lebanese Chart of Accounts'><h3><span class='parent'>Accounts &amp; Statements ›</span> Lebanese Chart of Accounts</h3>
+<ul>
+<li>Fields: <b>Account (4-digit prefix = automatic)</b>, name, parent, type (asset / liability / equity / income / expense).</li>
+<li>Buttons:</li>
+<ul>
+<li><b>Create Account</b></li>
+<li><b>Edit Selected Account</b>: English, French and Arabic names, Type; <b>Save</b>, <b>Cancel</b>.</li>
+<li><b>Delete Selected</b></li>
+<li><b>Delete Unused Accounts...</b>: <b>Delete Selected</b>, <b>Delete All Listed</b>, <b>Select All</b>, <b>Close</b>.</li>
+<li><b>Move / Transfer...</b>: three choices:</li>
+<ul>
+<li>move the chosen transactions to another account;</li>
+<li>move ALL its transactions;</li>
+<li>transfer only the BALANCE with a journal voucher.</li>
+</ul>
+</ul>
+</ul>
+<p>Window buttons: <b>Show Transactions</b>, <b>Select All</b>, <b>Run</b>, <b>Close</b>.</p>
+<ul>
+<li><b>Refresh</b></li>
+</ul>
+<ul>
+<li>Columns: Account, Parent, English, French, Arabic, Type.</li>
+</ul>
+</section>
+<section class='topic' id='accounting-profit-loss' data-title='Profit &amp; Loss'><h3>Profit &amp; Loss</h3><div class='where'>Accounting &gt; Profit &amp; Loss</div>
+<p>The profit and loss for a period, plus year-end closing.</p>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li>"Fiscal Year …", <b>From:</b>, <b>To:</b>, <b>Apply</b>, and a status (Open / CLOSED).</li>
+</ul>
+<p class='lead'><b>"Year-end closing [year]" buttons</b></p>
+<ul>
+<li><b>Preview Closing 6&amp;7</b></li>
+<li><b>Close [year] &amp; Open [year+1]</b>: runs the Year-End Check first.</li>
+<li><b>Delete Closing &amp; Reopen Year</b></li>
+<li><b>Refresh Opening of [year+1]</b></li>
+<li><b>Delete Year [year]</b> (administrator only)</li>
+<li><b>Year-End Check</b>: columns Status, Check, Result, What to do. Buttons: Excel/PDF export, <b>Cancel</b> or <b>Close</b>, and <b>Close [year] anyway</b> or <b>Go on and close [year]</b>.</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>Currency, Type, Account, Account Name, Debit, Credit, P&amp;L Amount.</li>
+<li>Double-click a line to see its entries.</li>
+</ul>
+<p class='lead'><b>Export</b></p>
+<ul>
+<li><b>Export Excel</b>, <b>Export PDF</b>, <b>Print</b>.</li>
+</ul>
+</section>
+<section class='topic' id='accounting-financial-reports' data-title='Financial Reports'><h3>Financial Reports</h3><div class='where'>Accounting &gt; Financial Reports</div>
+<p class='lead'><b>Common bar</b></p>
+<ul>
+<li><b>From:</b>, <b>To:</b>, <b>Account From:</b>, <b>To:</b>.</li>
+<li><b>Apply</b>.</li>
+<li><b>Choose filters...</b>: tick Branch, Project, Department, Customer / Supplier, Section; then <b>Save</b> or <b>Cancel</b>. The chosen filters show as multi-select lists and apply to the General Ledger lines.</li>
+</ul>
+<p>Every sub-tab below can be hidden in Accounting Settings.</p>
+<p class='lead'><b>General Ledger</b></p>
+<ul>
+<li>Columns: Date, Entry, Account, Currency, Account Name, Description, Debit, Credit, Balance.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+</ul>
+<p class='lead'><b>Balance Sheet</b></p>
+<ul>
+<li>Shows balances at the To date.</li>
+<li>Columns: Type, Account, Currency, Account Name, Debit, Credit, Balance.</li>
+<li>Double-click a line to see its entries.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+</ul>
+<p class='lead'><b>Lebanese VAT Report</b></p>
+<ul>
+<li>Columns: Currency, Type, Count, Before VAT, VAT, Total.</li>
+<li>A "VAT payable" line per currency.</li>
+<li>Needs the VAT right.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+</ul>
+<p class='lead'><b>Cash Flow</b></p>
+<ul>
+<li>Columns: Currency, Cash Flow Category, Inflow, Outflow, Net Cash Movement.</li>
+<li>Categories: Operating - Invoices / Expenses / Payroll / Receipts / Payments, Opening Balance, Year Closing, Other Cash Movement.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+</ul>
+<p class='lead'><b>Cash Flow Outlook</b></p>
+<ul>
+<li>Fields: <b>Report year</b>, <b>Project ahead</b> (Quarter (3 months) / 6 Months / Yearly (12 months)).</li>
+<li>Button: <b>Refresh Projection</b>. Projections use the last 3 complete months.</li>
+<li>Columns: Period, Status (Actual / Actual total / Projected), Currency, Inflow, Outflow, Net cash movement.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+<li>A second part, <b>5-Year Projection to date</b>, has <b>Growth % per year</b>, <b>Per-year %</b> (e.g. 2027=10, 2028=5) and the button <b>5-Year Projection</b>. Columns: Year, Up to, Currency, Source, Inflow, Outflow, Net cash movement.</li>
+</ul>
+<p class='lead'><b>Cash Budget</b></p>
+<ul>
+<li>Fields: <b>Base year (actual)</b>, <b>Cash budget year</b>, <b>Cash in %</b>, <b>Cash out %</b>.</li>
+<li>Buttons: <b>Build Cash Budget</b>, <b>Excel</b>, <b>PDF</b>.</li>
+<li>Columns: Month, Currency, Opening cash, Cash in, Cash out, Net, Closing cash.</li>
+</ul>
+<p class='lead'><b>Comparative P&amp;L</b></p>
+<ul>
+<li>Columns: Currency, Type, Account, Account Name, Current Period, Prior Year, Variance.</li>
+<li>Double-click a line to see its entries.</li>
+<li>Export: <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+</ul>
+<p class='lead'><b>Budget</b></p>
+<ul>
+<li><b>"Budget"</b></li>
+<ul>
+<li>Fields: <b>Year</b>, <b>Currency</b>, <b>Department</b>, <b>Project</b>.</li>
+<li>Buttons: <b>Load</b>, <b>Save Budget</b>, Monthly / Yearly choice, <b>Project from Actual</b>.</li>
+</ul>
+<li><b>"Budget from a year + %"</b></li>
+<ul>
+<li>Fields: <b>Base year (actual)</b>, <b>Revenue %</b>, <b>Expenses %</b>.</li>
+<li>Button: <b>Fill the Budget</b>.</li>
+</ul>
+<li><b>"Forecast and 5-year projection"</b></li>
+<ul>
+<li>Fields: <b>Actual report year</b>, <b>Project ahead</b>.</li>
+<li>Buttons: <b>Year &amp; Future Forecast</b>, <b>Excel</b>, <b>PDF</b>, <b>Print</b>.</li>
+<li>Result: "Account actuals and forecast" and "Projected months".</li>
+<li>Also: <b>5-Year Projection to date</b>, <b>Growth % per year</b>, <b>Per-year %</b>, with the button <b>5-Year Projection</b>. Result: "Net income / expense by year" and "By account".</li>
+</ul>
+<li><b>"Budget lines"</b></li>
+<ul>
+<li>Buttons: <b>Add Account</b>, <b>Delete Line</b>, <b>Spread Annual over 12 Months</b>.</li>
+<li><b>Compare up to</b> (month) with <b>Budget vs Actual</b>. The result shows Budget, Actual (period), Variance, Used % per account.</li>
+<li>Grid: #, Account, Account Name, Annual, Jan…Dec, Months Total.</li>
+</ul>
+</ul>
+<p class='lead'><b>Projection &amp; Budget (3D)</b></p>
+<ul>
+<li>Fields: <b>Base year</b>, <b>Years ahead (1-5)</b>, <b>Currency</b>, <b>Scenario</b> (Pessimistic / Base / Optimistic).</li>
+<li>More fields: <b>Scenario spread (± points)</b>, <b>Income tax %</b>, <b>Customer days (DSO)</b>, <b>Supplier days (DPO)</b>, <b>Asset life (years)</b>, <b>Same revenue % for every year</b>.</li>
+<li>Buttons:</li>
+<ul>
+<li><b>Build from the books</b></li>
+<li><b>3D Charts</b></li>
+<li><b>Excel</b>, <b>PDF</b></li>
+<li><b>Apply to all years</b></li>
+<li><b>% from past years</b></li>
+<li><b>Save assumptions</b></li>
+<li><b>Save as budget for year</b> (year box) with <b>Save as Budget</b></li>
+</ul>
+<li>Assumptions grid: Year, Revenue %, Cost of sales %, Personnel %, Operating exp. %, Other income %, Financial charges %, Investments, Financing.</li>
+<li>Result sections: Assumptions; Other assumptions; Projected income statement; Projected cash flow (indirect method); Key indicators; Scenario comparison; Budget projection by account; Monthly budget; Monthly cash plan.</li>
+</ul>
+<p class='lead'><b>Business Reports</b></p>
+<ul>
+<li>Filters:</li>
+<ul>
+<li>Report.</li>
+<li><b>From</b>, <b>As of</b>, with <b>Today</b> and <b>+30 days</b>.</li>
+<li><b>Amounts in</b>, <b>Only</b> (currency).</li>
+<li><b>Ageing buckets</b> (30,60,90,180), <b>Top</b>.</li>
+<li><b>3D: rows</b> (client / item / category), <b>columns</b> (month / quarter / client / item / category), <b>measure</b> (quantity / ht / vat / ttc).</li>
+<li><b>Include Review</b>.</li>
+</ul>
+<li>"Financial statements:" options: Years / Period (From - As of), <b>Years</b> box, <b>Period: compare with the same period last year</b>.</li>
+<li>Buttons: <b>Edit Notes / Audit / Mapping</b>, <b>Show</b>, <b>Print Preview</b>, <b>Print</b>, <b>Excel</b>, <b>PDF</b>.</li>
+<li>Double-click a row to see its full text.</li>
+</ul>
+<p>The 8 Business Reports:</p>
+<ol>
+<li><b>Receivables Ageing (customers)</b> and <b>Payables Ageing (suppliers)</b>:</li>
+<ul>
+<li>Ageing summary (Age, Amount, % of open).</li>
+<li>Ageing by customer / supplier: name, Account, buckets, Total Open, Unallocated, Net Due, % Overdue.</li>
+<li>Open documents: Document, Date, Due Date, Currency, Open Amount, Days Overdue, Bucket.</li>
+<li>Expected collection / payment due by the date.</li>
+</ul>
+<li><b>Client Items: Qty &amp; Value</b>: per client, Item Code, Item, Unit, Quantity, Avg Price HT, Sales HT, VAT, TTC, Lines.</li>
+<li><b>Client Quantities by Item</b>: per item, Client and the same figures.</li>
+<li><b>Sales Analysis (3D pivot)</b>: rows by columns with Total and Share.</li>
+<li><b>Top Clients (HT + VAT = TTC)</b> and <b>Top Suppliers</b>: Rank, name, VAT Number, HT, VAT, TTC, Share, Cumulative, Documents, Last Document.</li>
+<li><b>Financial Statements + Audit + Notes</b>:</li>
+<ul>
+<li>INDEPENDENT AUDITOR'S REPORT.</li>
+<li>Statement of Financial Position.</li>
+<li>Statement of Profit or Loss and OCI.</li>
+<li>Statement of Changes in Equity.</li>
+<li>Statement of Cash Flows.</li>
+<li>Notes to the financial statements.</li>
+<li>Preparer review points ("remove before issue").</li>
+</ul>
+</ol>
+<p><b>Edit Notes / Audit / Mapping</b> window</p>
+<ul>
+<li><b>Edit fiscal year</b> selector.</li>
+<li>Tab <b>Company &amp; Auditor</b>:</li>
+<ul>
+<li>Fields: Legal form, Commercial register number, Date of incorporation, Tax (MoF) number, Principal activities, Shareholders / partners, Directors / managers, Share capital, Date approved for issue, Audit firm, Signing partner, Licence number (LACPA), Auditor address, City of the report, Date of the auditor's report.</li>
+<li>Buttons: <b>Choose logo...</b>, <b>Remove logo</b>.</li>
+</ul>
+<li>Tab <b>Notes</b>: one sub-tab per note.</li>
+<li>Tab <b>Auditor's report</b>: one sub-tab per section.</li>
+<li>Tab <b>OCI and Cash Flow</b>: OCI, net operating / investing / financing cash flows, exchange effect.</li>
+<li>Tab <b>Account mapping</b>.</li>
+<li>Button: <b>Save (information and texts apply to every year)</b>.</li>
+</ul>
+<p class='lead'><b>Management Pack</b></p>
+<ul>
+<li>Fields: <b>Month (MM-YYYY)</b>, <b>Currency</b>.</li>
+<li>Buttons: <b>Build Management Pack</b>, <b>Excel</b>, <b>PDF</b>.</li>
+<li>Sections:</li>
+<ul>
+<li>Results for the month and year to date against the budget and last year.</li>
+<li>Balance sheet summary.</li>
+<li>Cash and banks.</li>
+<li>Customers and suppliers ageing.</li>
+<li>VAT position for the quarter.</li>
+<li>Key ratios.</li>
+</ul>
+</ul>
+</section></div><div class='tab' id='tab-payroll-vat'><h2 style='margin-top:14px'>Payroll & VAT · الرواتب والضريبة</h2><nav class='toc'><a href='#payroll-vat-payroll' data-jump='payroll-vat-payroll' class=''>Payroll</a><a href='#payroll-vat-payroll-employees' data-jump='payroll-vat-payroll-employees' class='subl'>Employees</a><a href='#payroll-vat-payroll-payroll-entry' data-jump='payroll-vat-payroll-payroll-entry' class='subl'>Payroll Entry</a><a href='#payroll-vat-payroll-end-of-service-leave' data-jump='payroll-vat-payroll-end-of-service-leave' class='subl'>End of Service &amp; Leave</a><a href='#payroll-vat-payroll-payroll-reports-worksheets-r5-r6-r10' data-jump='payroll-vat-payroll-payroll-reports-worksheets-r5-r6-r10' class='subl'>Payroll Reports &amp; Worksheets (R5 / R6 / R10)</a><a href='#payroll-vat-payroll-cnss-forms' data-jump='payroll-vat-payroll-cnss-forms' class='subl'>NSSF &amp; MOF Forms (Excel)</a><a href='#payroll-vat-payroll-tax-nssf-settings' data-jump='payroll-vat-payroll-tax-nssf-settings' class='subl'>Tax &amp; NSSF Settings</a><a href='#payroll-vat-quarterly-vat' data-jump='payroll-vat-quarterly-vat' class=''>Quarterly VAT</a></nav><section class='topic' id='payroll-vat-payroll' data-title='Payroll'><h3>Payroll</h3><div class='where'>Payroll &amp; VAT &gt; Payroll</div>
+<p>Six sub-tabs.</p>
+</section>
+<section class='topic sub' id='payroll-vat-payroll-employees' data-title='Payroll › Employees'><h3><span class='parent'>Payroll ›</span> Employees</h3>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>New Employee</b>, <b>Edit Selected</b> (or double-click).</li>
+<li><b>Official Forms (Excel)</b>: opens Payroll › NSSF &amp; MOF Forms (Excel) with the selected employee.</li>
+<li><b>Refresh</b>.</li>
+<li>"NSSF employee forms:" <b>Employment Declaration Worksheet</b>, <b>Termination Declaration Worksheet</b>.</li>
+</ul>
+<p class='lead'><b>Employee window</b></p>
+<ul>
+<li>Fields: Employee ID / 4-digit prefix, Full Name, National ID, MOF Number, NSSF Number, Address, Contact Number, Nationality, Father's Name, Mother's Name, Date of Birth, Place of Birth, Job Title, Hire Date, Leave Date, Base Salary, Salary Expense Account, Payable Account.</li>
+<li>More fields: Marital Status, Children, Currency, Spouse Works, Active, Payroll Group (employee / manager), Sex.</li>
+<li>"Family changes": Married during the year and its date; New child and date of birth; <b>Add child</b>, <b>Remove</b>.</li>
+<li>"Employee register": unit, cost of living, indemnities, representation, address parts, Phone 2, leaving reason, end-of-service contributions before Saber, annual leave days, leave carried.</li>
+<li>"Not subject to NSSF" ticks: End of service, Family allowances, Sickness &amp; maternity.</li>
+<li>Button: <b>Save Employee</b>.</li>
+</ul>
+<p class='lead'><b>List columns</b></p>
+<ul>
+<li>Employee ID, Employee Name, Job Title, Starting Date, Leaving Date, Branch, Currency, Base Salary, NSSF Number, Active.</li>
+</ul>
+</section>
+<section class='topic sub' id='payroll-vat-payroll-payroll-entry' data-title='Payroll › Payroll Entry'><h3><span class='parent'>Payroll ›</span> Payroll Entry</h3>
+<p class='lead'><b>"Monthly Payroll" form</b></p>
+<ul>
+<li><b>Employee</b>, <b>Period Date</b>.</li>
+<li>Salary, Transport, Overtime, Commission, Retroactive Salary, Schooling, Bonus, 13th Month, Director Remuneration (not taxable).</li>
+<li><b>Retro From</b>, <b>Retro To</b>.</li>
+<li><b>Transport Days</b>.</li>
+<li><b>Family Allocation</b>.</li>
+<li>The result line shows Gross, Tax, Employee NSSF and Net, plus a breakdown and compliance notes.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Schooling Law</b> (window with <b>Use Amount in Payroll</b>)</li>
+<li><b>Calculate</b></li>
+<li><b>Save Payroll</b></li>
+<li><b>Post Selected to Accounting</b></li>
+<li><b>Monthly Payroll Sheet | الحركة الشهرية</b>:</li>
+<ul>
+<li><b>Month (MM-YYYY)</b>.</li>
+<li><b>Load</b>, <b>Calculate All</b>, <b>Save All (draft)</b>, <b>Post All</b>, <b>Export Excel</b>.</li>
+<li>Grid: Reg. No., Name, Salary, Overtime, Commission, Bonus, 13th, Transport, Days, the allowances, Gross, Tax, Emp. NSSF, Family alloc., Net, Status.</li>
+</ul>
+</ul>
+<p class='lead'><b>List columns</b></p>
+<ul>
+<li>Payroll No., Period, Employee, Currency, Gross, Tax, Employee NSSF, Net Salary, Status.</li>
+</ul>
+</section>
+<section class='topic sub' id='payroll-vat-payroll-end-of-service-leave' data-title='Payroll › End of Service &amp; Leave'><h3><span class='parent'>Payroll ›</span> End of Service &amp; Leave</h3>
+<ul>
+<li><b>At date</b>.</li>
+<li>Buttons:</li>
+<ul>
+<li><b>End-of-Service Provision</b>, <b>Post Provision</b></li>
+<li><b>Leave Balances</b></li>
+<li><b>Excel</b>, <b>PDF</b></li>
+<li><b>Payslips of month (MM-YYYY)</b> with <b>All Payslips (PDF)</b></li>
+</ul>
+<li>"Leave taken":</li>
+<ul>
+<li>Fields: <b>Employee</b>, <b>From</b>, <b>To</b>, <b>Days (empty = calendar days)</b>, type (Annual leave / Sick leave / Unpaid leave / Other), <b>Note</b>.</li>
+<li>Buttons: <b>Add Leave</b>, <b>Delete Selected</b>.</li>
+<li>Columns: Employee, From, To, Days, Type, Note.</li>
+</ul>
+</ul>
+</section>
+<section class='topic sub' id='payroll-vat-payroll-payroll-reports-worksheets-r5-r6-r10' data-title='Payroll › Payroll Reports &amp; Worksheets (R5 / R6 / R10)'><h3><span class='parent'>Payroll ›</span> Payroll Reports &amp; Worksheets (R5 / R6 / R10)</h3>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li>Report.</li>
+<li><b>Period</b>: Monthly / Quarterly / Yearly. Auto (employee count) is added for the NSSF report.</li>
+<li><b>Year</b>, month or quarter.</li>
+<li><b>Group</b>: Employees and Managers (separate) / Employees only / Managers only.</li>
+<li><b>Include draft payroll (preview only)</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Generate</b></li>
+<li><b>Export Excel</b>, <b>Export PDF</b></li>
+<li><b>Open / Fill PDF</b></li>
+<li><b>Employee List / Edit</b></li>
+<li><b>Filed NSSF Wages</b>: 12 months; <b>Save 12 Months</b></li>
+<li><b>Record NSSF Payment</b> (<b>Save Payment</b>)</li>
+<li><b>CNSS Contributions Form</b>, <b>CNSS Annual Settlement Form</b>, <b>CNSS Annual Employee Declaration</b></li>
+</ul>
+<p><b>Reports</b> (official figures use posted payroll, in LBP)</p>
+<ul>
+<li><b>R10 - Quarterly withholding</b>: "Salary tax withheld". Columns: Emp. No., Employee Name, MOF No., Months, the salary components, Gross, Deductions &amp; Exemptions, Taxable, Income Tax, of which Retro Tax. Plus an NSSF contributions section and a grand total.</li>
+<li><b>R5 - Annual employer declaration</b>: "Declaration summary" (Item, Amount (LBP)) and "Employee schedule" (Emp. No., Name, MOF No., NSSF No., Family Status, Months, Gross, Deductions &amp; Exemptions, Taxable, Income Tax).</li>
+<li><b>R6 - Individual annual statement</b>: month by month per employee. Columns: components, Retro Period, Gross, Taxable, Income Tax, Retro Tax, Employee NSSF, NSSF Family Allowance, Net Salary, Status.</li>
+<li><b>NSSF - Contributions table (all employees)</b>: one line per employee, a monthly detail, a payment summary by branch, the rules applied, and the company employee list.</li>
+<li><b>SETTLEMENT - NSSF annual reconciliation</b>: payroll vs filed wage bases, contributions vs payments, annual review.</li>
+<li><b>CEILINGS - NSSF ceilings by month</b>.</li>
+<li><b>R5_BOXES - R5 official boxes (ر5)</b> and <b>R10_BOXES - R10 official boxes (ر10)</b>: Box, Item, البيان, employee and manager columns.</li>
+<li><b>R6_LINES - R6 lines 100-360 (ر6)</b>.</li>
+<li><b>AUDIT - Audit statement R6 vs R5</b>: "For accounting audit only", "Sum of all R6 statements by line", "Reconciliation R6 vs R5".</li>
+<li><b>MOVEMENT - Monthly &amp; year-to-date movement</b>.</li>
+<li><b>REGISTER - Employees register</b>.</li>
+<li><b>LEAVERS - Leavers register</b>.</li>
+</ul>
+</section>
+<section class='topic sub' id='payroll-vat-payroll-cnss-forms' data-title='Payroll › NSSF &amp; MOF Forms (Excel)'><h3><span class='parent'>Payroll ›</span> NSSF &amp; MOF Forms (Excel) · نماذج الضمان والمالية</h3>
+<p>The 8 official forms as editable Excel files in the layout of the printed forms, filled automatically. Yellow cells can be changed; amounts are numbers and the totals are formulas, so the form stays correct after a change.</p>
+<p class='lead'><b>Forms</b></p>
+<ul>
+<li><b>CNSS 190A</b> – contributions due for a month or a quarter: number of employees, wages, rate and contribution of each branch, family allowances paid, net due (from the posted payroll).</li>
+<li><b>CNSS 351</b> – contributions from the annual declaration: (wages of the year − wages declared) × rate.</li>
+<li><b>CNSS 386</b> – annual nominative declaration: wages declared each month, the yearly settlement, and a second sheet with the employee / month schedule.</li>
+<li><b>CNSS 2AA</b>, <b>CNSS 41A</b>, <b>CNSS leaving notice</b>, <b>MOF R3</b> – from Settings › Company and the selected employee.</li>
+<li><b>MOF R3-1</b> – company letter (no employee needed).</li>
+</ul>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li><b>Form</b>, <b>Employee</b>, <b>Period</b>, <b>Year</b>, <b>Month / quarter</b>.</li>
+<li>"Payment details" (optional): Payment date, Receipt / document no., Method – written on 190A / 351 (the method is marked with X).</li>
+<li>"Missing data and review notes" and "What the form will be filled with".</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Auto-fill / Refresh</b></li>
+<li><b>Create Excel…</b> – saves the filled form; with "Open in Excel after saving" it opens at once.</li>
+<li><b>Print last saved file</b></li>
+</ul>
+</section>
+<section class='topic sub' id='payroll-vat-payroll-tax-nssf-settings' data-title='Payroll › Tax &amp; NSSF Settings'><h3><span class='parent'>Payroll ›</span> Tax &amp; NSSF Settings</h3>
+<p class='lead'><b>Period fields</b></p>
+<ul>
+<li>Date From/To, allowances, NSSF rates and ceilings, accounts, transport, schooling, rounding, minimum wage, family allowance.</li>
+<li><b>Tax Brackets JSON</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Load Settings</b>, <b>Save Settings</b></li>
+<li><b>Load Lebanese Law 2024-2026</b></li>
+<li><b>Print Settings</b>, <b>Settings PDF</b></li>
+<li><b>Rules for the Adviser (PDF)</b>, <b>Rules (Excel)</b></li>
+<li><b>Adviser confirmation...</b></li>
+</ul>
+<p class='lead'><b>Other panels</b></p>
+<ul>
+<li>A period table "NSSF ceilings, rates and family allowance by period" with <b>Add Period</b>, <b>Delete Period</b>, <b>Save Periods</b>.</li>
+<li>"Family allowance reference · 2024–2026".</li>
+<li>"Standard Posting Accounts" (Component / Employees / Managers).</li>
+</ul>
+</section>
+<section class='topic' id='payroll-vat-quarterly-vat' data-title='Quarterly VAT'><h3>Quarterly VAT</h3><div class='where'>Payroll &amp; VAT &gt; Quarterly VAT</div>
+<p>The quarterly VAT return, worksheets, official forms and the settlement entry.</p>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li><b>&lt;</b> / <b>&gt;</b> to move between quarters.</li>
+<li><b>Year</b>, <b>Quarter</b>.</li>
+<li><b>Currency</b>.</li>
+<li><b>Include Review documents</b>.</li>
+<li><b>Credit B/F (optional)</b>.</li>
+<li><b>Deduction ratio (Art. 31)</b>: Each quarter alone (automatic) / Annual (provisional + Q4 adjustment).</li>
+<li><b>Provisional %</b> with <b>Save %</b>.</li>
+<li><b>Refund requested (Art. 30)</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Generate</b></li>
+<li><b>Save Return (lock quarter)</b></li>
+<li><b>Reopen Saved Return</b> (administrator only)</li>
+<li><b>Export Excel</b>, <b>Export PDF</b></li>
+<li><b>Filing Worksheet PDF</b>, <b>Filing Worksheet Excel</b></li>
+<li><b>Open / Fill VAT PDF</b></li>
+<li><b>Official Form Q1-2 (PDF)</b>, <b>Official Form Excel</b>: periodic declaration, settlement, Q11-2 annex, deduction ratio, Q13-2 ten largest suppliers and customers.</li>
+<li><b>Taux Récupérable (PDF)</b>, <b>Taux Récupérable Excel</b></li>
+<li><b>VAT Settlement Entry...</b>: <b>Preview</b> and <b>Post Settlement Voucher</b>.</li>
+</ul>
+<p class='lead'><b>Sub-tabs</b></p>
+<ul>
+<li><b>VAT Return</b>: VAT calculation by currency, summary in the VAT currency, partial deduction right (Art. 31).</li>
+<li><b>Filing Worksheet</b>: based on the published specimen; not an official form.</li>
+<li><b>Check with the Books</b>: VAT accounts in the books vs the return, and documents to check. Export: <b>Excel</b>, <b>PDF</b>.</li>
+<li><b>Supporting Documents</b>: Date, Document, Customer / Supplier, Category, Deductible, Currency, Base, VAT, Rate, VAT (LBP), Status.</li>
+<li><b>Manual Adjustments</b>:</li>
+<ul>
+<li>Fields: Output VAT / Deductible VAT / Non-deductible VAT, currency, <b>Amount (+/-)</b>, <b>Reason</b>.</li>
+<li>Buttons: <b>Add Adjustment</b>, <b>Delete Selected</b>.</li>
+</ul>
+<li><b>Saved Returns</b>: Quarter, Net VAT, Credit B/F, Payable, Credit C/F, Saved by, Saved at.</li>
+</ul>
+</section></div><div class='tab' id='tab-settings'><h2 style='margin-top:14px'>Settings · الإعدادات</h2><nav class='toc'><a href='#settings-security-backup-rates' data-jump='settings-security-backup-rates' class=''>Security / Backup / Rates</a><a href='#settings-security-backup-rates-users-permissions-administrator-only' data-jump='settings-security-backup-rates-users-permissions-administrator-only' class='subl'>Users &amp; Permissions (administrator only)</a><a href='#settings-security-backup-rates-backup-restore-administrators-my-backu' data-jump='settings-security-backup-rates-backup-restore-administrators-my-backu' class='subl'>Backup &amp; Restore (administrators) / My Backups (others; not shown to viewers)</a><a href='#settings-security-backup-rates-exchange-rates' data-jump='settings-security-backup-rates-exchange-rates' class='subl'>Exchange Rates</a><a href='#settings-security-backup-rates-branches' data-jump='settings-security-backup-rates-branches' class='subl'>Branches</a><a href='#settings-security-backup-rates-general-settings' data-jump='settings-security-backup-rates-general-settings' class='subl'>General Settings</a><a href='#settings-security-backup-rates-departments' data-jump='settings-security-backup-rates-departments' class='subl'>Departments</a><a href='#settings-security-backup-rates-projects' data-jump='settings-security-backup-rates-projects' class='subl'>Projects</a><a href='#settings-security-backup-rates-accounting-settings' data-jump='settings-security-backup-rates-accounting-settings' class='subl'>Accounting Settings</a><a href='#settings-security-backup-rates-audit-trail-administrator-only' data-jump='settings-security-backup-rates-audit-trail-administrator-only' class='subl'>Audit Trail (administrator only)</a></nav><section class='topic' id='settings-security-backup-rates' data-title='Security / Backup / Rates'><h3>Security / Backup / Rates</h3><div class='where'>Settings &gt; Security / Backup / Rates</div>
+<p>Which tabs appear depends on the user's role.</p>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-users-permissions-administrator-only' data-title='Security / Backup / Rates › Users &amp; Permissions (administrator only)'><h3><span class='parent'>Security / Backup / Rates ›</span> Users &amp; Permissions (administrator only)</h3>
+<p class='lead'><b>Fields</b></p>
+<ul>
+<li>Username, Password.</li>
+<li>Role (admin / accountant / viewer), Language.</li>
+<li>Valid until.</li>
+<li>Ticks: Active, Payroll access, VAT access, Can delete / cancel, Can approve.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Save User</b>, <b>Renew 1 Year</b>, <b>New / Clear</b>.</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>ID, Username, Role, Language, Status, Valid Until, Days Left, Payroll, VAT, Delete, Approve.</li>
+</ul>
+<p><b>Licence box</b> ("Licence of this installation")</p>
+<ul>
+<li>Installation ID with <b>Copy</b>.</li>
+<li>New licence code with <b>Apply Code</b>.</li>
+<li><b>Make a licence (seller)...</b>.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-backup-restore-administrators-my-backu' data-title='Security / Backup / Rates › Backup &amp; Restore (administrators) / My Backups (others; not shown to viewers)'><h3><span class='parent'>Security / Backup / Rates ›</span> Backup &amp; Restore (administrators) / My Backups (others; not shown to viewers)</h3>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Create Backup Now</b></li>
+<li><b>Save Backup As... (USB / Drive)</b></li>
+<li><b>Open Backup Folder</b>, <b>Open Log Folder</b></li>
+<li><b>Network Check</b></li>
+<li><b>Restore Selected</b> (administrator only)</li>
+</ul>
+<p class='lead'><b>Administrator panels</b></p>
+<ul>
+<li>"Close the books (period lock)": <b>Lock up to</b>, <b>Lock</b>, <b>Unlock</b>.</li>
+<li>"Second copy of every backup": Folder, <b>Browse...</b>, <b>Use OneDrive</b>, Keep, <b>Save</b>.</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>Backup File, Type, Checked, Size, Created.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-exchange-rates' data-title='Security / Backup / Rates › Exchange Rates'><h3><span class='parent'>Security / Backup / Rates ›</span> Exchange Rates</h3>
+<ul>
+<li>Fields: <b>Date From</b>, <b>Date To</b>, from currency <b>to</b> currency, rate.</li>
+<li>Buttons: <b>Add Daily Rate</b>, <b>Restore EUR Rates 2024-Today</b>, <b>Restore ALL Currencies 2024-Today</b>.</li>
+<li><b>Create currency</b>: Code (3 letters), Name, with <b>Add Currency</b>.</li>
+<li>Columns: Date, From, To, Daily Average, Entries, Saved. Double-click a line to edit it.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-branches' data-title='Security / Backup / Rates › Branches'><h3><span class='parent'>Security / Backup / Rates ›</span> Branches</h3>
+<ul>
+<li><b>New Branch Name</b> with <b>Save Branch</b>.</li>
+<li>Columns: ID, Branch Name, Active.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-general-settings' data-title='Security / Backup / Rates › General Settings'><h3><span class='parent'>Security / Backup / Rates ›</span> General Settings</h3>
+<ul>
+<li>Main Currency 1 (base), Main Currency 2.</li>
+<li>Company Name, Address, Phone, MOF / VAT Number, NSSF Employer Number, Email, Website, Logo File Path.</li>
+<li>Registered in VAT, VAT Registration Date.</li>
+<li>VAT Rate %, VAT Return Currency 1 / 2.</li>
+<li>Button: <b>Save Settings</b>.</li>
+<li>"Screen layout (this computer)": a tick for the side menu.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-departments' data-title='Security / Backup / Rates › Departments'><h3><span class='parent'>Security / Backup / Rates ›</span> Departments</h3>
+<ul>
+<li><b>Show Department in all sheets</b>.</li>
+<li>Fields: Code (blank = automatic), Department Name, Active.</li>
+<li>Buttons: <b>New</b>, <b>Save</b>.</li>
+<li>List: Code, Department, Active.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-projects' data-title='Security / Backup / Rates › Projects'><h3><span class='parent'>Security / Backup / Rates ›</span> Projects</h3>
+<ul>
+<li><b>Show Project in all sheets</b>.</li>
+<li>Fields: Code, Project Name, Start Date, End Date, Notes, Customer, Status (open / on hold / completed / cancelled), Active.</li>
+<li>Buttons: <b>New</b>, <b>Save</b>.</li>
+<li>List: Code, Project, Customer, Start, End, Status, Active.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-accounting-settings' data-title='Security / Backup / Rates › Accounting Settings'><h3><span class='parent'>Security / Backup / Rates ›</span> Accounting Settings</h3>
+<p class='lead'><b>Screens and reports shown</b></p>
+<ul>
+<li>"This company uses (administrator)" and "I see (only for me)": ticks for each screen, Fixed Assets, Production, Bank Reconciliation, and each Financial Report.</li>
+<li>Buttons: <b>Save for the Company</b>, <b>Save for Me</b>.</li>
+</ul>
+<p class='lead'><b>"Default posting accounts"</b></p>
+<ul>
+<li>Purchases, Purchases without VAT, Expenses imported, Sales, Sales of goods, Output VAT, Deductible VAT purchases / expenses, Cash, Bank commission, Exchange gain / loss, VAT payable, VAT credit, Non-deductible VAT.</li>
+<li>Buttons: <b>Save Default Accounts</b>, <b>Program Defaults</b>.</li>
+</ul>
+<p class='lead'><b>"Approval (internal control)"</b></p>
+<ul>
+<li>Ticks: Sales / purchase invoices, Journal vouchers, Receipts and payments, Expenses.</li>
+<li>Buttons: <b>Save</b>, <b>Pending approvals (n)</b> (opens a window with <b>Approve Selected</b>).</li>
+</ul>
+<p class='lead'><b>"Dashboard"</b></p>
+<ul>
+<li>The off-budget % threshold, with <b>Save</b>.</li>
+</ul>
+<p class='lead'><b>"Year-End Check"</b></p>
+<ul>
+<li><b>Run Year-End Check</b>.</li>
+</ul>
+<p class='lead'><b>"VAT by customer / supplier (VAT 140)"</b></p>
+<ul>
+<li>Ticks: every customer / supplier has its own VAT account; close the VAT automatically when the return is saved.</li>
+<li>Grid: Ledger / VAT / Main / Closing.</li>
+<li>Buttons: <b>Save</b>, <b>Start from (&gt;)</b>, <b>Create VAT Accounts</b>, <b>Testing VAT Accounts</b>.</li>
+</ul>
+</section>
+<section class='topic sub' id='settings-security-backup-rates-audit-trail-administrator-only' data-title='Security / Backup / Rates › Audit Trail (administrator only)'><h3><span class='parent'>Security / Backup / Rates ›</span> Audit Trail (administrator only)</h3>
+<p class='lead'><b>Filters</b></p>
+<ul>
+<li><b>From</b>, <b>To</b>, <b>User</b>, <b>Record</b>, <b>Action</b>, <b>Contains</b>.</li>
+</ul>
+<p class='lead'><b>Buttons</b></p>
+<ul>
+<li><b>Show</b>, <b>Excel</b>, <b>PDF</b>.</li>
+<li>"For the auditor:" <b>Verify Audit Trail</b>, <b>Audit Report (Excel)</b>, <b>Audit Report (PDF)</b>.</li>
+<li>"Late entries = entered more than [30] days after their date".</li>
+</ul>
+<p class='lead'><b>Columns</b></p>
+<ul>
+<li>Date / time (UTC), User, Action, Record, No., Details.</li>
+</ul>
+<p class='lead'><b>Audit Report sections</b></p>
+<ol>
+<li>Integrity of the audit trail</li>
+<li>Activity per user</li>
+<li>Changes to documents after they were saved</li>
+<li>Late entries</li>
+<li>Entries made by the administrator</li>
+<li>Entries outside working hours</li>
+<li>Manual journal vouchers on cash or bank (51 / 53)</li>
+</ol>
+</section></div>
+</main>
+</div>
+<script>
+const tabs=[...document.querySelectorAll('.tab')], btns=[...document.querySelectorAll('aside button')];
+const q=document.getElementById('q'), results=document.getElementById('results'), count=document.getElementById('count');
+function show(key, anchor){ tabs.forEach(t=>t.classList.toggle('on', t.id==='tab-'+key)); btns.forEach(b=>b.classList.toggle('on', b.dataset.tab===key));
+  results.classList.remove('on'); if(anchor){ const el=document.getElementById(anchor); if(el){ el.scrollIntoView({behavior:'smooth'}); el.style.outline='3px solid #B78B45'; setTimeout(()=>el.style.outline='',1800);} } else window.scrollTo(0,0); }
+btns.forEach(b=>b.addEventListener('click',()=>{ q.value=''; clearMarks(); count.textContent=''; show(b.dataset.tab); }));
+document.querySelectorAll('[data-jump]').forEach(a=>a.addEventListener('click',e=>{ e.preventDefault(); show(a.closest('.tab').id.slice(4), a.dataset.jump); }));
+const fold=s=>s.toLowerCase().normalize('NFKD').replace(/[ً-ٰٟ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+const topics=[...document.querySelectorAll('section.topic')].map(s=>({el:s, tab:s.closest('.tab').id.slice(4), tabName:document.querySelector(`aside button[data-tab="${s.closest('.tab').id.slice(4)}"]`).firstChild.textContent,
+  title:(s.querySelector('h2,h3')||{}).textContent||'', text:s.textContent}));
+function clearMarks(){ document.querySelectorAll('mark').forEach(m=>{ m.replaceWith(document.createTextNode(m.textContent)); }); document.querySelectorAll('.tab').forEach(t=>t.normalize()); }
+function mark(root, words){ const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT); const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(n=>{ const text=n.nodeValue; const low=text.toLowerCase(); let hits=[]; words.forEach(w=>{ let i=low.indexOf(w); while(i>=0&&w){ hits.push([i,i+w.length]); i=low.indexOf(w,i+w.length);} });
+    if(!hits.length) return; hits.sort((a,b)=>a[0]-b[0]); const frag=document.createDocumentFragment(); let at=0;
+    hits.forEach(([a,b])=>{ if(a<at) return; frag.append(text.slice(at,a)); const m=document.createElement('mark'); m.textContent=text.slice(a,b); frag.append(m); at=b; }); frag.append(text.slice(at)); n.replaceWith(frag); }); }
+let timer; q.addEventListener('input',()=>{ clearTimeout(timer); timer=setTimeout(search,150); });
+function search(){ clearMarks(); const raw=q.value.trim(); if(raw.length<2){ results.classList.remove('on'); count.textContent=''; return; }
+  const words=raw.toLowerCase().split(/\s+/).filter(Boolean), fw=words.map(fold);
+  const hits=topics.filter(t=>{ const f=fold(t.title+' '+t.text); return fw.every(w=>f.includes(w)); })
+    .sort((a,b)=>fw.filter(w=>fold(b.title).includes(w)).length-fw.filter(w=>fold(a.title).includes(w)).length);
+  count.textContent=hits.length+(hits.length===1?' result':' results');
+  results.innerHTML=hits.length?hits.map((h,i)=>{ const f=h.text.replace(/\s+/g,' '); const pos=Math.max(0,fold(f).indexOf(fw[0])-60);
+    return `<div class='hit' data-i='${i}'><b class='t'>${h.title}</b><small>${h.tabName}</small><div>…${f.slice(pos,pos+190).replace(/</g,'&lt;')}…</div></div>`; }).join('')
+    :`<div class='empty'>No result for “${raw.replace(/</g,'&lt;')}”. Try fewer or other words (English or Arabic).</div>`;
+  results.querySelectorAll('.hit').forEach(d=>{ const h=hits[+d.dataset.i]; mark(d, words); d.addEventListener('click',()=>{ show(h.tab, h.el.id); mark(h.el, words); }); });
+  tabs.forEach(t=>t.classList.remove('on')); btns.forEach(b=>b.classList.remove('on')); results.classList.add('on'); window.scrollTo(0,0); }
+document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'){ e.preventDefault(); q.focus(); q.select(); } if(e.key==='Escape'&&q.value){ q.value=''; search(); show(btns.find(b=>b.classList.contains('on'))?.dataset.tab||'start'); } });
+</script>
+</body>
+</html>

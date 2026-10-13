@@ -1,0 +1,71 @@
+vaser> SAMPLE CONTRACTORS S.A.L
+Ref Nb: SMP-30-24
+Bill To:
+Messrs. Sample Client SARL
+VAT NB:1234567-601
+Project:
+Engineering, Procurement, Construction, Start - up and Testing of a
+Sample warehouse - Lebanon.
+Subject:
+VARIOUS VARIATION ORDER EXECUTED - 3
+‘A= BASE COARSE:
+[| pate [ privername [ms [ue Te
+[oes fe
+{Driver A [27.00] ¢ 19.00 Ts 513.00 |
+[sito [Papa —__f__augf's cs
+[Driver A [54.00] ¢ 19.00 | 1,026.00
+[Driver B 20.00 ¢ 19.00 [$380.00 |
+[Driver C 20.00] ¢ 19.00 Ts 380.00 |
+[Driver A | 27.00] ¢ 19.00 Ts 513.00 |
+{Driver D [27.00 ¢ 19.00 $513.00 |
+[Driver E 20.00] ¢ 19.00 | "380.00
+[Driver B | 20.00, g 19.00 $380.00 |
+7-Mar-24 [Driver C [20.00] 19.00 Ts 380.00 |
+[Driver A [54.00] ¢ 19.00 [$1,026.00 |
+ldriver d_ | 54.00 $39.00 $1,026.00
+[Driver B 20.00] 9. 00 Ts 380.00 |
+}-Mar-: [Driver C [20.00] ¢ 39.00 Ts 380.00 |
+aerate [Driver A [27.00 ¢ 39.00 Ts 513.00 |
+{Driver D 27.00) $19.00 | ¢513.00 |
+6
+[Driver E 20.00[ ¢ 19.00 | ¢ 380.00}
+TOTAL m> 619.00 TOTALUSD $11,761.00
+B: LIMESTONE (ROCKS);
+[pate TT privername [ms [ue Te
+[Driver B [20.00 $7.50 $350.00 |
+[Driver E 20.00 7 so Ts 350.00 |
+{Driver A [27.00 $17.50 Ts 472.50 |
+ne
+{Driver C | 40.00] § 17.50 [$700.00 |
+[Driver E 20.00[ $17.50 | $350.00 |
+Mar-24 [Driver B | 20.00f'¢ 7.50 $350.00 |
+[Driver C | 20.00] § 17.50 [$s 350.00 |
+[Driver A [27.00] 17.50 [$472.50 |
+IDriver C _[20.00f' $s i7.s0 $350.00}
+TOTAL m> 281.00 TOTALUSD $4,917.50
+(C- FINE GRAVEL:
+[eT bescrrprion [ms [up re |
+(Ca TFine Gravel 00.00 $22.00 [$2,200.00]
+IQTALUSD $2,200.00
+TOTAL A+B+C $ 18,878.50
+VAT 11% $ 2,076.64
+Grand Total; $20,955.14:
+Only Twenty Thousand Nine Hundred Fifty Five US.Dollars & 14% (Incl VAT) L
+Payment to be released within 7 days as per Contract Agreement (Exhibit D, Article 1.42) SAMPLE CONTRAC L.
+Bank Account Details: SAMPLE
+Beneficiary: Sample Contractors S.A.L .
+Bank Name: SAMPLE BANK S.A.L Tel 05/9 3
+Address: Sample Street, Beirut - Lebanon
+Account nb 0000-000000-000
+Swift Code: SMPLLBBE
+Iban NB: LB00 0000 0000 0000 0000 0000 0000,
+Currency: USD
+‘SAMPLE CONTRACTORS S.A.L
+Correspondent Bank Details:
+Bank Name: Sample Correspondent Bank
+City: Sample City
+Account Nb: 000000000
+Swift Code: SMPLUS00
+Currency: USD.
+Capital $00 000 000 LBP - C.R. 00 000 Beirut - VAT Registery 000 000-601
+Sample Center, Main Road, Beirut ~ Lebanon

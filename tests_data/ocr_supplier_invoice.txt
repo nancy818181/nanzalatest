@@ -1,0 +1,22 @@
+Sample K. Supplier
+Beirut - Hamra
+601-0000000 :
+03000000 = - - 07000000 :
+supplier @ example.com :
+Name & Address
+16 SAMPLE CLIENT S.A.R.L
+INVOICE No.
+16 . .
+| Reference o
+“01/0000000*
+dete | Account No. | Currency Code
+01/11/2024 | 41100000 | eebbAle
+%
+Amount Discount} Total Price Description Code
+38000 :
+4180 VAT 11%
+t)) g
+An amount of only 42,180.00
+374,110,000 VAT 11% LBP
+
+INVOICE No.

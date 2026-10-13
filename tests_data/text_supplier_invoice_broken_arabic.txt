@@ -1,0 +1,49 @@
+16مقر تر تاف
+INVOICE No.
+01/11/2024
+خيرقتلا
+ مقر تر روتاف 
+SAMPLE CLIENT  S.A.R.L
+خف  خي خ
+ت
+خيعلش     
+Currency Code
+Beirut - Hamra
+-  07000000
+Name & Address
+خياقرا
+ي ت - افج خي-عقيص
+رف  - خيقا ختص
+فتاهلا :03000000
+خيفاف خيعقيص601-0000000
+خيعفتا
+Reference16
+41100000
+تاف خي مقر
+Account No.
+للعاإsupplier@example.com
+01/0000000
+خيفاف خيعقيص1234567
+Sample K. Supplier
+
+Amount
+
+TotalPrice
+ا
+Code
+ولا
+Description
+%مح
+Discount
+42180 42180 Item134ت0
+مح
+VAT11%
+
+ودق لبم
+Anamountofonly وو اوفوو قو
+38000
+0
+4180
+42,180.00قو
+وا:
+VAT11%LBP374,110,000
