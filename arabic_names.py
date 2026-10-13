@@ -135,6 +135,46 @@ def transliterate(word: str) -> str:
     return "".join(out) + end
 
 
+# 2.9.112: address words (place kind); in Arabic the word comes first: "Hamra Street" -> "شارع الحمرا"
+ADDRESS_WORDS = {"street": "شارع", "st": "شارع", "st.": "شارع", "road": "طريق", "rd": "طريق", "rd.": "طريق", "avenue": "جادة",
+                 "ave": "جادة", "highway": "أوتوستراد", "square": "ساحة", "building": "بناية", "bldg": "بناية", "bldg.": "بناية",
+                 "floor": "طابق", "center": "سنتر", "centre": "سنتر", "tower": "برج", "near": "قرب",
+                 "next": "بجانب", "to": "", "block": "بلوك", "main road": "الطريق العام", "main street": "الشارع العام", "old road": "الطريق القديمة"}
+
+
+# 2.9.112: company names - business words translated, the legal form at the end ("Sample Trading SARL" -> "سامبل للتجارة ش.م.م.")
+LEGAL_FORMS = {"sarl": "ش.م.م.", "s.a.r.l": "ش.م.م.", "s.a.r.l.": "ش.م.م.", "sal": "ش.م.ل.", "s.a.l": "ش.م.ل.", "s.a.l.": "ش.م.ل.",
+               "llc": "ش.م.م.", "ltd": "المحدودة", "inc": "ش.م.", "co": "وشركاه", "holding": "هولدنغ", "offshore": "أوف شور"}
+BUSINESS_WORDS = {"trading": "للتجارة", "trade": "للتجارة", "company": "شركة", "group": "مجموعة", "audit": "للتدقيق", "auditing": "للتدقيق",
+                  "accounting": "للمحاسبة", "consulting": "للاستشارات", "consultancy": "للاستشارات", "services": "للخدمات", "service": "للخدمات",
+                  "contracting": "للمقاولات", "construction": "للبناء", "engineering": "للهندسة", "industries": "للصناعات", "industry": "للصناعة",
+                  "industrial": "الصناعية", "commercial": "التجارية", "general": "العامة", "international": "الدولية", "lebanon": "لبنان",
+                  "lebanese": "اللبنانية", "real estate": "العقارية", "estate": "العقارية", "pharmacy": "صيدلية", "pharma": "للأدوية",
+                  "restaurant": "مطعم", "hotel": "فندق", "bakery": "فرن", "transport": "للنقل", "import": "للاستيراد", "export": "للتصدير",
+                  "electric": "للكهرباء", "electronics": "للإلكترونيات", "technology": "للتكنولوجيا", "tech": "للتكنولوجيا", "solutions": "للحلول",
+                  "management": "للإدارة", "foods": "للأغذية", "food": "للأغذية", "medical": "الطبية", "insurance": "للتأمين", "printing": "للطباعة",
+                  "sons": "أولاده", "brothers": "إخوان", "and": "و", "&": "و", "for": "", "the": "", "of": ""}
+
+
+def company_arabic(text) -> str:
+    """A company name in Arabic: known business words translated, names written in Arabic letters, the legal form last."""
+    text = str(text or "").strip()
+    if not text or (re.search(r"[؀-ۿ]", text) and not re.search(r"[A-Za-z]", text)): return text
+    words = [w for w in re.split(r"[\s,]+", text) if w]
+    legal = [LEGAL_FORMS[w.lower().rstrip(".") if w.lower().rstrip(".") in LEGAL_FORMS else w.lower()] for w in words
+             if w.lower() in LEGAL_FORMS or w.lower().rstrip(".") in LEGAL_FORMS]
+    out = []
+    for w in words:
+        low = w.lower()
+        if low in LEGAL_FORMS or low.rstrip(".") in LEGAL_FORMS: continue
+        if low in BUSINESS_WORDS:
+            if BUSINESS_WORDS[low]: out.append(BUSINESS_WORDS[low])
+        else:
+            found = NAMES.get(low) or PLACES.get(low)
+            out.append(found or transliterate(w[:-1] if len(w) > 4 and low.endswith(("ple", "ble", "ge")) else w))
+    return " ".join(out + legal).strip()
+
+
 def _lookup(phrase: str, *tables) -> str | None:
     for table in tables:
         if phrase in table: return table[phrase]
@@ -147,6 +187,7 @@ def to_arabic(text, kind: str = "name") -> str:
     if not text: return ""
     if re.search(r"[؀-ۿ]", text) and not re.search(r"[A-Za-z]", text): return text  # already Arabic
     low = re.sub(r"\s+", " ", text.lower())
+    if kind == "company": return company_arabic(text)
     if kind == "nationality":
         return NATIONALITIES.get(low) or NATIONALITIES.get(low.rstrip("e")) or to_arabic(text, "name")
     if kind == "job":
@@ -156,6 +197,10 @@ def to_arabic(text, kind: str = "name") -> str:
             words = [words[-1]] + words[:-1]
         return " ".join(filter(None, (JOB_WORDS.get(w) if w in JOB_WORDS else transliterate(w) for w in words)))
     tables = (PLACES, NAMES) if kind == "place" else (NAMES, PLACES)
+    if kind == "place":
+        tables = tables + (ADDRESS_WORDS,)
+        moved = re.match(r"^(.+?)\s+(street|st\.?|road|rd\.?|avenue|ave\.?|building|bldg\.?|tower|center|centre|square)$", text, re.I)
+        if moved and "," not in text and low not in ADDRESS_WORDS: return to_arabic(moved.group(2), "place") + " " + to_arabic(moved.group(1), "place")
     whole = _lookup(low, *tables)
     if whole: return whole
     parts = re.split(r"(\s+|-|,|/)", text)

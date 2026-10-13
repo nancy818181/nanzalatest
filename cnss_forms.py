@@ -101,6 +101,7 @@ def form_data(
     period_type: str = "monthly",
     index: int = 1,
     payment_details: Mapping[str, Any] | None = None,
+    language: str = "ar",
 ) -> tuple[dict[str, Any], list[str]]:
     """The values a form is filled with, and the user-facing notes about anything missing.
     Nothing is invented: what Saber does not hold stays empty for the user to complete in Excel."""
@@ -116,7 +117,7 @@ def form_data(
         missing.append("Company MOF registration number is missing in Settings > Company.")
 
     if form.kind in ("employee", "company"):
-        data = employee_forms.form_data(company, employee if form.kind == "employee" else None)
+        data = employee_forms.form_data(company, employee if form.kind == "employee" else None, language=language)  # 2.9.112
         if form.kind == "employee":
             if not employee:
                 missing.insert(0, "Select an employee to fill this form.")

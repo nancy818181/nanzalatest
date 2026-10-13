@@ -23,7 +23,9 @@ class PayrollStore:
         "full_name_ar","father_name_ar","mother_name_ar","birth_place_ar","nationality_ar","job_title_ar","address_ar",  # 2.9.108: Arabic, for the official forms
         "spouse_name","spouse_maiden_name","spouse_father","spouse_mother","spouse_nationality","spouse_birth_place","spouse_birth_date",
         "spouse_id","spouse_mof","spouse_employer","spouse_employer_mof","spouse_public_admin","family_dependents",  # 2.9.109: spouse, as on MOF R3
-        "spouse_name_ar","spouse_maiden_name_ar","spouse_father_ar","spouse_mother_ar","spouse_nationality_ar","spouse_birth_place_ar")
+        "spouse_name_ar","spouse_maiden_name_ar","spouse_father_ar","spouse_mother_ar","spouse_nationality_ar","spouse_birth_place_ar",
+        "registry_number","registry_place","registry_place_ar","birth_caza","sect","work_hours","work_time","hire_salary","work_permit",
+        "other_employer","other_employer_nssf","previous_employer","previous_employer_nssf")  # 2.9.112: every box of the official forms
 
     @staticmethod
     def parse_birth_dates(text):

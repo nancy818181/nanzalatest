@@ -27,7 +27,7 @@ class PayrollExcelFormsTest(unittest.TestCase):
                     path = Path(folder) / f"{key}.xlsx"
                     forms.build_form(key, path, COMPANY, EMPLOYEE if needs_employee else None)
                     workbook = load_workbook(path); text = values(workbook)
-                    self.assertIn("SAMPLE TRADING SARL", text)
+                    self.assertIn("سامبل للتجارة ش.م.م.", text)  # 2.9.112: company details in Arabic
                     for sheet in workbook.worksheets:
                         self.assertTrue(sheet.sheet_view.rightToLeft)
                         self.assertEqual((sheet.page_setup.fitToWidth, sheet.page_setup.fitToHeight), (1, 1))

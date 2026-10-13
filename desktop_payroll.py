@@ -297,6 +297,24 @@ class PayrollMixin:
             tk.Label(spouse,text=label,bg=LIGHT).grid(row=index,column=0,padx=6,pady=2,sticky="w")
             (self.date_entry(spouse,register_vars[key],26) if key=="spouse_birth_date" else tk.Entry(spouse,textvariable=register_vars[key],width=26)).grid(
                 row=index,column=1,padx=6,pady=2,sticky="w")
+        # 2.9.112: every box of the NSSF / MOF forms (registry, sect, hours, wage at hire, work permit, other / previous employer)
+        official=tk.LabelFrame(form,text="Official forms details | معلومات النماذج الرسمية",bg=LIGHT,padx=6,pady=4)
+        official.grid(row=15,column=0,columnspan=4,padx=10,pady=8,sticky="ew")
+        from payroll_excel_forms import EMPLOYEE_FORM_FIELDS
+        register_vars.update({key:tk.StringVar(value=str(data.get(key) or "")) for key in EMPLOYEE_FORM_FIELDS+("registry_place_ar",)})
+        official_labels=(("registry_number","Registry no. | رقم السجل"),("registry_place","Registry place | مكان السجل"),
+            ("registry_place_ar","مكان السجل (عربي)"),("birth_caza","Caza of birth | قضاء الولادة"),("sect","Sect | المذهب"),
+            ("work_hours","Hours per month | عدد ساعات العمل في الشهر"),("work_time","Working time | دوام العمل"),
+            ("hire_salary","Salary at hire (empty = current) | الاجر بتاريخ دخول العمل"),("work_permit","Work permit no. and date | رقم وتاريخ اجازة العمل"),
+            ("other_employer","Other employer now (empty = none) | صاحب عمل آخر"),("other_employer_nssf","Other employer NSSF no. | رقمه في الضمان"),
+            ("previous_employer","Previous employer, name and address | صاحب العمل السابق"),("previous_employer_nssf","Previous employer NSSF no. | رقمه"))
+        for index,(key,label) in enumerate(official_labels):
+            row,column=index//2,(index%2)*2
+            tk.Label(official,text=label,bg=LIGHT).grid(row=row,column=column,padx=6,pady=3,sticky="w")
+            if key=="work_time":
+                ttk.Combobox(official,textvariable=register_vars[key],values=("","full","part"),state="readonly",width=24).grid(row=row,column=column+1,padx=6,pady=3,sticky="w")
+            else:
+                tk.Entry(official,textvariable=register_vars[key],width=26,justify="right" if key.endswith("_ar") else "left").grid(row=row,column=column+1,padx=6,pady=3,sticky="w")
         # 2.9.109: the Arabic boxes follow the English ones (until the user corrects the Arabic himself)
         from arabic_names import to_arabic
         def link_arabic(english,arabic,kind):
@@ -312,7 +330,8 @@ class PayrollMixin:
                 (fields["job_title"],"job_title_ar","job"),(fields["address"],"address_ar","place"),
                 (register_vars["spouse_name"],"spouse_name_ar","name"),(register_vars["spouse_maiden_name"],"spouse_maiden_name_ar","name"),
                 (register_vars["spouse_father"],"spouse_father_ar","name"),(register_vars["spouse_mother"],"spouse_mother_ar","name"),
-                (register_vars["spouse_nationality"],"spouse_nationality_ar","nationality"),(register_vars["spouse_birth_place"],"spouse_birth_place_ar","place")):
+                (register_vars["spouse_nationality"],"spouse_nationality_ar","nationality"),(register_vars["spouse_birth_place"],"spouse_birth_place_ar","place"),
+                (register_vars["registry_place"],"registry_place_ar","place")):
             link_arabic(english,register_vars[arabic],kind)
         flags={key:tk.BooleanVar(value=str(data.get(key) or "0")=="1") for key in ("nssf_no_end_service","nssf_no_family","nssf_no_medical")}
         flag_row=tk.Frame(register,bg=LIGHT); flag_row.grid(row=20,column=0,columnspan=4,sticky="w",pady=(4,0))

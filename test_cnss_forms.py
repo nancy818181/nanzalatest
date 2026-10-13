@@ -132,7 +132,7 @@ class EmployeeFormsTest(unittest.TestCase):
         self.assertTrue(any("Select an employee" in n for n in notes))
         data, _ = form_data("cnss_termination_notice", COMPANY, EMPLOYEE)
         self.assertEqual(data["leave_code"], "1")
-        self.assertEqual(data["addr_governorate"], "North")
+        self.assertEqual(data["addr_governorate"], "الشمال")  # 2.9.112: the address in Arabic
         self.assertEqual(leave_code("Death"), "5")
         self.assertEqual(leave_code(""), "")
 

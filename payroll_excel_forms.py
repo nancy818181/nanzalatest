@@ -188,14 +188,14 @@ def build_cnss_leave(data=None, path=None):
     head(f, "عن ترك اجير عمله في المؤسسة (١)")
     r = 15; f.label(r, 1, 3, "اسـم الاجير :", 9, True); f.field(r, 4, 13, key="first_name"); f.label(r, 14, 15, "الشهرة :", 9, True); f.field(r, 16, f.N, key="last_name")
     r = 16; f.label(r, 1, 2, "اسم الأب :", 9, True); f.field(r, 3, 11, key="father_name"); f.label(r, 12, 15, "اسم الأم وشهرتها :", 9, True); f.field(r, 16, f.N, key="mother_name")
-    r = 17; f.label(r, 1, 5, "تاريخ ومحل ولادة الاجير :", 9, True); f.field(r, 6, 11, key="birth"); f.label(r, 12, 14, "رقم السجل :", 9, True); f.field(r, 15, 18)
+    r = 17; f.label(r, 1, 5, "تاريخ ومحل ولادة الاجير :", 9, True); f.field(r, 6, 11, key="birth"); f.label(r, 12, 14, "رقم السجل :", 9, True); f.field(r, 15, 18, key="registry_number")
     f.label(r, 19, 20, "الجنسية :", 9, True); f.field(r, 21, f.N, key="nationality")
     family(f, 19)
     r = 20; f.label(r, 1, 4, "ترك العمل بها منذ :", 9, True); f.field(r, 5, 14, key="leave_date")
     r = 21; f.label(r, 1, 3, "سبب ترك العمل :", 9, True); c = 4
     for text, number, code in (("استقالة", "١", "1"), ("بلوغ السن", "٢", "2"), ("عجز", "٣", "3"), ("زواج", "٤", "4"), ("وفاة", "٥", "5"), ("هجرة", "٦", "6"), ("عمل آخر", "٧", "7")):
         c = f.option(r, c, text, number, text_cols=2 if len(text) > 4 else 1, key="leave_code", match=code)
-    r = 22; f.label(r, 1, 3, "عمل الأجير الحالي", 9, True); f.field(r, 4, 20); f.boxes(r, 22, 3)
+    r = 22; f.label(r, 1, 3, "عمل الأجير الحالي", 9, True); f.field(r, 4, 20, key="job_title"); f.boxes(r, 22, 3)
     r = 23; f.label(r, 1, 7, "ان راتب الأجير بتاريخ ترك العمل هو :", 9, True); f.field(r, 8, f.N, key="salary_text")
     f.heights(range(15, 24), 20)
     r = 25; f.label(r, 1, 2, "بيروت في", 9, True); f.field(r, 3, 6, key="today_dm"); f.label(r, 7, 7, "٢٠", 9, True); f.field(r, 8, 8, key="today_yy")
@@ -203,7 +203,8 @@ def build_cnss_leave(data=None, path=None):
     f.field(26, 17, f.N, 29, box=True); f.field(26, 11, 14, 29, box=True); f.heights(range(26, 30), 18)
     r = 31; f.hline(r)
     f.label(r, 1, 9, "اوافق على صحة المعلومات المدرجة اعلاه :", 9, True); f.label(r, 13, 15, "اسم الاجير :", 9, True); f.field(r, 16, f.N, key="full_name")
-    r = 32; f.label(r, 1, 2, "التاريخ", 9, True); f.field(r, 3, 6); f.label(r, 7, 7, "في", 9); f.field(r, 8, 9); f.label(r, 10, 10, "٢٠", 9); f.field(r, 11, 11)
+    r = 32; f.label(r, 1, 2, "التاريخ", 9, True); f.field(r, 3, 6, key="city"); f.label(r, 7, 7, "في", 9); f.field(r, 8, 9, key="today_dm"); f.label(r, 10, 10, "٢٠", 9)
+    f.field(r, 11, 11, key="today_yy")
     f.label(r, 13, 15, "التوقيــــع :", 9, True); f.field(r, 16, f.N); f.heights((31, 32), 22)
     r = office_boxes(f, 34)
     f.hline(r)
@@ -220,28 +221,29 @@ def build_cnss_41a(data=None, path=None):
     r = 15; f.label(r, 1, 2, "الاسـم :", 9, True); f.field(r, 3, 8, key="first_name"); f.label(r, 9, 10, "الشهرة :", 9, True); f.field(r, 11, 14, key="last_name")
     f.label(r, 15, 16, "رقمه في الصندوق", 9, True); f.field(r, 18, 23, box=True, key="nssf_number")
     r = 16; f.label(r, 1, 2, "اسم الأب :", 9, True); f.field(r, 3, 11, key="father_name"); f.label(r, 12, 15, "اسم الأم وشهرتها :", 9, True); f.field(r, 16, f.N, key="mother_name")
-    r = 17; f.label(r, 1, 5, "تاريخ ومحل الولادة :", 9, True); f.field(r, 6, 10, key="birth"); f.label(r, 11, 13, "رقم السجل :", 9, True); f.field(r, 14, 16)
+    r = 17; f.label(r, 1, 5, "تاريخ ومحل الولادة :", 9, True); f.field(r, 6, 10, key="birth"); f.label(r, 11, 13, "رقم السجل :", 9, True); f.field(r, 14, 16, key="registry_number")
     f.label(r, 17, 18, "الجنسية :", 9, True); f.field(r, 19, 21, key="nationality"); f.boxes(r, 23, 2)
     family(f, 19); f.boxes(19, 23, 2)
-    r = 20; f.label(r, 1, 4, "استخدم فيها منذ :", 9, True); f.field(r, 5, 12, key="hire_date"); f.label(r, 13, 17, "عدد ساعات العمل في الشهر", 9, True); f.field(r, 18, f.N)
-    r = 21; c = f.option(r, 1, "بدوام كامل", "١"); f.option(r, c, "دوام جزئي", "٢")
+    r = 20; f.label(r, 1, 4, "استخدم فيها منذ :", 9, True); f.field(r, 5, 12, key="hire_date"); f.label(r, 13, 17, "عدد ساعات العمل في الشهر", 9, True); f.field(r, 18, f.N, key="work_hours")
+    r = 21; c = f.option(r, 1, "بدوام كامل", "١", key="work_time", match="full"); f.option(r, c, "دوام جزئي", "٢", key="work_time", match="part")
     r = 22; f.label(r, 1, 4, "* عمل الأجير الحالي", 9, True); f.field(r, 5, 10, key="job_title"); f.boxes(r, 11, 3)
     f.label(r, 15, 17, "ان الراتب الحالي :", 9, True); f.field(r, 18, 22, key="salary_lbp"); f.label(r, 23, 23, "ل.ل.", 9, True)
     r = 23; f.label(r, 1, 3, "* طريقة دفع الأجر :", 9, True); c = 4
     for text, number, m in (("شهري", "١", "monthly"), ("اسبوعي", "٢", "weekly"), ("يومي", "٣", "daily"), ("لقاء عمولة", "٤", "commission"), ("على الانتاج", "٥", "piece")):
         c = f.option(r, c, text, number, key="pay_type", match=m)
-    r = 24; f.label(r, 1, 9, "* هل يعمل حسب معرفتك لدى صاحب عمل آخر :", 9, True); c = f.option(r, 10, "نعم", "١", 1); c = f.option(r, c, "كلا", "٢", 1)
+    r = 24; f.label(r, 1, 9, "* هل يعمل حسب معرفتك لدى صاحب عمل آخر :", 9, True); c = f.option(r, 10, "نعم", "١", 1, key="other_job", match="yes")
+    c = f.option(r, c, "كلا", "٢", 1, key="other_job", match="no")
     f.label(r, c, f.N, "اذكر اسم المؤسسة ورقمها", 9, True)
-    r = 25; f.field(r, 1, 14); f.field(r, 16, 19, box=True); f.field(r, 20, 21, box=True); f.field(r, 22, 23, box=True)
-    r = 26; f.label(r, 1, 11, "* اسم وعنوان صاحب العمل الذي كان الاجير يعمل لديه قبل دخوله مؤسستي :", 9, True); f.field(r, 12, f.N)
-    r = 27; f.label(r, 1, 3, "رقمه في الصندوق", 9, True); f.field(r, 4, 14); f.field(r, 16, 19, box=True); f.field(r, 20, 21, box=True); f.field(r, 22, 23, box=True)
+    r = 25; f.field(r, 1, 14, key="other_employer"); f.field(r, 16, 19, box=True, key="other_employer_nssf"); f.field(r, 20, 21, box=True); f.field(r, 22, 23, box=True)
+    r = 26; f.label(r, 1, 11, "* اسم وعنوان صاحب العمل الذي كان الاجير يعمل لديه قبل دخوله مؤسستي :", 9, True); f.field(r, 12, f.N, key="previous_employer")
+    r = 27; f.label(r, 1, 3, "رقمه في الصندوق", 9, True); f.field(r, 4, 14, key="previous_employer_nssf"); f.field(r, 16, 19, box=True); f.field(r, 20, 21, box=True); f.field(r, 22, 23, box=True)
     f.heights(range(15, 28), 20)
     r = 29; f.hline(r); f.label(r, 1, 9, "* اوافق على صحة المعلومات المدرجة اعلاه :", 9, True)
     f.label(r, 11, 14, "ختم المؤسسة", 9, True, align=center); f.label(r, 16, f.N, "اسم وتوقيع الشخص المسؤول", 9, True, align=center)
     r = 30; f.label(r, 1, 3, "اسم الاجير", 9, True); f.field(r, 4, 6, key="full_name"); f.label(r, 7, 8, "التوقيع", 9, True); f.field(r, 9, 10)
     f.field(30, 11, 14, 32, box=True); f.field(30, 16, f.N, 32, box=True)
-    r = 33; f.field(r, 1, 4); f.label(r, 5, 5, "في", 9); f.field(r, 6, 7); f.label(r, 8, 8, "٢٠", 9); f.field(r, 9, 9)
-    f.field(r, 14, 17); f.label(r, 18, 18, "في", 9); f.field(r, 19, 20, key="today_dm"); f.label(r, 21, 21, "٢٠", 9); f.field(r, 22, 22, key="today_yy")
+    r = 33; f.field(r, 1, 4, key="city"); f.label(r, 5, 5, "في", 9); f.field(r, 6, 7, key="today_dm"); f.label(r, 8, 8, "٢٠", 9); f.field(r, 9, 9, key="today_yy")
+    f.field(r, 14, 17, key="city"); f.label(r, 18, 18, "في", 9); f.field(r, 19, 20, key="today_dm"); f.label(r, 21, 21, "٢٠", 9); f.field(r, 22, 22, key="today_yy")
     f.heights(range(29, 34), 20)
     r = office_boxes(f, 35)
     f.hline(r)
@@ -273,26 +275,29 @@ def build_cnss_2aa(data=None, path=None):
     r = 14; num(r, "٤"); f.label(r, 2, 3, "اسم الاجير:", 9); f.field(r, 4, 9, key="first_name"); f.label(r, 10, 11, "الشهرة", 9); f.field(r, 12, P, key="last_name")
     r = 15; num(r, "٥"); f.label(r, 2, 3, "اسم الأب:", 9); f.field(r, 4, 9, key="father_name"); f.label(r, 10, 12, "اسم الام وشهرتها", 9); f.field(r, 13, P, key="mother_name")
     r = 16; num(r, "٦"); f.label(r, 2, 5, "تاريخ ومحل الولادة:", 9); f.field(r, 6, 9, key="birth"); f.label(r, 10, 11, "القضاء", 9); f.field(r, 12,
-            13); f.label(r, 14, 15, "رقم السجل:", 9); f.field(r, 16, P)
+            13, key="birth_caza"); f.label(r, 14, 15, "رقم السجل:", 9); f.field(r, 16, P, key="registry_number")
     r = 17; num(r, "٧"); f.label(r, 2, 3, "الوضع العائلي:", 9); c = 4
     for text, n, match in (("أعزب", "١", "single"), ("متأهل", "٢", "married"), ("ارمل", "٣", "widowed"), ("مطلق", "٤", "divorced"), ("هاجر", "٥", "separated")):
         c = f.option(r, c, text, n, 1, key="marital_status", match=match)
-    r = 18; num(r, "٨"); f.label(r, 2, 5, "محل الاقامة (حسب الهوية)", 9); f.field(r, 6, 11); f.label(r, 12, 13, "المذهب", 9); f.field(r, 14, P)
-    r = 19; num(r, "٩"); f.label(r, 2, 6, "عنوان السكن الحالي: المحافظة", 9); f.field(r, 7, 11, key="address"); f.label(r, 12, 13, "القضاء", 9); f.field(r, 14, P)
-    r = 20; f.label(r, 2, 4, "المدينة أو القرية:", 9); f.field(r, 5, 8); f.label(r, 9, 9, "الحي", 9); f.field(r, 10, 12); f.label(r, 13, 14, "الشارع", 9); f.field(r, 15, P)
-    r = 21; f.label(r, 2, 4, "بناية وطابق", 9); f.field(r, 5, 11); f.label(r, 12, 13, "هاتف", 9); f.field(r, 14, P, key="contact_number")
-    r = 22; num(r, "١٠"); f.label(r, 2, 4, "تاريخ دخول العمل", 9); f.field(r, 5, 9, key="hire_date"); f.label(r, 10, 13, "عدد ساعات عمله في الشهر", 9); f.field(r, 14, P)
-    r = 23; f.label(r, 2, 3, "دوام العمل:", 9); c = f.option(r, 4, "كامل", "١", 1); f.option(r, c + 1, "جزئي", "٢", 1)
+    r = 18; num(r, "٨"); f.label(r, 2, 5, "محل الاقامة (حسب الهوية)", 9); f.field(r, 6, 11, key="registry_place"); f.label(r, 12, 13, "المذهب", 9); f.field(r, 14, P, key="sect")
+    r = 19; num(r, "٩"); f.label(r, 2, 6, "عنوان السكن الحالي: المحافظة", 9); f.field(r, 7, 11, key="addr_governorate"); f.label(r, 12, 13, "القضاء", 9); f.field(r, 14, P, key="addr_caza")
+    r = 20; f.label(r, 2, 4, "المدينة أو القرية:", 9); f.field(r, 5, 8, key="addr_town"); f.label(r, 9, 9, "الحي", 9); f.field(r, 10, 12, key="addr_district"); f.label(r, 13, 14, "الشارع", 9)
+    f.field(r, 15, P, key="addr_street")
+    r = 21; f.label(r, 2, 4, "بناية وطابق", 9); f.field(r, 5, 11, key="building_floor"); f.label(r, 12, 13, "هاتف", 9); f.field(r, 14, P, key="contact_number")
+    r = 22; num(r, "١٠"); f.label(r, 2, 4, "تاريخ دخول العمل", 9); f.field(r, 5, 9, key="hire_date"); f.label(r, 10, 13, "عدد ساعات عمله في الشهر", 9); f.field(r, 14, P, key="work_hours")
+    r = 23; f.label(r, 2, 3, "دوام العمل:", 9); c = f.option(r, 4, "كامل", "١", 1, key="work_time", match="full"); f.option(r, c + 1, "جزئي", "٢", 1, key="work_time", match="part")
     r = 24; num(r, "١١"); f.label(r, 2, 4, "عمل الاجير الحالي", 9); f.field(r, 5, 8, key="job_title"); f.boxes(r, 9, 3); f.label(r, 12, 13, "الراتب الحالي:",
             9); f.field(r, 14, 16, key="salary_lbp"); f.label(r, P, P, "ل.ل.", 9)
-    r = 25; num(r, "١٢"); f.label(r, 2, 5, "الاجر بتاريخ دخول العمل:", 9); f.field(r, 6, 10); f.label(r, 11, 11, "ل.ل.", 9)
+    r = 25; num(r, "١٢"); f.label(r, 2, 5, "الاجر بتاريخ دخول العمل:", 9); f.field(r, 6, 10, key="hire_salary"); f.label(r, 11, 11, "ل.ل.", 9)
     r = 26; f.label(r, 2, 3, "طريقة دفع الاجر:", 9); c = 4
     for text, n, m in (("شهري", "١", "monthly"), ("اسبوعي", "٢", "weekly"), ("يومي", "٣", "daily"), ("لقاء عمولة", "٤", "commission"), ("على الانتاج", "٥", "piece")):
         c = f.option(r, c, text, n, 1 if len(text) < 6 else 2, key="pay_type", match=m)
     r = 27; num(r, "١٣"); f.label(r, 2, 6, "اذا كان الاجير اجنبياً تذكر", 9); f.label(r, 7, 8, "الجنسية", 9); f.field(r, 9, P, key="foreign_nationality")
-    r = 28; f.label(r, 2, 6, "رقم وتاريخ اجازة عمله", 9); f.field(r, 7, P)
-    r = 29; num(r, "١٤"); f.label(r, 2, 10, "هل يعمل الاجير، حسب معرفتك، لدى صاحب عمل آخر؟", 9); c = f.option(r, 11, "نعم", "١", 1); f.option(r, c, "كلا", "٢", 1)
-    r = 30; num(r, "١٥"); f.label(r, 2, 6, "اسم ورقم صاحب العمل الآخر:", 9); f.field(r, 7, 11); f.field(r, 12, 13, box=True); f.field(r, 14, 14, box=True); f.field(r, 15, 16, box=True)
+    r = 28; f.label(r, 2, 6, "رقم وتاريخ اجازة عمله", 9); f.field(r, 7, P, key="work_permit")
+    r = 29; num(r, "١٤"); f.label(r, 2, 10, "هل يعمل الاجير، حسب معرفتك، لدى صاحب عمل آخر؟", 9); c = f.option(r, 11, "نعم", "١", 1, key="other_job", match="yes")
+    f.option(r, c, "كلا", "٢", 1, key="other_job", match="no")
+    r = 30; num(r, "١٥"); f.label(r, 2, 6, "اسم ورقم صاحب العمل الآخر:", 9); f.field(r, 7, 11, key="other_employer"); f.field(r, 12, 13, box=True, key="other_employer_nssf")
+    f.field(r, 14, 14, box=True); f.field(r, 15, 16, box=True)
     f.heights(range(5, 31), 19)
     # right panel (left side of the page): for the Fund
     f.vline(P, 4, 30)
@@ -308,11 +313,11 @@ def build_cnss_2aa(data=None, path=None):
     f.label(25, P + 2, N, "اسم المستخدم وتوقيعه", 9); f.field(26, P + 2, N, 27, box=True)
     f.hline(31, style="medium")
     r = 32; f.label(r, 1, 9, "اوافق على صحة المعلومات المدرجة أعلاه: اسم الاجير:", 9); f.field(r, 10, 14, key="full_name"); f.label(r, 15, 16, "التاريخ",
-            9); f.field(r, 17, 19); f.label(r, 20, 21, "التوقيع", 9); f.field(r, 22, N)
+            9); f.field(r, 17, 19, key="today"); f.label(r, 20, 21, "التوقيع", 9); f.field(r, 22, N)
     f.hline(33, style="thin")
     r = 34; f.label(r, 12, 15, "ختم المؤسسة", 9, align=center); f.label(r, 17, N, "اسم وتوقيع الشخص المسؤول", 9, align=center)
     f.field(35, 12, 15, 38, box=True); f.field(35, 17, N, 38, box=True)
-    r = 39; f.field(r, 14, 18); f.label(r, 19, 19, "في", 9); f.field(r, 20, N, key="today")
+    r = 39; f.field(r, 14, 18, key="city"); f.label(r, 19, 19, "في", 9); f.field(r, 20, N, key="today")
     f.hline(41)
     f.label(41, 1, N, "١ – ملاحظة: كل صاحب عمل يغفل التصريح عن اجرائه ضمن مهلة (١٥) يوماً من تاريخ الاستخدام أو يتقدم بتصاريح غير صحيحة يتعرض لعقوبات الغرامة والحبس وذلك عملاً باحكام المادتين ٨٠ و ٨١ من قانون الضمان الاجتماعي.",
             7, r2=42)
@@ -411,7 +416,7 @@ def build_mof_r3(data=None, path=None):
     r = 14; f.label(r, 1, 3, "٥. الجنـس*", 9); c = f.checkbox(r, 4, "ذكر", 1, key="sex", match="male"); f.checkbox(r, c, "أنثى", 1, key="sex",
             match="female"); item(r, 13, "٦. الجنسية", "nationality", N)
     r = 15; item(r, 1, "٧. محل الــولادة", "birth_place", 11); f.label(r, 13, 15, "٨. تاريخ الولادة", 9); f.date(r, 16, key="birth_date")
-    r = 17; item(r, 1, "٩. رقم السجل", None, 6); item(r, 7, "١٠. مكان السجل", None, 11); item(r, 13, "١١. رقم بطاقة الهوية", "national_id", N, 4)
+    r = 17; item(r, 1, "٩. رقم السجل", "registry_number", 6); item(r, 7, "١٠. مكان السجل", "registry_place", 11); item(r, 13, "١١. رقم بطاقة الهوية", "national_id", N, 4)
     r = 18; f.label(r, 1, 3, "١٢. الوضع العائلي*", 9); c = 4
     for t, m in (("أعزب", "single"), ("متزوج", "married"), ("أرمل", "widowed"), ("مطلَق", "divorced")): c = f.checkbox(r, c, t, 1, key="marital_status", match=m)
     item(r, 13, "١٣. عدد الأولاد", "children", 17, 3)
@@ -438,7 +443,8 @@ def build_mof_r3(data=None, path=None):
     r = 38
     for c1, t, c2, k in ((1, "محافظة", 5, "addr_governorate"), (7, "قضـــاء", 11, "addr_caza"), (13, "منطقة – بلدة", 17, "addr_town"), (19, "الحـــي", N, "addr_district")):
         f.label(r, c1, c1 + 1, t, 9); f.field(r, c1 + 2, c2, key=k)
-    r = 39; f.label(r, 1, 2, "الشـــارع", 9); f.field(r, 3, 11, key="addr_street"); f.label(r, 12, 14, "المنطقة العقارية", 9); f.field(r, 15, 18); f.label(r, 19, 21, "رقم العقار/القسم", 9); f.field(r, 22, N)
+    r = 39; f.label(r, 1, 2, "الشـــارع", 9); f.field(r, 3, 11, key="addr_street"); f.label(r, 12, 14, "المنطقة العقارية", 9); f.field(r, 15, 18); f.label(r, 19, 21, "رقم العقار/القسم", 9)
+    f.field(r, 22, N)
     r = 40; f.label(r, 1, 2, "المبنـــى", 9); f.field(r, 3, 8, key="addr_building"); f.label(r, 9, 10, "الطابـــق", 9); f.field(r, 11, 13, key="addr_floor")
     f.label(r, 14, 14, "هاتف", 9); f.field(r, 15, 18, key="contact_number"); f.label(r, 19, 19, "هاتف", 9); f.field(r, 20, N, key="phone2")
     r = 41; f.label(r, 1, 4, "صندوق البريد: رقم", 9); f.field(r, 5, 7); f.label(r, 8, 9, "المنطقة", 9); f.field(r, 10, 16); f.label(r, 19, 19, "فاكس", 9); f.field(r, 20, 20); f.field(r, 21, N)
@@ -565,9 +571,12 @@ def arabic_nationality(value):
     return NATIONALITIES_AR.get(text.lower(), text) if text else ""
 
 
-def _ar(source, key, kind=None):
+def _ar(source, key, kind=None, language="ar"):
     """2.9.108: the Arabic version of a field (key + "_ar") when it is filled; otherwise (2.9.109) the English value written
-    in Arabic when a kind is given (name, place, nationality, job), else the field as written."""
+    in Arabic when a kind is given (name, place, nationality, job), else the field as written.
+    2.9.112: language "en" keeps the English value (the form is filled in English)."""
+    if language == "en":
+        return source.get(key) if str(source.get(key) or "").strip() else source.get(key + "_ar")
     value = str(source.get(key + "_ar") or "").strip()
     if value: return value
     if kind and str(source.get(key) or "").strip():
@@ -576,23 +585,39 @@ def _ar(source, key, kind=None):
     return source.get(key)
 
 
-def form_data(company=None, employee=None, extra=None):
+def _money(value):
+    try: return f"{float(str(value).replace(',', '')):,.0f}"
+    except (TypeError, ValueError): return str(value or "")
+
+
+EMPLOYEE_FORM_FIELDS = ("registry_number", "registry_place", "birth_caza", "sect", "work_hours", "work_time", "hire_salary", "work_permit",
+                        "other_employer", "other_employer_nssf", "previous_employer", "previous_employer_nssf")  # 2.9.112: every box of the forms
+WORK_TIMES = ("full", "part")
+
+
+def form_data(company=None, employee=None, extra=None, language="ar"):
     """Values the forms use, from Settings > Company and the employee record. Nothing is invented:
-    a value that is not in Saber stays empty for the user to complete. Arabic fields are used first (2.9.108)."""
+    a value that is not in the program stays empty for the user to complete. Arabic fields are used first (2.9.108);
+    language "en" (2.9.112) fills the forms with the English values instead."""
     company = company or {}; employee = employee or {}
-    data = {key: company.get(key) for key in ("company_mof", "company_nssf", "company_phone", "company_email", "company_cr_number", "company_cr_place")}
-    data.update(company_name=_ar(company, "company_name"), company_address=_ar(company, "company_address"),
-                trade_name=company.get("company_trade_name") or "")
+    lang = "en" if str(language or "").lower().startswith("en") else "ar"
+    pick = lambda source, key, kind=None: _ar(source, key, kind, lang)
+    data = {key: company.get(key) for key in ("company_mof", "company_nssf", "company_phone", "company_email", "company_cr_number")}
+    data.update(company_name=pick(company, "company_name", "company"), company_address=pick(company, "company_address", "place"),
+                company_cr_place=pick(company, "company_cr_place", "place"), trade_name=company.get("company_trade_name") or "")
     today = date.today()
     data["today"] = today.strftime("%d-%m-%Y"); data["today_dm"] = today.strftime("%d-%m"); data["today_yy"] = today.strftime("%y")
-    data["requests"] = "1"
+    data["requests"] = "1"; data["language"] = lang; data["city"] = "بيروت" if lang == "ar" else "Beirut"
     if employee:
-        name = str(_ar(employee, "full_name", "name") or "").strip(); parts = name.split(None, 1)
-        data.update({key: employee.get(key) for key in ("national_id", "nssf_number", "mof_number", "contact_number", "children")})
-        data.update({key: _ar(employee, key, kind) for key, kind in (("father_name", "name"), ("mother_name", "name"), ("birth_place", "place"),
-                                                                      ("job_title", "job"), ("address", "place"))})
+        name = str(pick(employee, "full_name", "name") or "").strip(); parts = name.split(None, 1)
+        data.update({key: employee.get(key) for key in ("national_id", "nssf_number", "mof_number", "contact_number", "children", "registry_number",
+                                                        "work_hours", "work_permit", "other_employer_nssf", "previous_employer_nssf")})
+        data.update({key: pick(employee, key, kind) for key, kind in (("father_name", "name"), ("mother_name", "name"), ("birth_place", "place"),
+                                                                      ("job_title", "job"), ("address", "place"), ("registry_place", "place"),
+                                                                      ("birth_caza", "place"), ("sect", None), ("other_employer", "name"),
+                                                                      ("previous_employer", "name"))})
         # 2.9.109: spouse (MOF R3, CNSS 2AA family page)
-        data.update({key: _ar(employee, key, kind) for key, kind in (("spouse_name", "name"), ("spouse_maiden_name", "name"), ("spouse_father", "name"),
+        data.update({key: pick(employee, key, kind) for key, kind in (("spouse_name", "name"), ("spouse_maiden_name", "name"), ("spouse_father", "name"),
                                                                       ("spouse_mother", "name"), ("spouse_nationality", "nationality"),
                                                                       ("spouse_birth_place", "place"))})
         data.update({key: employee.get(key) for key in ("spouse_id", "spouse_mof", "spouse_employer", "spouse_employer_mof", "spouse_public_admin",
@@ -604,18 +629,28 @@ def form_data(company=None, employee=None, extra=None):
                     birth_date=_display(employee.get("birth_date")), hire_date=_display(employee.get("hire_date")),
                     leave_date=_display(employee.get("leave_date")),
                     birth=" - ".join(filter(None, [data.get("birth_place"), _display(employee.get("birth_date"))])),
-                    nationality=_ar(employee, "nationality", "nationality") or "",
+                    nationality=pick(employee, "nationality", "nationality") or "",
                     marital_status=MARITAL.get(str(employee.get("marital_status") or "").lower(), ""),
                     spouse_works=("yes" if int(employee.get("spouse_works") or 0) else "no") if str(employee.get("marital_status") or "").lower() in ("married", "spouse") else "",
                     has_mof="yes" if employee.get("mof_number") else "no", sex=str(employee.get("sex") or "").lower(),
                     pay_type=PAY_TYPES.get(str(employee.get("pay_type") or "monthly").strip().lower(), "monthly"),
-                    leave_code=leave_code(employee.get("leave_reason")))
-        data.update({key: employee.get(key) for key in ("addr_governorate", "addr_caza", "addr_town", "addr_district", "addr_street",
-                                                        "addr_building", "addr_floor", "phone2") if employee.get(key)})
+                    leave_code=leave_code(employee.get("leave_reason")),
+                    work_time=str(employee.get("work_time") or "").strip().lower() if str(employee.get("work_time") or "").strip().lower() in WORK_TIMES else "",
+                    other_job="yes" if str(employee.get("other_employer") or "").strip() else "no")
+        # 2.9.112: the address of the employee, box by box (governorate falls back on the one-line address)
+        for key in ("addr_governorate", "addr_caza", "addr_town", "addr_district", "addr_street", "addr_building"):
+            if str(employee.get(key) or employee.get(key + "_ar") or "").strip(): data[key] = pick(employee, key, "place")
+        data.update({key: employee.get(key) for key in ("addr_floor", "phone2") if employee.get(key)})
+        if not data.get("addr_governorate") and data.get("address"): data["addr_governorate"] = data["address"]
+        data["building_floor"] = " - ".join(filter(None, [str(data.get("addr_building") or "").strip(),
+                                                          (("طابق " if lang == "ar" else "Floor ") + str(data["addr_floor"])) if data.get("addr_floor") else ""]))
         nationality = str(data.get("nationality") or "").strip().lower()
         if nationality and not any(t in nationality for t in ("leban", "لبنان")): data["foreign_nationality"] = data["nationality"]
-        if str(employee.get("currency") or "LBP").upper() == "LBP" and employee.get("base_salary"):
-            data["salary_lbp"] = f"{float(employee['base_salary']):,.0f}"
+        lbp = str(employee.get("currency") or "LBP").upper() == "LBP"
+        if lbp and employee.get("base_salary"):
+            data["salary_lbp"] = _money(employee["base_salary"])
+        hire_salary = employee.get("hire_salary") or employee.get("base_salary")  # 2.9.112: wage at the date of entry (the salary when not given)
+        if lbp and hire_salary: data["hire_salary"] = _money(hire_salary)
         if employee.get("base_salary"):
             currency = {"LBP": "ل.ل.", "USD": "د.أ."}.get(str(employee.get("currency") or "LBP").upper(), employee.get("currency") or "")
             data["salary_text"] = f"{float(employee['base_salary']):,.0f} {currency}"
@@ -623,7 +658,30 @@ def form_data(company=None, employee=None, extra=None):
     return data
 
 
-def build_form(key, path, company=None, employee=None, extra=None):
+EDITABLE_FIELDS = (  # 2.9.112: what the user can correct on the screen before the Excel is made (label, key)
+    ("Company name | إسم المؤسسة", "company_name"), ("Company address | عنوان المؤسسة", "company_address"),
+    ("Commercial register no. | رقم السجل التجاري", "company_cr_number"), ("Commercial register place | مكان السجل التجاري", "company_cr_place"),
+    ("Company phone | هاتف", "company_phone"), ("Employer NSSF no. | رقم المؤسسة في الضمان", "company_nssf"),
+    ("Company MOF no. | رقم التسجيل في المالية", "company_mof"), ("Trade name | الشهرة التجارية", "trade_name"),
+    ("First name | الإسم", "first_name"), ("Family name | الشهرة", "last_name"), ("Full name | الإسم الكامل", "full_name"), ("Father | إسم الأب", "father_name"),
+    ("Mother | إسم الأم وشهرتها", "mother_name"), ("Place of birth | محل الولادة", "birth_place"), ("Date of birth | تاريخ الولادة", "birth_date"),
+    ("Birth - place and date | تاريخ ومحل الولادة", "birth"), ("Caza of birth | القضاء", "birth_caza"),
+    ("Registry no. | رقم السجل", "registry_number"), ("Registry place | مكان السجل / محل الإقامة حسب الهوية", "registry_place"),
+    ("Sect | المذهب", "sect"), ("Nationality | الجنسية", "nationality"), ("ID card no. | رقم بطاقة الهوية", "national_id"),
+    ("Employee NSSF no. | رقم الأجير في الضمان", "nssf_number"), ("Employee MOF no. | الرقم المالي", "mof_number"),
+    ("Governorate | المحافظة", "addr_governorate"), ("Caza | القضاء", "addr_caza"), ("Town | المدينة أو القرية", "addr_town"),
+    ("District | الحي", "addr_district"), ("Street | الشارع", "addr_street"), ("Building | بناية", "addr_building"), ("Floor | طابق", "addr_floor"),
+    ("Building and floor | بناية وطابق", "building_floor"), ("Phone | هاتف", "contact_number"),
+    ("Hire date | تاريخ دخول العمل", "hire_date"), ("Hours per month | عدد ساعات العمل في الشهر", "work_hours"),
+    ("Job | عمل الأجير الحالي", "job_title"), ("Current salary | الراتب الحالي", "salary_lbp"), ("Salary at hire | الاجر بتاريخ دخول العمل", "hire_salary"),
+    ("Salary text | الراتب", "salary_text"), ("Work permit no. and date | رقم وتاريخ اجازة العمل", "work_permit"),
+    ("Other employer | صاحب العمل الآخر", "other_employer"), ("Other employer NSSF no. | رقمه", "other_employer_nssf"),
+    ("Previous employer | صاحب العمل السابق", "previous_employer"), ("Previous employer NSSF no. | رقمه", "previous_employer_nssf"),
+    ("Leave date | تاريخ ترك العمل", "leave_date"), ("Spouse | الزوج/الزوجة", "spouse_full"), ("Children | عدد الأولاد", "children"),
+    ("Date on the form | التاريخ", "today"))
+
+
+def build_form(key, path, company=None, employee=None, extra=None, language="ar"):
     title, builder, needs_employee = FORMS[key]
     if needs_employee and not employee: raise ValueError("Select an employee first")
-    return builder(form_data(company, employee, extra), path)
+    return builder(form_data(company, employee, extra, language), path)

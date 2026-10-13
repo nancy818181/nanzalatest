@@ -21,7 +21,7 @@ class BalanceReportsMixin:
              "posting": tk.StringVar(value="Posted only"), "first_column": tk.StringVar(value="account"), "second_column": tk.StringVar(value=main_currency(self, 2)), "party": tk.StringVar()}
         flags = {name: tk.BooleanVar(value=default) for name, default in (("summary", False), ("by_due_date", False), ("reference", statement), ("with_branch", False),
                  ("detailed", statement), ("include_zero", False), ("order_by_description", False), ("non_zero_only", False), ("chapters", False), ("sub_chapters", False),
-                 ("balance_sheet_only", False), ("profit_loss_only", False), ("balance_format", False), ("carry_forward", True), ("monthly", False),
+                 ("balance_sheet_only", False), ("profit_loss_only", False), ("tax_basis", False), ("balance_format", False), ("carry_forward", True), ("monthly", False),
                  ("without_opening", False), ("without_closing", False))}
         currencies = {code: tk.BooleanVar(value=True) for code in self.currency_codes}
         box = tk.LabelFrame(page, text="Statement of Account - options" if statement else "Balance des Comptes - options", bg=LIGHT, padx=8, pady=6)
@@ -63,7 +63,8 @@ class BalanceReportsMixin:
         groups = [("Lines", [("summary", "Summary (Resume)"), ("by_due_date", "By Due Date"), ("reference", "Reference"), ("with_branch", "With Branch")]),
                   ("Accounts", [("detailed", "Detailed Account (statement)"), ("include_zero", "All accounts"), ("order_by_description",
                           "Order by Description"), ("non_zero_only", "Non-zero Balances only")]),
-                  ("Grouping", [("chapters", "Chapters (class)"), ("sub_chapters", "Sub-chapters"), ("balance_sheet_only", "Balance Sheet (1-5)"), ("profit_loss_only", "Profit & Loss (6-7)")]),
+                  ("Grouping", [("chapters", "Chapters (class)"), ("sub_chapters", "Sub-chapters"), ("balance_sheet_only", "Balance Sheet (1-5)"), ("profit_loss_only", "Profit & Loss (6-7)"),
+                                ("tax_basis", "P&L tax basis (without non-deductible expenses)")]),
                   ("Format", [("balance_format", "Format Balance (Dr / Cr balance)"), ("carry_forward", "With Carry Forward (opening)"), ("monthly", "Monthly"),
                               ("without_opening", "Without Opening entries"), ("without_closing", "Without Closing entries")])]
         for title, items in groups:
@@ -307,6 +308,10 @@ class BalanceReportsMixin:
         options["view_year"] = view_year if view_year and view_year != current else ""  # 2.9.109: another year, read only
         self._report_view_year = options["view_year"]
         if options["view_year"]: options["filter_text"] = (options.get("filter_text", "") + f"   Fiscal year {view_year} (read only)").strip()
+        if options.get("tax_basis"):  # 2.9.112: said on the report, so it is never mistaken for the accounting P&L
+            options["profit_loss_only"] = True
+            basis = "   TAX BASIS - without expenses not deductible for income tax (no official invoice) | على الأساس الضريبي"
+            options["filter_text"] = (options.get("filter_text", "") + basis).strip()
         branches = chosen_values(v["branch"].get())
         if branches:  # 2.9.62: one or several branches ticked
             try: known = {row["name"]: row["id"] for row in self.client.branches()}

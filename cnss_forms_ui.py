@@ -8,10 +8,13 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 import tkinter as tk
 
 from cnss_forms import FORMS, FORM_BY_KEY, FORM_BY_LABEL, LEGACY_FORM_KEYS, build_workbook, form_data, summary_rows
+from payroll_excel_forms import EDITABLE_FIELDS
+
+LANGUAGES = ("عربي | Arabic", "English")  # 2.9.112: the language the forms are filled in
 
 log = logging.getLogger("saber")
 
@@ -28,6 +31,8 @@ class CNSSFormsMixin:
         self.cnss_payment_reference_var = tk.StringVar()
         self.cnss_payment_method_var = tk.StringVar()
         self.cnss_open_after_var = tk.BooleanVar(value=True)
+        self.cnss_language_var = tk.StringVar(value=LANGUAGES[0])
+        self.cnss_overrides, self.cnss_override_context = {}, None
         self.cnss_employee_by_display = {}
         self.cnss_current_data = None
         self.cnss_current_form_key = None
@@ -59,6 +64,10 @@ class CNSSFormsMixin:
         self.cnss_period_index_combo = ttk.Combobox(controls, textvariable=self.cnss_period_index_var, state="readonly", width=15)
         self.cnss_period_index_combo.grid(row=1, column=5, padx=4, pady=4, sticky="w")
         self.cnss_period_index_combo.bind("<<ComboboxSelected>>", self._cnss_period_changed)
+        ttk.Label(controls, text="Fill in | لغة التعبئة").grid(row=1, column=6, padx=4, pady=4, sticky="w")
+        language = ttk.Combobox(controls, textvariable=self.cnss_language_var, values=LANGUAGES, state="readonly", width=16)
+        language.grid(row=1, column=7, padx=4, pady=4, sticky="w")
+        language.bind("<<ComboboxSelected>>", lambda _event: self.refresh_cnss_form_preview())
 
         payment = ttk.LabelFrame(parent, text="Payment details (optional - written on the form)")
         payment.pack(fill="x", padx=10, pady=(0, 5))
@@ -95,7 +104,7 @@ class CNSSFormsMixin:
         notes_scroll.grid(row=0, column=1, sticky="ns")
         self._show_cnss_notes(["Choose a form: it is filled automatically."])
 
-        values = ttk.LabelFrame(parent, text="What the form will be filled with")
+        values = ttk.LabelFrame(parent, text="What the form will be filled with - double-click a value to correct it before Create Excel")
         values.pack(fill="both", expand=True, padx=10, pady=(0, 10))
         self.cnss_values_tree = ttk.Treeview(values, columns=("field", "value"), show="headings", height=12)
         self.cnss_values_tree.heading("field", text="Field"); self.cnss_values_tree.heading("value", text="Value")
@@ -104,6 +113,7 @@ class CNSSFormsMixin:
         self.cnss_values_tree.configure(yscrollcommand=values_scroll.set)
         self.cnss_values_tree.pack(side="left", fill="both", expand=True)
         values_scroll.pack(side="left", fill="y")
+        self.cnss_values_tree.bind("<Double-1>", self._edit_cnss_value)
         self.payroll_notebook.bind("<<NotebookTabChanged>>", self._cnss_tab_activated, add="+")
 
         self._refresh_cnss_period_options()
@@ -235,7 +245,9 @@ class CNSSFormsMixin:
                 filed = self.client.nssf_filed_wages(year)
         payment = {"payment_date": self.cnss_payment_date_var.get().strip(), "reference": self.cnss_payment_reference_var.get().strip(),
                    "method": self.cnss_payment_method_var.get().strip()}
-        data, notes = form_data(key, company, employee, report, filed, year=year, period_type=period_type, index=index, payment_details=payment)
+        language = "en" if self.cnss_language_var.get() == "English" else "ar"
+        data, notes = form_data(key, company, employee, report, filed, year=year, period_type=period_type, index=index,
+                                payment_details=payment, language=language)
         return key, data, notes
 
     def refresh_cnss_form_preview(self):
@@ -249,15 +261,45 @@ class CNSSFormsMixin:
             self.cnss_save_button.configure(state="disabled")
             self.cnss_status.configure(text=f"Could not fill this form: {exc}")
             return self._show_cnss_notes([str(exc)])
+        form = FORM_BY_KEY[key]
+        context = (key, self.cnss_employee_var.get(), self.cnss_language_var.get())
+        if context != self.cnss_override_context:  # 2.9.112: corrections belong to one form / employee / language
+            self.cnss_overrides, self.cnss_override_context = {}, context
+        data.update(self.cnss_overrides)
         self.cnss_current_data, self.cnss_current_form_key = data, key
         self.cnss_values_tree.delete(*self.cnss_values_tree.get_children())
-        for label, value in summary_rows(key, data):
-            self.cnss_values_tree.insert("", "end", values=(label, value if value not in (None, "") else "— (fill in Excel)"))
+        if form.kind in ("employee", "company"):
+            company_keys = {"company_name", "company_address", "company_cr_number", "company_cr_place", "company_phone", "company_nssf",
+                            "company_mof", "trade_name", "today"}
+            for label, field in EDITABLE_FIELDS:
+                if form.kind == "company" and field not in company_keys: continue
+                value = data.get(field)
+                shown = value if value not in (None, "") else "— (empty: double-click to fill)"
+                self.cnss_values_tree.insert("", "end", iid=field, values=(label + (" ✎" if field in self.cnss_overrides else ""), shown))
+        else:
+            for label, value in summary_rows(key, data):
+                self.cnss_values_tree.insert("", "end", values=(label, value if value not in (None, "") else "— (fill in Excel)"))
         self._show_cnss_notes(notes)
-        form = FORM_BY_KEY[key]
         ready = not (form.kind == "employee" and not self.cnss_employee_by_display.get(self.cnss_employee_var.get()))
         self.cnss_save_button.configure(state="normal" if ready else "disabled")
         self.cnss_status.configure(text=f"{form.label.split('|')[0].strip()} · filled automatically · press Create Excel")
+
+    def _edit_cnss_value(self, _event=None):
+        """2.9.112: correct one value of the form before the Excel is made (kept until the form, employee or language changes)."""
+        selected = self.cnss_values_tree.focus()
+        if not self.cnss_current_data or selected not in dict((key, label) for label, key in EDITABLE_FIELDS):
+            return
+        label = next(text for text, key in EDITABLE_FIELDS if key == selected)
+        current = str(self.cnss_current_data.get(selected) or "")
+        value = simpledialog.askstring("NSSF & MOF Forms", label, initialvalue=current, parent=self)
+        if value is None:
+            return
+        self.cnss_overrides[selected] = value.strip()
+        if selected in ("first_name", "last_name"):
+            first = self.cnss_overrides.get("first_name", self.cnss_current_data.get("first_name") or "")
+            last = self.cnss_overrides.get("last_name", self.cnss_current_data.get("last_name") or "")
+            self.cnss_overrides["full_name"] = f"{first} {last}".strip()
+        self.refresh_cnss_form_preview()
 
     def save_cnss_form(self):
         if not self.cnss_current_data:
