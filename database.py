@@ -435,6 +435,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if "tax_deductible" not in expense_columns: db.execute("ALTER TABLE expenses ADD COLUMN tax_deductible INTEGER NOT NULL DEFAULT 1")
             # 2.9.113: the same tick on journal vouchers, purchases and payments (one row = that entry is not deductible for income tax)
             db.execute("CREATE TABLE IF NOT EXISTS tax_flags(source_type TEXT NOT NULL,source_id INTEGER NOT NULL,PRIMARY KEY(source_type,source_id))")
+            db.execute("""CREATE TABLE IF NOT EXISTS income_exemptions(source_type TEXT NOT NULL,source_id INTEGER NOT NULL,reason TEXT NOT NULL,
+                PRIMARY KEY(source_type,source_id))""")  # 2.9.113: income not subject to income tax, with its legal reason
             db.execute("INSERT OR IGNORE INTO users(username,password_hash,role) VALUES(?,?,?)", ("admin", hash_password(admin_password), "admin"))
             db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('base_currency','USD')")
             db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('second_currency','LBP')")  # 2.9.71: the 2 main currencies
@@ -1027,7 +1029,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         allowed={"base_currency","second_currency","vat_rate","vat_currency","vat_second_currency","backup_interval_hours","company_name","company_address",
                 "company_phone","company_mof","company_nssf","company_email","company_website","company_logo","company_vat_registered","company_vat_date",
                 "vat_ratio_method","company_name_ar","company_address_ar","company_trade_name","company_cr_number","company_cr_place",
-                "show_tax_tick"}
+                "show_tax_tick","enable_exempt_income"}
         if str(values.get("base_currency") or "USD") not in self.currency_codes(): raise ValueError("Invalid base currency")
         if "vat_ratio_method" in values and str(values["vat_ratio_method"]).strip().lower() not in ("quarter","annual"):  # 2.9.83
             raise ValueError("VAT ratio method must be quarter or annual")

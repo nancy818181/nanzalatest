@@ -242,6 +242,30 @@ class PaymentsStore:
         with self.connect() as db:
             return [row[0] for row in db.execute("SELECT source_id FROM tax_flags WHERE source_type=?", (source_type,))]
 
+    def set_income_exemption(self, source_id, reason, article=""):
+        """2.9.113: a sales invoice whose income is not subject to income tax (already taxed / exempt by law) - the reason is required."""
+        from tax_adjustments import reason_text
+        text = reason_text(reason, article)
+        with self.connect() as db:
+            if text: db.execute("INSERT OR REPLACE INTO income_exemptions(source_type,source_id,reason) VALUES('invoice',?,?)", (int(source_id), text))
+            else: db.execute("DELETE FROM income_exemptions WHERE source_type='invoice' AND source_id=?", (int(source_id),))
+        return {"source_id": int(source_id), "reason": text}
+
+    def income_exemptions(self):
+        with self.connect() as db:
+            return [{"source_id": r[0], "reason": r[1]} for r in db.execute("SELECT source_id,reason FROM income_exemptions WHERE source_type='invoice'")]
+
+    def exempt_income(self, year=None):
+        """The income (class 7 lines) of the sales invoices marked not subject to income tax, with the legal reason."""
+        with self.connect() as db:
+            rows = [{"entry_number": r[0], "date": r[1], "description": r[2], "account": r[3], "currency": r[4], "amount": round(r[5] or 0, 2), "reason": r[6]}
+                    for r in db.execute("""SELECT e.entry_number,e.entry_date,e.description,a.code,e.currency,
+                        SUM(CAST(j.credit AS REAL)-CAST(j.debit AS REAL)),x.reason FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
+                        JOIN accounts a ON a.id=j.account_id JOIN income_exemptions x ON x.source_type='invoice' AND x.source_id=e.source_id
+                        WHERE e.source_type='invoice' AND substr(a.code,1,1)='7' GROUP BY e.id,a.code ORDER BY e.entry_date,e.id""")]
+        if year: rows = [r for r in rows if str(r["date"])[:4] == str(year) or str(r["date"])[6:10] == str(year)]
+        return rows
+
     def non_deductible_expenses(self, year=None):
         """2.9.110: expenses marked not deductible for income tax (no official invoice ...), to add back to the taxable profit.
         2.9.113: with the expense lines (class 6) of the journal vouchers, purchases and payments ticked the same way."""

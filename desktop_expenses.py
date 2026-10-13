@@ -175,6 +175,16 @@ class ExpensesMixin:
                      "headers": ["No.", "Date", "Description", "Category", "Account", "Currency", "Amount (before VAT)", "Reference"],
                      "rows": lines or [["No expense marked not deductible in this year", "", "", "", "", "", "", ""]],
                      "total_rows": list(range(len(rows), len(lines)))}]
+        try: exempt = self.client.exempt_income(year)  # 2.9.113: income not subject to income tax, deducted with its legal reason
+        except (RuntimeError, OSError, ValueError): exempt = []
+        if exempt:
+            rows2 = [[r["entry_number"], _dd(r["date"]), r["description"], r["reason"], r["account"], r["currency"], r["amount"], ""] for r in exempt]
+            sums = {}
+            for r in exempt: sums[r["currency"]] = sums.get(r["currency"], 0) + float(r["amount"] or 0)
+            for currency, amount in sorted(sums.items()): rows2.append(["TOTAL | المجموع", "", "To deduct from the taxable profit", "", "", currency, amount, ""])
+            sections.append({"heading": f"Income not subject to income tax - {year} | إيرادات غير خاضعة لضريبة الدخل",
+                             "headers": ["No.", "Date", "Description", "Legal reason", "Account", "Currency", "Amount", ""],
+                             "rows": rows2, "total_rows": list(range(len(exempt), len(rows2)))})
         meta = [f"Fiscal year {year}", "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation."]
         self.output_sections("Non-deductible Expenses", meta, sections, f"Non_deductible_expenses_{year}", "preview")
 

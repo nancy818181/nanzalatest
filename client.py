@@ -312,6 +312,10 @@ class ApiClient:
     def tax_flags(self,source_type): return set(self.request("GET",f"/api/tax-flags?source_type={source_type}")["ids"])  # 2.9.113
     def set_tax_flag(self,source_type,source_id,not_deductible):
         return self.request("POST","/api/tax-flags",{"source_type":source_type,"source_id":source_id,"not_deductible":bool(not_deductible)})
+    def income_exemptions(self): return {r["source_id"]:r["reason"] for r in self.request("GET","/api/income-exemptions")["items"]}  # 2.9.113
+    def set_income_exemption(self,invoice_id,reason,article=""):
+        return self.request("POST","/api/income-exemptions",{"source_id":invoice_id,"reason":reason,"article":article})
+    def exempt_income(self,year=None): return self.request("GET","/api/income-exemptions/schedule"+(f"?year={year}" if year else ""))["items"]
     def non_deductible_expenses(self,year=None): return self.request("GET","/api/expenses/non-deductible"+(f"?year={year}" if year else ""))["items"]  # 2.9.110
     def add_expense(self, item):
         item = dict(item); checked = item.pop("duplicate_ok", False)

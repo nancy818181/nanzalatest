@@ -527,6 +527,10 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/tax-flags":  # 2.9.113: the entries ticked "not deductible for income tax"
             try: return self._json(200,{"ids":self.db.tax_flag_ids(self._query(parsed,"source_type") or "")})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/income-exemptions":  # 2.9.113
+            return self._json(200,{"items":self.db.income_exemptions()})
+        if path == "/api/income-exemptions/schedule":  # 2.9.113
+            return self._json(200,{"items":self.db.exempt_income(self._query(parsed,"year") or None)})
         if path == "/api/expenses/non-deductible":  # 2.9.110
             return self._json(200,{"items":self.db.non_deductible_expenses(self._query(parsed,"year") or None)})
         if path == "/api/employees": return self._json(200,{"items":self.db.list_employees()})
@@ -1047,6 +1051,9 @@ class ApiHandler(BaseHTTPRequestHandler):
             try: result=self.db.save_payroll_settings(body,user["id"])
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
+        if path == "/api/income-exemptions":  # 2.9.113
+            try: return self._json(200,self.db.set_income_exemption(body.get("source_id"),body.get("reason"),body.get("article","")))
+            except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/tax-flags":  # 2.9.113
             try: return self._json(200,self.db.set_tax_flag(body.get("source_type"),body.get("source_id"),bool(body.get("not_deductible"))))
             except Exception as exc: return self._json(400,{"error":str(exc)})

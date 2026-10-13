@@ -67,6 +67,8 @@ def _load_lines(db, options):
         conditions.append("NOT (substr(a.code,1,1)='6' AND ((e.source_type='expense' AND e.source_id IN (SELECT id FROM expenses WHERE tax_deductible=0))"
                           " OR EXISTS (SELECT 1 FROM tax_flags t WHERE t.source_type=e.source_type"
                           " AND t.source_id=CASE WHEN e.source_type='journal_voucher' THEN e.id ELSE e.source_id END)))")  # 2.9.113
+        conditions.append("NOT (substr(a.code,1,1)='7' AND e.source_type='invoice' AND EXISTS (SELECT 1 FROM income_exemptions x"
+                          " WHERE x.source_type='invoice' AND x.source_id=e.source_id))")  # 2.9.113: income not subject to income tax (with its reason)
     if department_ids: among("j.department_id", department_ids)
     if project_ids: among("j.project_id", project_ids)
     where = " WHERE " + " AND ".join(conditions) if conditions else ""

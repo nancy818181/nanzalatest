@@ -39,6 +39,30 @@ class TaxFlagEverywhereTest(unittest.TestCase):
             self.assertAlmostEqual(class6(tax_basis=True), 300)
             db.release()
 
+    def test_exempt_income_needs_a_legal_reason_and_is_scheduled(self):
+        from tax_adjustments import EXEMPT_REASONS, NEEDS_ARTICLE
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            db = Database(Path(folder) / "c.db"); db.initialize("secret12345")
+            def sale(price, label):
+                result = db.create_manual_invoice({"invoice_date": "10-04-2026", "party_name": "Client", "kind": "sales", "currency": "USD",
+                                                   "status": "posted"}, [{"description": label, "quantity": 1, "unit_price": price, "vat_rate": 0}], 1)
+                return result["invoice_id"] if isinstance(result, dict) else result
+            exempt_id = sale(500, "Interest"); sale(2000, "Services")
+            with self.assertRaises(ValueError): db.set_income_exemption(exempt_id, "anything")
+            with self.assertRaises(ValueError): db.set_income_exemption(exempt_id, NEEDS_ARTICLE, "")   # the article is required
+            db.set_income_exemption(exempt_id, EXEMPT_REASONS[0])
+            schedule = db.exempt_income(2026)
+            self.assertEqual([(r["amount"], r["reason"]) for r in schedule], [(500.0, EXEMPT_REASONS[0])])
+
+            def class7(**extra):
+                lines = ledger_reports._load_lines(db, dict({"profit_loss_only": True}, **extra))
+                return sum(float(l["credit"] or 0) - float(l["debit"] or 0) for l in lines if str(l["code"]).startswith("7"))
+            self.assertAlmostEqual(class7(), 2500)
+            self.assertAlmostEqual(class7(tax_basis=True), 2000)
+            db.set_income_exemption(exempt_id, "")                                                      # removed
+            self.assertEqual(db.exempt_income(2026), [])
+            db.release()
+
 
 if __name__ == "__main__":
     unittest.main()
