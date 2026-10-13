@@ -1,4 +1,4 @@
-name: Build Saber Accounting Installer
+name: Build Nanza Accounting Installer
 
 on:
   workflow_dispatch:
@@ -188,5 +188,5 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $installer "installer-output/SaberAccountingSetup.exe.sha256" --clobber
           } else {
-            gh release create $tag $installer "installer-output/SaberAccountingSetup.exe.sha256" --title "Saber Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
+            gh release create $tag $installer "installer-output/SaberAccountingSetup.exe.sha256" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
           }
