@@ -1,6 +1,7 @@
 """Purchases & Expenses tab and the purchases page (moved out of desktop_stage3.py in 2.9.42, unchanged)."""
 from __future__ import annotations
 from desktop_common import search_arrows  # 2.9.78
+from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag  # 2.9.113
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -97,6 +98,7 @@ class PurchasesMixin:
         use_box.bind("<<ComboboxSelected>>", lambda _e: self.purchase_amounts_changed("use"))
         tk.Label(r3, text="Mixed prorates input VAT by taxable / total use.", bg=LIGHT, fg=MUTED).pack(side="left", padx=4)
         tk.Checkbutton(r3, text="Reverse charge", variable=f["reverse"], bg=LIGHT).pack(side="left")
+        f["not_deductible"] = tk.BooleanVar(value=False); tax_tick(r3, f["not_deductible"], LIGHT).pack(side="left", padx=(10, 0))
         find = tk.Frame(page, bg=LIGHT); find.pack(fill="x", padx=8, pady=(0, 2), before=box); f["find"] = tk.StringVar()
         tk.Label(find, text="Find purchase (No., supplier, date)", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
         f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=48); f["find_box"].pack(side="left", padx=6)
@@ -330,6 +332,7 @@ class PurchasesMixin:
 
     def new_purchase(self):
         f = self.purchase_form; v = f["vars"]; f["id"] = None; f["pdf"] = None; f["pdf_pending_invoice_id"] = None
+        if "not_deductible" in f: f["not_deductible"].set(False)
         f["vat_typed"] = False; f["pdf_vat_review"] = False; f["pdf_suggested_type"] = ""
         for key in ("supplier", "number", "due", "taxable", "exempt", "vat"): v[key].set("")
         v["date"].set(self.fiscal_today()); v["rate"].set("11"); v["type"].set("Purchases"); v["account"].set("601100000"); f["department"].set("(none)"); f["project"].set("(none)")
@@ -667,6 +670,7 @@ class PurchasesMixin:
             invoice_id = self.client.replace_invoice(f["id"], invoice, lines) if f["id"] else self.client.create_manual_invoice({**invoice, "duplicate_ok": True}, lines)["invoice_id"]
         except Exception as exc:
             return messagebox.showerror("Purchases", f"{exc}\nIf the result is uncertain, check the purchase list before retrying.")
+        if "not_deductible" in f: save_tax_flag(self.client, "invoice", invoice_id, f["not_deductible"])
         if pdf_content is not None:
             try:
                 self.client.upload_attachment(invoice_id, Path(f["pdf"]).name,
@@ -745,6 +749,7 @@ class PurchasesMixin:
         if row.get("status") in ("deleted","cancelled"):
             return messagebox.showwarning("Purchases","Deleted or cancelled purchases cannot be edited")
         f["id"] = row["id"]; f["pdf"] = None; f["vat_typed"] = True
+        if "not_deductible" in f: load_tax_flag(self.client, "invoice", row["id"], f["not_deductible"])
         discount=_num(row.get("invoice_discount_amount")) or 0
         net_taxable=float(row.get("deductible_subtotal") or 0)
         gross_taxable=round(net_taxable+discount,2)

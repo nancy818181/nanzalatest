@@ -1,5 +1,6 @@
 """Stage 3 screens (version 1.16): Import from Excel or PDF, Payment & Receipt, Purchases & Expenses."""
 from __future__ import annotations
+from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag  # 2.9.113
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -587,6 +588,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         form["department"] = tk.StringVar(); form["project"] = tk.StringVar()
         box = tk.LabelFrame(page, text="Customer Receipt (RV)" if kind == "customer_receipt" else "Supplier Payment (PV)", bg=LIGHT, padx=8, pady=6); box.pack(fill="x", padx=8, pady=6)
         row = tk.Frame(box, bg=LIGHT); row.pack(fill="x")
+        form["not_deductible"] = tk.BooleanVar(value=False)
+        tax_tick(box, form["not_deductible"], LIGHT).pack(side="bottom", anchor="w")  # 2.9.113 (bank commission / expense lines)
         tk.Label(row, text="Number", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
         tk.Entry(row, textvariable=v["number"], width=16, state="readonly", readonlybackground="white", font=("Segoe UI", 10, "bold")).pack(side="left", padx=(4, 10))
         tk.Label(row, text="Date", bg=LIGHT).pack(side="left"); self.date_entry(row, v["date"], 11).pack(side="left", padx=(4, 10))
@@ -796,6 +799,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
 
     def new_payment(self, form):
         form["id"] = None; v = form["vars"]; form.pop("_chosen_party_id", None)
+        if "not_deductible" in form: form["not_deductible"].set(False)
         for key in ("party", "amount", "reference", "description", "bank_commission", "exchange_difference"): v[key].set("")
         self.reset_payment_accounts(form)
         if "alloc_sheet" in form: form["alloc_sheet"].clear(); form["alloc_info"].config(text="Choose the customer / supplier to see the open invoices")
@@ -831,6 +835,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
             payment_id = self.client.update_payment(form["id"], payload) if form["id"] else self.client.add_payment(payload)["payment_id"]
             if allocations: self.client.save_allocations(payment_id, allocations)
         except Exception as exc: return messagebox.showerror("Payment & Receipt", str(exc))
+        if "not_deductible" in form: save_tax_flag(self.client, "payment", payment_id, form["not_deductible"])
         number = form["vars"]["number"].get()
         messagebox.showinfo("Payment & Receipt", f"{'Receipt' if form['kind'] == 'customer_receipt' else 'Payment'} {number} saved")
         self.load_transactions(); self.new_payment(form); self.load_journal(); self.load_trial()
@@ -841,6 +846,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         row = form.get("rows", {}).get(selected[0])
         if not row: return
         form["id"] = row["id"]; v = form["vars"]
+        if "not_deductible" in form: load_tax_flag(self.client, "payment", row["id"], form["not_deductible"])
         label = next((name for name, p in form.get("party_map", {}).items() if p["id"] == row["party_id"]), row["party_name"])
         for key, value in (("number", row.get("payment_number") or ""), ("date", _dd(row["payment_date"])), ("party", label), ("currency", row["currency"]), ("amount", f'{row["amount"]:g}'),
                            ("method", row.get("payment_method") or "Cash"), ("cash_account", account_label(self, row["cash_account"])), ("reference",

@@ -228,11 +228,35 @@ class PaymentsStore:
                 expense_number,department_id,project_id,vat_use,tax_deductible,
                 (SELECT COUNT(*) FROM expense_attachments a WHERE a.expense_id=expenses.id) attachment_count FROM expenses ORDER BY id DESC""")]
 
+    TAX_FLAG_SOURCES = ("journal_voucher", "invoice", "payment")  # 2.9.113
+
+    def set_tax_flag(self, source_type, source_id, not_deductible):
+        """2.9.113: tick / untick "not deductible for income tax" on a journal voucher, purchase or payment (the entry stays in the books)."""
+        if source_type not in self.TAX_FLAG_SOURCES: raise ValueError("Unknown entry type")
+        with self.connect() as db:
+            if not_deductible: db.execute("INSERT OR IGNORE INTO tax_flags(source_type,source_id) VALUES(?,?)", (source_type, int(source_id)))
+            else: db.execute("DELETE FROM tax_flags WHERE source_type=? AND source_id=?", (source_type, int(source_id)))
+        return {"source_type": source_type, "source_id": int(source_id), "not_deductible": bool(not_deductible)}
+
+    def tax_flag_ids(self, source_type):
+        with self.connect() as db:
+            return [row[0] for row in db.execute("SELECT source_id FROM tax_flags WHERE source_type=?", (source_type,))]
+
     def non_deductible_expenses(self, year=None):
-        """2.9.110: expenses marked not deductible for income tax (no official invoice ...), to add back to the taxable profit."""
+        """2.9.110: expenses marked not deductible for income tax (no official invoice ...), to add back to the taxable profit.
+        2.9.113: with the expense lines (class 6) of the journal vouchers, purchases and payments ticked the same way."""
         with self.connect() as db:
             rows=[dict(row) for row in db.execute("""SELECT id,expense_number,expense_date,description,category,currency,CAST(subtotal AS REAL) subtotal,
                 CAST(vat AS REAL) vat,CAST(total AS REAL) total,expense_account,reference FROM expenses WHERE tax_deductible=0 ORDER BY expense_date,id""")]
+            for row in db.execute("""SELECT e.id,e.entry_number,e.entry_date,e.description,e.source_type,e.currency,a.code,
+                    SUM(CAST(j.debit AS REAL)-CAST(j.credit AS REAL)) amount FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
+                    JOIN accounts a ON a.id=j.account_id JOIN tax_flags t ON t.source_type=e.source_type
+                    AND t.source_id=CASE WHEN e.source_type='journal_voucher' THEN e.id ELSE e.source_id END
+                    WHERE substr(a.code,1,1)='6' GROUP BY e.id,a.code ORDER BY e.entry_date,e.id"""):
+                label = {"journal_voucher": "Journal voucher", "invoice": "Purchase", "payment": "Payment"}.get(row["source_type"], row["source_type"])
+                rows.append({"id": None, "entry_id": row["id"], "expense_number": row["entry_number"], "expense_date": row["entry_date"],
+                             "description": row["description"], "category": label, "currency": row["currency"], "subtotal": round(row["amount"] or 0, 2),
+                             "vat": 0.0, "total": round(row["amount"] or 0, 2), "expense_account": row["code"], "reference": ""})
         if year: rows=[r for r in rows if str(r["expense_date"])[:4]==str(year) or str(r["expense_date"])[6:10]==str(year)]
         return rows
 

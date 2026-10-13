@@ -309,6 +309,9 @@ class ApiClient:
     def payments(self): return self.request("GET","/api/payments")["items"]
     def add_payment(self, item): return self.request("POST","/api/payments",item)
     def expenses(self): return self.request("GET","/api/expenses")["items"]
+    def tax_flags(self,source_type): return set(self.request("GET",f"/api/tax-flags?source_type={source_type}")["ids"])  # 2.9.113
+    def set_tax_flag(self,source_type,source_id,not_deductible):
+        return self.request("POST","/api/tax-flags",{"source_type":source_type,"source_id":source_id,"not_deductible":bool(not_deductible)})
     def non_deductible_expenses(self,year=None): return self.request("GET","/api/expenses/non-deductible"+(f"?year={year}" if year else ""))["items"]  # 2.9.110
     def add_expense(self, item):
         item = dict(item); checked = item.pop("duplicate_ok", False)

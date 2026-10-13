@@ -1,5 +1,10 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.113 (the "not deductible for income tax" tick on every entry screen)
+- **Journal Voucher, Purchases and Payment & Receipt** now have the same tick as Expenses: "Not deductible for income tax (no official invoice) | غير مقبول ضريبياً". It is saved with the entry and shown again when the entry is opened.
+- A ticked entry **stays in the books** (journal, ledgers, trial balance, balance sheet, financial statements). Its expense lines (class 6) are listed in Expenses > Non-deductible report (to add back to the taxable profit) and left out of the "P&L tax basis" in Accounts & Statements.
+- New table tax_flags (journal voucher / purchase / payment); new routes GET and POST /api/tax-flags.
+
 ## Version 2.9.112 (every box of the NSSF / MOF forms; forms in Arabic or English; P&L on the tax basis)
 - **Every box filled.** CNSS 2AA: salary at the date of entry (الاجر بتاريخ دخول العمل - the current salary when no other is given), registry number and place, caza of birth, sect, the full address box by box (governorate, caza, town, district, street, building and floor), hours per month, full / part time, work permit, other employer (كلا when none is written), the employee's date. Leaving notice: current job (عمل الأجير الحالي), registry number, the employee's date. CNSS 41A: registry number, hours, full / part time, other and previous employer, dates. MOF R3: registry number and place (رقم السجل / مكان السجل).
 - **Employee file:** new box "Official forms details | معلومات النماذج الرسمية" for these values (registry place also in Arabic, automatic).

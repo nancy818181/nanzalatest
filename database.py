@@ -433,6 +433,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if "vat_recoverable" not in expense_columns: db.execute("ALTER TABLE expenses ADD COLUMN vat_recoverable INTEGER NOT NULL DEFAULT 1")
             # 2.9.110: an expense without an official invoice stays in the books but is added back to the taxable profit
             if "tax_deductible" not in expense_columns: db.execute("ALTER TABLE expenses ADD COLUMN tax_deductible INTEGER NOT NULL DEFAULT 1")
+            # 2.9.113: the same tick on journal vouchers, purchases and payments (one row = that entry is not deductible for income tax)
+            db.execute("CREATE TABLE IF NOT EXISTS tax_flags(source_type TEXT NOT NULL,source_id INTEGER NOT NULL,PRIMARY KEY(source_type,source_id))")
             db.execute("INSERT OR IGNORE INTO users(username,password_hash,role) VALUES(?,?,?)", ("admin", hash_password(admin_password), "admin"))
             db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('base_currency','USD')")
             db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('second_currency','LBP')")  # 2.9.71: the 2 main currencies

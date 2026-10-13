@@ -3,6 +3,7 @@ Balance des Comptes panel used by both the Trial Balance and the Statement of Ac
 from __future__ import annotations
 from desktop_common import add_search_bar  # 2.9.78
 from desktop_common import search_arrows  # 2.9.78
+from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag  # 2.9.113
 import logging
 
 from desktop_brains_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -221,6 +222,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
         header = tk.Frame(page, bg=LIGHT); header.pack(fill="x", padx=10, pady=6)
         self.manual_type = tk.StringVar(value=VOUCHER_TYPES[0]); self.manual_no = tk.StringVar(); self.manual_date = tk.StringVar(value=self.fiscal_today())
         self.manual_currency = tk.StringVar(value="USD"); self.manual_find = tk.StringVar()
+        self.manual_not_deductible = tk.BooleanVar(value=False); tax_tick(header, self.manual_not_deductible, LIGHT).pack(side="right", padx=6)
         tk.Label(header, text="Type", bg=LIGHT).pack(side="left")
         self.manual_type_box=ttk.Combobox(header, textvariable=self.manual_type, values=VOUCHER_TYPES, state="readonly", width=17)
         self.manual_type_box.pack(side="left", padx=(4, 8))
@@ -556,6 +558,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
     def new_manual_voucher(self, confirm=True):
         if confirm and self.voucher_lines() and not self.editing_voucher_id and not messagebox.askyesno("Journal Voucher", "Start a new voucher? Lines that are not saved will be cleared."): return
         self.editing_voucher_id = None; self.voucher_sheet.clear(); self.manual_details.delete("1.0", "end"); self.manual_find.set("")
+        if hasattr(self, "manual_not_deductible"): self.manual_not_deductible.set(False)
         self.manual_type.set(VOUCHER_TYPES[0]); self.manual_currency.set(main_currency(self, 1)); self.manual_date.set(self.fiscal_today())
         self._account_cache = None; self.set_next_manual_voucher_number()
         for _ in range(2): self.voucher_sheet.insert(self.new_voucher_line())
@@ -585,6 +588,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
         try: detail = self.client.journal_voucher(int(entry_id))
         except Exception as exc: return messagebox.showerror("Journal Voucher", str(exc))
         voucher = detail["voucher"]; self.editing_voucher_id = int(voucher["id"])
+        if hasattr(self, "manual_not_deductible"): load_tax_flag(self.client, "journal_voucher", voucher["id"], self.manual_not_deductible)
         self.manual_no.set(voucher["entry_number"]); self.manual_date.set(_date_text(voucher["entry_date"])); self.manual_currency.set(voucher["currency"])
         self.manual_type.set(next((t for t in VOUCHER_TYPES if t.startswith(str(voucher.get("voucher_type") or "01"))), VOUCHER_TYPES[0]))
         self.manual_details.delete("1.0", "end"); self.manual_details.insert("1.0", voucher.get("description") or "")
@@ -762,6 +766,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
                     "description": (r.get("description") or detail_lines[min(index,len(detail_lines)-1)])[:120]} for index,r in enumerate(lines)]
         try: saved = self.client.save_journal_voucher(voucher, payload, self.editing_voucher_id)
         except Exception as exc: return messagebox.showerror("Journal Voucher", str(exc))
+        if hasattr(self, "manual_not_deductible"): save_tax_flag(self.client, "journal_voucher", saved["voucher"]["id"], self.manual_not_deductible)
         messagebox.showinfo("Journal Voucher", f'Voucher {saved["voucher"]["entry_number"]} saved')
         self.load_manual_vouchers(); self.open_voucher(saved["voucher"]["id"]); self.load_journal(); self.load_trial()
 

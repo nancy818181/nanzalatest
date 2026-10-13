@@ -64,7 +64,9 @@ def _load_lines(db, options):
     # 2.9.112: Profit & Loss on the TAX basis - without the expense lines (class 6) of expenses marked "not deductible for income tax".
     # Only for the P&L (the trial balance and balance sheet always keep every entry); the report title says so.
     if _truthy(options.get("tax_basis", False)) and _truthy(options.get("profit_loss_only", False)):
-        conditions.append("NOT (e.source_type='expense' AND substr(a.code,1,1)='6' AND e.source_id IN (SELECT id FROM expenses WHERE tax_deductible=0))")
+        conditions.append("NOT (substr(a.code,1,1)='6' AND ((e.source_type='expense' AND e.source_id IN (SELECT id FROM expenses WHERE tax_deductible=0))"
+                          " OR EXISTS (SELECT 1 FROM tax_flags t WHERE t.source_type=e.source_type"
+                          " AND t.source_id=CASE WHEN e.source_type='journal_voucher' THEN e.id ELSE e.source_id END)))")  # 2.9.113
     if department_ids: among("j.department_id", department_ids)
     if project_ids: among("j.project_id", project_ids)
     where = " WHERE " + " AND ".join(conditions) if conditions else ""
