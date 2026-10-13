@@ -322,9 +322,9 @@ INFO_LABELS = {  # what to complete, when the company / auditor information was 
 
 COVER = {
     "en": {"title": "FINANCIAL STATEMENTS", "sub": "AND INDEPENDENT AUDITOR'S REPORT", "contents": "CONTENTS", "page": "Page",
-           "audit": "Independent auditor's report", "position": "Statement of financial position",
-           "profit": "Statement of profit or loss and other comprehensive income", "equity": "Statement of changes in equity",
-           "cash": "Statement of cash flows", "notes": "Notes to the financial statements",
+           "audit": "Independent auditor's report", "position": "Statement of Financial Position",
+           "profit": "Statement of Profit or Loss and Other Comprehensive Income", "equity": "Statement of Changes in Equity",
+           "cash": "Statement of Cash Flows", "notes": "Notes to the financial statements",
            "sheets": {"audit": "Auditor's Report", "position": "Financial Position", "profit": "Profit or Loss", "equity": "Changes in Equity",
                       "cash": "Cash Flows", "notes": "Notes", "review": "Review Points", "cover": "Cover"}},
     "fr": {"title": "ÉTATS FINANCIERS", "sub": "ET RAPPORT DE L'AUDITEUR INDÉPENDANT", "contents": "SOMMAIRE", "page": "Page",
