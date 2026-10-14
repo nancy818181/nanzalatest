@@ -126,7 +126,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
             import webbrowser
             if found.get("url"): webbrowser.open(found["url"])
             messagebox.showinfo("Update",
-                    f"Saber Accounting {found['version']} is available.\n\n1. Make a backup (Settings > Backup & Restore > Create Backup Now).\n2. Download SaberAccountingSetup.exe and run it; your data is kept.")
+                    f"Nanza Accounting {found['version']} is available.\n\n1. Make a backup (Settings > Backup & Restore > Create Backup Now).\n2. Download NanzaAccountingSetup.exe and run it; your data is kept.")
         tk.Button(bar,text=f"New version {found['version']} available",command=open_page,bg=GOLD,fg=NAVY,border=0,padx=10,font=("Segoe UI",9,"bold")).pack(side="right",padx=8)
 
     def open_user_guide(self):

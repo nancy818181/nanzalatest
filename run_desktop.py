@@ -68,8 +68,8 @@ def start_local_server(database=None):
     _wait_for_service(ready, thread)
     if "port" not in chosen:
         reason = chosen.get("error") or "the data service did not answer"
-        hint = ("\n\nAnother Saber program is using the data (the background backup or a second window): restart the computer, "
-                "or end 'SaberAccountingBackup' in the Task Manager, then open Saber Accounting again.") if "locked" in reason.lower() else ""
+        hint = ("\n\nAnother Nanza program is using the data (the background backup or a second window): restart the computer, "
+                "or end 'NanzaAccountingBackup' in the Task Manager, then open Nanza Accounting again.") if "locked" in reason.lower() else ""
         raise RuntimeError(f"Nanza Accounting could not start its local data service ({reason}).{hint}")
     app_runtime.LOCAL_URL = f"http://127.0.0.1:{chosen['port']}"; app_runtime.LOCAL_KEY = key
     if initial_password:

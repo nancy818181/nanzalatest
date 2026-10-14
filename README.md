@@ -1,5 +1,10 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.114 (the program file is named Nanza)
+- **The program file is now NanzaAccounting.exe** (was SaberAccounting.exe), the background backup **NanzaAccountingBackup.exe** and the setup **NanzaAccountingSetup.exe**. Explorer (Properties > Details), the Task Manager and "Open with" now show **Nanza Accounting** with its version, from Windows file details written into each program at build time.
+- Updating an installed copy: the setup stops the old and the new programs, removes the old SaberAccounting.exe, SaberAccountingBackup.exe and the old "Saber Accounting Backups" start-up shortcut, and points the Start menu / desktop shortcuts to NanzaAccounting.exe. A taskbar pin made on the old program file must be pinned again once.
+- New installations go to Program Files\Nanza Accounting; an installed copy keeps its folder (same AppId). The company data folder (SaberAccounting) is NOT renamed, so every company, year, backup and licence stays exactly where it was.
+
 ## Version 2.9.113 (the "not deductible for income tax" tick on every entry screen)
 - **Journal Voucher, Purchases and Payment & Receipt** now have the same tick as Expenses: "Not deductible for income tax (no official invoice) | غير مقبول ضريبياً". It is saved with the entry and shown again when the entry is opened.
 - A ticked entry **stays in the books** (journal, ledgers, trial balance, balance sheet, financial statements). Its expense lines (class 6) are listed in Expenses > Non-deductible report (to add back to the taxable profit) and left out of the "P&L tax basis" in Accounts & Statements.

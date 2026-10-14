@@ -114,7 +114,7 @@ class BuildCheckTest(unittest.TestCase):
     def test_workflow_stops_on_a_nested_upload_or_a_version_mismatch(self):
         workflow = (HERE / ".github" / "workflows" / "build-windows-installer.yml").read_text(encoding="utf-8")
         self.assertIn("Check repository layout and version", workflow)
-        self.assertIn("SaberAccountingSetup-${{ steps.version.outputs.version }}", workflow)
+        self.assertIn("NanzaAccountingSetup-${{ steps.version.outputs.version }}", workflow)
 
 
 if __name__ == "__main__":

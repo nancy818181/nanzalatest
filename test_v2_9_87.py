@@ -129,7 +129,7 @@ class StartAndBackupTest(unittest.TestCase):
 
     def test_installer_stops_the_backup_before_replacing_it(self):
         text = (Path(__file__).parent / "installer.iss").read_text(encoding="utf-8")
-        self.assertIn("function PrepareToInstall", text); self.assertIn("/F /IM SaberAccountingBackup.exe", text)
+        self.assertIn("function PrepareToInstall", text); self.assertIn("/F /IM NanzaAccountingBackup.exe", text)
 
 
 if __name__ == "__main__":

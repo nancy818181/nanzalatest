@@ -44,8 +44,8 @@ jobs:
           $program = (Select-String -Path app_runtime.py -Pattern '^APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
           if ($installer -ne $program) { throw "installer.iss says $installer but app_runtime.py says $program." }
           "version=$installer" >> $env:GITHUB_OUTPUT
-          "## Building Saber Accounting $installer" >> $env:GITHUB_STEP_SUMMARY
-          Write-Host "Building Saber Accounting $installer"
+          "## Building Nanza Accounting $installer" >> $env:GITHUB_STEP_SUMMARY
+          Write-Host "Building Nanza Accounting $installer"
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -80,6 +80,34 @@ jobs:
       - name: Run all tests
         run: python -m unittest discover -v -p "test_*.py"
 
+      # 2.9.114: the program files carry the Nanza name and version (Explorer > Properties, Task Manager, "Open with").
+      - name: Write Windows file details (Nanza Accounting)
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $parts = @($v.Split('.') | ForEach-Object { [int]$_ }); while ($parts.Count -lt 4) { $parts += 0 }
+          $tuple = ($parts[0..3] -join ', ')
+          foreach ($item in @(@("version_main.txt", "Nanza Accounting", "NanzaAccounting.exe"), @("version_backup.txt", "Nanza Accounting Backups", "NanzaAccountingBackup.exe"))) {
+            $text = @"
+          VSVersionInfo(
+            ffi=FixedFileInfo(filevers=($tuple), prodvers=($tuple), mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
+            kids=[
+              StringFileInfo([StringTable('040904B0', [
+                StringStruct('CompanyName', 'Nanza Accounting'),
+                StringStruct('FileDescription', '$($item[1])'),
+                StringStruct('FileVersion', '$v'),
+                StringStruct('InternalName', '$($item[2].Replace('.exe',''))'),
+                StringStruct('OriginalFilename', '$($item[2])'),
+                StringStruct('ProductName', 'Nanza Accounting'),
+                StringStruct('ProductVersion', '$v')])]),
+              VarFileInfo([VarStruct('Translation', [1033, 1200])])
+            ]
+          )
+          "@
+            Set-Content -Path $item[0] -Value $text -Encoding utf8NoBOM
+            Write-Host "Wrote $($item[0])"
+          }
+
       - name: Build standalone application (data service included)
         shell: pwsh
         run: |
@@ -90,15 +118,15 @@ jobs:
             --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
             --hidden-import arabic_reshaper --hidden-import bidi --hidden-import bidi.algorithm --collect-data arabic_reshaper `
             --hidden-import payroll_reports --hidden-import vat_return --hidden-import desktop_final --hidden-import desktop_brains --hidden-import ledger_reports --hidden-import desktop_dimensions --hidden-import desktop_stage3 --hidden-import ai_mapper --hidden-import ai_service --hidden-import pdf_import --hidden-import pypdf --hidden-import pypdfium2 --hidden-import pytesseract --collect-all pypdfium2 --collect-all pypdfium2_raw --hidden-import year_end --hidden-import cnss_forms --hidden-import cnss_forms_ui --hidden-import party_similarity --hidden-import pdf_form_editor --hidden-import desktop_assets --hidden-import report_export --hidden-import payroll_excel_forms --hidden-import lebanese_payroll --hidden-import inventory --hidden-import fixed_assets --hidden-import desktop_inventory --hidden-import desktop_v22 --hidden-import chart_extra --hidden-import invoice_calc --hidden-import tafqeet --hidden-import business_reports --hidden-import financial_projection --hidden-import financial_statements --hidden-import app_runtime --hidden-import desktop_common --hidden-import desktop_invoices --hidden-import desktop_parties --hidden-import desktop_payroll --hidden-import desktop_reports --hidden-import desktop_settings --hidden-import desktop_stage3_common --hidden-import desktop_purchases --hidden-import desktop_asset_register --hidden-import desktop_expenses --hidden-import desktop_brains_common --hidden-import desktop_balance_reports --hidden-import desktop_payroll_sheet --hidden-import payroll_lines --hidden-import payroll_official --hidden-import office_tls --hidden-import vat_ledgers --hidden-import audit_chain --hidden-import audit_report --hidden-import desktop_attachments --hidden-import tax_review --hidden-import approvals --hidden-import release_check --hidden-import owner_access --hidden-import licence --hidden-import desktop_licence `
-            --name SaberAccounting run_desktop.py
+            --version-file version_main.txt --name NanzaAccounting run_desktop.py
 
       - name: Verify application and offline PDF reading files
         shell: pwsh
         run: |
-          if (-not (Test-Path "dist\SaberAccounting\SaberAccounting.exe")) {
-            throw "PyInstaller did not produce dist\SaberAccounting\SaberAccounting.exe - check the build step above."
+          if (-not (Test-Path "dist\NanzaAccounting\NanzaAccounting.exe")) {
+            throw "PyInstaller did not produce dist\NanzaAccounting\NanzaAccounting.exe - check the build step above."
           }
-          $bundle = "dist\SaberAccounting\_internal"
+          $bundle = "dist\NanzaAccounting\_internal"
           # Check the exact paths used by the frozen app and pypdfium2_raw.
           foreach ($relativePath in @(
             "ocr\engine\tesseract.exe",
@@ -122,7 +150,7 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed --icon Assets/nanza.ico `
             --hidden-import inventory --hidden-import chart_extra --hidden-import lebanese_accounts --hidden-import lebanese_payroll --hidden-import app_runtime `
-            --name SaberAccountingBackup backup_service.py
+            --version-file version_backup.txt --name NanzaAccountingBackup backup_service.py
 
       - name: Make sure Inno Setup is available
         shell: pwsh
@@ -136,13 +164,13 @@ jobs:
         if: env.SIGN_CERT != ''
         shell: pwsh
         run: |
-          $pfx = Join-Path $env:RUNNER_TEMP "saber-sign.pfx"
+          $pfx = Join-Path $env:RUNNER_TEMP "nanza-sign.pfx"
           [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGN_CERT))
           $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
           if (-not $signtool) { throw "signtool.exe was not found on the build machine." }
           "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
           "SIGN_PFX=$pfx" >> $env:GITHUB_ENV
-          foreach ($file in @("dist\SaberAccounting\SaberAccounting.exe", "dist\SaberAccountingBackup.exe")) {
+          foreach ($file in @("dist\NanzaAccounting\NanzaAccounting.exe", "dist\NanzaAccountingBackup.exe")) {
             if (Test-Path $file) {
               & $signtool.FullName sign /f $pfx /p $env:SIGN_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $file
               if ($LASTEXITCODE -ne 0) { throw "Signing $file failed." }
@@ -156,7 +184,7 @@ jobs:
         if: env.SIGN_CERT != ''
         shell: pwsh
         run: |
-          & $env:SIGNTOOL sign /f $env:SIGN_PFX /p $env:SIGN_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 installer-output\SaberAccountingSetup.exe
+          & $env:SIGNTOOL sign /f $env:SIGN_PFX /p $env:SIGN_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 installer-output\NanzaAccountingSetup.exe
           if ($LASTEXITCODE -ne 0) { throw "Signing the installer failed." }
           Remove-Item $env:SIGN_PFX -Force
 
@@ -166,8 +194,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v6  # 2.9.73: v4 ran on the deprecated Node.js 20
         with:
-          name: SaberAccountingSetup-${{ steps.version.outputs.version }}
-          path: installer-output/SaberAccountingSetup.exe
+          name: NanzaAccountingSetup-${{ steps.version.outputs.version }}
+          path: installer-output/NanzaAccountingSetup.exe
           if-no-files-found: error
           retention-days: 3
 
@@ -181,12 +209,12 @@ jobs:
         run: |
           $version = (Select-String -Path installer.iss -Pattern '#define MyAppVersion "([^"]+)"').Matches[0].Groups[1].Value
           $tag = "v$version"
-          $installer = "installer-output/SaberAccountingSetup.exe"
+          $installer = "installer-output/NanzaAccountingSetup.exe"
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash
-          Set-Content -Path "installer-output/SaberAccountingSetup.exe.sha256" -Value "$hash  SaberAccountingSetup.exe"
+          Set-Content -Path "installer-output/NanzaAccountingSetup.exe.sha256" -Value "$hash  NanzaAccountingSetup.exe"
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag $installer "installer-output/SaberAccountingSetup.exe.sha256" --clobber
+            gh release upload $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --clobber
           } else {
-            gh release create $tag $installer "installer-output/SaberAccountingSetup.exe.sha256" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
+            gh release create $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
           }
