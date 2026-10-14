@@ -20,6 +20,10 @@ env:
   # and SIGN_CERT_PASSWORD; while they are missing the signing steps are skipped and the build works as before.
   SIGN_CERT: ${{ secrets.SIGN_CERT_PFX_BASE64 }}
   SIGN_PASSWORD: ${{ secrets.SIGN_CERT_PASSWORD }}
+  # 2.9.117: cloud signing with SSL.com eSigner (certificates bought since June 2023 are not given as a .pfx file any
+  # more). Add the repository secrets ES_USERNAME, ES_PASSWORD, ES_CREDENTIAL_ID and ES_TOTP_SECRET; while they are
+  # missing these steps are skipped and the build works exactly as before.
+  ESIGNER_USER: ${{ secrets.ES_USERNAME }}
 
 jobs:
   build:
@@ -184,8 +188,50 @@ jobs:
             }
           }
 
+      - name: Sign the program (SSL.com eSigner, only when its secrets are set)
+        if: env.ESIGNER_USER != ''
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/NanzaAccounting/NanzaAccounting.exe
+          override: true
+          malware_block: false
+          environment_name: PROD
+
+      - name: Sign the backup program (SSL.com eSigner, only when its secrets are set)
+        if: env.ESIGNER_USER != ''
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/dist/NanzaAccountingBackup.exe
+          override: true
+          malware_block: false
+          environment_name: PROD
+
       - name: Create Windows installer
         run: iscc installer.iss
+
+      - name: Sign the installer (SSL.com eSigner, only when its secrets are set)
+        if: env.ESIGNER_USER != ''
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.ES_CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: ${{ github.workspace }}/installer-output/NanzaAccountingSetup.exe
+          override: true
+          malware_block: false
+          environment_name: PROD
 
       - name: Sign the installer (only when a certificate is set)
         if: env.SIGN_CERT != ''
