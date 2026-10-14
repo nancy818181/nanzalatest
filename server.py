@@ -1392,7 +1392,7 @@ def main():
     parser = argparse.ArgumentParser(description="Nanza Accounting shared server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--database", default=None, help="Main data file (default: the Nanza data folder, SaberAccounting)")
+    parser.add_argument("--database", default=None, help="Main data file (default: the Nanza data folder)")
     parser.add_argument("--admin-password", default=None,
                         help="Initial admin password (or set SABER_ADMIN_PASSWORD)")
     parser.add_argument("--tls-cert",help="Path to a trusted TLS certificate chain (PEM)")
@@ -1404,7 +1404,7 @@ def main():
         import app_runtime, office_tls
         cert, key = office_tls.make_certificate(app_runtime.data_dir(), args.make_certificate)
         print(f"Certificate: {cert}\nPrivate key (keep on this computer only): {key}")
-        print(f"Copy the certificate to each office PC as <Nanza data folder (SaberAccounting)>\\{office_tls.TRUSTED_CERT_NAME}, then start the server with:")
+        print(f"Copy the certificate to each office PC as <Nanza data folder>\\{office_tls.TRUSTED_CERT_NAME}, then start the server with:")
         print(f"  run_server.py --host 0.0.0.0 --tls-cert \"{cert}\" --tls-key \"{key}\"")
         return
     if not args.database:

@@ -30,9 +30,18 @@ LOCAL_URL: str | None = None
 LOCAL_KEY: str | None = None
 
 
+DATA_FOLDER_NAME = "NanzaAccounting"      # 2.9.114: the data folder on a computer that never had the program
+OLD_DATA_FOLDER_NAME = "SaberAccounting"  # kept for every computer that already has it - nothing is moved or renamed
+
+
 def data_dir() -> Path:
+    """C:\\Users\\<name>\\NanzaAccounting on a new computer; SaberAccounting where that folder already exists
+    (an installed copy keeps its companies, backups, licence and log exactly where they are)."""
     override = os.environ.get("SABER_DATA_DIR")
-    return Path(override) if override else Path.home() / "SaberAccounting"
+    if override: return Path(override)
+    home = Path.home()
+    old = home / OLD_DATA_FOLDER_NAME
+    return old if old.exists() else home / DATA_FOLDER_NAME
 
 
 # ------------------------------------------------------------------ logging

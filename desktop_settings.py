@@ -346,7 +346,7 @@ class SettingsMixin:
             lines.append("Encryption: " + ("HTTPS - passwords and data are encrypted on the network" if url.startswith("https") else
                                           "NONE (http) - use the office certificate: run_server.py --make-certificate"))
             trusted = office_tls.trusted_certificate()
-            lines.append("Office certificate on this PC: " + (str(trusted) if trusted else "not found (copy server-cert.pem as office-server-cert.pem into the Nanza data folder, SaberAccounting)"))
+            lines.append("Office certificate on this PC: " + (str(trusted) if trusted else "not found (copy server-cert.pem as office-server-cert.pem into the Nanza data folder)"))
         if times:
             average = statistics.mean(times)
             verdict = "excellent" if average < 30 else "good" if average < 120 else "slow - check the cable / Wi-Fi of this PC and of the server"
@@ -354,12 +354,12 @@ class SettingsMixin:
         if error: lines.append(f"Could not reach the data service: {error}")
         lines += ["", "Office network (2-3 PCs):", "1. On the server PC: python run_server.py --make-certificate SERVER-NAME,SERVER-IP",
                   "2. Start it: run_server.py --host 0.0.0.0 --tls-cert server-cert.pem --tls-key server-key.pem",
-                  "3. Copy server-cert.pem (never the key) to each PC's Nanza data folder (SaberAccounting) as office-server-cert.pem",
+                  "3. Copy server-cert.pem (never the key) to each PC's Nanza data folder as office-server-cert.pem",
                   "4. On each PC sign in with https://SERVER-NAME:8765, then press Network Check here."]
         (messagebox.showwarning if error else messagebox.showinfo)("Network Check", "\n".join(lines))
 
     def open_log_folder(self):
-        """Error log of this computer (logs/saber.log in the Saber data folder) - send it when reporting a problem."""
+        """Error log of this computer (logs/saber.log in the Nanza data folder) - send it when reporting a problem."""
         import app_runtime
         folder=app_runtime.data_dir()/"logs"; folder.mkdir(parents=True,exist_ok=True)
         try:

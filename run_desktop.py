@@ -124,7 +124,7 @@ def run():
         return 0
     except Exception as exc:
         log.exception("Nanza Accounting stopped")
-        _tell(f"Nanza Accounting could not continue:\n{exc}\n\nThe details are in the log file (SaberAccounting\\logs\\saber.log).", error=True)
+        _tell(f"Nanza Accounting could not continue:\n{exc}\n\nThe details are in the log file ({app_runtime.data_dir() / 'logs' / 'saber.log'}).", error=True)
         return 1
     finally:
         instance.release()

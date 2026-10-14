@@ -36,11 +36,16 @@ class NanzaProgramFileTest(unittest.TestCase):
 
     def test_installed_copies_update_in_place_and_keep_their_data(self):
         self.assertIn("AppId={{4C848D44-EF69-47C0-86F1-5A5AA3C34E8D}", self.installer)
-        import app_runtime
+        import os, tempfile, app_runtime
         from unittest import mock
-        with mock.patch.dict("os.environ", {}, clear=False):
-            __import__("os").environ.pop("SABER_DATA_DIR", None)
-            self.assertEqual(app_runtime.data_dir().name, "SaberAccounting")  # company data stays where it is
+        with tempfile.TemporaryDirectory() as home, mock.patch.dict("os.environ", {}, clear=False), \
+             mock.patch.object(app_runtime.Path, "home", return_value=Path(home)):
+            os.environ.pop("SABER_DATA_DIR", None)
+            self.assertEqual(app_runtime.data_dir(), Path(home) / "NanzaAccounting")   # new computer: no Saber anywhere
+            (Path(home) / "SaberAccounting").mkdir()
+            self.assertEqual(app_runtime.data_dir(), Path(home) / "SaberAccounting")   # existing copy: data stays where it is
+            (Path(home) / "NanzaAccounting").mkdir()
+            self.assertEqual(app_runtime.data_dir(), Path(home) / "SaberAccounting")   # never switches away from existing data
 
 
 class NanzaWordingTest(unittest.TestCase):

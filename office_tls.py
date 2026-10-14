@@ -1,7 +1,7 @@
 """2.9.94: an office certificate for the shared server (several PCs on the office network).
 
 The server computer makes it once:  python run_server.py --make-certificate SERVER-NAME,192.168.1.10
-That writes server-cert.pem and server-key.pem in the Nanza data folder (SaberAccounting). Copy server-cert.pem (never the key)
+That writes server-cert.pem and server-key.pem in the Nanza data folder. Copy server-cert.pem (never the key)
 to each office PC as  <data folder>/office-server-cert.pem  - the program then trusts that server over HTTPS
 (passwords and data are encrypted on the network). Everything stays inside the office."""
 from __future__ import annotations
