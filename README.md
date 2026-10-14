@@ -1,5 +1,24 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.117 (the code in folders; code signing in the cloud; commercial register in the wizard)
+- **The program is now in folders by subject** - nothing it does changes:
+
+  | Folder | What is in it |
+  | --- | --- |
+  | nanza/core | data files, data service, users, licences, backups, audit trail |
+  | nanza/accounting | charts of accounts, numbering, inventory, fixed assets, bank, year end |
+  | nanza/tax | VAT return, VAT ledgers, tax review |
+  | nanza/payroll | Lebanese payroll, NSSF / MOF forms |
+  | nanza/reports | financial statements, ledgers, management pack, exports |
+  | nanza/documents | PDF reading, AI mapping, PDF forms, logos |
+  | nanza/ui | every screen of the program |
+  | tests | the tests (run: python -m unittest discover -s tests -t . -p "test_*.py") |
+  | tools | help pictures (make_help.py) |
+
+  The entry points stay at the top: run_desktop.py, run_server.py, backup_service.py. nanza_paths.py puts the folders on the import path, so every module imports the others by name as before; the Windows build searches every folder.
+- **Code signing in the cloud (SSL.com eSigner):** certificates bought since June 2023 are no longer given as a .pfx file. Add the repository secrets ES_USERNAME, ES_PASSWORD, ES_CREDENTIAL_ID and ES_TOTP_SECRET and the build signs NanzaAccounting.exe, NanzaAccountingBackup.exe and NanzaAccountingSetup.exe; without them the build works as before (the .pfx signing of 2.9.52 stays too).
+- **New company wizard:** step 1 also asks for the Commercial Register number and place (as in Settings > General Settings; written on the NSSF and MOF forms).
+
 ## Version 2.9.116 (Odoo + Zoho + ERP: setup wizard, four charts of accounts, numbering, a clearer look, help with pictures)
 - **Help with pictures (English and Arabic):** a **Help** button beside the title of every screen opens the help of that screen: a picture of the screen with numbered steps and a short line for each, in English or Arabic (button at the top). 17 topics (every screen and the new company wizard). The pictures are taken from the program itself by tools/make_help.py and are taken again in every Windows build, so they follow the screens. New folder Assets/help (shipped with the program).
 - **New company = a setup wizard (as in Zoho):** 1. company, 2. country and chart of accounts, 3. currencies and VAT (filled from the country), 4. fiscal year and summary.

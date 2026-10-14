@@ -1,4 +1,5 @@
 """Start Nanza Accounting: one copy per Windows user, its own private data service, an error log."""
+import nanza_paths  # noqa: F401  2.9.117: the program's folders (nanza/...) on the import path
 import json
 import logging
 import secrets

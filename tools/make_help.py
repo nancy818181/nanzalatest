@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "Assets" / "help"
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nanza_paths  # noqa: E402,F401  the program's folders
 os.chdir(ROOT)
 os.environ["SABER_DATA_DIR"] = str(Path(tempfile.mkdtemp()) / "NanzaAccounting")
 

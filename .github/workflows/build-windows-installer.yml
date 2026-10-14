@@ -39,13 +39,13 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          foreach ($file in @("run_desktop.py", "app_runtime.py", "installer.iss")) {
+          foreach ($file in @("run_desktop.py", "nanza/core/app_runtime.py", "installer.iss")) {
             if (-not (Test-Path $file)) { throw "$file is missing at the top of the repository. Upload the CONTENT of the replitt-main folder, not the folder itself." }
           }
           $nested = Get-ChildItem -Directory | Where-Object { Test-Path (Join-Path $_.FullName "installer.iss") }
           if ($nested) { throw "A second copy of the program was found in the folder '$($nested[0].Name)'. Delete that folder and upload the files at the top of the repository." }
           $installer = (Select-String -Path installer.iss -Pattern '#define MyAppVersion "([^"]+)"').Matches[0].Groups[1].Value
-          $program = (Select-String -Path app_runtime.py -Pattern '^APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
+          $program = (Select-String -Path nanza/core/app_runtime.py -Pattern '^APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
           if ($installer -ne $program) { throw "installer.iss says $installer but app_runtime.py says $program." }
           "version=$installer" >> $env:GITHUB_OUTPUT
           "## Building Nanza Accounting $installer" >> $env:GITHUB_STEP_SUMMARY
@@ -82,7 +82,7 @@ jobs:
           }
 
       - name: Run all tests
-        run: python -m unittest discover -v -p "test_*.py"
+        run: python -m unittest discover -v -s tests -t . -p "test_*.py"
 
       # 2.9.116: the help pictures are taken again from this version's screens (Windows fonts). If the runner cannot
       # show windows, the pictures already in Assets/help are used - the build never stops here.
@@ -123,9 +123,11 @@ jobs:
         shell: pwsh
         run: |
             # 2.9.46: every program module in the repository is added automatically (no workflow edit for new files).
-            $modules = Get-ChildItem -Path . -Filter *.py -File | Where-Object { $_.Name -notlike 'test_*' -and $_.Name -ne 'run_desktop.py' } | ForEach-Object { '--hidden-import'; $_.BaseName }
+            # 2.9.117: the program is in folders (nanza/core, nanza/ui ...): every one is searched, and every module in them included.
+            $folders = Get-ChildItem -Path nanza -Directory | ForEach-Object { '--paths'; $_.FullName }
+            $modules = @(Get-ChildItem -Path nanza -Recurse -Filter *.py -File) + @(Get-Item nanza_paths.py) | ForEach-Object { '--hidden-import'; $_.BaseName }
             Write-Host "Program modules included: $(($modules | Where-Object { $_ -ne '--hidden-import' }) -join ', ')"
-            pyinstaller --noconfirm --clean --onedir --windowed --noupx --icon Assets/nanza.ico @modules `
+            pyinstaller --noconfirm --clean --onedir --windowed --noupx --icon Assets/nanza.ico @folders @modules `
             --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/help;assets/help" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
             --hidden-import arabic_reshaper --hidden-import bidi --hidden-import bidi.algorithm --collect-data arabic_reshaper `
             --hidden-import payroll_reports --hidden-import vat_return --hidden-import desktop_final --hidden-import desktop_brains --hidden-import ledger_reports --hidden-import desktop_dimensions --hidden-import desktop_stage3 --hidden-import ai_mapper --hidden-import ai_service --hidden-import pdf_import --hidden-import pypdf --hidden-import pypdfium2 --hidden-import pytesseract --collect-all pypdfium2 --collect-all pypdfium2_raw --hidden-import year_end --hidden-import cnss_forms --hidden-import cnss_forms_ui --hidden-import party_similarity --hidden-import pdf_form_editor --hidden-import desktop_assets --hidden-import report_export --hidden-import payroll_excel_forms --hidden-import lebanese_payroll --hidden-import inventory --hidden-import fixed_assets --hidden-import desktop_inventory --hidden-import desktop_v22 --hidden-import chart_extra --hidden-import invoice_calc --hidden-import tafqeet --hidden-import business_reports --hidden-import financial_projection --hidden-import financial_statements --hidden-import app_runtime --hidden-import desktop_common --hidden-import desktop_invoices --hidden-import desktop_parties --hidden-import desktop_payroll --hidden-import desktop_reports --hidden-import desktop_settings --hidden-import desktop_stage3_common --hidden-import desktop_purchases --hidden-import desktop_asset_register --hidden-import desktop_expenses --hidden-import desktop_brains_common --hidden-import desktop_balance_reports --hidden-import desktop_payroll_sheet --hidden-import payroll_lines --hidden-import payroll_official --hidden-import office_tls --hidden-import vat_ledgers --hidden-import audit_chain --hidden-import audit_report --hidden-import desktop_attachments --hidden-import tax_review --hidden-import approvals --hidden-import release_check --hidden-import owner_access --hidden-import licence --hidden-import desktop_licence `
@@ -160,7 +162,8 @@ jobs:
       - name: Build background backup service
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed --icon Assets/nanza.ico `
-            --hidden-import inventory --hidden-import chart_extra --hidden-import lebanese_accounts --hidden-import lebanese_payroll --hidden-import app_runtime `
+            --paths nanza/core --paths nanza/accounting --paths nanza/tax --paths nanza/payroll --paths nanza/reports --paths nanza/documents --paths nanza/ui `
+            --hidden-import nanza_paths --hidden-import inventory --hidden-import chart_extra --hidden-import lebanese_accounts --hidden-import lebanese_payroll --hidden-import app_runtime `
             --version-file version_backup.txt --name NanzaAccountingBackup backup_service.py
 
       - name: Make sure Inno Setup is available

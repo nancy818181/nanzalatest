@@ -1,6 +1,8 @@
 """Create daily per-company backups independently of the desktop window."""
 from __future__ import annotations
 
+import nanza_paths  # noqa: F401  2.9.117: the program's folders on the import path
+
 import argparse
 import logging
 import time
