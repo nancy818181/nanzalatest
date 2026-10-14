@@ -67,5 +67,30 @@ class NanzaWordingTest(unittest.TestCase):
         self.assertIn('== "Saber Accounting"', (HERE / "run_desktop.py").read_text(encoding="utf-8"))
 
 
+class NanzaFileNamesTest(unittest.TestCase):
+    def test_new_folder_gets_nanza_files_old_folder_keeps_saber_files(self):
+        import tempfile, sqlite3, app_runtime
+        from contextlib import closing
+        with tempfile.TemporaryDirectory() as root:
+            new = Path(root) / "NanzaAccounting"; new.mkdir()
+            self.assertEqual(app_runtime.main_database_path(new).name, "nanza_accounting.db")
+            self.assertEqual(app_runtime.log_file(new).name, "nanza.log")
+            self.assertEqual(app_runtime.SingleInstance(new).lock_path.name, ".nanza.lock")
+            old = Path(root) / "SaberAccounting"; (old / "logs").mkdir(parents=True)
+            with closing(sqlite3.connect(old / "saber_accounting.db")) as db: db.execute("CREATE TABLE t(x)"); db.commit()
+            (old / "logs" / "saber.log").write_text("x")
+            self.assertEqual(app_runtime.main_database_path(old).name, "saber_accounting.db")   # never renamed
+            self.assertEqual(app_runtime.log_file(old).name, "saber.log")
+            self.assertEqual(app_runtime.SingleInstance(old).lock_path.name, ".saber.lock")
+
+    def test_backups_of_the_nanza_main_file_are_listed(self):
+        import tempfile, database
+        with tempfile.TemporaryDirectory() as root:
+            db = database.Database(str(Path(root) / "nanza_accounting.db")); db.initialize("Admin-Pass-2026!")
+            made = db.backup()
+            self.assertTrue(Path(made).name.startswith("nanza_accounting_"), made)
+            self.assertIn(Path(made).name, [b["name"] for b in db.list_backups()])
+
+
 if __name__ == "__main__":
     unittest.main()

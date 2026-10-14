@@ -151,7 +151,7 @@ class MainFileRenameTest(unittest.TestCase):
 
     def test_new_installation_uses_the_new_name(self):
         with tempfile.TemporaryDirectory() as name:
-            self.assertEqual(app_runtime.main_database_path(Path(name)).name, "saber_accounting.db")
+            self.assertEqual(app_runtime.main_database_path(Path(name)).name, "nanza_accounting.db")  # 2.9.114: a new installation uses the Nanza name
 
 
 class ScreenSplitTest(unittest.TestCase):

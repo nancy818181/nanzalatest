@@ -23,6 +23,7 @@ log = logging.getLogger("saber")
 
 MAIN_DATABASE_NAME = "saber_accounting.db"
 OLD_MAIN_DATABASE_NAME = "saber_accounting_v0_7.db"
+NEW_MAIN_DATABASE_NAME = "nanza_accounting.db"  # 2.9.114: the main data file in a folder that never had a Saber one
 KEY_HEADER = "X-Saber-Key"
 
 # Filled in by run_desktop.py once the private data service is running.
@@ -45,11 +46,18 @@ def data_dir() -> Path:
 
 
 # ------------------------------------------------------------------ logging
+def log_file(folder: Path | None = None) -> Path:
+    """logs/nanza.log; logs/saber.log where that log already exists (2.9.114: an installed copy keeps its log)."""
+    logs = Path(folder or data_dir()) / "logs"
+    old = logs / "saber.log"
+    return old if old.exists() else logs / "nanza.log"
+
+
 def setup_logging(folder: Path | None = None) -> Path:
-    """Write warnings and errors (with the full details) to logs/saber.log; 5 x 1 MB kept."""
+    """Write warnings and errors (with the full details) to logs/nanza.log (saber.log on older installations); 5 x 1 MB kept."""
     folder = Path(folder or data_dir()) / "logs"
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / "saber.log"
+    path = log_file(folder.parent)
     root = logging.getLogger()
     if not any(getattr(h, "_saber", False) for h in root.handlers):
         handler = logging.handlers.RotatingFileHandler(path, maxBytes=1_000_000, backupCount=5, encoding="utf-8")
@@ -106,7 +114,7 @@ def main_database_path(folder: Path | None = None) -> Path:
     new, old = folder / MAIN_DATABASE_NAME, folder / OLD_MAIN_DATABASE_NAME
     registry = folder / "companies" / "companies.json"
     if not new.exists() and not old.exists():
-        return new
+        return folder / NEW_MAIN_DATABASE_NAME  # 2.9.114: a new data folder gets the Nanza name; an existing file is never renamed
     if new.exists():
         # Finish an interrupted rename: the company list must not point at the old name.
         try: _registry_points_to(registry, old, new)
@@ -163,8 +171,10 @@ class SingleInstance:
 
     def __init__(self, folder: Path | None = None):
         self.folder = Path(folder or data_dir()); self.folder.mkdir(parents=True, exist_ok=True)
-        self.lock_path = self.folder / ".saber.lock"
-        self.window_path = self.folder / ".saber.window"
+        # 2.9.114: ".nanza.*" in a new data folder; a SaberAccounting folder keeps ".saber.*" (every copy there agrees)
+        tag = "saber" if self.folder.name == OLD_DATA_FOLDER_NAME or (self.folder / ".saber.window").exists() else "nanza"
+        self.lock_path = self.folder / f".{tag}.lock"
+        self.window_path = self.folder / f".{tag}.window"
         self._handle = None
 
     def acquire(self) -> bool:

@@ -40,7 +40,9 @@ def _main_database():
     import app_runtime
     folder = app_runtime.data_dir()
     new, old = folder/app_runtime.MAIN_DATABASE_NAME, folder/app_runtime.OLD_MAIN_DATABASE_NAME
-    return new if new.exists() or not old.exists() else old
+    if new.exists(): return new
+    if old.exists(): return old
+    return folder/app_runtime.NEW_MAIN_DATABASE_NAME  # 2.9.114: nanza_accounting.db on a new computer
 
 
 def main():

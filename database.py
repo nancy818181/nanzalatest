@@ -823,7 +823,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         source = Path(self.path)
         if not source.exists(): return None
         folder = self._backups_dir(); folder.mkdir(parents=True, exist_ok=True)
-        label = self.backup_label or "saber_accounting"
+        label = self.backup_label or ("nanza_accounting" if Path(self.path).stem == "nanza_accounting" else "saber_accounting")  # 2.9.114
         target = folder / f"{label}_{datetime.now():%Y-%m-%d_%H%M%S}{'_' + kind if kind != 'backup' else ''}.db"
         if target.exists(): target = folder / f"{target.stem}_{datetime.now():%f}.db"
         with self._lock:
@@ -906,14 +906,14 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         files={}
         for index,folder in enumerate(folders):
             if not folder.exists(): continue
-            for path in folder.glob("*.db" if index==0 else "saber_accounting_*.db"): files.setdefault(path.name,path)
+            for path in ([*folder.glob("*.db")] if index==0 else [*folder.glob("saber_accounting_*.db"),*folder.glob("nanza_accounting_*.db")]): files.setdefault(path.name,path)
         return files
 
     def list_backups(self):
         files=self._backup_files(); checks=self._backup_checks()
         return [{"checked":("ok" if checks[path.name].get("ok") else "FAILED") if path.name in checks else "not checked","name":path.name,
                 "size":path.stat().st_size,"modified":datetime.fromtimestamp(path.stat().st_mtime).isoformat(),
-                 "kind":"safety" if "_safety" in path.stem else "automatic" if path.stem.endswith("_auto") else "older version" if path.name.startswith("saber_accounting_") and self.backup_label else "backup"}
+                 "kind":"safety" if "_safety" in path.stem else "automatic" if path.stem.endswith("_auto") else "older version" if path.name.startswith(("saber_accounting_","nanza_accounting_")) and self.backup_label else "backup"}
                 for path in sorted(files.values(),key=lambda p:p.stat().st_mtime,reverse=True)]
 
     def backup_path(self, name):

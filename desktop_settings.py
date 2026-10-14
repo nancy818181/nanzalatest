@@ -359,7 +359,7 @@ class SettingsMixin:
         (messagebox.showwarning if error else messagebox.showinfo)("Network Check", "\n".join(lines))
 
     def open_log_folder(self):
-        """Error log of this computer (logs/saber.log in the Nanza data folder) - send it when reporting a problem."""
+        """Error log of this computer (logs/nanza.log - saber.log on older installations - in the Nanza data folder) - send it when reporting a problem."""
         import app_runtime
         folder=app_runtime.data_dir()/"logs"; folder.mkdir(parents=True,exist_ok=True)
         try:
