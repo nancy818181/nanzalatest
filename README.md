@@ -1,5 +1,14 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.115 (renumber documents by date; a calmer, clearer look)
+- **Settings > Renumber (administrator):** puts the numbers back in date order after a document was entered with a wrong date - customer receipts (RV), supplier payments (PV), journal vouchers (JV), expenses (EXP), purchase invoices (PUR) and sales invoices (SAL). Choose the documents and the year, press **Preview** to see every current -> new number, then **Renumber**.
+  - Only the program's own numbers change (RV-2026-000012); a number typed by hand or an imported supplier number is never touched.
+  - Documents in locked books, a closed fiscal year or a quarter whose VAT return is saved keep their numbers; the documents after them follow on.
+  - A safety backup is made first, everything changes in one step, and the Audit Trail keeps every old -> new number. The journal entry of a receipt, payment or expense takes the new number; an invoice's entry mentions it. Amounts, dates, accounts, allocations and attachments do not change.
+  - Sales invoices: a warning reminds that invoices already given to customers carry the old number.
+  - New module resequence.py, screen desktop_renumber.py; routes GET /api/renumber (preview) and POST /api/renumber (administrator).
+- **Look (only the look changes):** buttons by importance as in Odoo / Zoho - one gold main action (Save ...), red for delete, every other action a light button with a thin border (they were all solid navy); table headings light grey-blue with thin column lines instead of solid navy; no grey box around unused tick boxes.
+
 ## Version 2.9.114 (the program file is named Nanza)
 - **The program file is now NanzaAccounting.exe** (was SaberAccounting.exe), the background backup **NanzaAccountingBackup.exe** and the setup **NanzaAccountingSetup.exe**. Explorer (Properties > Details), the Task Manager and "Open with" now show **Nanza Accounting** with its version, from Windows file details written into each program at build time.
 - Updating an installed copy: the setup stops the old and the new programs, removes the old SaberAccounting.exe, SaberAccountingBackup.exe and the old "Saber Accounting Backups" start-up shortcut, and points the Start menu / desktop shortcuts to NanzaAccounting.exe. A taskbar pin made on the old program file must be pinned again once.

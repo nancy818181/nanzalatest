@@ -34,8 +34,9 @@ from desktop_reports import ReportsMixin
 from desktop_settings import SettingsMixin
 from desktop_payroll_sheet import PayrollSheetMixin
 from desktop_projection import ProjectionMixin
+from desktop_renumber import RenumberMixin  # 2.9.115
 
-class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
+class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
         ReportsMixin, SettingsMixin, AssetsMixin, V22Mixin, InventoryMixin, ProductionMixin, AccountToolsMixin, Stage3Mixin, DimensionsMixin,
         BrainsScreensMixin, FinalFeaturesMixin, CNSSFormsMixin, tk.Tk):
     def __init__(self):
@@ -694,6 +695,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
             for index,(page,name) in enumerate(zip(self.main_tab_pages,self.tab_names)):
                 button=tk.Button(tab_nav,text=name,command=lambda p=page:self.select_main_tab(p),bg=NAVY,fg="white",
                     activebackground=GOLD,activeforeground=NAVY,border=0,font=("Segoe UI",8,"bold"),pady=1,wraplength=120,cursor="hand2")
+                button._saber_keep=True  # 2.9.115: its colour shows the open page - the design pass leaves it alone
                 nav_buttons.append(button)
         self.after_idle(size_navigation)
         notebook.bind("<<NotebookTabChanged>>",lambda _event:self.highlight_main_tab())

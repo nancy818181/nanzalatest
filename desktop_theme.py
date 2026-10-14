@@ -12,8 +12,9 @@ from tkinter import ttk
 from desktop_common import GOLD, LIGHT, NAVY
 
 FONT = "Segoe UI"
-HEADING = "#23405E"        # table headings
-HEADING_ACTIVE = "#2E5277"
+HEADING = "#E9EEF4"        # table headings (2.9.115: light, as in modern ERPs; was navy #23405E)
+HEADING_ACTIVE = "#DCE4EE"
+HEADING_TEXT = "#102A43"
 SELECTED = "#D3E5F5"       # selected table row
 STRIPE = "#F3F6F9"         # every second table row
 BORDER = "#C9D3DD"
@@ -31,8 +32,9 @@ def apply_theme(root: tk.Misc) -> ttk.Style:
     style.configure("Treeview", rowheight=27, font=(FONT, 10), background="white", fieldbackground="white", foreground=NAVY,
                     borderwidth=0, bordercolor=BORDER)  # 2.9.59: 10 pt text in tables
     style.map("Treeview", background=[("selected", SELECTED)], foreground=[("selected", NAVY)])
-    style.configure("Treeview.Heading", background=HEADING, foreground="white", font=(FONT, 10, "bold"), relief="flat", padding=(4, 6))
-    style.map("Treeview.Heading", background=[("active", HEADING_ACTIVE)])
+    style.configure("Treeview.Heading", background=HEADING, foreground=HEADING_TEXT, font=(FONT, 10, "bold"), relief="raised", padding=(4, 7),
+                    borderwidth=1, bordercolor=BORDER, lightcolor=HEADING, darkcolor=BORDER)
+    style.map("Treeview.Heading", background=[("active", HEADING_ACTIVE)], foreground=[("active", HEADING_TEXT)])
     style.configure("Sales.Treeview", rowheight=28, font=(FONT, 10))
     style.configure("TCombobox", padding=4, arrowsize=13, bordercolor=BORDER, lightcolor="white", darkcolor="white")
     style.map("TCombobox", bordercolor=[("focus", GOLD)], fieldbackground=[("readonly", "white")])
@@ -50,12 +52,19 @@ def apply_theme(root: tk.Misc) -> ttk.Style:
     root.option_add("*Entry.highlightThickness", 1); root.option_add("*Entry.highlightColor", GOLD); root.option_add("*Entry.highlightBackground", BORDER)
     root.option_add("*LabelFrame.foreground", NAVY); root.option_add("*LabelFrame.font", (FONT, 9, "bold"))
     root.option_add("*Button.cursor", "hand2"); root.option_add("*Button.relief", "flat")
+    # 2.9.115: no grey focus box around every tick box when it is not in use
+    for kind in ("Checkbutton", "Radiobutton"): root.option_add(f"*{kind}.highlightThickness", 0)
     root.option_add("*Listbox.selectBackground", SELECTED); root.option_add("*Listbox.selectForeground", NAVY)
     root.option_add("*Text.highlightColor", GOLD); root.option_add("*Text.highlightBackground", BORDER)
 
     def hover(event, entering):  # buttons light up under the mouse
         widget = event.widget
         try:
+            if getattr(widget, "_saber_kind", "") in ("secondary", "outline"):  # 2.9.115: light buttons get a soft grey-blue
+                if entering:
+                    if _lower(widget.cget("background")) == _lower(OUTLINE_BG): widget.configure(background=OUTLINE_HOVER)
+                elif _lower(widget.cget("background")) == _lower(OUTLINE_HOVER): widget.configure(background=OUTLINE_BG)
+                return
             if entering:
                 widget._saber_bg = widget.cget("background"); color = widget._saber_bg.lstrip("#")
                 if len(color) == 6:
@@ -86,6 +95,12 @@ GOLD_HOVER = "#C99D57"
 NAVY_HOVER = "#1E4268"
 DANGER_HOVER = "#A32A2A"
 _BUTTON_FONT = (FONT, 9, "bold")
+# 2.9.115: buttons by importance, as in Odoo / Zoho: ONE gold main action (Save ...), red for delete, and every other
+# action a light button with a thin border (they were all solid navy, so nothing stood out). Only the look changes.
+OUTLINE_BG = "#FFFFFF"
+OUTLINE_HOVER = "#E8EEF5"
+OUTLINE_BORDER = "#B9C6D3"
+_OUTLINE_SOURCES = ("white", "#ffffff", "#fff", "systembuttonface", "#f0f0f0", "#d9d9d9")
 _TITLE_FONT = (FONT, 10, "bold")
 
 
@@ -106,16 +121,26 @@ def _pixels(widget, option):
 
 def _polish_button(button):
     try:
+        if getattr(button, "_saber_keep", False): return  # a button whose colour shows a state (page buttons ...)
         bg = _lower(button.cget("background"))
         if _lower(button.master.cget("background")) in (_lower(NAVY), "#0b1f33"): return  # menu / top bar: keep
         if button.cget("text") in ("", None) or button.cget("image"): return
-        if bg == _lower(GOLD): kind, hover, fg = "primary", GOLD_HOVER, NAVY
-        elif bg in DANGER: kind, hover, fg = "danger", DANGER_HOVER, "white"
-        elif bg == _lower(NAVY): kind, hover, fg = "secondary", NAVY_HOVER, "white"
+        done = getattr(button, "_saber_kind", "")
+        if done in ("secondary", "outline") and bg in (_lower(OUTLINE_BG), _lower(OUTLINE_HOVER)): kind = done  # polished before
+        elif bg == _lower(GOLD) or done == "primary" and bg == _lower(GOLD_HOVER): kind = "primary"
+        elif bg in DANGER or done == "danger" and bg == _lower(DANGER_HOVER): kind = "danger"
+        elif bg == _lower(NAVY): kind = "secondary"
+        elif bg in _OUTLINE_SOURCES: kind = "outline"
         else: return  # a colour chosen on purpose (status chips, colour pickers)
         padx = max(12, _pixels(button, "padx")); pady = 5 if _pixels(button, "pady") >= 4 else _pixels(button, "pady")
-        button.configure(font=_BUTTON_FONT, fg=fg, relief="flat", bd=0, highlightthickness=0, padx=padx, pady=pady,
-                         activebackground=hover, activeforeground=fg, cursor="hand2")
+        if kind in ("secondary", "outline"):
+            button.configure(font=_BUTTON_FONT, bg=OUTLINE_BG, fg=NAVY, relief="flat", bd=0, highlightthickness=1,
+                             highlightbackground=OUTLINE_BORDER, highlightcolor=GOLD, padx=padx, pady=max(pady, 4),
+                             activebackground=OUTLINE_HOVER, activeforeground=NAVY, cursor="hand2")
+        else:
+            hover, fg = (GOLD_HOVER, NAVY) if kind == "primary" else (DANGER_HOVER, "white")
+            button.configure(font=_BUTTON_FONT, fg=fg, relief="flat", bd=0, highlightthickness=0, padx=padx, pady=pady,
+                             activebackground=hover, activeforeground=fg, cursor="hand2")
         button._saber_kind = kind
     except (tk.TclError, ValueError):
         pass

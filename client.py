@@ -352,6 +352,8 @@ class ApiClient:
     def create_backup(self): return self.request("POST","/api/backups/create",{})
     def scheduled_backup(self): return self.request("POST","/api/backups/scheduled",{})
     def books_lock(self): return self.request("GET","/api/books-lock")
+    def renumber_preview(self,kind,year): return self.request("GET",f"/api/renumber?{urlencode({'kind':kind,'year':year})}")  # 2.9.115
+    def renumber(self,kind,year,token): return self.request("POST","/api/renumber",{"kind":kind,"year":year,"token":token})
     def set_books_lock(self,date): return self.request("POST","/api/books-lock",{"locked_until":date})
     def restore_backup(self,name): return self.request("POST","/api/backups/restore",{"name":name})
     def settings(self): return self.request("GET","/api/settings")

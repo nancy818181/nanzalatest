@@ -60,11 +60,12 @@ def _json_value(value):
 # 2.9.103: every request that only the administrator may make, in one place (checked before the request is handled).
 # A new administrator-only request is added here; a test fails when a request checks "admin" itself without being listed.
 ADMIN_ONLY = {
-    "GET": {"/api/users", "/api/audit-log", "/api/audit-report", "/api/audit-verify"},
+    "GET": {"/api/users", "/api/audit-log", "/api/audit-report", "/api/audit-verify", "/api/renumber"},
     "POST": {"/api/companies", "/api/companies/import", "/api/companies/year", "/api/accounting-setup", "/api/tax-adviser", "/api/vat-ledgers", "/api/vat-ledgers/create",
              "/api/vat-return/reopen", "/api/users", "/api/books-lock", "/api/backups/restore", "/api/settings", "/api/currencies",
              "/api/payroll/delete-period", "/api/payroll/apply-lebanese-rules", "/api/payroll/periods", "/api/payroll/settings",
-             "/api/fiscal-years/close", "/api/fiscal-years/delete", "/api/fiscal-years/reopen", "/api/fiscal-years/refresh-opening"},
+             "/api/fiscal-years/close", "/api/fiscal-years/delete", "/api/fiscal-years/reopen", "/api/fiscal-years/refresh-opening",
+             "/api/renumber"},
     "PUT": {"/api/companies/*"},
     "DELETE": {"/api/opening-vouchers/*"},
 }
@@ -599,6 +600,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                 if path=="/api/tax-adviser": return self._json(200,tax_review.adviser(self.db))
                 return self._json(200,tax_review.settings_report(self.db,self._query(parsed,"date","")))
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/renumber":  # 2.9.115: preview of a renumbering by date (administrator, nothing changes)
+            import resequence
+            try: return self._json(200,resequence.plan(self.db,self._query(parsed,"kind",""),self._query(parsed,"year","")))
+            except ValueError as exc: return self._json(400,{"error":str(exc)})
         if path in ("/api/audit-report","/api/audit-verify"):  # 2.9.97: audit report and audit-trail integrity (administrator)
             if user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})
             import audit_chain, audit_report
@@ -960,6 +965,10 @@ class ApiHandler(BaseHTTPRequestHandler):
             if user["role"]=="viewer": return self._json(200,{"path":None})
             try: return self._json(200,{"path":self.db.maybe_scheduled_backup()})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/renumber":  # 2.9.115: renumber as previewed (administrator; safety backup + audit trail)
+            import resequence
+            try: return self._json(200,resequence.apply(self.db,body.get("kind"),body.get("year"),body.get("token"),user["id"]))
+            except ValueError as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/books-lock":
             if user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})
             try: return self._json(200,self.db.set_books_lock(body.get("locked_until"),user["id"]))
