@@ -548,6 +548,11 @@ class BrainsScreensMixin(BalanceReportsMixin):
         if not hasattr(self, "manual_no") or self.editing_voucher_id: return
         try: year = datetime.strptime(self.manual_date.get(), "%d-%m-%Y").year
         except ValueError: year = datetime.now().year
+        branch = self.manual_branch.get().strip() if hasattr(self, "manual_branch") else ""
+        try:  # 2.9.116: the prefix (and branch) of Settings > Numbering, from the data service
+            self.manual_no.set(self.client.next_document_number("journal_voucher", self.manual_date.get().strip() or None, branch or None)); return
+        except (RuntimeError, ValueError, OSError):
+            pass  # offline: count from the vouchers on screen, as before
         prefix = f"JV-{year}-"; numbers = []
         for row in getattr(self, "manual_voucher_rows", {}).values():
             if str(row["number"]).startswith(prefix):

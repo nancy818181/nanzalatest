@@ -76,6 +76,9 @@ class SalesInvoiceMixin:
         self.sales_department=tk.StringVar(); self.sales_project=tk.StringVar(); self.dimension_selectors(dims,self.sales_department,self.sales_project)
         vat_row=tk.Frame(invoice_details,bg=LIGHT); vat_row.pack(anchor="w",fill="x",pady=(1,0))
         tk.Label(vat_row,text="Branch",bg=LIGHT).pack(side="left"); self.branch_selector(vat_row,self.sales_branch,14,False).pack(side="left",padx=(4,10))
+        # 2.9.116: the branch can be in the number (Settings > Numbering): a new invoice takes the number of its branch
+        self.sales_branch.trace_add("write",lambda *_a:(not getattr(self,"sales_edit_id",None) and len(self.sales_date.get())==10
+                                                       and self.after_idle(self.refresh_sales_number)))
         tk.Label(vat_row,text="Amount Paid",bg=LIGHT).pack(side="left"); tk.Entry(vat_row,textvariable=self.sales_amount_paid,width=10).pack(side="left",padx=(4,10))
         self.sales_cash_account=tk.StringVar()
         tk.Label(vat_row,text="Paid into",bg=LIGHT).pack(side="left"); self.account_search_box(vat_row,self.sales_cash_account,12).pack(side="left",padx=(4,10))
@@ -170,7 +173,8 @@ class SalesInvoiceMixin:
 
     def refresh_sales_number(self):
         kind={"Credit Note":"credit_note","Return":"credit_note","Debit Note":"debit_note"}.get(self.sales_doc_type.get() if hasattr(self,"sales_doc_type") else "Invoice","sale")
-        try: self.sales_no.set(self.client.next_invoice_number(kind,self.sales_date.get().strip() or None))
+        branch=self.sales_branch.get().strip() if hasattr(self,"sales_branch") else None  # 2.9.116: the branch can be in the number
+        try: self.sales_no.set(self.client.next_invoice_number(kind,self.sales_date.get().strip() or None,branch if branch not in ("","All") else None))
         except Exception: self.sales_no.set("")
 
     def load_sales_customer_list(self):

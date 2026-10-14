@@ -15,6 +15,7 @@ FONT = "Segoe UI"
 HEADING = "#E9EEF4"        # table headings (2.9.115: light, as in modern ERPs; was navy #23405E)
 HEADING_ACTIVE = "#DCE4EE"
 HEADING_TEXT = "#102A43"
+FORM_TEXT = "#2B3F55"      # 2.9.116: labels and tick boxes
 SELECTED = "#D3E5F5"       # selected table row
 STRIPE = "#F3F6F9"         # every second table row
 BORDER = "#C9D3DD"
@@ -54,6 +55,9 @@ def apply_theme(root: tk.Misc) -> ttk.Style:
     root.option_add("*Button.cursor", "hand2"); root.option_add("*Button.relief", "flat")
     # 2.9.115: no grey focus box around every tick box when it is not in use
     for kind in ("Checkbutton", "Radiobutton"): root.option_add(f"*{kind}.highlightThickness", 0)
+    # 2.9.116: form text in a soft navy instead of plain black (a label given its own colour keeps it)
+    for kind in ("Label", "Checkbutton", "Radiobutton"): root.option_add(f"*{kind}.foreground", FORM_TEXT)
+    root.option_add("*Entry.foreground", "#102A43"); root.option_add("*Entry.insertWidth", 1)
     root.option_add("*Listbox.selectBackground", SELECTED); root.option_add("*Listbox.selectForeground", NAVY)
     root.option_add("*Text.highlightColor", GOLD); root.option_add("*Text.highlightBackground", BORDER)
 
@@ -142,8 +146,29 @@ def _polish_button(button):
             button.configure(font=_BUTTON_FONT, fg=fg, relief="flat", bd=0, highlightthickness=0, padx=padx, pady=pady,
                              activebackground=hover, activeforeground=fg, cursor="hand2")
         button._saber_kind = kind
+        _button_icon(button, kind)
     except (tk.TclError, ValueError):
         pass
+
+
+def _button_icon(button, kind):
+    """2.9.116: a small icon before the everyday actions (New, Save, Print, Delete, Excel, PDF, Import)."""
+    if getattr(button, "_saber_icon_done", False): return
+    button._saber_icon_done = True
+    try:
+        if str(button.cget("image")) or str(button.cget("compound")) not in ("", "none"): return
+        if int(str(button.cget("width")) or 0): return  # a width in letters would turn into pixels with an image
+        words = str(button.cget("text")).strip().lower().split()  # "+ Sales Invoice" already shows its +: no icon
+        if not words: return
+        import icons
+        name = icons.BUTTON_ICONS.get(words[0])
+        if not name: return
+        colour = "#FFFFFF" if kind == "danger" else NAVY
+        button._saber_icon = icons.tk_icon(button, name, colour, 12)
+        # Tk puts padx between the icon and the text too: a smaller padx keeps the button about as wide as before
+        button.configure(image=button._saber_icon, compound="left", padx=max(7, _pixels(button, "padx") // 2))
+    except (ImportError, OSError, ValueError, tk.TclError):  # Pillow missing or an unusual button: it simply keeps no icon
+        logging.getLogger("saber.ignored").debug("Button icon left out", exc_info=True)
 
 
 def _into_card(widget):
@@ -201,8 +226,84 @@ def _fit_width(widgets):
         except Exception: logging.getLogger("saber.ignored").debug("Row left as it was", exc_info=True)
 
 
-def polish(widget):
-    """Apply the design system to a screen or window and everything in it (safe to call again)."""
+# ---------------------------------------------------------------- 2.9.116: toolbars as in Odoo / Zoho
+# A row with many light buttons shows the first few and puts the others in a "More" menu (the main gold action and
+# the red ones always stay in view). The buttons themselves are kept, only out of sight: the menu runs the same
+# button, so every command, shortcut and permission works exactly as before.
+FOLD_AT = 6        # light buttons in one row before the row is folded
+KEEP_VISIBLE = 4   # light buttons left in view
+MORE_TEXT = "More \u25be"
+EVERYDAY = {"new", "add", "+", "print", "refresh", "show", "edit", "open", "find", "apply", "run", "build", "create"}
+
+
+def _row_items(frame):
+    """The widgets of a toolbar row in order, and how they are placed ('flow' / 'pack'), or (None, None)."""
+    try:
+        if getattr(frame, "_saber_flow", False):
+            return [w for w, *_rest in getattr(frame, "_flow_order", []) if w.winfo_exists()], "flow"
+        if frame.grid_slaves() or frame.place_slaves(): return None, None
+        slaves = frame.pack_slaves()
+        if any(s.pack_info().get("side") not in ("left",) for s in slaves if isinstance(s, tk.Button)): return None, None
+        return slaves, "pack"
+    except tk.TclError:
+        return None, None
+
+
+def _more_menu(frame, button):
+    menu = tk.Menu(button, tearoff=0, font=(FONT, 10), activebackground=OUTLINE_HOVER, activeforeground=NAVY, bg="white", fg=NAVY, bd=1)
+    for hidden in getattr(frame, "_saber_folded", []):
+        try:
+            if not hidden.winfo_exists(): continue
+            menu.add_command(label=str(hidden.cget("text")), command=hidden.invoke, state=str(hidden.cget("state")))
+        except tk.TclError: continue
+    try: menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
+    finally: menu.grab_release()
+
+
+def fold_toolbar(frame):
+    """Fold one row (safe to call again; buttons added to the row later are folded too)."""
+    items, mode = _row_items(frame)
+    if not items: return False
+    light = [w for w in items if isinstance(w, tk.Button) and getattr(w, "_saber_kind", "") in ("secondary", "outline")
+             and not getattr(w, "_saber_more", False) and not getattr(w, "_flow_hidden", False)]
+    folded = [w for w in getattr(frame, "_saber_folded", []) if w.winfo_exists()]
+    if len(light) + len(folded) < FOLD_AT or len(light) <= KEEP_VISIBLE: return False
+    # the everyday actions stay in view first (New / Add / Print / Refresh ...), then the others in their order
+    everyday = [w for w in light if str(w.cget("text")).strip().split(" ")[0].lower() in EVERYDAY]
+    chosen = set((everyday + [w for w in light if w not in everyday])[:KEEP_VISIBLE])
+    keep, hide = [w for w in light if w in chosen], [w for w in light if w not in chosen]
+    more = getattr(frame, "_saber_more_button", None)
+    if more is None or not more.winfo_exists():
+        more = tk.Button(frame, text=MORE_TEXT, bg=OUTLINE_BG, fg=NAVY, pady=_pixels(keep[-1], "pady") or 5); more._saber_more = True
+        more.configure(command=lambda f=frame, b=more: _more_menu(f, b)); _polish_button(more); frame._saber_more_button = more
+        if mode == "pack":
+            info = keep[-1].pack_info()  # the same spacing as its neighbours, so the row stays level
+            more.pack(side="left", padx=info.get("padx", 3), pady=info.get("pady", 0), after=keep[-1])
+        else:
+            order = frame._flow_order; index = next((i for i, e in enumerate(order) if e[0] is keep[-1]), len(order) - 1)
+            order.insert(index + 1, (more, "left", order[index][2], order[index][3]))
+            more.bind("<Configure>", lambda _e, f=frame: f._flow_schedule(), add="+")
+    for button in hide:
+        if mode == "pack": button.pack_forget()
+        else: button._flow_hidden = True; button.place_forget()
+    frame._saber_folded = folded + hide
+    if mode == "flow": frame._flow_schedule()
+    return True
+
+
+def fold_toolbars(widget):
+    """Every row under `widget` with many light buttons gets a More menu."""
+    stack = [widget]
+    while stack:
+        item = stack.pop()
+        if type(item) in (tk.Frame, tk.LabelFrame) and not getattr(item, "_saber_no_fold", False): fold_toolbar(item)
+        try: stack.extend(c for c in item.winfo_children() if not isinstance(c, tk.Toplevel))
+        except tk.TclError: pass
+
+
+def polish(widget, fold=False):
+    """Apply the design system to a screen or window and everything in it (safe to call again).
+    fold=True (the program's screens) also folds long rows of buttons into a More menu (2.9.116)."""
     stack = [widget]; seen = []
     while stack:
         item = stack.pop(); seen.append(item)
@@ -211,6 +312,7 @@ def polish(widget):
         elif isinstance(item, tk.Entry) and not isinstance(item, ttk.Entry): _polish_entry(item)
         try: stack.extend(item.winfo_children())
         except tk.TclError: pass
+    if fold: fold_toolbars(widget)
     _fit_width([w for w in seen if isinstance(w, (tk.Frame, tk.Label, tk.LabelFrame))])
 
 

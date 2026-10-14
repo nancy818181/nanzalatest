@@ -67,30 +67,36 @@ def plan(database, kind, year):
     spec = SERIES[kind]
     try: year = int(str(year).strip())
     except ValueError: raise ValueError("Year must be a number such as 2026") from None
-    pattern = re.compile(rf"^{re.escape(spec['prefix'])}-{year}-(\d+)$")
+    import numbering  # 2.9.116: the prefix chosen in Settings > Numbering; each branch in the number counts on its own
     lock = str(database.settings().get("books_locked_until", "") or "")
     with database.connect() as db:
+        prefix = numbering.settings(db)[kind]["prefix"]
         found = db.execute(f"SELECT id, {spec['column']} number, {spec['date']} day FROM {spec['table']} WHERE {spec['where']}").fetchall()
-    rows = []
+    pattern = re.compile(rf"^{re.escape(prefix)}(?:-([A-Z][A-Z0-9]{{0,3}}))?-{year}-(\d+)$")
+    groups = {}
     for row in found:
         match = pattern.match(str(row["number"] or "").strip())
-        if not match: continue  # a number typed by hand or imported: never touched
+        if not match: continue  # a number typed by hand, imported, or of another prefix: never touched
         iso = _iso(row["day"])
-        rows.append({"id": int(row["id"]), "date": iso, "old": str(row["number"]).strip(), "sequence": int(match.group(1)),
-                     "frozen": _frozen_reason(database, iso, lock)})
-    rows.sort(key=lambda r: (r["date"] or "9999-99-99", r["sequence"], r["id"]))
-    # Documents up to the last one that may not change keep their numbers; the others follow on after them.
-    last_frozen = max((i for i, r in enumerate(rows) if r["frozen"]), default=-1)
-    kept = rows[:last_frozen + 1]
-    width = max([6] + [len(r["old"].rsplit("-", 1)[-1]) for r in rows])
-    following = max([r["sequence"] for r in kept], default=0)
-    for r in kept: r.update(new=r["old"], change=False, kept=True)
-    for offset, r in enumerate(rows[last_frozen + 1:], 1):
-        r["new"] = f"{spec['prefix']}-{year}-{following + offset:0{width}d}"
-        r["change"] = r["new"] != r["old"]; r["kept"] = False
+        groups.setdefault(match.group(1) or "", []).append({"id": int(row["id"]), "date": iso, "old": str(row["number"]).strip(),
+                                                            "sequence": int(match.group(2)), "frozen": _frozen_reason(database, iso, lock), "branch": match.group(1) or ""})
+    rows = []; kept = []
+    for branch, members in sorted(groups.items()):
+        members.sort(key=lambda r: (r["date"] or "9999-99-99", r["sequence"], r["id"]))
+        # Documents up to the last one that may not change keep their numbers; the others follow on after them.
+        last_frozen = max((i for i, r in enumerate(members) if r["frozen"]), default=-1)
+        held = members[:last_frozen + 1]; kept += held
+        width = max([6] + [len(r["old"].rsplit("-", 1)[-1]) for r in members])
+        following = max([r["sequence"] for r in held], default=0)
+        head = f"{prefix}-{branch}" if branch else prefix
+        for r in held: r.update(new=r["old"], change=False, kept=True)
+        for offset, r in enumerate(members[last_frozen + 1:], 1):
+            r["new"] = f"{head}-{year}-{following + offset:0{width}d}"
+            r["change"] = r["new"] != r["old"]; r["kept"] = False
+        rows += members
     changes = [r for r in rows if r["change"]]
     token = hashlib.sha256(json.dumps([(r["id"], r["old"], r["new"]) for r in changes]).encode()).hexdigest()[:16]
-    return {"kind": kind, "label": spec["label"], "year": year, "rows": rows, "changes": len(changes), "kept": len(kept),
+    return {"kind": kind, "label": spec["label"], "year": year, "prefix": prefix, "rows": rows, "changes": len(changes), "kept": len(kept),
             "kept_reason": kept[-1]["frozen"] if kept else "", "token": token,
             "warning": SALES_WARNING if kind == "sale" and changes else ""}
 
@@ -124,5 +130,5 @@ def apply(database, kind, year, token, user_id):
                            "AND source_id=? AND instr(description,?)>0", (r["old"], r["new"], spec["source"], r["id"], r["old"]))
         db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                    (user_id, "renumber", spec["source"], None,
-                    json.dumps({"series": f"{spec['prefix']}-{current['year']}", "changes": [[r["old"], r["new"]] for r in changes]}), utcnow()))
+                    json.dumps({"series": f"{current['prefix']}-{current['year']}", "changes": [[r["old"], r["new"]] for r in changes]}), utcnow()))
     return {**current, "renumbered": len(changes)}

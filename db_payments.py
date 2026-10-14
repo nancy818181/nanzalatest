@@ -193,7 +193,8 @@ class PaymentsStore:
                         str(with_vat),str(without_vat),str(vat),str(total),expense_account,expense_without_vat_account,vat_account,payment_account,expense_side,
                         expense_without_vat_side,vat_side,payment_side,str(item.get("reference") or "").strip(),user_id,utcnow()))
             expense_id=result.lastrowid
-            number=str(item.get("expense_number") or "").strip() or self._next_number(db,"expenses","expense_number","EXP",date)
+            import numbering  # 2.9.116
+            number=str(item.get("expense_number") or "").strip() or self._next_number(db,"expenses","expense_number",numbering.series(db,"expense"),date)
             db.execute("UPDATE expenses SET expense_number=? WHERE id=?",(number,expense_id))
             entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at)
                 VALUES(?,?,?,?,?,?,?,?)""",(number if not db.execute("SELECT 1 FROM journal_entries WHERE entry_number=?",(number,)).fetchone() else f"EXP-{expense_id}",date,
@@ -285,7 +286,8 @@ class PaymentsStore:
         return rows
 
     def _next_payment_number(self, db, kind, date):
-        return self._next_number(db, "payments", "payment_number", "RV" if kind == "customer_receipt" else "PV", date)
+        import numbering  # 2.9.116: the prefix chosen in Settings > Numbering (RV / PV by default)
+        return self._next_number(db, "payments", "payment_number", numbering.series(db, "customer_receipt" if kind == "customer_receipt" else "supplier_payment"), date)
 
     # ---------------------------------------------------------------- receipts and payments: edit / delete
     def _remove_entries(self, db, source_type, source_id, extra_numbers=()):

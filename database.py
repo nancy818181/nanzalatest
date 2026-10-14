@@ -462,14 +462,17 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                                WHERE previous.date_from<'2025-01-01' AND previous.date_to>='2025-01-01')
                     AND EXISTS(SELECT 1 FROM payroll_settings AS following WHERE following.date_from>'2025-01-01')""",
                     (default_brackets,))
-            db.executemany("""INSERT INTO accounts(code,name_en,name_ar,name_fr,type)
-                VALUES(?,?,?,?,?) ON CONFLICT(code) DO UPDATE SET
-                name_en=excluded.name_en,name_ar=excluded.name_ar,name_fr=excluded.name_fr,type=excluded.type""",
-                [row[:5] for row in LEBANESE_ACCOUNTS])
-            for code, _name_en, _name_ar, _name_fr, _type, parent_code in LEBANESE_ACCOUNTS:
-                if parent_code:
-                    db.execute("UPDATE accounts SET parent_id=(SELECT id FROM accounts WHERE code=?) WHERE code=?",
-                               (parent_code, code))
+            import chart_templates  # 2.9.116: a company created with another chart keeps it (IFRS, Saudi Arabia, UAE)
+            if chart_templates.current(db) != "lebanon": chart_templates.ensure(db, chart_templates.current(db))
+            else:
+                db.executemany("""INSERT INTO accounts(code,name_en,name_ar,name_fr,type)
+                    VALUES(?,?,?,?,?) ON CONFLICT(code) DO UPDATE SET
+                    name_en=excluded.name_en,name_ar=excluded.name_ar,name_fr=excluded.name_fr,type=excluded.type""",
+                    [row[:5] for row in LEBANESE_ACCOUNTS])
+                for code, _name_en, _name_ar, _name_fr, _type, parent_code in LEBANESE_ACCOUNTS:
+                    if parent_code:
+                        db.execute("UPDATE accounts SET parent_id=(SELECT id FROM accounts WHERE code=?) WHERE code=?",
+                                   (parent_code, code))
             for old_code, new_code in LEGACY_ACCOUNT_MAP.items():
                 old = db.execute("SELECT id FROM accounts WHERE code=?", (old_code,)).fetchone()
                 new = db.execute("SELECT id FROM accounts WHERE code=?", (new_code,)).fetchone()
@@ -1103,11 +1106,13 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                    if str(row["value"]).rsplit("-", 1)[-1].isdigit()]
         return f"{pattern}{max(numbers, default=0) + 1:06d}"
 
-    def next_document_number(self, kind, date=None):
+    def next_document_number(self, kind, date=None, branch=None):
         date = date or datetime.now().strftime("%d-%m-%Y")
+        import numbering  # 2.9.116: Settings > Numbering
         with self.connect() as db:
             if kind in ("customer_receipt", "supplier_payment"): return self._next_payment_number(db, kind, date)
-            if kind == "expense": return self._next_number(db, "expenses", "expense_number", "EXP", date)
+            if kind == "expense": return self._next_number(db, "expenses", "expense_number", numbering.series(db, "expense"), date)
+            if kind == "journal_voucher": return self._next_number(db, "journal_entries", "entry_number", numbering.series(db, "journal_voucher", branch), date)
             if kind == "purchase": return self.next_invoice_number("purchase", date)
         raise ValueError("Unknown document type")
 

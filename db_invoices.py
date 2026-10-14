@@ -11,8 +11,11 @@ from database_common import _soft_iso  # noqa: F401
 
 
 class InvoicesStore:
-    def next_invoice_number(self, kind="sale", invoice_date=None):
+    def next_invoice_number(self, kind="sale", invoice_date=None, branch=None):
         prefix = {"sale":"SAL","sales":"SAL","credit_note":"CN","debit_note":"DN","supplier_credit_note":"SCN","supplier_debit_note":"SDN"}.get(str(kind).lower(),"PUR")
+        if prefix in ("SAL", "PUR"):  # 2.9.116: the prefix (and branch) chosen in Settings > Numbering
+            import numbering
+            with self.connect() as db: prefix = numbering.series(db, "sale" if prefix == "SAL" else "purchase", branch)
         year = str(invoice_date or datetime.now().year)
         if "-" in year:
             year = year[-4:] if year[:4].isdigit() is False else year[:4]

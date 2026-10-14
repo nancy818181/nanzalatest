@@ -65,7 +65,7 @@ ADMIN_ONLY = {
              "/api/vat-return/reopen", "/api/users", "/api/books-lock", "/api/backups/restore", "/api/settings", "/api/currencies",
              "/api/payroll/delete-period", "/api/payroll/apply-lebanese-rules", "/api/payroll/periods", "/api/payroll/settings",
              "/api/fiscal-years/close", "/api/fiscal-years/delete", "/api/fiscal-years/reopen", "/api/fiscal-years/refresh-opening",
-             "/api/renumber"},
+             "/api/renumber", "/api/accounts/import", "/api/numbering"},
     "PUT": {"/api/companies/*"},
     "DELETE": {"/api/opening-vouchers/*"},
 }
@@ -302,7 +302,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 return self._json(200,ledger_reports.json_ready(ledger_reports.build_account_report(books,options)))
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/documents/next-number":
-            try: return self._json(200,{"number":self.db.next_document_number(self._query(parsed,"kind"),self._query(parsed,"date"))})
+            try: return self._json(200,{"number":self.db.next_document_number(self._query(parsed,"kind"),self._query(parsed,"date"),self._query(parsed,"branch"))})
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/expenses/") and path.endswith("/attachments"):
             try: return self._json(200,{"items":self.db.list_expense_attachments(int(path.split("/")[-2]))})
@@ -459,7 +459,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 return self._json(200, {"items": items, "year": year, "separate_file": year_db is not self.db})
             except Exception as exc: return self._json(400, {"error": str(exc)})
         if path == "/api/invoices/next-number":
-            try: return self._json(200,{"invoice_number":self.db.next_invoice_number(self._query(parsed,"kind","sale"),self._query(parsed,"date"))})
+            try: return self._json(200,{"invoice_number":self.db.next_invoice_number(self._query(parsed,"kind","sale"),self._query(parsed,"date"),self._query(parsed,"branch"))})
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/parties/next-number":
             try: return self._json(200,{"account_number":self.db.next_party_account_number(self._query(parsed,"prefix",""))})
@@ -600,6 +600,9 @@ class ApiHandler(BaseHTTPRequestHandler):
                 if path=="/api/tax-adviser": return self._json(200,tax_review.adviser(self.db))
                 return self._json(200,tax_review.settings_report(self.db,self._query(parsed,"date","")))
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/numbering":  # 2.9.116: the naming series (prefix / branch per kind of document)
+            import numbering
+            with self.db.connect() as connection: return self._json(200,{"items":numbering.settings(connection),"labels":numbering.LABELS,"with_branch":list(numbering.WITH_BRANCH)})
         if path == "/api/renumber":  # 2.9.115: preview of a renumbering by date (administrator, nothing changes)
             import resequence
             try: return self._json(200,resequence.plan(self.db,self._query(parsed,"kind",""),self._query(parsed,"year","")))
@@ -950,6 +953,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                 else: result=self.db.transfer_balance(body.get("from"),body.get("to"),body.get("date"),user["id"],body.get("description") or "")
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
+        if path == "/api/accounts/import":  # 2.9.116: chart of accounts from Excel (administrator; adds and names, never deletes)
+            import chart_templates
+            try: return self._json(200,chart_templates.import_accounts(self.db,body.get("items") or [],user["id"]))
+            except ValueError as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/accounts":
             try: account=self.db.save_account(body,user["id"])
             except Exception as exc: return self._json(400,{"error":str(exc)})
@@ -965,6 +972,10 @@ class ApiHandler(BaseHTTPRequestHandler):
             if user["role"]=="viewer": return self._json(200,{"path":None})
             try: return self._json(200,{"path":self.db.maybe_scheduled_backup()})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/numbering":  # 2.9.116: save the naming series (administrator)
+            import numbering
+            try: return self._json(200,{"items":numbering.save_settings(self.db,body.get("items") or {},user["id"])})
+            except ValueError as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/renumber":  # 2.9.115: renumber as previewed (administrator; safety backup + audit trail)
             import resequence
             try: return self._json(200,resequence.apply(self.db,body.get("kind"),body.get("year"),body.get("token"),user["id"]))

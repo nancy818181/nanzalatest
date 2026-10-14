@@ -84,7 +84,9 @@ class JournalStore:
             else:
                 voucher_number=str(item.get("entry_number") or "").strip()
                 if not voucher_number:
-                    year=self._date_year(date); prefix=f"JV-{year}-"; row=db.execute("SELECT entry_number FROM journal_entries WHERE entry_number LIKE ? ORDER BY entry_number DESC LIMIT 1",
+                    import numbering  # 2.9.116: Settings > Numbering (JV by default, the branch when chosen)
+                    year=self._date_year(date); prefix=f"{numbering.series(db,'journal_voucher',branch_id)}-{year}-"
+                    row=db.execute("SELECT entry_number FROM journal_entries WHERE entry_number LIKE ? ORDER BY entry_number DESC LIMIT 1",
                             (prefix+"%",)).fetchone()
                     sequence=int(row["entry_number"].rsplit("-",1)[-1])+1 if row else 1; voucher_number=f"{prefix}{sequence:06d}"
                 if db.execute("SELECT 1 FROM journal_entries WHERE entry_number=?",(voucher_number,)).fetchone(): raise ValueError("Voucher number already exists")

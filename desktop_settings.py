@@ -19,6 +19,7 @@ class SettingsMixin:
         self.action_button(controls,"Create Account",self.save_new_account).pack(side="left",padx=5)
         tk.Button(controls,text="Edit Selected Account",command=self.edit_selected_account,bg=GOLD,fg=NAVY,border=0,padx=12,pady=6,font=("Segoe UI",9,"bold")).pack(side="left",padx=5)
         self.account_tool_buttons(controls)  # 2.9.66: delete (one or many), delete unused, move / transfer
+        if (self.current_user or {}).get("role")=="admin": self.action_button(controls,"Import from Excel",self.import_chart_from_excel).pack(side="left",padx=5)  # 2.9.116
         self.action_button(controls,tr(self.language.get(),"refresh"),self.load_accounts).pack(side="right")
         self.accounts_tree=self.table(self.accounts_tab,[
             ("code","Account",100),("parent","Parent",80),("english","English",270),
@@ -28,6 +29,23 @@ class SettingsMixin:
         self.accounts_tree.bind("<Delete>",lambda _event:self.delete_selected_accounts())
         flow_toolbars(controls)
         self.load_accounts()
+
+    def import_chart_from_excel(self):
+        """2.9.116: add accounts (and their Arabic / French names) from an Excel file with the columns of this table."""
+        from tkinter import filedialog
+        import chart_templates
+        path=filedialog.askopenfilename(title="Chart of accounts from Excel",filetypes=[("Excel","*.xlsx *.xlsm"),("All files","*.*")])
+        if not path: return
+        try: items=chart_templates.read_excel(path)
+        except (ValueError,OSError,KeyError) as exc: return messagebox.showerror("Import Chart of Accounts",str(exc))
+        if not messagebox.askyesno("Import Chart of Accounts",f"{len(items)} account(s) found. New accounts are added and the names of existing ones "
+                                   "are filled in; nothing is deleted. Continue?"): return
+        try: result=self.client.import_accounts(items)
+        except (RuntimeError,ValueError,OSError) as exc: return messagebox.showerror("Import Chart of Accounts",str(exc))
+        self._account_cache=None; self.load_accounts()
+        text=f"{result['added']} added, {result['updated']} updated."
+        if result["skipped"]: text+=f"\n\n{len(result['skipped'])} not imported:\n"+"\n".join(result["skipped"][:15])
+        messagebox.showinfo("Import Chart of Accounts",text)
 
     def save_new_account(self):
         try: account=self.client.save_account({"code":self.new_account_code.get(),"name_en":self.new_account_name.get(),"parent_code":self.new_account_parent.get(),"type":self.new_account_type.get()})
@@ -107,7 +125,7 @@ class SettingsMixin:
         setup_page=tk.Frame(nested,bg=LIGHT); nested.add(setup_page,text="Accounting Settings"); self.build_accounting_setup_page(setup_page)  # 2.9.81
         if is_admin:  # 2.9.84: who added, changed, posted or deleted what, and when
             audit_page=tk.Frame(nested,bg=LIGHT); nested.add(audit_page,text="Audit Trail"); self.build_audit_trail_page(audit_page)
-            renumber_page=tk.Frame(nested,bg=LIGHT); nested.add(renumber_page,text="Renumber"); self.build_renumber_page(renumber_page)  # 2.9.115
+            renumber_page=tk.Frame(nested,bg=LIGHT); nested.add(renumber_page,text="Numbering"); self.build_renumber_page(renumber_page)  # 2.9.115
         if is_admin: self.build_users_page(users)
         if not is_viewer:
             backup_controls=tk.Frame(backups,bg=LIGHT); backup_controls.pack(fill="x",padx=10,pady=10)

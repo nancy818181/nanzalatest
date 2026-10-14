@@ -109,6 +109,12 @@ def build_side_menu(app, holder, attributes, pages, names):
             button = tk.Button(body, text=name, command=lambda p=page: app.select_main_tab(p), bg=MENU_BG, fg=MENU_TEXT, anchor="w",
                                activebackground=GOLD, activeforeground=NAVY, border=0, relief="flat", font=("Segoe UI", 10),
                                padx=26, pady=4, cursor="hand2", highlightthickness=0)
+            try:  # 2.9.116: a small line icon before every page name (white; navy on the gold bar of the open page)
+                import icons
+                kind = icons.PAGE_ICONS.get(attribute, "")
+                button._saber_icons = (icons.tk_icon(button, kind, MENU_MUTED, 17, gap=9), icons.tk_icon(button, kind, NAVY, 17, gap=9))
+                button.configure(image=button._saber_icons[0], compound="left", padx=16)
+            except (ImportError, OSError, ValueError, tk.TclError): log.debug("Menu icon left out", exc_info=True)
             button.pack(fill="x")
             button.bind("<Enter>", lambda _e, b=button: b.config(bg=MENU_HOVER) if b.cget("bg") == MENU_BG else None)
             button.bind("<Leave>", lambda _e, b=button: b.config(bg=MENU_BG) if b.cget("bg") == MENU_HOVER else None)
@@ -121,6 +127,7 @@ def colour_menu_button(button, selected):
     if button.cget("bg") in (MENU_BG, MENU_HOVER) or getattr(button, "_side_selected", False):
         button._side_selected = selected
         button.config(bg=GOLD if selected else MENU_BG, fg=NAVY if selected else MENU_TEXT, font=("Segoe UI", 10, "bold" if selected else "normal"))
+        if getattr(button, "_saber_icons", None): button.config(image=button._saber_icons[1 if selected else 0])  # 2.9.116
         return True
     return False
 
@@ -172,7 +179,7 @@ def attention_items(app, metrics=None):
 def build_today_panel(app, parent):
     """Quick actions + 'Needs attention' list at the top of the Dashboard."""
     box = tk.Frame(parent, bg=LIGHT); box.pack(fill="x", padx=12, pady=(2, 6))
-    actions = tk.Frame(box, bg=LIGHT); actions.pack(fill="x")
+    actions = tk.Frame(box, bg=LIGHT); actions.pack(fill="x"); actions._saber_no_fold = True  # 2.9.116: shortcuts stay all in view
     tk.Label(actions, text="Quick actions", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 10))
     for text, attribute in QUICK_ACTIONS:
         if attribute not in getattr(app, "_page_attributes", ()): continue

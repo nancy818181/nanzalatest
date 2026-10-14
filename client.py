@@ -174,6 +174,7 @@ class ApiClient:
     def accounts(self): return self.request("GET", "/api/accounts")["items"]
     def next_account_number(self,prefix): return self.request("GET",f"/api/accounts/next-number?{urlencode({'prefix':prefix})}")["account_number"]
     def save_account(self,item): return self.request("POST","/api/accounts",item)["account"]
+    def import_accounts(self,items): return self.request("POST","/api/accounts/import",{"items":items})  # 2.9.116
     def rename_account(self,code,name): return self.request("PUT",f"/api/accounts/{code}",{"name_en":name})["account"]
     def account_usage(self,codes=None): return self.request("GET","/api/accounts/usage?"+urlencode({"codes":",".join(codes or [])}))["items"]
     def unused_accounts(self,scope="all"): return self.request("GET","/api/accounts/unused?"+urlencode({"scope":scope}))["items"]
@@ -352,6 +353,8 @@ class ApiClient:
     def create_backup(self): return self.request("POST","/api/backups/create",{})
     def scheduled_backup(self): return self.request("POST","/api/backups/scheduled",{})
     def books_lock(self): return self.request("GET","/api/books-lock")
+    def numbering(self): return self.request("GET","/api/numbering")  # 2.9.116
+    def save_numbering(self,items): return self.request("POST","/api/numbering",{"items":items})["items"]
     def renumber_preview(self,kind,year): return self.request("GET",f"/api/renumber?{urlencode({'kind':kind,'year':year})}")  # 2.9.115
     def renumber(self,kind,year,token): return self.request("POST","/api/renumber",{"kind":kind,"year":year,"token":token})
     def set_books_lock(self,date): return self.request("POST","/api/books-lock",{"locked_until":date})
@@ -421,8 +424,8 @@ class ApiClient:
     def set_vat_recoverable(self,source,document_id,recoverable):
         return self.request("POST","/api/vat-recoverable",{"source":source,"id":document_id,"recoverable":bool(recoverable)})
     def document_alerts(self,days=30): return self.request("GET",f"/api/alerts/documents?{urlencode({'days':days})}")
-    def next_invoice_number(self,kind="sale",date=None):
-        return self.request("GET","/api/invoices/next-number?"+urlencode({k:v for k,v in {"kind":kind,"date":date}.items() if v}))["invoice_number"]
+    def next_invoice_number(self,kind="sale",date=None,branch=None):
+        return self.request("GET","/api/invoices/next-number?"+urlencode({k:v for k,v in {"kind":kind,"date":date,"branch":branch}.items() if v}))["invoice_number"]
     def next_party_account_number(self,prefix): return self.request("GET",f"/api/parties/next-number?{urlencode({'prefix':prefix})}")["account_number"]
     def invoice_items(self,invoice_id): return self.request("GET",f"/api/invoices/{invoice_id}/items")["items"]
     def account_report(self,options): return self.request("GET","/api/reports/accounts?"+urlencode({"options":json.dumps(options)}))
@@ -435,7 +438,9 @@ class ApiClient:
     def budgets(self,year,currency="USD",department=None,project=None):
         return self.request("GET","/api/budgets?"+urlencode({k:v for k,v in {"year":year,"currency":currency,"department":department,"project":project}.items() if v}))["items"]
     def save_budget(self,item): return self.request("POST","/api/budgets",item)["item"]
-    def next_document_number(self,kind,date=None): return self.request("GET","/api/documents/next-number?"+urlencode({k:v for k,v in {"kind":kind,"date":date}.items() if v}))["number"]
+    def next_document_number(self,kind,date=None,branch=None):
+        query={k:v for k,v in {"kind":kind,"date":date,"branch":branch}.items() if v}
+        return self.request("GET","/api/documents/next-number?"+urlencode(query))["number"]
     def update_payment(self,payment_id,item): return self.request("PUT",f"/api/payments/{payment_id}",item)["id"]
     def delete_payment(self,payment_id): return self.request("DELETE",f"/api/payments/{payment_id}")
     def update_expense(self,expense_id,item): return self.request("PUT",f"/api/expenses/{expense_id}",item)["id"]

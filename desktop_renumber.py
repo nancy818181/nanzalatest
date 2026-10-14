@@ -18,6 +18,7 @@ KINDS = (("customer_receipt", "Customer receipts (RV)"), ("supplier_payment", "S
 
 class RenumberMixin:
     def build_renumber_page(self, page):
+        self.build_numbering_series(page)  # 2.9.116: naming series above the renumbering
         year = str(getattr(self, "current_fiscal_year", "") or "")
         self.renumber_kind = tk.StringVar(value=KINDS[0][1]); self.renumber_year = tk.StringVar(value=year)
         self.renumber_state = {"token": None, "kind": None, "year": None}
@@ -25,7 +26,8 @@ class RenumberMixin:
                  "numbers change (RV-2026-000012); numbers typed by hand or imported are kept. Documents in locked books, a closed "
                  "year or a quarter whose VAT return is saved keep their numbers. A safety backup is made first and the Audit Trail "
                  "keeps every old -> new number.")
-        tk.Label(page, text=intro, bg=LIGHT, fg="#5f6b76", justify="left", wraplength=980, anchor="w").pack(fill="x", padx=12, pady=(10, 4))
+        tk.Label(page, text="Renumber by date", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold"), anchor="w").pack(fill="x", padx=12, pady=(12, 0))
+        tk.Label(page, text=intro, bg=LIGHT, fg="#5f6b76", justify="left", wraplength=980, anchor="w").pack(fill="x", padx=12, pady=(2, 4))
         bar = tk.Frame(page, bg=LIGHT); bar.pack(fill="x", padx=10, pady=4)
         tk.Label(bar, text="Documents", bg=LIGHT).pack(side="left")
         ttk.Combobox(bar, textvariable=self.renumber_kind, values=[label for _k, label in KINDS], state="readonly", width=26).pack(side="left", padx=(4, 10))
@@ -80,3 +82,35 @@ class RenumberMixin:
             return messagebox.showerror("Renumber Documents", str(exc))
         messagebox.showinfo("Renumber Documents", f"{result.get('renumbered', 0)} document(s) renumbered.")
         self.preview_renumbering()
+
+    # ------------------------------------------------------------ 2.9.116: naming series
+    def build_numbering_series(self, page):
+        box = tk.Frame(page, bg=LIGHT); box.pack(fill="x", padx=12, pady=(10, 0))
+        tk.Label(box, text="Numbering of new documents", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold"), anchor="w").grid(row=0, column=0, columnspan=4, sticky="w")
+        tk.Label(box, text="The prefix of each kind of document, and the branch in the number where it helps (each branch then counts on its own). "
+                           "Numbers already given are not changed.", bg=LIGHT, fg="#5f6b76", anchor="w").grid(row=1, column=0, columnspan=4, sticky="w", pady=(0, 6))
+        try: data = self.client.numbering()
+        except (RuntimeError, ValueError, OSError) as exc:
+            tk.Label(box, text=str(exc), bg=LIGHT, fg="#8B1E1E").grid(row=2, column=0, sticky="w"); return
+        self.numbering_vars = {}; year = str(getattr(self, "current_fiscal_year", "") or "2026")
+        for column, title in enumerate(("Document", "Prefix", "Branch in the number", "Example")):
+            tk.Label(box, text=title, bg=LIGHT, fg="#6B7A89", font=("Segoe UI", 8, "bold")).grid(row=2, column=column, sticky="w", padx=(0, 18))
+        for row, (kind, label) in enumerate(data["labels"].items(), 3):
+            item = data["items"][kind]; prefix = tk.StringVar(value=item["prefix"]); branch = tk.BooleanVar(value=item["branch"])
+            example = tk.Label(box, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold"))
+            def show(*_a, p=prefix, b=branch, e=example):
+                head = "".join(ch for ch in p.get().upper() if ch.isalnum())[:6] or "?"
+                e.configure(text=f"{head}-BEI-{year}-000001" if b.get() else f"{head}-{year}-000001")
+            prefix.trace_add("write", show); branch.trace_add("write", show); show()
+            tk.Label(box, text=label, bg=LIGHT).grid(row=row, column=0, sticky="w", pady=2)
+            tk.Entry(box, textvariable=prefix, width=8).grid(row=row, column=1, sticky="w")
+            if kind in data["with_branch"]: tk.Checkbutton(box, variable=branch, bg=LIGHT, activebackground=LIGHT).grid(row=row, column=2, sticky="w")
+            example.grid(row=row, column=3, sticky="w")
+            self.numbering_vars[kind] = (prefix, branch)
+        tk.Button(box, text="Save Numbering", command=self.save_numbering_series, bg=GOLD, fg=NAVY, border=0, padx=14, pady=5).grid(row=row + 1, column=0, sticky="w", pady=(8, 0))
+
+    def save_numbering_series(self):
+        items = {kind: {"prefix": prefix.get(), "branch": branch.get()} for kind, (prefix, branch) in self.numbering_vars.items()}
+        try: self.client.save_numbering(items)
+        except (RuntimeError, ValueError, OSError) as exc: return messagebox.showerror("Numbering", str(exc))
+        messagebox.showinfo("Numbering", "Saved. New documents use these numbers from now on.")

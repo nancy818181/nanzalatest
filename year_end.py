@@ -125,7 +125,8 @@ def close_year(database, year, user_id):
         if existing and existing["status"] == "closed": raise ValueError(f"Fiscal year {year} is already closed. Reopen it first to close it again.")
         removed = remove_closing(database, year, db)
         for currency, data in preview.items():
-            number = database._next_number(db, "journal_entries", "entry_number", "JV", f"31-12-{year}")
+            import numbering  # 2.9.116
+            number = database._next_number(db, "journal_entries", "entry_number", numbering.series(db, "journal_voucher"), f"31-12-{year}")
             entry = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at,voucher_type,branch_id)
                 VALUES(?,?,?,?,?,?,?,?,?,(SELECT id FROM branches ORDER BY id LIMIT 1))""", (number, f"31-12-{year}", f"CLOSING 6&7 - {year} ({currency})", "journal_voucher", None,
                 currency, user_id, utcnow(), "05")).lastrowid

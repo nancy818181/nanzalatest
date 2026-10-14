@@ -35,8 +35,9 @@ from desktop_settings import SettingsMixin
 from desktop_payroll_sheet import PayrollSheetMixin
 from desktop_projection import ProjectionMixin
 from desktop_renumber import RenumberMixin  # 2.9.115
+from desktop_setup_wizard import SetupWizardMixin  # 2.9.116
 
-class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
+class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
         ReportsMixin, SettingsMixin, AssetsMixin, V22Mixin, InventoryMixin, ProductionMixin, AccountToolsMixin, Stage3Mixin, DimensionsMixin,
         BrainsScreensMixin, FinalFeaturesMixin, CNSSFormsMixin, tk.Tk):
     def __init__(self):
@@ -129,6 +130,18 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
             messagebox.showinfo("Update",
                     f"Nanza Accounting {found['version']} is available.\n\n1. Make a backup (Settings > Backup & Restore > Create Backup Now).\n2. Download NanzaAccountingSetup.exe and run it; your data is kept.")
         tk.Button(bar,text=f"New version {found['version']} available",command=open_page,bg=GOLD,fg=NAVY,border=0,padx=10,font=("Segoe UI",9,"bold")).pack(side="right",padx=8)
+
+    def open_page_help(self,topic=None):
+        """2.9.116: the help with pictures, opened on the screen that is open (English or Arabic, as the program)."""
+        path=resource_path("assets/help/help.html")
+        if not Path(path).exists(): return self.open_user_guide()
+        topic=topic or getattr(self,"_open_page_attribute","") or ""
+        query="?lang=ar" if str(getattr(self,"language",None) and self.language.get() or "").lower().startswith("ar") else ""
+        try:
+            import webbrowser
+            webbrowser.open(Path(path).resolve().as_uri()+query+(f"#{topic}" if topic else ""))
+        except (OSError,RuntimeError) as exc:
+            log.warning("Picture help could not be opened",exc_info=True); messagebox.showerror("Help",f"The help could not be opened: {exc}")
 
     def open_user_guide(self):
         """The user guide (English and Arabic) that ships with the program."""
@@ -492,36 +505,7 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
         messagebox.showinfo("Add Company from File",f"{company['name']} is now in the list (years: {years}).\nThe original file was copied and left untouched.")
         self.company_selection_screen()
 
-    def create_company_dialog(self):
-        window=tk.Toplevel(self); window.title("Create Company"); window.configure(bg=LIGHT); window.transient(self); window.grab_set()
-        fields={key:tk.StringVar(value=str(datetime.now().year) if key=="year" else "") for key in ("name","year","address","phone","mof_number","email","website")}
-        for row,(key,label) in enumerate((("name","Company Name"),("year","Opening Fiscal Year"),("address","Address"),("phone","Phone"),("mof_number",
-                "MOF / VAT Number"),("email","Email"),("website","Website"))):
-            tk.Label(window,text=label,bg=LIGHT).grid(row=row,column=0,sticky="w",padx=14,pady=7); tk.Entry(window,textvariable=fields[key],width=38).grid(row=row,column=1,padx=14,pady=7)
-        # 2.9.71: the two main currencies of the company (USD + LBP, EUR + USD, AED + USD ...), changeable later in Settings
-        choices=["USD","LBP","EUR","AED","SAR","QAR","KWD","GBP","CHF","CAD","JOD","EGP","TRY"]
-        main1=tk.StringVar(value="USD"); main2=tk.StringVar(value="LBP")
-        tk.Label(window,text="Main Currency 1 (base)",bg=LIGHT,font=("Segoe UI",9,"bold")).grid(row=7,column=0,sticky="w",padx=14,pady=7)
-        ttk.Combobox(window,textvariable=main1,values=choices,width=12).grid(row=7,column=1,sticky="w",padx=14,pady=7)
-        tk.Label(window,text="Main Currency 2",bg=LIGHT,font=("Segoe UI",9,"bold")).grid(row=8,column=0,sticky="w",padx=14,pady=7)
-        ttk.Combobox(window,textvariable=main2,values=choices,width=12).grid(row=8,column=1,sticky="w",padx=14,pady=7)
-        # 2.9.72: the VAT of the company (Lebanon: 11%, VAT return in LBP with USD; Emirates: 5%, AED with USD ...)
-        vat_rate_var=tk.StringVar(value="11"); vat1=tk.StringVar(value="LBP"); vat2=tk.StringVar(value="USD")
-        tk.Label(window,text="VAT Rate %",bg=LIGHT,font=("Segoe UI",9,"bold")).grid(row=9,column=0,sticky="w",padx=14,pady=7)
-        tk.Entry(window,textvariable=vat_rate_var,width=8).grid(row=9,column=1,sticky="w",padx=14,pady=7)
-        tk.Label(window,text="VAT Return Currency 1 / 2",bg=LIGHT,font=("Segoe UI",9,"bold")).grid(row=10,column=0,sticky="w",padx=14,pady=7)
-        vat_boxes=tk.Frame(window,bg=LIGHT); vat_boxes.grid(row=10,column=1,sticky="w",padx=14,pady=7)
-        ttk.Combobox(vat_boxes,textvariable=vat1,values=choices,width=8).pack(side="left"); ttk.Combobox(vat_boxes,textvariable=vat2,values=choices,width=8).pack(side="left",padx=(6,0))
-        def save():
-            payload={key:var.get().strip() for key,var in fields.items()}
-            payload["main_currency_1"]=main1.get().strip().upper(); payload["main_currency_2"]=main2.get().strip().upper()
-            payload.update(vat_rate=vat_rate_var.get().strip(),vat_currency_1=vat1.get().strip().upper(),vat_currency_2=vat2.get().strip().upper())
-            if payload["vat_currency_1"]==payload["vat_currency_2"]: return messagebox.showwarning("Create Company","Choose two different VAT return currencies",parent=window)
-            if payload["main_currency_1"]==payload["main_currency_2"]: return messagebox.showwarning("Create Company","Choose two different main currencies",parent=window)
-            try: self.client.create_company(payload)
-            except Exception as exc: return messagebox.showerror("Create Company",str(exc),parent=window)
-            window.destroy(); self.company_selection_screen()
-        self.action_button(window,"Create Company",save).grid(row=11,column=0,columnspan=2,pady=14)
+    # 2.9.116: New company = the setup wizard (desktop_setup_wizard.SetupWizardMixin.create_company_dialog)
 
     def manage_company_dialog(self,company):
         if not company: return
@@ -702,6 +686,12 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
         self.highlight_main_tab()
         # 2.9.95: page title (SECTION > Screen) on the left, the currency filter on the right
         self.page_title=page_title_bar(filter_bar); self.page_title.pack(side="left",fill="x",expand=True)
+        # 2.9.116: "?" beside the title opens the picture help of the screen that is open
+        help_button=tk.Button(self.page_title,text="Help",command=self.open_page_help,bg="white",fg=NAVY,border=0,padx=10,pady=3,cursor="hand2")
+        try:
+            import icons; self._help_icon=icons.tk_icon(help_button,"help",NAVY,15); help_button.configure(image=self._help_icon,compound="left",padx=6)
+        except (ImportError,OSError,ValueError,tk.TclError): log.debug("Help icon left out",exc_info=True)
+        help_button.pack(side="left",padx=(14,0)); help_button._saber_icon_done=True
         currency_filter=ttk.Combobox(filter_bar,textvariable=self.view_currency,values=["All Currencies"]+self.currency_codes,state="readonly",width=16)
         currency_filter.pack(side="right",padx=(8,2))
         tk.Label(filter_bar,text="Show currency",bg=LIGHT,fg="#5f6b76",font=("Segoe UI",9,"bold")).pack(side="right")
@@ -738,7 +728,7 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
         self.__dict__["_building_depth"]=self.__dict__.get("_building_depth",0)+1
         try:
             build()
-            try: polish(getattr(self,"main_notebook",self))  # 2.9.95: same buttons, cards and inputs on every screen
+            try: polish(getattr(self,"main_notebook",self),fold=True)  # 2.9.95: same buttons, cards and inputs on every screen; 2.9.116: More menus
             except Exception: log.debug("Design pass skipped", exc_info=True)
             # Bind newly created controls while missing widgets cannot trigger eager loading.
             self.setup_context_f2()
@@ -914,6 +904,7 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
             index=[str(p) for p in self.main_tab_pages].index(selected)
             attribute=self._page_attributes[index]
             group=next((g for g,members in desktop_layout.MENU_GROUPS if attribute in members),"")
+            self._open_page_attribute=attribute  # 2.9.116: which picture help the "Help" button opens
             self.page_title._section.configure(text=(group.upper()+"  ›") if group else "")
             self.page_title._title.configure(text=self.tab_names[index])
         except (AttributeError,ValueError,IndexError,tk.TclError): pass
@@ -1097,18 +1088,7 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
         for child in self.dashboard_cards.winfo_children(): child.destroy()
         if not rows:
             tk.Label(self.dashboard_cards,text="No activity for this currency yet.",bg=LIGHT,fg="#506274",font=("Segoe UI",10)).pack(anchor="w",padx=10,pady=12)
-        labels=(("sales","Sales"),("purchases","Purchases"),("expenses","Expenses"),("profit","Net profit"),
-                ("receivables","Receivables"),("payables","Payables"),("overdue","Overdue invoices"))
-        for index,r in enumerate(rows):
-            card=tk.LabelFrame(self.dashboard_cards,text=r["currency"],bg="white",fg=NAVY,font=("Segoe UI",10,"bold"),padx=10,pady=6)
-            card.grid(row=index//2,column=index%2,sticky="ew",padx=4,pady=3)
-            for col,(key,title) in enumerate(labels):
-                line=tk.Frame(card,bg="white"); line.grid(row=col//4,column=col%4,sticky="ew",padx=5,pady=3)
-                tk.Label(line,text=title,bg="white",fg="#506274",font=("Segoe UI",8)).pack(anchor="w")
-                value=str(r[key]) if key=="overdue" else f'{r[key]:,.2f}'
-                tk.Label(line,text=value,bg="white",fg=NAVY,font=("Segoe UI",10,"bold"),anchor="w").pack(anchor="w")
-            for col in range(4): card.grid_columnconfigure(col,weight=1)
-        for col in range(2): self.dashboard_cards.grid_columnconfigure(col,weight=1)
+        self.draw_kpi_cards(rows)
         chart_rows=[]; chart_rates={}
         for source_row in data.get("monthly",[]):
             if selected!="All Currencies" and source_row["currency"]!=selected: continue
@@ -1123,6 +1103,28 @@ class SaberApp(RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, Accounting
         try:
             import desktop_layout; desktop_layout.fill_today_panel(self,data.get("metrics",[]))
         except Exception: log.warning("Needs attention list could not be filled",exc_info=True)
+
+    # 2.9.116: the figures as KPI cards (as in Zoho): one row per currency, a large number per card with a colour
+    # strip that says what it is. The same figures as before, only shown larger.
+    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#B78B45"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
+               ("receivables","Receivables","#102A43"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
+
+    def draw_kpi_cards(self,rows):
+        holder=self.dashboard_cards
+        for index,r in enumerate(rows):
+            block=tk.Frame(holder,bg=LIGHT); block.grid(row=index,column=0,sticky="ew",pady=(4,6))
+            tk.Label(block,text=r["currency"],bg=LIGHT,fg=NAVY,font=("Segoe UI",10,"bold"),anchor="w").grid(row=0,column=0,columnspan=7,sticky="w",padx=4,pady=(0,4))
+            for col,(key,title,colour) in enumerate(self.KPI_CARDS):
+                card=tk.Frame(block,bg="white",highlightthickness=1,highlightbackground="#DDE4EC"); card.grid(row=1,column=col,sticky="nsew",padx=4)
+                tk.Frame(card,bg=colour,height=4).pack(fill="x")
+                inner=tk.Frame(card,bg="white",padx=12,pady=8); inner.pack(fill="both",expand=True)
+                tk.Label(inner,text=title.upper(),bg="white",fg="#6B7A89",font=("Segoe UI",8,"bold"),anchor="w").pack(anchor="w")
+                number=float(r[key] or 0)
+                value=str(r[key]) if key=="overdue" else f'{number:,.2f}'
+                tone=("#8B1E1E" if number<0 else "#2E7D5B") if key=="profit" else ("#8B1E1E" if key=="overdue" and number else NAVY)
+                tk.Label(inner,text=value,bg="white",fg=tone,font=("Segoe UI",16,"bold"),anchor="w").pack(anchor="w",pady=(2,0))
+                block.grid_columnconfigure(col,weight=1,uniform="kpi")
+        holder.grid_columnconfigure(0,weight=1)
 
     def draw_dashboard_chart(self,rows):
         canvas=self.dashboard_chart; canvas.delete("all"); canvas.update_idletasks(); width=max(canvas.winfo_width(),700); height=100
