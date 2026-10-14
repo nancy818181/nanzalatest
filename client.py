@@ -124,7 +124,7 @@ class ApiClient:
         try:
             status, payload = self._send(method, path, data, headers)
         except URLError as exc:
-            raise RuntimeError(f"Cannot reach the Saber Accounting data service at {self.base_url}. "
+            raise RuntimeError(f"Cannot reach the Nanza Accounting data service at {self.base_url}. "
                                "Check that the server computer is on and the address is correct.") from exc
         except TimeoutError as exc:
             raise RuntimeError("The data service took too long to answer. Please try again.") from exc

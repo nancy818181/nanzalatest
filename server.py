@@ -106,7 +106,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         given = self.headers.get(KEY_HEADER, "")
         if given and hmac.compare_digest(given.encode("utf-8"), self.local_key.encode("utf-8")): return False
         self.close_connection = True
-        self._json(403, {"error": "This data service only answers Saber Accounting on this computer"})
+        self._json(403, {"error": "This data service only answers Nanza Accounting on this computer"})
         return True
 
     # HTTP/1.1 lets the desktop program keep one connection open and reuse it for every
@@ -1382,17 +1382,17 @@ def run_server(host="127.0.0.1", port=8765, database="saber_accounting.db", admi
         server.socket=context.wrap_socket(server.socket,server_side=True)
     port = server.server_address[1]
     log.info("Data service running at %s://%s:%s", 'https' if tls_cert else 'http', host, port)
-    print(f"Saber Accounting server running at {'https' if tls_cert else 'http'}://{host}:{port}")
+    print(f"Nanza Accounting server running at {'https' if tls_cert else 'http'}://{host}:{port}")
     print("For a new database, sign in as admin with this one-time initial password:")
     print(admin_password)
     if on_ready: on_ready(port)
     server.serve_forever()
 
 def main():
-    parser = argparse.ArgumentParser(description="Saber Accounting shared server")
+    parser = argparse.ArgumentParser(description="Nanza Accounting shared server")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
-    parser.add_argument("--database", default=None, help="Main data file (default: the Saber data folder)")
+    parser.add_argument("--database", default=None, help="Main data file (default: the Nanza data folder, SaberAccounting)")
     parser.add_argument("--admin-password", default=None,
                         help="Initial admin password (or set SABER_ADMIN_PASSWORD)")
     parser.add_argument("--tls-cert",help="Path to a trusted TLS certificate chain (PEM)")
@@ -1404,7 +1404,7 @@ def main():
         import app_runtime, office_tls
         cert, key = office_tls.make_certificate(app_runtime.data_dir(), args.make_certificate)
         print(f"Certificate: {cert}\nPrivate key (keep on this computer only): {key}")
-        print(f"Copy the certificate to each office PC as <Saber data folder>\\{office_tls.TRUSTED_CERT_NAME}, then start the server with:")
+        print(f"Copy the certificate to each office PC as <Nanza data folder (SaberAccounting)>\\{office_tls.TRUSTED_CERT_NAME}, then start the server with:")
         print(f"  run_server.py --host 0.0.0.0 --tls-cert \"{cert}\" --tls-key \"{key}\"")
         return
     if not args.database:

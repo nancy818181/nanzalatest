@@ -112,7 +112,7 @@ def verify(db):
         previous = row["row_hash"]
         if len(broken) >= 50: break
     if not same_key:
-        message = ("This audit trail was sealed on another computer: copy audit.key from the Saber data folder of the computer that runs "
+        message = ("This audit trail was sealed on another computer: copy audit.key from the Nanza data folder (SaberAccounting) of the computer that runs "
                    "the data service to check it here.")
     elif broken: message = f"{len(broken)} problem(s): the audit trail was changed outside the program (first at line {broken[0]['id']})."
     else: message = f"Audit trail intact: {len(rows)} line(s) checked, none changed, removed or inserted."

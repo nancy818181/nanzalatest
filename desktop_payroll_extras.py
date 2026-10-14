@@ -32,7 +32,7 @@ class PayrollExtrasMixin:
             self.action_button(bar, label, lambda f=fmt: self.export_payroll_extra(f)).pack(side="left", padx=2)
         tk.Label(bar, text="Payslips of month (MM-YYYY)", bg=LIGHT).pack(side="left", padx=(18, 2)); tk.Entry(bar, textvariable=self.px_month, width=8).pack(side="left")
         tk.Button(bar, text="All Payslips (PDF)", command=self.export_month_payslips, bg=GOLD, fg=NAVY, border=0, padx=12, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
-        tk.Label(page, text="End of service: last salary x years of service, less the end-of-service contributions paid (Saber's posted payroll + 'contributions before Saber' "
+        tk.Label(page, text="End of service: last salary x years of service, less the end-of-service contributions paid (Nanza's posted payroll + 'contributions before Nanza' "
                  "on the employee). Post Provision brings 1552.1 to that amount (Dr 6355 / Cr 1552.1, or Dr 1552.1 / Cr 7552.2 when it goes down). "
                  "Annual leave: 15 days a year unless set on the employee; the value is the balance x monthly salary / 30.",
                  bg=LIGHT, fg=MUTED, anchor="w", justify="left", wraplength=1150).pack(fill="x", padx=12)

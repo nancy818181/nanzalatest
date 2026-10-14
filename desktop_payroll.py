@@ -265,7 +265,7 @@ class PayrollMixin:
             ("representation_taxable","Representation taxable / month"),("representation_exempt","Representation not taxable / month"),
             ("addr_governorate","Governorate | محافظة"),("addr_caza","Caza | قضاء"),("addr_town","Town | بلدة"),("addr_district","District | حي"),
             ("addr_street","Street | شارع"),("addr_building","Building | مبنى"),("addr_floor","Floor | طابق"),("phone2","Phone 2"),("leave_reason","Leaving reason | سبب الترك"),
-            ("eos_paid_before","End-of-service contributions before Saber (LBP)"),("leave_days_year","Annual leave days / year (empty = 15)"),("leave_carried","Leave days carried in"),
+            ("eos_paid_before","End-of-service contributions before Nanza (LBP)"),("leave_days_year","Annual leave days / year (empty = 15)"),("leave_carried","Leave days carried in"),
             ("full_name_ar","الإسم والشهرة (عربي)"),("father_name_ar","إسم الأب (عربي)"),("mother_name_ar","إسم الأم وشهرتها (عربي)"),
             ("birth_place_ar","محل الولادة (عربي)"),("nationality_ar","الجنسية (عربي)"),
             ("job_title_ar","العمل / الوظيفة (عربي)"),("address_ar","العنوان (عربي)"))

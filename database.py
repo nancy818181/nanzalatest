@@ -1,4 +1,4 @@
-"""The Saber database (one SQLite file per company and year).
+"""The Nanza database (one SQLite file per company and year).
 
 2.9.63: the methods are grouped in db_*.py files (invoices, payments, journal, reports, payroll, rates, VAT,
 dimensions, documents); this file keeps the connection, setup, users, backups and settings. Database is still
@@ -896,8 +896,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 if connection.execute("PRAGMA integrity_check").fetchone()[0]!="ok": raise ValueError("Backup file is damaged")
                 tables={row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
             finally: connection.close()
-        except sqlite3.DatabaseError as exc: raise ValueError("Selected file is not a valid Saber Accounting backup") from exc
-        if not {"accounts","journal_entries","invoices"}.issubset(tables): raise ValueError("Selected file is not a Saber Accounting backup")
+        except sqlite3.DatabaseError as exc: raise ValueError("Selected file is not a valid Nanza Accounting backup") from exc
+        if not {"accounts","journal_entries","invoices"}.issubset(tables): raise ValueError("Selected file is not a Nanza Accounting backup")
 
     def _backup_files(self):
         folders=[self._backups_dir()]

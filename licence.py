@@ -115,14 +115,14 @@ def status(connection, today=None):
     latest = latest_seen(connection, licence)
     if latest and today < latest - timedelta(days=CLOCK_TOLERANCE_DAYS):  # 2.9.104: the computer's date was turned back
         result.update(expired=True, clock_back=True,
-                      message=f"The date of this computer ({display_date(today.isoformat())}) is earlier than a date Saber Accounting has already used "
+                      message=f"The date of this computer ({display_date(today.isoformat())}) is earlier than a date Nanza Accounting has already used "
                               f"({display_date(latest.isoformat())}). Correct the date and time of the computer (Windows Settings > Time & language), "
                               "then sign in again.")
         return result
     if not latest or today > latest: _put(connection, SEEN_KEY, today.isoformat())
     if result["expired"]:
         what = "trial period" if result["trial"] else "licence"
-        result["message"] = (f"The {what} of Saber Accounting ended on {display_date(until)}. Send the Installation ID {ident} "
+        result["message"] = (f"The {what} of Nanza Accounting ended on {display_date(until)}. Send the Installation ID {ident} "
                              f"to {SELLER} and enter the new licence code.")
     return result
 

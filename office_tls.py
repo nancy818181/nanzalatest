@@ -1,7 +1,7 @@
 """2.9.94: an office certificate for the shared server (several PCs on the office network).
 
 The server computer makes it once:  python run_server.py --make-certificate SERVER-NAME,192.168.1.10
-That writes server-cert.pem and server-key.pem in the Saber data folder. Copy server-cert.pem (never the key)
+That writes server-cert.pem and server-key.pem in the Nanza data folder (SaberAccounting). Copy server-cert.pem (never the key)
 to each office PC as  <data folder>/office-server-cert.pem  - the program then trusts that server over HTTPS
 (passwords and data are encrypted on the network). Everything stays inside the office."""
 from __future__ import annotations
@@ -40,7 +40,7 @@ def make_certificate(folder, names, days=3650):
         try: alt.append(x509.IPAddress(ipaddress.ip_address(name)))
         except ValueError: alt.append(x509.DNSName(name))
     key = ec.generate_private_key(ec.SECP256R1())
-    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, names[0]), x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Saber Accounting office server")])
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, names[0]), x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Nanza Accounting office server")])
     now = datetime.datetime.now(datetime.timezone.utc)
     cert = (x509.CertificateBuilder().subject_name(subject).issuer_name(subject).public_key(key.public_key())
             .serial_number(x509.random_serial_number()).not_valid_before(now - datetime.timedelta(minutes=5))

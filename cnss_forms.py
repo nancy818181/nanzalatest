@@ -104,7 +104,7 @@ def form_data(
     language: str = "ar",
 ) -> tuple[dict[str, Any], list[str]]:
     """The values a form is filled with, and the user-facing notes about anything missing.
-    Nothing is invented: what Saber does not hold stays empty for the user to complete in Excel."""
+    Nothing is invented: what Nanza does not hold stays empty for the user to complete in Excel."""
     form = FORM_BY_KEY.get(LEGACY_FORM_KEYS.get(form_key, form_key))
     if form is None:
         raise ValueError(f"Unknown form: {form_key}")

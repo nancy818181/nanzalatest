@@ -181,7 +181,7 @@ class ProjectionMixin:
         if getattr(self, "pj_base", None) is None: return
         base = pm._statement(pm._lines_total(self.pj_base[0]))
         growth = pm.historical_growth(getattr(self, "pj_history", []), base)
-        if growth is None: return messagebox.showinfo("Projection", "There is no earlier year with revenue in Saber to measure the growth. Type the % yourself.")
+        if growth is None: return messagebox.showinfo("Projection", "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself.")
         self.pj["all_growth"].set(f"{growth:g}"); self.apply_projection_growth_to_all(); self.refresh_projection(reload=False)
         messagebox.showinfo("Projection", f"Revenue growth set to {growth:g}% per year (average of the actual years). Adjust any year in the sheet.")
 

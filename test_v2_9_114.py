@@ -43,5 +43,24 @@ class NanzaProgramFileTest(unittest.TestCase):
             self.assertEqual(app_runtime.data_dir().name, "SaberAccounting")  # company data stays where it is
 
 
+class NanzaWordingTest(unittest.TestCase):
+    def test_the_user_never_sees_saber_accounting(self):
+        import re
+        for path in HERE.glob("*.py"):
+            if path.name.startswith("test_"): continue
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if "Saber Accounting" not in line and "Saber_Accounting" not in line: continue
+                allowed = ('"application"' in line or "Accounting Backups" in line or line.lstrip().startswith("#"))
+                self.assertTrue(allowed, f"{path.name}:{number}: {line.strip()}")
+        guide = (HERE / "Assets" / "user_guide.html").read_text(encoding="utf-8")
+        self.assertNotIn("Saber Accounting", guide); self.assertNotIn("SaberAccountingSetup", guide)
+        self.assertNotRegex(guide, re.compile(r"\bSaber\b(?! for Audit)"))
+
+    def test_data_service_handshake_is_unchanged(self):
+        # old and new copies (office server / desktop) must still recognise each other
+        self.assertIn('"application": "Saber Accounting"', (HERE / "server.py").read_text(encoding="utf-8"))
+        self.assertIn('== "Saber Accounting"', (HERE / "run_desktop.py").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

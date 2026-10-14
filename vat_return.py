@@ -787,7 +787,7 @@ def filing_worksheet(result, company):
 def official_form(result, company):
     """The return in the layout of the Ministry's periodic declaration Q1-2, with its annexes Q11-2 (partial right of
     deduction, Art. 31: deductible VAT on mixed purchases = VAT x ratio) and Q13-2 (ten largest suppliers and customers).
-    Amounts in LBP. Boxes that Saber does not record separately (advances, tax withheld at source, sales of fixed assets,
+    Amounts in LBP. Boxes that Nanza does not record separately (advances, tax withheld at source, sales of fixed assets,
     penalties) show 0 and are filled by hand when they apply."""
     if result.get("currency_filter") != "All" or result.get("include_review"):
         raise ValueError("The official form requires All Currencies and excludes Review documents")

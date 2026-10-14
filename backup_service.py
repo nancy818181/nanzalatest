@@ -46,7 +46,7 @@ def _main_database():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true")
-    parser.add_argument("--database", default=None, help="Main data file (default: the Saber data folder)")
+    parser.add_argument("--database", default=None, help="Main data file (default: the Nanza data folder, SaberAccounting)")
     args = parser.parse_args()
     log_dir = Path(args.database).parent if args.database else _data_dir()
     log_dir.mkdir(parents=True, exist_ok=True)

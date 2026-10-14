@@ -145,7 +145,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
         if kind.__name__ == "SessionExpired":  # the sign-in screen is already shown
             log.info("Session ended during a screen action"); return
         log.error("Screen action failed", exc_info=(kind, value, tb))
-        try: messagebox.showerror("Saber Accounting",
+        try: messagebox.showerror("Nanza Accounting",
                 f"Something went wrong: {value}\n\nYour saved data is safe. The details were written to the log file (Settings > Backup & Restore > Open Log Folder).")
         except Exception: logging.getLogger("saber.ignored").debug("Ignored error", exc_info=True)
 
@@ -426,7 +426,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
                 import desktop_licence
                 if desktop_licence.enter_code_dialog(self,self.client,text): return self.login()
                 return
-            messagebox.showerror("Saber Accounting", text)
+            messagebox.showerror("Nanza Accounting", text)
 
     def company_selection_screen(self):
         try: companies=self.client.companies()
@@ -483,7 +483,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
 
     def import_company_file_dialog(self):
         """2.9.108: a company file (.db) copied from another computer: copied into the companies folder and added to the list."""
-        path=filedialog.askopenfilename(parent=self,title="Company file from another computer",filetypes=[("Saber company file","*.db"),("All files","*.*")])
+        path=filedialog.askopenfilename(parent=self,title="Company file from another computer",filetypes=[("Nanza company file","*.db"),("All files","*.*")])
         if not path: return
         try: company=self.client.import_company_file(path)
         except RuntimeError as exc: return messagebox.showerror("Add Company from File",str(exc))
@@ -742,7 +742,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
             self.setup_context_f2()
             self.apply_hidden_tabs()  # 2.9.81
         except Exception as exc:
-            log.exception("Page %s could not be loaded", build.__name__); messagebox.showerror("Saber Accounting",
+            log.exception("Page %s could not be loaded", build.__name__); messagebox.showerror("Nanza Accounting",
                     f"A page could not be loaded ({build.__name__.replace('build_','').replace('_',' ')}): {exc}\n\nThe other pages are still available.")
         finally: self.__dict__["_building_depth"]-=1
 
@@ -828,7 +828,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
 
     def check_auto_logout(self):
         if self.client and time.monotonic()-self.last_activity>=1800:
-            self.client=None; self.current_user=None; self.login_screen(); messagebox.showinfo("Saber Accounting","Signed out automatically after 30 minutes of inactivity"); return
+            self.client=None; self.current_user=None; self.login_screen(); messagebox.showinfo("Nanza Accounting","Signed out automatically after 30 minutes of inactivity"); return
         self.after(60000,self.check_auto_logout)
 
     def move_main_tab(self,direction):
@@ -888,7 +888,7 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
     def select_main_tab(self,page):
         page=self.main_tab_container(page)
         if page not in getattr(self,"main_tab_pages",[]):  # 2.9.81: a screen hidden in Accounting Settings
-            messagebox.showinfo("Saber Accounting","This screen is hidden for this company or for you (Settings > Accounting Settings)."); return
+            messagebox.showinfo("Nanza Accounting","This screen is hidden for this company or for you (Settings > Accounting Settings)."); return
         self._ensure_main_tab(page)
         self.main_notebook.select(page); self.highlight_main_tab()
         seen=self.__dict__.setdefault("_pages_opened",set())
@@ -1314,15 +1314,15 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
 
     def export_report(self,report,format_name):
         if report == "dashboard":
-            title="Saber Accounting - Dashboard"; headers=["Currency","Sales","Purchases","Expenses","Net Profit","Receivables","Payables","Overdue"]
+            title="Nanza Accounting - Dashboard"; headers=["Currency","Sales","Purchases","Expenses","Net Profit","Receivables","Payables","Overdue"]
             rows=[[r["currency"],r["sales"],r["purchases"],r["expenses"],r["profit"],r["receivables"],r["payables"],r["overdue"]] for r in getattr(self,"dashboard_rows",[])]
         else:
-            title="Saber Accounting - Trial Balance"
+            title="Nanza Accounting - Trial Balance"
             if self.trial_from_date.get().strip() or self.trial_to_date.get().strip():
                 title += f" ({self.trial_from_date.get().strip() or 'Beginning'} to {self.trial_to_date.get().strip() or 'Today'})"
             headers=["Currency","Account","Account Name","Opening Balance","Debit","Credit","Closing Balance"]
             rows=[[r["currency"],r["code"],r["name_en"],r.get("opening",0),r["debit"] or 0,r["credit"] or 0,r.get("closing_balance",0)] for r in getattr(self,"trial_rows",[])]
-        if not rows: return messagebox.showwarning("Saber Accounting","No report data to export")
+        if not rows: return messagebox.showwarning("Nanza Accounting","No report data to export")
         try:
             if format_name == "print": print_rows(title,headers,rows); return
             extension=".xlsx" if format_name=="xlsx" else ".pdf"
@@ -1330,8 +1330,8 @@ class SaberApp(ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, Pro
                     "*.pdf")],initialfile=title.replace(" - ","_").replace(" ","_")+extension)
             if not path: return
             (export_excel if format_name=="xlsx" else export_pdf)(path,title,headers,rows)
-            messagebox.showinfo("Saber Accounting",f"Saved successfully:\n{path}")
-        except Exception as exc: messagebox.showerror("Saber Accounting",str(exc))
+            messagebox.showinfo("Nanza Accounting",f"Saved successfully:\n{path}")
+        except Exception as exc: messagebox.showerror("Nanza Accounting",str(exc))
 
 def main():
     app=SaberApp()

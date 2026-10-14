@@ -41,7 +41,7 @@ def save_settings(folder, keep=30):
         except OSError as exc: raise ValueError(f"The folder cannot be used: {exc}")
         probe = target / ".saber_write_test"
         try: probe.write_text("ok", encoding="utf-8"); probe.unlink()
-        except OSError as exc: raise ValueError(f"Saber cannot write in this folder: {exc}")
+        except OSError as exc: raise ValueError(f"Nanza cannot write in this folder: {exc}")
     keep = int(keep or 30)
     if keep < 1: raise ValueError("Keep at least one copy")
     data = settings(); data.update(folder=folder, keep=keep); _write(data)
@@ -52,7 +52,7 @@ def suggested_folder():
     """OneDrive (business first) when it is on this computer, else empty."""
     for name in ("OneDriveCommercial", "OneDrive", "OneDriveConsumer"):
         base = os.environ.get(name)
-        if base and Path(base).is_dir(): return str(Path(base) / "Saber Accounting Backups")
+        if base and Path(base).is_dir(): return str(Path(base) / "Nanza Accounting Backups")  # 2.9.114: only the suggestion; a folder already chosen is kept
     return ""
 
 

@@ -33,7 +33,7 @@ def _ocr_page(page):
     try:
         import fitz
     except ImportError as exc:
-        raise ValueError("Local PDF renderer is missing; update the Saber installer.") from exc
+        raise ValueError("Local PDF renderer is missing; update the Nanza installer.") from exc
     with tempfile.TemporaryDirectory(prefix="saber-ocr-") as folder:
         image = Path(folder) / "page.png"
         page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False).save(str(image))

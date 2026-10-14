@@ -7,7 +7,7 @@ from datetime import datetime
 import functools as _functools
 
 # openpyxl and reportlab take a noticeable time to load. They are loaded the first time an export is
-# made (not when the program opens), which makes opening Saber Accounting faster.
+# made (not when the program opens), which makes opening Nanza Accounting faster.
 _LIBRARIES_LOADED = False
 
 
@@ -129,7 +129,7 @@ def export_pdf(path, title, headers, rows):
     story.append(table); doc.build(story)
 
 def print_rows(title, headers, rows):
-    handle = tempfile.NamedTemporaryFile(prefix="SaberAccounting_", suffix=".pdf", delete=False)
+    handle = tempfile.NamedTemporaryFile(prefix="NanzaAccounting_", suffix=".pdf", delete=False)
     handle.close(); export_pdf(handle.name, title, headers, rows)
     if os.name != "nt": raise RuntimeError("Printing is available in the Windows application")
     os.startfile(handle.name, "print")

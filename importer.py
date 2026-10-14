@@ -275,7 +275,7 @@ def _header_map(sheet, keywords, scan=10):
             for index, label in enumerate(labels):
                 if label and any(word in label for word in words) and index not in mapping.values(): mapping[field] = index; break
         if len(mapping) >= 2: return row_number, mapping
-    raise ValueError("The Excel file has no heading row that Saber recognises")
+    raise ValueError("The Excel file has no heading row that Nanza recognises")
 
 
 def read_expenses(path):
@@ -335,7 +335,7 @@ INVOICE_TEMPLATE = {
 
 
 def write_invoice_template(path, kind):
-    """The Excel format Saber reads for multi-line invoices: one row per line; rows with the same Invoice No form one invoice."""
+    """The Excel format Nanza reads for multi-line invoices: one row per line; rows with the same Invoice No form one invoice."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     wb = Workbook(); ws = wb.active; ws.title = "Invoices"; headers = INVOICE_TEMPLATE[kind]; ws.append(headers)

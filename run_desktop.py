@@ -1,4 +1,4 @@
-"""Start Saber Accounting: one copy per Windows user, its own private data service, an error log."""
+"""Start Nanza Accounting: one copy per Windows user, its own private data service, an error log."""
 import json
 import logging
 import secrets
@@ -123,7 +123,7 @@ def run():
         main()
         return 0
     except Exception as exc:
-        log.exception("Saber Accounting stopped")
+        log.exception("Nanza Accounting stopped")
         _tell(f"Nanza Accounting could not continue:\n{exc}\n\nThe details are in the log file (SaberAccounting\\logs\\saber.log).", error=True)
         return 1
     finally:

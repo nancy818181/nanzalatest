@@ -609,10 +609,10 @@ class InvoicesMixin(SalesInvoiceMixin):
                  r["vat"],r["total"],r.get("payment_method") or "",r.get("amount_paid") or 0,r["debit"],r["credit"],r["supplier_account"],r["vat_account"],
                          r["expense_account"],r.get("expense_no_vat_account","601100001"),r["status"],r["source_row"]] for r in rows]
         path=filedialog.asksaveasfilename(defaultextension=".xlsx",filetypes=[("Excel workbook","*.xlsx")],
-                                          initialfile="Saber_Accounting_Invoices.xlsx")
+                                          initialfile="Nanza_Accounting_Invoices.xlsx")
         if not path: return
         try:
-            export_excel(path,"Saber Accounting - Invoices",headers,values)
+            export_excel(path,"Nanza Accounting - Invoices",headers,values)
             messagebox.showinfo("Invoices",f"Saved successfully:\n{path}")
         except Exception as exc:
             messagebox.showerror("Invoices",str(exc))

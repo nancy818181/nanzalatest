@@ -167,7 +167,7 @@ class ReportsMixin:
     def journal_report(self,format_name):
         rows=getattr(self,"journal_rows",[])
         if not rows: return messagebox.showwarning("General Journal","No journal data to export")
-        title="Saber Accounting - General Journal"
+        title="Nanza Accounting - General Journal"
         headers=["Entry No.","Date","Description","Source","Reference","Currency","Account","Account Name","Customer / Supplier","Debit","Credit","Balance"]
         values=[[r["entry_number"],r["entry_date"],r["description"],r["source_type"],r["source_id"],r["currency"],
                  r["account_code"],r["account_name"],r["party_name"],r["debit"],r["credit"],r["balance"]] for r in rows]
@@ -176,7 +176,7 @@ class ReportsMixin:
             if format_name=="print": print_rows(title,headers,values); return
             extension=".xlsx" if format_name=="xlsx" else ".pdf"
             path=filedialog.asksaveasfilename(defaultextension=extension,filetypes=[("Excel workbook","*.xlsx")] if format_name=="xlsx" else [("PDF document",
-                    "*.pdf")],initialfile="Saber_Accounting_General_Journal"+extension)
+                    "*.pdf")],initialfile="Nanza_Accounting_General_Journal"+extension)
             if not path: return
             (export_excel if format_name=="xlsx" else export_pdf)(path,title,headers,values)
             messagebox.showinfo("General Journal",f"Saved successfully:\n{path}")
@@ -279,7 +279,7 @@ class ReportsMixin:
     def profit_loss_report(self,format_name):
         rows=getattr(self,"pnl_rows",[])
         if not rows: return messagebox.showwarning("Profit & Loss","No data to export")
-        title=f"Saber Accounting - Profit & Loss ({self.pnl_from_date.get()} to {self.pnl_to_date.get()})"
+        title=f"Nanza Accounting - Profit & Loss ({self.pnl_from_date.get()} to {self.pnl_to_date.get()})"
         headers=["Currency","Type","Account","Account Name","Debit","Credit","P&L Amount"]
         values=[[r["currency"],r["type"],r["code"],r["name_en"],r["debit"],r["credit"],r["amount"]] for r in rows]
         try:

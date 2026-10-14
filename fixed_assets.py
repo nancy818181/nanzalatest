@@ -123,7 +123,7 @@ def save_asset(database, payload, asset_id=None, user_id=None):
     opening_date=None
     if str(payload.get("opening_date") or "").strip():
         opening_date=_iso(payload.get("opening_date"))
-        if opening_date<start: raise ValueError("'Depreciation booked before Saber up to' cannot be before the depreciation start")
+        if opening_date<start: raise ValueError("'Depreciation booked before Nanza up to' cannot be before the depreciation start")
     currency=str(payload.get("currency") or "USD").upper(); frequency=str(payload.get("frequency") or "monthly").lower()
     if currency not in ("USD","LBP","EUR","AED") or frequency not in ("monthly","yearly"):
         raise ValueError("Choose a supported currency and monthly or yearly posting")

@@ -251,12 +251,12 @@ class CompanyManager:
         try:
             with closing(sqlite3.connect(f"file:{path}?mode=ro",uri=True)) as db:
                 tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                if not {"journal_entries","app_settings","accounts"}<=tables: raise ValueError(f"{path.name} is not a Saber Accounting company file")
+                if not {"journal_entries","app_settings","accounts"}<=tables: raise ValueError(f"{path.name} is not a Nanza Accounting company file")
                 if db.execute("PRAGMA integrity_check").fetchone()[0]!="ok": raise ValueError(f"{path.name} is damaged (integrity check failed)")
                 row=db.execute("SELECT value FROM app_settings WHERE key='company_name'").fetchone()
                 days=[str(r[0]) for r in db.execute("SELECT entry_date FROM journal_entries")]
         except sqlite3.Error as exc:
-            raise ValueError(f"{path.name} cannot be read as a Saber Accounting company file: {exc}") from exc
+            raise ValueError(f"{path.name} cannot be read as a Nanza Accounting company file: {exc}") from exc
         name=str(row[0]).strip() if row and str(row[0] or "").strip() else re.sub(r"_\d{4}$","",path.stem).strip() or "Company"
         named=re.search(r"_(\d{4})$",path.stem)
         if named: year=int(named.group(1))

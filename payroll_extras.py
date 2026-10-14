@@ -2,8 +2,8 @@
 
 End of service (Lebanese Social Security Law, Art. 50-54): the indemnity is one month of the last salary for each year
 of service; the NSSF pays it from the end-of-service contributions (8.5%) and the employer pays the difference.
-The provision booked is that difference: indemnity less the contributions paid (those in Saber's payroll plus the
-contributions paid before Saber, entered on the employee). It is an estimate for the accounts, not the NSSF settlement.
+The provision booked is that difference: indemnity less the contributions paid (those in Nanza's payroll plus the
+contributions paid before Nanza, entered on the employee). It is an estimate for the accounts, not the NSSF settlement.
 
 Annual leave (Labour Law Art. 39): 15 days a year with pay (the company or the employee can have another number);
 the balance is the leave carried in + the days earned this year (pro rata) - the annual leave taken; its value is
@@ -174,7 +174,7 @@ def eos_sections(result):
             {"heading": "Entry", "headers": ["Account", "Debit", "Credit"], "rows": entry, "total_rows": []},
             {"heading": "Notes", "headers": ["Note"], "rows": [[n] for n in result["notes"] + [
                 "Indemnity = last monthly salary x years of service (Social Security Law Art. 50-54); the NSSF pays it from the 8.5% contributions and the employer pays the difference.",
-                "Contributions paid = the employer end-of-service share in Saber's posted payroll + 'End-of-service contributions before Saber' on the employee. An estimate for the accounts, not the NSSF settlement."]],
+                "Contributions paid = the employer end-of-service share in Nanza's posted payroll + 'End-of-service contributions before Nanza' on the employee. An estimate for the accounts, not the NSSF settlement."]],
                         "total_rows": []}]
 
 

@@ -23,7 +23,7 @@ class AssetRegisterMixin:
         form=tk.LabelFrame(page,text="Asset",bg=LIGHT,padx=10,pady=6); form.pack(fill="x",padx=8,pady=(6,0))
         layout=[[("Asset code","asset_code",14),("Description","name",34),("Currency","currency",8)],
                 [("Purchase date","acquired_on",12),("Purchase value","cost",16),("Residual value","residual",12)],
-                [("Depreciation start","start_on",12),("Purchase invoice No./ID","invoice_id",16),("Booked before Saber up to","opening_date",12)]]
+                [("Depreciation start","start_on",12),("Purchase invoice No./ID","invoice_id",16),("Booked before Nanza up to","opening_date",12)]]
         for row,items in enumerate(layout):
             for index,(label,key,width) in enumerate(items):
                 if not key: continue

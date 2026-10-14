@@ -206,7 +206,7 @@ class AccountingSetupMixin:
 
     # ------------------------------------------------------------ Year-End Check
     # ------------------------------------------------------------ 2.9.84: warn before the cash / bank goes negative
-    def confirm_cash_enough(self, account, currency, date, amount, title="Saber Accounting"):
+    def confirm_cash_enough(self, account, currency, date, amount, title="Nanza Accounting"):
         """True to go on. Asks when paying `amount` out of a cash / bank account (class 5) leaves it negative in its currency."""
         try: check = self.client.cash_check(account, currency, date, amount)
         except Exception: return True  # the check never blocks a save by itself

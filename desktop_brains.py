@@ -806,7 +806,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
             except Exception as exc: messagebox.showinfo(title, f"The PDF is ready: {handle.name}\n{exc}")
             return
         if format_name == "print":
-            handle = tempfile.NamedTemporaryFile(prefix="SaberAccounting_", suffix=".pdf", delete=False); handle.close()
+            handle = tempfile.NamedTemporaryFile(prefix="NanzaAccounting_", suffix=".pdf", delete=False); handle.close()
             try:
                 export_sections_pdf(handle.name, title, meta, sections)
                 if os.name != "nt": raise RuntimeError("Printing is available in the Windows application")
