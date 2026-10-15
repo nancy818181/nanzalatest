@@ -10,7 +10,7 @@ CENT = Decimal("0.01")
 
 def _d(value):
     try: return Decimal(str(value if value not in (None, "") else 0).replace(",", "").replace("%", ""))
-    except Exception: raise ValueError(f"'{value}' is not a number")
+    except (ArithmeticError, ValueError, TypeError, KeyError): raise ValueError(f"'{value}' is not a number")
 
 
 def calculate(lines, invoice_discount_percent=0, invoice_discount_amount=0, zero_vat=False):

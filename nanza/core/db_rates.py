@@ -9,6 +9,10 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
 from database_common import _soft_iso  # noqa: F401
 
 
+
+# 2.9.119: a EUR rate written offline by versions before 2.9.119 (1 EUR = 1 USD, so 1 EUR = 89,500 LBP)
+BAD_EURO_RATE = "(to_currency='USD' AND CAST(rate AS REAL)=1) OR (to_currency='LBP' AND CAST(rate AS REAL)=89500)"
+
 class RatesStore:
     def save_exchange_rate(self, item, user_id):
         self.__dict__.pop("_rate_state", None)  # 2.9.58: rates change - forget the cached ones
@@ -127,25 +131,35 @@ class RatesStore:
                 request=urllib.request.Request(url,headers={"User-Agent":"SaberAccounting/1.5"})
                 with urllib.request.urlopen(request,timeout=10) as response: payload=json.loads(response.read().decode("utf-8"))
                 for rate_date,values in payload.get("rates",{}).items(): collected[rate_date]=Decimal(str(values["USD"]))
-            except Exception:
+            except (OSError, ValueError, KeyError, ArithmeticError) as exc:  # offline / no answer: that year is tried again later
+                logging.getLogger("saber.database").info("EUR rates of %s were not downloaded: %s", year, exc)
                 continue
         if collected: previous=collected[min(collected)]
         else:
             try:
                 request=urllib.request.Request("https://api.frankfurter.app/latest?from=EUR&to=USD",headers={"User-Agent":"SaberAccounting/1.5"})
                 with urllib.request.urlopen(request,timeout=5) as response: previous=Decimal(str(json.loads(response.read().decode("utf-8"))["rates"]["USD"]))
-            except Exception: previous=Decimal("1")
+            except (OSError, ValueError, KeyError, ArithmeticError) as exc:
+                # 2.9.119: no EUR rate at all (offline). Before, 1 EUR = 1 USD was written for every day and kept for good;
+                # now no EUR rate is written and the download is tried again (a document in EUR asks for its rate).
+                logging.getLogger("saber.database").info("EUR rates were not downloaded: %s", exc); previous=None
         rows=[]; current=start
         while current<=end:
             if current.isoformat() in collected: previous=collected[current.isoformat()]
-            display=current.strftime("%d-%m-%Y"); eur_lbp=(previous*Decimal("89500")).quantize(Decimal("0.01"))
-            rows.extend(((display,"USD","LBP","89500",utcnow()),(display,"EUR","USD",str(previous),utcnow()),(display,"EUR","LBP",str(eur_lbp),utcnow())))
+            display=current.strftime("%d-%m-%Y")
+            rows.append((display,"USD","LBP","89500",utcnow()))
+            if previous is not None:
+                eur_lbp=(previous*Decimal("89500")).quantize(Decimal("0.01"))
+                rows.extend(((display,"EUR","USD",str(previous),utcnow()),(display,"EUR","LBP",str(eur_lbp),utcnow())))
             rows.extend(self._pegged_rows(display))  # 2.9.78: AED and SAR every day too
             current+=timedelta(days=1)
         with self.connect() as db:
+            if previous is not None:  # 2.9.119: the 1 EUR = 1 USD days written offline by earlier versions get the real rate
+                db.execute(f"DELETE FROM exchange_rates WHERE from_currency='EUR' AND to_currency IN ('USD','LBP') AND created_by IS NULL AND ({BAD_EURO_RATE})")
             db.executemany("""INSERT INTO exchange_rates(rate_date,from_currency,to_currency,rate,created_at)
                 VALUES(?,?,?,?,?) ON CONFLICT(rate_date,from_currency,to_currency) DO NOTHING""",rows)
-            db.execute("INSERT INTO app_settings(key,value) VALUES('exchange_history_loaded_through',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(end.isoformat(),))
+            if previous is not None:
+                db.execute("INSERT INTO app_settings(key,value) VALUES('exchange_history_loaded_through',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(end.isoformat(),))
         return {"from":start.isoformat(),"to":end.isoformat(),"days":(end-start).days+1,"rates":len(rows)}
 
     def restore_euro_rates(self):

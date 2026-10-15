@@ -88,16 +88,16 @@ class PaymentsStore:
         self._assert_period_open(date)
         if kind not in ("customer_receipt","supplier_payment"): raise ValueError("Invalid payment type")
         try: amount=Decimal(str(item.get("amount") or 0))
-        except Exception as exc: raise ValueError("Invalid payment amount") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Invalid payment amount") from exc
         if amount<=0: raise ValueError("Payment amount must be above zero")
         currency=str(item.get("currency") or "USD").upper()
         defaults=self.default_accounts()  # 2.9.81: Settings > Accounting Settings
         cash_account=str(item.get("cash_account") or defaults["cash"]).strip()
         try: commission=Decimal(str(item.get("bank_commission") or 0))
-        except Exception as exc: raise ValueError("Invalid bank commission amount") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Invalid bank commission amount") from exc
         if commission<0: raise ValueError("Bank commission cannot be negative")
         try: exchange_diff=Decimal(str(item.get("exchange_difference") or 0))
-        except Exception as exc: raise ValueError("Invalid exchange difference amount") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Invalid exchange difference amount") from exc
         import chart_extra
         # 2.9.79: the bank commission and the exchange gain / loss go to the accounts chosen on the receipt / payment
         # (673900000 / 775100000 / 675100000 when none is chosen).

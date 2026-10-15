@@ -131,7 +131,8 @@ class AssetRegisterMixin:
             fields.update(acquired_on=_dd(fields["acquired_on"]),start_on=_dd(fields["start_on"]),
                     opening_date=_dd(fields.get("opening_date")) if fields.get("opening_date") else "",invoice_id=invoice_id)
             try: self.client.save_asset(fields,asset["id"])
-            except Exception: pass  # the invoice is booked; the link is optional
+            except (RuntimeError, OSError, ValueError) as exc:  # 2.9.119: the invoice is booked; the missing link is said
+                return messagebox.showwarning("Book the asset purchase",f"Purchase booked, but not linked to asset {asset.get('asset_code')}: {exc}")
         except Exception as exc:
             return messagebox.showerror("Book the asset purchase",f"The register item is saved, but the invoice was not booked: {exc}\nRecord it in Purchases (type Assets).")
         messagebox.showinfo("Book the asset purchase",f"Purchase booked and linked to asset {asset.get('asset_code')}."); self.load_assets()

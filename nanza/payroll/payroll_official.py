@@ -39,7 +39,8 @@ def _record_lines(db, row):
     spouse = ZERO
     if family and str(row.get("marital_status") or "") in ("married", "spouse") and not int(row.get("spouse_works") or 0):
         try: spouse = min(family, Decimal(str(db.payroll_settings_for(row["period_date"]).get("family_allowance_spouse") or 0)))
-        except Exception: spouse = ZERO
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
+            raise ValueError(f"Payroll setting family allowance spouse is not a number: correct it in Tax & NSSF Settings") from exc
     values = {"salary": lbp["salary"], "retro_salary": lbp["retro_salary"], "overtime": lbp["overtime"], "commission": lbp["commission"],
               "bonus": lbp["bonus"], "thirteenth_month": lbp["thirteenth_month"], "transport": lbp["transport"],
               "exempt_transport": raw("exempt_transport"), "schooling": lbp["schooling"], "exempt_schooling": raw("exempt_schooling"),

@@ -101,8 +101,12 @@ class ReportsStore:
             return metrics.setdefault(code,{"currency":code,"sales":0.0,"purchases":0.0,
                 "expenses":0.0,"profit":0.0,"receivables":0.0,"payables":0.0,"overdue":0})
         with self.connect() as db:
-            invoice_rows=db.execute("""SELECT kind,currency,
-                DSUM(CAST(subtotal AS REAL)) subtotal,
+            # 2.9.119: the open invoices brought in by Start with Nanza are not sales / purchases of the year (still receivables / payables)
+            has_source={row[1] for row in db.execute("PRAGMA table_info(invoices)")} >= {"source_file"}
+            sales_amount="CASE WHEN COALESCE(source_file,'')='Opening balances' THEN 0 ELSE CAST(subtotal AS REAL) END" if has_source else "CAST(subtotal AS REAL)"
+            not_opening=" AND COALESCE(source_file,'')<>'Opening balances'" if has_source else ""
+            invoice_rows=db.execute(f"""SELECT kind,currency,
+                DSUM({sales_amount}) subtotal,
                 DSUM(CAST(total AS REAL)-CAST(COALESCE(amount_paid,'0') AS REAL)) outstanding
                 FROM invoices WHERE status NOT IN ('cancelled','deleted')
                 GROUP BY kind,currency""").fetchall()
@@ -115,8 +119,9 @@ class ReportsStore:
                   AND due_date GLOB '??-??-????'
                   AND substr(due_date,7,4)||'-'||substr(due_date,4,2)||'-'||substr(due_date,1,2)<?
                 GROUP BY currency""",(datetime.now().strftime("%Y-%m-%d"),)).fetchall()
-            monthly=[dict(row) for row in db.execute("""SELECT substr(CASE WHEN invoice_date GLOB '??-??-????' THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2) ELSE invoice_date END,1,7) month,
-                currency,kind,DSUM(CAST(subtotal AS REAL)) amount FROM invoices WHERE status NOT IN ('cancelled','deleted') GROUP BY month,currency,kind ORDER BY month""")]
+            monthly=[dict(row) for row in db.execute(f"""SELECT substr(CASE WHEN invoice_date GLOB '??-??-????' THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2) ELSE invoice_date END,1,7) month,
+                currency,kind,DSUM(CAST(subtotal AS REAL)) amount FROM invoices WHERE status NOT IN ('cancelled','deleted')
+                {not_opening} GROUP BY month,currency,kind ORDER BY month""")]  # 2.9.119: not the open invoices brought in
         for row in invoice_rows:
             values=metric(row["currency"]); amount=float(row["subtotal"] or 0)
             outstanding=float(row["outstanding"] or 0)
@@ -273,7 +278,7 @@ class ReportsStore:
                 DSUM(CAST(vat AS REAL)) vat,DSUM(CAST(total AS REAL)) total,COUNT(*) count,
                 DSUM(CASE WHEN kind='sale' THEN CAST(total AS REAL) ELSE 0 END) debit,
                 DSUM(CASE WHEN kind='purchase' THEN CAST(total AS REAL) ELSE 0 END) credit
-                FROM invoices WHERE status NOT IN ('cancelled','deleted') GROUP BY kind,currency""").fetchall()
+                FROM invoices WHERE status NOT IN ('cancelled','deleted') AND COALESCE(source_file,'')<>'Opening balances' GROUP BY kind,currency""").fetchall()
             return [dict(r) for r in rows]
 
     def journal(self, from_date=None, to_date=None, currency=None, limit=None, branch_id=None, entry_number=None, account_code=None, source_type=None):
@@ -551,7 +556,7 @@ class ReportsStore:
         normalized="""CASE WHEN invoice_date GLOB '??-??-????'
             THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2)
             ELSE invoice_date END"""
-        conditions=["status NOT IN ('cancelled','deleted')"]; parameters=[]
+        conditions=["status NOT IN ('cancelled','deleted')","COALESCE(source_file,'')<>'Opening balances'"]; parameters=[]
         if from_date: conditions.append(f"{normalized}>=?"); parameters.append(from_date)
         if to_date: conditions.append(f"{normalized}<=?"); parameters.append(to_date)
         if currency: conditions.append("currency=?"); parameters.append(currency)

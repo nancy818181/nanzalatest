@@ -97,6 +97,22 @@ TOPICS = [
       (None, "Numbering: the prefix of each document, the branch in the number, and Renumber by date.", "الترقيم: بادئة كل مستند، والفرع في الرقم، وإعادة الترقيم حسب التاريخ.")]),
 ]
 
+# 2.9.119: topics of a tab inside a screen (SUBTABS says which screen and tab), after the screen topics
+EXTRA_TOPICS = [
+    ("start_with_nanza", "Start with Nanza and check the books", "ابدأ مع نانزا وافحص الدفاتر",
+     "Bring the balances of the old program in one Excel file, then check that every number is where it should be.",
+     "انقل أرصدة البرنامج القديم بملف Excel واحد، ثم افحص أن كل رقم في مكانه.",
+     [("Excel Template", "Save the Excel template: opening balances, customers & suppliers, open invoices and items, one sheet each.",
+       "احفظ نموذج Excel: الأرصدة الافتتاحية، الزبائن والموردون، الفواتير المفتوحة والأصناف، كل منها في ورقة."),
+      ("Check & Import...", "Choose the filled file: every line is checked first and nothing is saved while one is wrong. Then Import.",
+       "اختر الملف المعبّأ: يُفحص كل سطر أولاً ولا يُحفظ شيء إذا كان أي سطر خاطئاً. ثم اضغط استيراد."),
+      ("Run Books Health Check", "Books Health Check: balanced entries, every document in the books, no gaps or duplicate numbers, VAT returns unchanged.",
+       "فحص سلامة الدفاتر: قيود متوازنة، كل مستند في الدفاتر، لا فجوات ولا أرقام مكررة، التصاريح الضريبية لم تتغير.")]),
+]
+
+# 2.9.119: topics shown on a tab inside a screen: key -> (screen, tab)
+SUBTABS = {"start_with_nanza": ("settings_tab", "Accounting Settings")}
+
 # The new company wizard (Switch Company / Year > Create Company): taken from its own window.
 WIZARD = ("new_company", "Create a new company", "إنشاء شركة جديدة",
           "Four short steps: company, country and chart of accounts, currencies and VAT, fiscal year.",

@@ -156,6 +156,13 @@ def attention_items(app, metrics=None):
         if unbalanced:
             items.append(("red", f"{len(unbalanced)} journal entr{'y is' if len(unbalanced) == 1 else 'ies are'} not balanced", "Check", app.check_unbalanced_entries))
     except Exception: log.debug("Balance check not available", exc_info=True)
+    try:  # 2.9.119: Books Health Check (the quick points) - documents without entries, duplicates, gaps...
+        health = client.books_check(getattr(app, "current_fiscal_year", None), quick=True)
+        problems = [r for r in health.get("results", []) if r["status"] != "OK" and r["check"] not in ("Every entry balanced", "No lines on heading accounts")]
+        if problems:
+            level = "red" if any(r["status"] == "ERROR" for r in problems) else "amber"
+            items.append((level, f"Books Health Check: {len(problems)} point(s) to look at ({problems[0]['check']})", "Check", app.show_books_check))
+    except (RuntimeError, OSError, ValueError, KeyError, AttributeError): log.debug("Books Health Check not available", exc_info=True)
     try:  # 2.9.82: accounts off budget
         alert = app.budget_alert_item() if hasattr(app, "budget_alert_item") else None
         if alert: items.append(alert)

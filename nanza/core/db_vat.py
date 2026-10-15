@@ -94,7 +94,7 @@ class VatStore:
             with self.connect() as db: db.execute("DELETE FROM vat_settings WHERE year=?", (int(year),))
             return None
         try: value = Decimal(str(ratio).replace("%", "").replace(",", ""))
-        except Exception as exc: raise ValueError("The deduction ratio must be a percentage, for example 85") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("The deduction ratio must be a percentage, for example 85") from exc
         if value > 1: value = value / 100
         if value < 0 or value > 1: raise ValueError("The deduction ratio must be between 0% and 100%")
         with self.connect() as db:

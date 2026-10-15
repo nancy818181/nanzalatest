@@ -70,7 +70,7 @@ def _negative_message(lines):
 
 def _d(value):
     try: return Decimal(str(value if value not in (None, "") else 0).replace(",", ""))
-    except Exception as exc: raise ValueError(f"'{value}' is not a number") from exc
+    except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"'{value}' is not a number") from exc
 
 
 def migrate(db):

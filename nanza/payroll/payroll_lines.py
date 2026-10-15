@@ -85,7 +85,7 @@ def clean_allowances(raw) -> dict:
         text = str(value if value is not None else "").replace(",", "").strip()
         if not text: continue
         try: amount = D(text)
-        except Exception as exc: raise ValueError(f"{ALLOWANCES[code][4]} must be a number") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{ALLOWANCES[code][4]} must be a number") from exc
         if amount < 0: raise ValueError(f"{ALLOWANCES[code][4]} cannot be negative")
         if amount: result[code] = amount
     return result

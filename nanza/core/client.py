@@ -174,6 +174,8 @@ class ApiClient:
     def accounts(self): return self.request("GET", "/api/accounts")["items"]
     def next_account_number(self,prefix): return self.request("GET",f"/api/accounts/next-number?{urlencode({'prefix':prefix})}")["account_number"]
     def save_account(self,item): return self.request("POST","/api/accounts",item)["account"]
+    def onboarding_check(self,data,date): return self.request("POST","/api/onboarding/check",{"data":data,"date":date})  # 2.9.119
+    def onboarding_import(self,data,date): return self.request("POST","/api/onboarding/import",{"data":data,"date":date})
     def import_accounts(self,items): return self.request("POST","/api/accounts/import",{"items":items})  # 2.9.116
     def rename_account(self,code,name): return self.request("PUT",f"/api/accounts/{code}",{"name_en":name})["account"]
     def account_usage(self,codes=None): return self.request("GET","/api/accounts/usage?"+urlencode({"codes":",".join(codes or [])}))["items"]
@@ -405,6 +407,9 @@ class ApiClient:
     def accounting_setup(self): return self.request("GET","/api/accounting-setup")
     def save_accounting_setup(self,item): return self.request("POST","/api/accounting-setup",item)
     def save_my_hidden(self,hidden): return self.request("POST","/api/accounting-setup/user",{"hidden":list(hidden)})["user_hidden"]
+    def books_check(self,year=None,quick=False):  # 2.9.119
+        query={k:v for k,v in {"year":year,"quick":"1" if quick else ""}.items() if v}
+        return self.request("GET","/api/books-check"+(f"?{urlencode(query)}" if query else ""))
     def year_end_check(self,year): return self.request("GET",f"/api/year-end-check?{urlencode({'year':year})}")
     def vat_check(self,year,quarter,credit_brought_forward=None,refund_requested=None,payable_account=None,credit_account=None,non_deductible_account=None):
         query=urlencode({k:v for k,v in {"year":year,"quarter":quarter,"credit_brought_forward":credit_brought_forward,"refund_requested":refund_requested,

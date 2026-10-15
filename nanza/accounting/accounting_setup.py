@@ -274,7 +274,7 @@ def year_end_check(db, year, previous_year_db=None):
         candidates = db.doe_candidates(f"31-12-{year}").get("items", [])
         def difference(c):  # LBP value at the rate of 31-12 less the LBP carried in the books
             try: return Decimal(str(c["balance"])) * Decimal(str(c["suggested_rate"])) - Decimal(str(c["carrying_lbp"]))
-            except Exception: return ZERO
+            except (ArithmeticError, ValueError, TypeError, KeyError): return Decimal("Infinity")  # 2.9.119: not readable = to look at, not "nothing to do"
         to_revalue = [c for c in candidates if abs(difference(c)) >= 1000]  # under LBP 1,000 is rounding
         add(WARNING if to_revalue else OK, "Exchange differences (DOE) at 31-12",
             (f"{len(to_revalue)} balance(s) to revalue in LBP, e.g. " + ", ".join(f"{c['account']} {c['currency']}" for c in to_revalue[:5])) if to_revalue else "No LBP revaluation needed",
@@ -288,7 +288,7 @@ def year_end_check(db, year, previous_year_db=None):
             def difference_main(c):
                 carrying = c.get(f"carrying_{main.lower()}", c.get("carrying"))
                 try: return Decimal(str(c["balance"])) * Decimal(str(c["suggested_rate"])) - Decimal(str(carrying))
-                except Exception: return ZERO
+                except (ArithmeticError, ValueError, TypeError, KeyError): return Decimal("Infinity")
             to_revalue = [c for c in candidates if abs(difference_main(c)) >= 1]  # under 1 unit is rounding
             add(WARNING if to_revalue else OK, f"Exchange differences (DOE) in {main} at 31-12",
                 (f"{len(to_revalue)} balance(s) to revalue in {main}, e.g. " + ", ".join(f"{c['account']} {c['currency']}" for c in to_revalue[:5])) if to_revalue else f"No {main} revaluation needed",

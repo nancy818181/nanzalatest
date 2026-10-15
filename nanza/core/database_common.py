@@ -310,7 +310,7 @@ def parse_vat_rate(value):
     """2.9.72: a VAT rate in % ("11", "5%", "15.0") -> Decimal 11 / 5 / 15; between 0 and 100."""
     text = str(value if value is not None else "").replace("%", "").replace(",", ".").strip()
     try: rate = Decimal(text)
-    except Exception as exc: raise ValueError("The VAT rate must be a number, for example 11 or 5") from exc
+    except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("The VAT rate must be a number, for example 11 or 5") from exc
     if rate < 0 or rate > 100: raise ValueError("The VAT rate must be between 0 and 100")
     return rate.normalize() if rate != rate.to_integral() else rate.quantize(Decimal("1"))
 

@@ -53,7 +53,7 @@ class JournalStore:
             if extra: debit,credit=extra["debit"],extra["credit"]
             else:
                 try: debit=Decimal(str(line.get("debit") or 0)); credit=Decimal(str(line.get("credit") or 0))
-                except Exception as exc: raise ValueError(f"Line {index}: Debit and Credit must be numbers") from exc
+                except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"Line {index}: Debit and Credit must be numbers") from exc
             if not code or min(debit,credit)<0 or (debit>0 and credit>0) or (debit==0 and credit==0): raise ValueError(f"Line {index}: choose an account and enter either Debit or Credit")
             normalized.append((code,str(line.get("description") or "").strip(),debit,credit,extra,line)); total_debit+=debit; total_credit+=credit
         if abs(total_debit-total_credit)>=Decimal("0.005"): raise ValueError(f"Journal Voucher is unbalanced. Debit {total_debit}; Credit {total_credit}; Remaining {abs(total_debit-total_credit)}")
@@ -251,7 +251,7 @@ class JournalStore:
         if basis not in self.currency_codes(): raise ValueError(f"DOE cannot be revalued in {basis}: add the currency first")
         if voucher_currency!=basis: raise ValueError(f"A {basis} DOE voucher must be in {basis}")
         try: debit=Decimal(str(line.get("debit") or 0)); credit=Decimal(str(line.get("credit") or 0))
-        except Exception as exc: raise ValueError(f"Line {index}: Debit and Credit must be numbers") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"Line {index}: Debit and Credit must be numbers") from exc
         value=(debit or credit).quantize(Decimal("0.01"))
         chosen=self.default_accounts()
         zero=Decimal("0"); offset=code in (EXCHANGE_GAIN_ACCOUNT,EXCHANGE_LOSS_ACCOUNT,chosen["exchange_gain"],chosen["exchange_loss"])
@@ -274,7 +274,7 @@ class JournalStore:
         try:
             amount=Decimal(str(line.get("amount")).replace(",","")); suggested=self.suggested_rates(currency,date)
             rate_lbp=Decimal(str(line.get("rate_lbp") or suggested["rate_lbp"]).replace(",","")); rate_usd=Decimal(str(line.get("rate_usd") or suggested["rate_usd"]).replace(",",""))
-        except Exception as exc: raise ValueError(f"Line {index}: amount and rates must be numbers") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"Line {index}: amount and rates must be numbers") from exc
         if amount<=0 or rate_lbp<=0 or rate_usd<=0: raise ValueError(f"Line {index}: amount and rates must be above zero")
         amount_lbp=(amount*rate_lbp).quantize(Decimal("0.01")); amount_usd=((amount/rate_usd) if currency=="LBP" else amount*rate_usd).quantize(Decimal("0.001"))
         if currency==voucher_currency: value=amount

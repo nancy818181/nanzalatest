@@ -44,8 +44,11 @@ def save_tax_flag(client, source_type, source_id, variable):
     """Store the tick for the entry just saved; a failure is shown in the log and never undoes the saved entry."""
     if not source_id: return
     try: client.set_tax_flag(source_type, int(source_id), bool(variable.get()))
-    except Exception:
+    except (RuntimeError, OSError, ValueError) as exc:  # 2.9.119: said on the screen too - the income tax figures depend on it
         log.warning("tax flag not saved for %s %s", source_type, source_id, exc_info=True)
+        from tkinter import messagebox
+        messagebox.showwarning("Not deductible for income tax", f"The entry is saved, but its 'not deductible' tick was not: {exc}\n"
+                               "Open the entry again and save it to set the tick.")
 
 
 def load_tax_flag(client, source_type, source_id, variable):

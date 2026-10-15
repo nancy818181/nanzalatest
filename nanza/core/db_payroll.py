@@ -6,6 +6,7 @@ from __future__ import annotations
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, Decimal, display_date, iso_date, json, timedelta, utcnow
 )
+from decimal import InvalidOperation
 from database_common import _soft_iso  # noqa: F401
 
 
@@ -141,7 +142,7 @@ class PayrollStore:
             for key in self.EMPLOYEE_MONEY_FIELDS:
                 if register.get(key):
                     try: amount=Decimal(register[key].replace(",",""))
-                    except Exception as exc: raise ValueError(f"{key.replace('_',' ').title()} must be a number") from exc
+                    except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{key.replace('_',' ').title()} must be a number") from exc
                     if amount<0: raise ValueError(f"{key.replace('_',' ').title()} cannot be negative")
                     register[key]=str(amount)
             for key in self.EMPLOYEE_FLAG_FIELDS:
@@ -210,12 +211,12 @@ class PayrollStore:
         for field in ("employee_nssf_rate","medical_rate","end_service_rate","family_rate"):
             if item.get(field) not in (None,""):
                 try: rate=Decimal(str(item.get(field)))
-                except Exception as exc: raise ValueError(f"{field.replace('_',' ').title()} must be a number such as 0.03") from exc
+                except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{field.replace('_',' ').title()} must be a number such as 0.03") from exc
                 if rate<0 or rate>=1: raise ValueError(f"{field.replace('_',' ').title()} must be a decimal rate between 0 and 1 (3% = 0.03)")
         for field in ("employee_ceiling","medical_ceiling","family_ceiling","end_service_ceiling","single_allowance","spouse_allowance","child_allowance"):
             if item.get(field) not in (None,""):
                 try: value=Decimal(str(item.get(field)).replace(",",""))
-                except Exception as exc: raise ValueError(f"{field.replace('_',' ').title()} must be a number") from exc
+                except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{field.replace('_',' ').title()} must be a number") from exc
                 if value<0: raise ValueError(f"{field.replace('_',' ').title()} cannot be negative")
                 item[field]=str(value)
         with self.connect() as db:
@@ -251,7 +252,7 @@ class PayrollStore:
                                 "family_allowance_max_children"):
                 if item.get(key) not in (None,""):
                     try: value=str(Decimal(str(item[key]).replace(",","")))
-                    except Exception as exc: raise ValueError(f"{key.replace('_',' ').title()} must be a number") from exc
+                    except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{key.replace('_',' ').title()} must be a number") from exc
                     db.execute(f"UPDATE payroll_settings SET {key}=? WHERE date_from=?",(value,date_from))
         return self.payroll_settings_for(date_from)
 
@@ -300,14 +301,15 @@ class PayrollStore:
         rules_date=self.month_end(period); settings=self.payroll_settings_for(rules_date); D=Decimal
         def setting(name,default="0"):
             try: return D(str(settings.get(name) if settings.get(name) not in (None,"") else default))
-            except Exception: return D(default)
+            except (InvalidOperation,ValueError,TypeError) as exc:  # 2.9.119: a payroll rate that is not a number stops the payroll
+                raise ValueError(f"Payroll setting {name.replace('_',' ')} is not a number ({settings.get(name)!r}): correct it in Tax & NSSF Settings") from exc
         money={}
         # Director remuneration is paid with the payroll but is NOT subject to salary tax (and not to NSSF);
         # it is part of gross and net pay and is posted to its own account.
         for name in ("salary","transport","overtime","commission","retro_salary","schooling","bonus","thirteenth_month","director_remuneration"):
             raw=item.get(name) if item.get(name) not in (None,"") else (employee["base_salary"] if name=="salary" else 0)
             try: money[name]=D(str(raw).replace(",",""))
-            except Exception as exc: raise ValueError(f"{name.replace('_',' ').title()} must be a number") from exc
+            except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{name.replace('_',' ').title()} must be a number") from exc
             if money[name]<0: raise ValueError(f"{name.replace('_',' ').title()} cannot be negative")
         import payroll_lines
         allowances=payroll_lines.clean_allowances(item.get("allowances"))
@@ -333,7 +335,7 @@ class PayrollStore:
         to_lbp=lambda value,day=period: self._converted_amount(value,currency,"LBP",day)
         from_lbp=lambda value,day=period: self._converted_amount(value,"LBP",currency,day)
         try: days=int(D(str(item.get("transport_days") if item.get("transport_days") not in (None,"") else setting("default_transport_days","26"))))
-        except Exception as exc: raise ValueError("Transport days must be a whole number") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Transport days must be a whole number") from exc
         if days<0 or days>31: raise ValueError("Transport days must be between 0 and 31")
         import lebanese_payroll
         food_from,food_daily=lebanese_payroll.FOOD_DAILY_EXEMPT  # 2.9.92: Budget Law 2026 Art. 26
@@ -494,7 +496,7 @@ class PayrollStore:
         override=str(item.get("family_allowance_override") if item.get("family_allowance_override") is not None else "").replace(",","").strip()
         if override:
             try: family_allowance=D(override).quantize(D("0.01"))
-            except Exception as exc: raise ValueError("Family Allocation must be a number") from exc
+            except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Family Allocation must be a number") from exc
             if family_allowance<0: raise ValueError("Family Allocation cannot be negative")
             notes.append("Family allocation entered manually for this payroll")
         if money["director_remuneration"]: notes.append("Director remuneration is not subject to salary tax or NSSF (as configured); confirm with your accountant")
@@ -654,7 +656,7 @@ class PayrollStore:
     def record_nssf_payment(self, item, user_id):
         """Payment of the NSSF statement: Dr NSSF payable / Cr cash or bank (payment voucher, type 03)."""
         try: amount = Decimal(str(item.get("amount") or 0).replace(",", ""))
-        except Exception as exc: raise ValueError("Enter the amount paid") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Enter the amount paid") from exc
         if amount <= 0: raise ValueError("The amount paid must be above zero")
         currency = str(item.get("currency") or "LBP").upper(); date = str(item.get("payment_date") or datetime.now().strftime("%d-%m-%Y"))
         cash = str(item.get("cash_account") or "531").split(" - ", 1)[0].strip()
@@ -699,7 +701,7 @@ class PayrollStore:
             for field in self.PERIOD_VALUE_FIELDS:
                 if period.get(field) in (None,""): continue
                 try: value=Decimal(str(period[field]).replace(",","").replace("%",""))
-                except Exception as exc: raise ValueError(f"Period {index}: {field.replace('_',' ')} must be a number") from exc
+                except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"Period {index}: {field.replace('_',' ')} must be a number") from exc
                 if value<0: raise ValueError(f"Period {index}: {field.replace('_',' ')} cannot be negative")
                 if field.endswith("rate") and value>=1: raise ValueError(f"Period {index}: {field.replace('_',' ')} must be a decimal rate (3% = 0.03)")
                 base[field]=str(value)

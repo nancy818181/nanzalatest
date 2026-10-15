@@ -3,6 +3,7 @@
 Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from InvoicesStore."""
 from __future__ import annotations
 import logging
+import sqlite3
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, Decimal, DEFAULT_LEBANESE_ACCOUNTS, EXPENSE_NO_VAT_ACCOUNT_9, hashlib, iso_date, json, utcnow
@@ -245,12 +246,14 @@ class InvoicesStore:
             try:
                 with self.connect() as db:
                     item_cost_accounts = {str(r["sku"]).upper(): r["cost_account"] for r in db.execute("SELECT sku,cost_account FROM inventory_items WHERE COALESCE(cost_account,'')<>''")}
-            except Exception: item_cost_accounts = {}
+            except sqlite3.Error:  # 2.9.119: an older file without the column; said in the log
+                logging.getLogger("saber").warning("Item cost accounts not read - the invoice accounts are used", exc_info=True); item_cost_accounts = {}
         elif self._entry_type(item) == "sales" and any(line.get("item_code") for line in line_items):  # 2.9.90: the item's sales account
             try:
                 with self.connect() as db:
                     item_cost_accounts = {str(r["sku"]).upper(): r["sales_account"] for r in db.execute("SELECT sku,sales_account FROM inventory_items WHERE COALESCE(sales_account,'')<>''")}
-            except Exception: item_cost_accounts = {}
+            except sqlite3.Error:
+                logging.getLogger("saber").warning("Item sales accounts not read - the invoice accounts are used", exc_info=True); item_cost_accounts = {}
         deductible_total = Decimal("0"); non_deductible_total=Decimal("0")
         vat_total = Decimal("0"); expense_splits={}
         for index, line in enumerate(line_items, start=1):
@@ -261,7 +264,7 @@ class InvoicesStore:
                 quantity = Decimal(str(line.get("quantity") or 0))
                 unit_price = Decimal(str(line.get("unit_price") or 0))
                 vat_rate = Decimal(str(line.get("vat_rate") if line.get("vat_rate") not in (None, "") else self.vat_rate_percent()))
-            except Exception as exc:
+            except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
                 raise ValueError(f"Item {index}: invalid quantity, price, or VAT rate") from exc
             if quantity <= 0 or unit_price < 0 or vat_rate < 0:
                 raise ValueError(f"Item {index}: values cannot be negative and quantity must be above zero")
@@ -441,7 +444,8 @@ class InvoicesStore:
         before = self._invoice_snapshot(invoice_id)
         result = self._update_invoice_with_vat(invoice_id, item, user_id)
         try: self._log_change(user_id, invoice_id, before, self._invoice_snapshot(invoice_id))
-        except Exception: logging.getLogger("saber").debug("ignored error", exc_info=True)  # 2.9.105
+        except (sqlite3.Error, ValueError, KeyError, TypeError):  # 2.9.119: a change missing from the audit trail is a warning, not silent
+            logging.getLogger("saber").warning("Change of invoice %s not written to the audit trail", invoice_id, exc_info=True)
         return result
 
     def _update_invoice_with_vat(self, invoice_id, item, user_id):
@@ -471,7 +475,7 @@ class InvoicesStore:
             non_deductible=Decimal(str(item.get("non_deductible_subtotal") or 0)); subtotal=deductible+non_deductible
             vat = Decimal(str(item.get("vat") or 0))
             total = Decimal(str(item.get("total") or 0))
-        except Exception as exc:
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
             raise ValueError("Before VAT, VAT, and Total must be valid numbers") from exc
         if min(subtotal, vat, total) < 0:
             raise ValueError("Amounts cannot be negative")
@@ -581,7 +585,7 @@ class InvoicesStore:
             subtotal = Decimal(str(line.get("subtotal") if line.get("subtotal") not in (None, "") else quantity * unit_price))
             vat_rate = Decimal(str(line.get("vat_rate") if line.get("vat_rate") not in (None, "") else self.vat_rate_percent()))
             vat = Decimal(str(line.get("vat") if line.get("vat") not in (None, "") else subtotal * vat_rate / Decimal("100")))
-        except Exception as exc:
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
             raise ValueError("Invalid item amount") from exc
         if quantity <= 0 or min(unit_price, subtotal, vat, vat_rate) < 0:
             raise ValueError("Item values cannot be negative and quantity must be above zero")
@@ -725,7 +729,7 @@ class InvoicesStore:
         try:
             source_exchange_rate=Decimal(str(source.get("exchange_rate") or "0"))
             if not source_exchange_rate.is_finite() or source_exchange_rate<=0: raise ValueError
-        except Exception as exc:
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
             raise ValueError("The original invoice has no valid positive exchange rate; return not posted") from exc
         originals=self.invoice_detail(int(invoice_id))["items"]
         if not originals: raise ValueError("This invoice has no item lines to return; no return was created")
@@ -738,7 +742,7 @@ class InvoicesStore:
         for row in returns:
             try:
                 item_id=int(row["item_id"]); qty=Decimal(str(row["quantity"]))
-            except Exception as exc:
+            except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
                 raise ValueError("Return lines need a valid invoice item and quantity") from exc
             if item_id not in by_id or qty<=0:
                 raise ValueError("Return quantities must be positive and belong to the original invoice")
@@ -916,7 +920,8 @@ class InvoicesStore:
             before = {k: old[k] for k in self.SNAPSHOT_FIELDS}
             self.delete_invoice(invoice_id, user_id)
             try: self._log_change(user_id, invoice_id, before, self._invoice_snapshot(new_id), new_id)  # 2.9.93
-            except Exception: logging.getLogger("saber").debug("ignored error", exc_info=True)  # 2.9.105
+            except (sqlite3.Error, ValueError, KeyError, TypeError):
+                logging.getLogger("saber").warning("Change of invoice %s not written to the audit trail", invoice_id, exc_info=True)
             return new_id
 
     def add_landed_cost(self, purchase_id, item, user_id):
@@ -929,11 +934,11 @@ class InvoicesStore:
         lines = []
         for key, label in components:
             try: amount = Decimal(str(item.get(key) or 0).replace(",", ""))
-            except Exception as exc: raise ValueError(f"{label} must be a number") from exc
+            except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{label} must be a number") from exc
             if amount < 0: raise ValueError(f"{label} cannot be negative")
             if amount: lines.append({"description": f"{label} - {purchase['invoice_number']}", "quantity": 1, "unit_price": str(amount), "deductible_subtotal": str(amount), "vat_rate": 0, "vat": 0})
         try: import_vat = Decimal(str(item.get("import_vat") or 0).replace(",", ""))
-        except Exception as exc: raise ValueError("Import VAT must be a number") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Import VAT must be a number") from exc
         if not lines and not import_vat: raise ValueError("Enter at least one landed-cost amount")
         if not lines: lines.append({"description": f"Import VAT - {purchase['invoice_number']}", "quantity": 1, "unit_price": "0", "deductible_subtotal": "0", "vat_rate": 0, "vat": 0})
         lines[0]["vat"] = str(import_vat)

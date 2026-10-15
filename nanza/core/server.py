@@ -69,7 +69,7 @@ ADMIN_ONLY = {
              "/api/vat-return/reopen", "/api/users", "/api/books-lock", "/api/backups/restore", "/api/settings", "/api/currencies",
              "/api/payroll/delete-period", "/api/payroll/apply-lebanese-rules", "/api/payroll/periods", "/api/payroll/settings",
              "/api/fiscal-years/close", "/api/fiscal-years/delete", "/api/fiscal-years/reopen", "/api/fiscal-years/refresh-opening",
-             "/api/renumber", "/api/accounts/import", "/api/numbering"},
+             "/api/renumber", "/api/accounts/import", "/api/numbering", "/api/onboarding/import"},
     "PUT": {"/api/companies/*"},
     "DELETE": {"/api/opening-vouchers/*"},
 }
@@ -243,6 +243,13 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/vat-ledgers/test":
             import vat_ledgers
             return self._json(200,vat_ledgers.test_vat_accounts(self.db))
+        if path == "/api/books-check":  # 2.9.119: Books Health Check (read only)
+            import books_check
+            try:
+                year=self._query(parsed,"year") or getattr(self.db,"fiscal_year",None)
+                check=books_check.run(self.db,int(year) if year else None,self._query(parsed,"quick")=="1"); check["sections"]=books_check.sections(check)
+                return self._json(200,check)
+            except (ValueError,KeyError,TypeError,sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/year-end-check":  # 2.9.81: the checks before closing a year
             try:
                 year=int(self._query(parsed,"year")); check=accounting_setup.year_end_check(self.db,year,self._previous_year_db(year))
@@ -957,6 +964,14 @@ class ApiHandler(BaseHTTPRequestHandler):
                 else: result=self.db.transfer_balance(body.get("from"),body.get("to"),body.get("date"),user["id"],body.get("description") or "")
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
+        if path in ("/api/onboarding/check", "/api/onboarding/import"):  # 2.9.119: Start with Nanza (opening balances from Excel)
+            import onboarding
+            try:
+                if path.endswith("check"):
+                    result=onboarding.check(self.db,body.get("data") or {},body.get("date")); result.pop("plan",None)
+                    return self._json(200,result)
+                return self._json(200,onboarding.apply(self.db,body.get("data") or {},body.get("date"),user["id"]))
+            except (ValueError,KeyError,TypeError,sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/accounts/import":  # 2.9.116: chart of accounts from Excel (administrator; adds and names, never deletes)
             import chart_templates
             try: return self._json(200,chart_templates.import_accounts(self.db,body.get("items") or [],user["id"]))

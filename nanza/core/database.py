@@ -809,7 +809,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             quarter = (parsed.month - 1) // 3 + 1
             with self.connect() as db:
                 try: saved = db.execute("SELECT 1 FROM vat_returns WHERE year=? AND quarter=?", (parsed.year, quarter)).fetchone()
-                except Exception: saved = None
+                except sqlite3.OperationalError: saved = None  # 2.9.119: only a file without the table; never skip the filed-quarter lock
             if saved:
                 raise ValueError(f"The Q{quarter} {parsed.year} VAT return is saved; an administrator must reopen it "
                                  "(VAT > Reopen) before documents of that quarter can be added, changed or deleted")
@@ -959,7 +959,9 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         """2.9.81: the default posting accounts of this company (Settings > Accounting Settings)."""
         import accounting_setup
         try: return accounting_setup.default_accounts(self)
-        except Exception: return {key: spec[1] for key, spec in accounting_setup.DEFAULT_ACCOUNTS.items()}
+        except (ValueError, KeyError, TypeError, sqlite3.Error):  # 2.9.119: said in the log
+            logging.getLogger("saber").warning("Accounting Settings not readable - the standard accounts are used", exc_info=True)
+            return {key: spec[1] for key, spec in accounting_setup.DEFAULT_ACCOUNTS.items()}
 
     def default_account(self, key):
         return self.default_accounts()[key]
@@ -976,7 +978,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         Lets the screens warn before a payment or an expense makes the cash or the bank negative."""
         code = str(account or "").split(" - ", 1)[0].strip(); currency = str(currency or "").upper()
         try: amount = Decimal(str(amount or 0).replace(",", ""))
-        except Exception as exc: raise ValueError("Amount must be a number") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Amount must be a number") from exc
         day = iso_date(date)
         if not code.startswith("5"): return {"account": code, "checked": False}
         balance = Decimal("0")
@@ -1047,7 +1049,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if str(values["second_currency"])==str(values.get("base_currency") or self.settings().get("base_currency") or "USD"):
                 raise ValueError("The two main currencies must be different")
         try: hours=int(values.get("backup_interval_hours",24))
-        except Exception as exc: raise ValueError("Backup interval must be a number") from exc
+        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Backup interval must be a number") from exc
         if hours<1 or hours>720: raise ValueError("Backup interval must be between 1 and 720 hours")
         with self.connect() as db:
             for key in allowed:

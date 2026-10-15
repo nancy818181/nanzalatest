@@ -3459,6 +3459,13 @@ AR.update({
 # Texts made with a number or a name inside: (pattern, Arabic with \\1 \\2 ...)
 PATTERNS = (
     (r"Report: (.+)", "تقرير: {1}"),
+    (r"(\d+) opening line\(s\) in (.+?) · (\d+) customer\(s\) / supplier\(s\) · (\d+) open invoice\(s\) · (\d+) item\(s\)   -   ready",
+     "{1} سطر افتتاحي بـ {2} · {3} زبون / مورد · {4} فاتورة مفتوحة · {5} صنف   -   جاهز"),
+    (r"(\d+) opening line\(s\) in (.+?) · (\d+) customer\(s\) / supplier\(s\) · (\d+) open invoice\(s\) · (\d+) item\(s\)   -   (\d+) line\(s\) to correct",
+     "{1} سطر افتتاحي بـ {2} · {3} زبون / مورد · {4} فاتورة مفتوحة · {5} صنف   -   {6} سطر للتصحيح"),
+    (r"(\d+) error\(s\), (\d+) warning\(s\) to look at", "{1} خطأ، {2} تنبيه للمراجعة"),
+    (r"Books Health Check: (\d+) point\(s\) to look at \((.+)\)", "فحص سلامة الدفاتر: {1} نقطة للمراجعة ({2})"),
+    (r"Books Health Check: (.+)", "فحص سلامة الدفاتر: {1}"),
     (r"(.+?)  \(default (.+)\)", "{1}  (الافتراضي {2})"),
     (r"Expected cost \(current average\): materials (\S+) \+ extra (\S+) = (\S+)   \|   per unit (.+)",
      "الكلفة المتوقعة (المعدل الحالي): مواد {1} + إضافي {2} = {3}   |   للوحدة {4}"),
@@ -3489,3 +3496,110 @@ AR.update({
     "English | الإنكليزية": "English",
 })
 AR["Exchange Difference (+ / -)"] = "فرق الصرف (+ / -)"
+
+# 2.9.119: Books Health Check
+AR.update({
+    "Books Health Check": "فحص سلامة الدفاتر",
+    "Run Books Health Check": "تشغيل فحص سلامة الدفاتر",
+    "Is every number where it should be? Balanced entries, every document in the books, no gaps or duplicates, VAT returns unchanged. Nothing is changed.":
+        "هل كل رقم في مكانه؟ قيود متوازنة، كل مستند في الدفاتر، لا فجوات ولا أرقام مكررة، التصاريح الضريبية لم تتغير. لا يتم تعديل أي شيء.",
+    "Select a line to see every document it found.": "اختر سطراً لترى كل المستندات التي وجدها.",
+    "The books are consistent": "الدفاتر سليمة ومتطابقة",
+    "Every entry balanced": "كل قيد متوازن",
+    "Trial balance in each currency": "ميزان المراجعة بكل عملة",
+    "Entries with amounts": "قيود فيها مبالغ",
+    "Every document in the books": "كل مستند مقيّد في الدفاتر",
+    "No entry without its document": "لا قيد بدون مستنده",
+    "Invoices: subtotal + VAT = total": "الفواتير: المجموع + الضريبة = الإجمالي",
+    "Invoices: lines = subtotal": "الفواتير: الأسطر = المجموع",
+    "Invoices equal their entries": "الفواتير مطابقة لقيودها",
+    "No duplicate numbers": "لا أرقام مكررة",
+    "Supplier invoices entered once": "فواتير الموردين مدخلة مرة واحدة",
+    "Sales invoices numbered without gaps": "تسلسل فواتير البيع بلا فجوات",
+    "Lines on existing accounts": "الأسطر على حسابات موجودة",
+    "No lines on heading accounts": "لا أسطر على الحسابات الرئيسية",
+    "Entries inside the fiscal year": "القيود ضمن السنة المالية",
+    "Saved VAT returns unchanged": "التصاريح الضريبية المحفوظة لم تتغير",
+    "Audit trail intact": "سجل التدقيق سليم",
+    "Debit = credit in every journal entry": "المدين = الدائن في كل قيد",
+    "Every entry has amounts": "كل قيد فيه مبالغ",
+    "Every posted invoice, receipt / payment, expense and payroll has its journal entry": "كل فاتورة وسند قبض / دفع ومصروف وراتب مرحّل له قيده",
+    "Every invoice, receipt / payment and expense entry has its document": "كل قيد فاتورة وسند ومصروف له مستنده",
+    "The lines add up to the subtotal": "مجموع الأسطر يساوي المجموع",
+    "Each invoice entry carries the invoice total": "قيد كل فاتورة يحمل إجمالي الفاتورة",
+    "Every sales invoice and receipt / payment number is used once": "كل رقم فاتورة بيع وسند مستعمل مرة واحدة",
+    "No supplier invoice entered twice": "لا فاتورة مورد مدخلة مرتين",
+    "Every sequence of sales invoice numbers is unbroken": "تسلسل أرقام فواتير البيع غير منقطع",
+    "Every line is on an account of the chart": "كل سطر على حساب من الدليل",
+    "Amounts are on the detail accounts": "المبالغ على الحسابات التفصيلية",
+    "No VAT return saved yet": "لم يُحفظ أي تصريح ضريبي بعد",
+    "General Journal: open each entry and correct it (Reports > Check Balance lists them)": "دفتر اليومية: افتح كل قيد وصحّحه (التقارير > فحص التوازن تعرضها)",
+    "Correct the unbalanced entries above": "صحّح القيود غير المتوازنة أعلاه",
+    "General Journal: complete or delete them": "دفتر اليومية: أكملها أو احذفها",
+    "Open each document and save it again (the entry is written again); if it should not count, delete or cancel it":
+        "افتح كل مستند واحفظه من جديد (يُكتب القيد من جديد)؛ وإذا كان لا يجب احتسابه فاحذفه أو ألغِه",
+    "General Journal: check them with the documents; delete the entry if the document was deleted on purpose":
+        "دفتر اليومية: طابقها مع المستندات؛ احذف القيد إذا حُذف المستند عن قصد",
+    "Uploaded Data: open each invoice and correct the amounts": "البيانات المرفوعة: افتح كل فاتورة وصحّح المبالغ",
+    "Open each invoice: a line or the discount was changed without the totals": "افتح كل فاتورة: تغيّر سطر أو الحسم دون المجاميع",
+    "Open each invoice and save it again so the entry is written from the invoice": "افتح كل فاتورة واحفظها من جديد ليُكتب القيد منها",
+    "Settings > Numbering > Renumber, or correct the document": "الإعدادات > الترقيم > إعادة الترقيم، أو صحّح المستند",
+    "Uploaded Data: check whether the same supplier invoice was entered twice": "البيانات المرفوعة: تحقق إذا أُدخلت فاتورة المورد نفسها مرتين",
+    "A deleted invoice leaves a gap: cancel invoices instead of deleting them, or renumber (Settings > Numbering)":
+        "الفاتورة المحذوفة تترك فجوة: ألغِ الفواتير بدل حذفها، أو أعد الترقيم (الإعدادات > الترقيم)",
+    "Chart of Accounts: create the account again, or correct the entries": "دليل الحسابات: أنشئ الحساب من جديد، أو صحّح القيود",
+    "Usually fine when the heading is the account you use; otherwise move the amounts to the sub-accounts (Journal Voucher)":
+        "غالباً لا مشكلة إذا كان الحساب الرئيسي هو الذي تستعمله؛ وإلا انقل المبالغ إلى الحسابات الفرعية (سند قيد)",
+    "Check the date: an entry of another year belongs in that year's file": "تحقق من التاريخ: قيد سنة أخرى مكانه في ملف تلك السنة",
+    "Quarterly VAT: compare, then file an amended return or put the documents back": "الضريبة الفصلية: قارن، ثم قدّم تصريحاً معدّلاً أو أعد المستندات كما كانت",
+    "Quarterly VAT: open the quarter (an exchange rate may be missing)": "الضريبة الفصلية: افتح الفصل (قد يكون سعر صرف ناقصاً)",
+    "Restore a backup from before the change, and find out who opened the data file outside Nanza":
+        "استرجع نسخة احتياطية من قبل التغيير، وابحث عمّن فتح ملف البيانات خارج نانزا",
+    "Run the check on the computer that runs the data service": "شغّل الفحص على الكمبيوتر الذي يشغّل خدمة البيانات",
+})
+AR.update({
+    "EUR rates look right": "أسعار اليورو صحيحة",
+    "No EUR rate of 1 USD": "لا يوجد سعر يورو = 1 دولار",
+    "Settings > Exchange Rates > Restore EUR Rates 2024-Today (online), then open and save again the EUR documents of those days":
+        "الإعدادات > أسعار الصرف > استرجاع أسعار اليورو 2024 حتى اليوم (مع الإنترنت)، ثم افتح واحفظ من جديد مستندات اليورو في تلك الأيام",
+})
+
+# 2.9.119: Start with Nanza
+AR.update({
+    "Start with Nanza (opening balances)": "ابدأ مع نانزا (الأرصدة الافتتاحية)",
+    "Start with Nanza": "ابدأ مع نانزا",
+    "Bring the old program in one Excel file: opening balances, customers & suppliers, open invoices and items. Everything is checked first; nothing is saved while a line is wrong.":
+        "انقل البرنامج القديم بملف Excel واحد: الأرصدة الافتتاحية، الزبائن والموردون، الفواتير المفتوحة والأصناف. يُفحص كل شيء أولاً؛ لا يُحفظ شيء إذا كان أي سطر خاطئاً.",
+    "Excel Template": "نموذج Excel",
+    "Check & Import...": "فحص واستيراد...",
+    "Opening date (go-live)": "تاريخ الافتتاح (بدء العمل)",
+    "Check again": "فحص من جديد",
+    "Import": "استيراد",
+    "To correct before importing:": "للتصحيح قبل الاستيراد:",
+    "Good to know:": "للعلم:",
+    "Every line is correct.": "كل الأسطر صحيحة.",
+    "Import now? A safety backup is made first.": "الاستيراد الآن؟ تؤخذ نسخة أمان أولاً.",
+})
+
+# 2.9.119: printed documents and reports in Arabic (added only where the list had no text yet)
+for _english, _arabic in {
+    "SALES INVOICE": "فاتورة مبيع", "PURCHASE INVOICE": "فاتورة شراء", "CREDIT NOTE": "إشعار دائن", "DEBIT NOTE": "إشعار مدين",
+    "RETURN NOTE": "إشعار مرتجع", "PAID": "مدفوعة", "PARTIAL": "مدفوعة جزئياً", "Invoice Date": "تاريخ الفاتورة",
+    "Invoice No.": "رقم الفاتورة", "Currency": "العملة", "Due Date": "تاريخ الاستحقاق", "BILL TO": "فاتورة إلى", "Code": "الرمز",
+    "Address": "العنوان", "MOF No.": "الرقم المالي", "VAT No.": "رقم التسجيل الضريبي", "Item": "الصنف", "Description": "البيان",
+    "Quantity": "الكمية", "Unit Price": "سعر الوحدة", "Net before VAT": "الصافي قبل الضريبة", "Invoice total": "مجموع الفاتورة",
+    "Total": "المجموع", "Discount": "الحسم", "Total HT (before VAT)": "المجموع قبل الضريبة", "TOTAL": "المجموع الكلي",
+    "Balance Due": "الرصيد المستحق", "AMOUNT IN WORDS": "المبلغ بالأحرف", "Notes": "ملاحظات", "Prepared by": "أعدّه",
+    "Approved by": "وافق عليه", "Received by": "استلمه", "Registered in VAT since": "مسجل في الضريبة على القيمة المضافة منذ",
+    "Registered in VAT": "مسجل في الضريبة على القيمة المضافة", "Not registered in VAT": "غير مسجل في الضريبة على القيمة المضافة",
+    "Generated": "أُنشئ في",
+}.items():
+    AR.setdefault(_english, _arabic)
+PATTERNS = PATTERNS + (
+    (r"VAT (\S+) \((\w+)\)", "الضريبة {1} ({2})"),
+    (r"VAT (\w+) Rate", "سعر صرف الضريبة {1}"),
+    (r"Discount (\S+)%", "الحسم {1}%"),
+    (r"VAT (\S+%)", "الضريبة {1}"),
+)
+AR.setdefault("Page", "صفحة")
+PATTERNS = PATTERNS + ((r"Period (\S+) - (\S+)", "الفترة {1} - {2}"),)

@@ -76,6 +76,16 @@ class AccountingSetupMixin:
         tk.Entry(alerts, textvariable=self.setup_alert_percent, width=6, state="normal" if is_admin else "disabled").pack(side="left", padx=4)
         tk.Label(alerts, text="% (year to date, the company budget in the main currency)", bg=LIGHT).pack(side="left")
         if is_admin: self.action_button(alerts, "Save", self.save_alert_percent).pack(side="left", padx=8)
+        start = tk.LabelFrame(page, text="Start with Nanza (opening balances)", bg=LIGHT, padx=8, pady=6); start.pack(fill="x", padx=8, pady=6)  # 2.9.119
+        tk.Label(start, text="Bring the old program in one Excel file: opening balances, customers & suppliers, open invoices and items. "
+                 "Everything is checked first; nothing is saved while a line is wrong.", bg=LIGHT, fg=MUTED, wraplength=760, justify="left").pack(side="left")
+        self.action_button(start, "Excel Template", self.save_onboarding_template).pack(side="left", padx=(8, 2))
+        if is_admin: tk.Button(start, text="Check & Import...", command=self.import_onboarding, bg=GOLD, fg=NAVY, border=0, padx=14, pady=6,
+                               font=("Segoe UI", 9, "bold")).pack(side="left", padx=2)
+        health = tk.LabelFrame(page, text="Books Health Check", bg=LIGHT, padx=8, pady=6); health.pack(fill="x", padx=8, pady=6)  # 2.9.119
+        tk.Label(health, text="Is every number where it should be? Balanced entries, every document in the books, no gaps or duplicates, VAT returns unchanged. Nothing is changed.",
+                 bg=LIGHT, fg=MUTED, wraplength=760, justify="left").pack(side="left")
+        tk.Button(health, text="Run Books Health Check", command=self.show_books_check, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
         check = tk.LabelFrame(page, text="Year-End Check", bg=LIGHT, padx=8, pady=6); check.pack(fill="x", padx=8, pady=6)
         tk.Label(check, text="The points an auditor checks before the books are closed. It runs again by itself when you close the year (Profit & Loss).", bg=LIGHT, fg=MUTED).pack(side="left")
         tk.Button(check, text="Run Year-End Check", command=self.show_year_end_check, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
@@ -244,7 +254,7 @@ class AccountingSetupMixin:
         for key, label, width in (("when", "Date / time (UTC)", 150), ("user", "User", 100), ("action", "Action", 90), ("entity", "Record", 120), ("id", "No.", 60), ("details", "Details", 460)):
             self.audit_tree.heading(key, text=label); self.audit_tree.column(key, width=width, anchor="w", stretch=key == "details")
         scroll = ttk.Scrollbar(frame, orient="vertical", command=self.audit_tree.yview); self.audit_tree.configure(yscrollcommand=scroll.set)
-        self.audit_tree.pack(side="left", fill="both", expand=True); scroll.pack(side="right", fill="y")
+        self.audit_tree.grid(row=0, column=0, sticky="nsew"); scroll.grid(row=0, column=1, sticky="ns"); frame.grid_rowconfigure(0, weight=1); frame.grid_columnconfigure(0, weight=1)
         self.audit_detail = tk.Label(page, text="Select a line to read its details in full.", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=1100)
         self.audit_detail.pack(fill="x", padx=10, pady=(0, 8))
         self.audit_tree.bind("<<TreeviewSelect>>", lambda _e: self.audit_detail.config(text=str(self.audit_tree.item(self.audit_tree.selection()[0],
@@ -284,6 +294,103 @@ class AccountingSetupMixin:
                 f"{s['outside_hours']} outside working hours, {s['manual_cash']} manual vouchers on cash / bank"]
         self.save_sections("Audit Report", meta, report["sections"], "Audit_Report", fmt)
 
+    def save_onboarding_template(self):
+        """2.9.119: the empty Excel file of Start with Nanza."""
+        from tkinter import filedialog
+        import onboarding
+        path = filedialog.asksaveasfilename(title="Start with Nanza - Excel template", defaultextension=".xlsx", initialfile="Nanza_Opening_Balances.xlsx",
+                                            filetypes=[("Excel", "*.xlsx")])
+        if not path: return
+        try: onboarding.template(path)
+        except OSError as exc: return messagebox.showerror("Start with Nanza", str(exc))
+        messagebox.showinfo("Start with Nanza", f"Template saved:\n{path}\n\nFill the sheets you need (Read me explains each one), then Check & Import.")
+
+    def import_onboarding(self):
+        """2.9.119: read the Excel file, show the check, import when nothing is wrong."""
+        from tkinter import filedialog
+        import onboarding
+        path = filedialog.askopenfilename(title="Start with Nanza - the filled Excel file", filetypes=[("Excel", "*.xlsx *.xlsm"), ("All files", "*.*")])
+        if not path: return
+        try: data = onboarding.read(path)
+        except (OSError, ValueError, KeyError) as exc: return messagebox.showerror("Start with Nanza", f"The file could not be read: {exc}")
+        year = int(getattr(self, "current_fiscal_year", 0) or 0)
+        date = tk.StringVar(value=f"01-01-{year}" if year else "")
+        window = tk.Toplevel(self); window.title("Start with Nanza"); window.configure(bg=LIGHT); window.transient(self)
+        self.fit_dialog(window, 900, 560)
+        top = tk.Frame(window, bg=LIGHT); top.pack(fill="x", padx=12, pady=(10, 4))
+        tk.Label(top, text="Opening date (go-live)", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold")).pack(side="left")
+        self.date_entry(top, date, 12).pack(side="left", padx=6)
+        summary = tk.Label(window, text="", bg=LIGHT, fg=NAVY, anchor="w", justify="left", font=("Segoe UI", 10, "bold")); summary.pack(fill="x", padx=12)
+        frame = tk.Frame(window, bg=LIGHT); frame.pack(fill="both", expand=True, padx=12, pady=4)
+        text = tk.Text(frame, wrap="word", height=16, bg="white", fg=NAVY, relief="flat", font=("Segoe UI", 10))
+        scroll = ttk.Scrollbar(frame, orient="vertical", command=text.yview); text.configure(yscrollcommand=scroll.set)
+        text.grid(row=0, column=0, sticky="nsew"); scroll.grid(row=0, column=1, sticky="ns"); frame.grid_rowconfigure(0, weight=1); frame.grid_columnconfigure(0, weight=1)
+        text.tag_configure("bad", foreground=RED); text.tag_configure("note", foreground=AMBER); text.tag_configure("head", font=("Segoe UI", 10, "bold"))
+        bar = tk.Frame(window, bg=LIGHT); bar.pack(fill="x", padx=12, pady=8)
+        go = tk.Button(bar, text="Import", bg=GOLD, fg=NAVY, border=0, padx=18, pady=6, font=("Segoe UI", 9, "bold"), state="disabled")
+        def run_check():
+            text.configure(state="normal"); text.delete("1.0", "end")
+            try: result = self.client.onboarding_check(data, date.get())
+            except (RuntimeError, OSError, ValueError) as exc:
+                summary.config(text=str(exc), fg=RED); go.configure(state="disabled"); text.configure(state="disabled"); return
+            c = result["counts"]
+            summary.config(fg=RED if result["problems"] else GREEN, text=(
+                f"{c['opening_lines']} opening line(s) in {', '.join(c['currencies']) or '-'} · {c['customers_suppliers']} customer(s) / supplier(s) · "
+                f"{c['open_invoices']} open invoice(s) · {c['items']} item(s)" + (f"   -   {len(result['problems'])} line(s) to correct" if result["problems"] else "   -   ready")))
+            if result["problems"]:
+                text.insert("end", "To correct before importing:\n", "head")
+                for line in result["problems"]: text.insert("end", f"  • {line}\n", "bad")
+            if result["notes"]:
+                text.insert("end", "\nGood to know:\n", "head")
+                for line in result["notes"]: text.insert("end", f"  • {line}\n", "note")
+            if not result["problems"] and not result["notes"]: text.insert("end", "Every line is correct.")
+            text.configure(state="disabled"); go.configure(state="disabled" if result["problems"] else "normal")
+        def run_import():
+            if not messagebox.askyesno("Start with Nanza", "Import now? A safety backup is made first.", parent=window): return
+            try: result = self.client.onboarding_import(data, date.get())
+            except (RuntimeError, OSError, ValueError) as exc: return messagebox.showerror("Start with Nanza", str(exc), parent=window)
+            window.destroy()
+            messagebox.showinfo("Start with Nanza", f"Imported: {result['customers_suppliers']} customer(s) / supplier(s), {result['open_invoices']} open invoice(s), "
+                                f"{result['items']} item(s); opening voucher(s) {', '.join(result['vouchers']) or '-'}."
+                                + (f"\nOpening stock: {', '.join(result['stock_documents'])}" if result["stock_documents"] else "")
+                                + "\n\nRun the Books Health Check to see that everything agrees.")
+        go.configure(command=run_import)
+        self.action_button(bar, "Check again", run_check).pack(side="left", padx=(0, 4)); go.pack(side="left", padx=4)
+        self.action_button(bar, "Close", window.destroy).pack(side="left", padx=12)
+        run_check()
+
+    def show_books_check(self):
+        """2.9.119: Books Health Check - each point OK / WARNING / ERROR with the document numbers and what to do."""
+        try: check = self.client.books_check(getattr(self, "current_fiscal_year", None))
+        except (RuntimeError, OSError, ValueError) as exc:
+            messagebox.showerror("Books Health Check", str(exc)); return None
+        window = tk.Toplevel(self); window.title("Books Health Check"); window.configure(bg=LIGHT); window.transient(self)
+        self.fit_dialog(window, 1100, 560)
+        colour = GREEN if not check["errors"] and not check["warnings"] else RED if check["errors"] else AMBER
+        tk.Label(window, text=f"Books Health Check: {check['summary']}", bg=LIGHT, fg=colour, font=("Segoe UI", 12, "bold"), anchor="w").pack(fill="x", padx=12, pady=(10, 4))
+        frame = tk.Frame(window, bg=LIGHT); frame.pack(fill="both", expand=True, padx=12, pady=4)
+        tree = ttk.Treeview(frame, columns=("status", "check", "result", "fix"), show="headings")
+        for key, label, width in (("status", "Status", 80), ("check", "Check", 230), ("result", "Result", 470), ("fix", "What to do", 330)):
+            tree.heading(key, text=label); tree.column(key, width=width, anchor="w", stretch=key in ("result", "fix"))
+        scroll = ttk.Scrollbar(frame, orient="vertical", command=tree.yview); tree.configure(yscrollcommand=scroll.set)
+        tree.grid(row=0, column=0, sticky="nsew"); scroll.grid(row=0, column=1, sticky="ns"); frame.grid_rowconfigure(0, weight=1); frame.grid_columnconfigure(0, weight=1)
+        for status, tint in (("ERROR", "#f8d7d7"), ("WARNING", "#fdf0d5"), ("OK", "#e3f2ea")): tree.tag_configure(status, background=tint)
+        order = {"ERROR": 0, "WARNING": 1, "OK": 2}; rows = {}
+        for item in sorted(check["results"], key=lambda r: order.get(r["status"], 3)):
+            rows[tree.insert("", "end", values=(item["status"], item["check"], item["detail"], item["fix"]), tags=(item["status"],))] = item
+        detail = tk.Label(window, text="Select a line to see every document it found.", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=1050); detail.pack(fill="x", padx=12)
+        def show(_event=None):
+            item = rows.get(tree.selection()[0]) if tree.selection() else None
+            if not item: return
+            numbers = ", ".join(str(i.get("number") or i.get("id")) for i in item.get("items") or [])
+            detail.config(text=f"{item['check']}: {item['detail']}" + (f"\n{numbers}" if numbers else "") + (f"\n{item['fix']}" if item["fix"] else ""))
+        tree.bind("<<TreeviewSelect>>", show)
+        bar = tk.Frame(window, bg=LIGHT); bar.pack(fill="x", padx=12, pady=8)
+        for label, fmt in (("Excel", "xlsx"), ("PDF", "pdf")):
+            self.action_button(bar, label, lambda f=fmt: self.save_sections("Books Health Check", [check["summary"]], check["sections"], "Books_Health_Check", f)).pack(side="left", padx=2)
+        self.action_button(bar, "Close", window.destroy).pack(side="left", padx=12)
+        return check
+
     def show_year_end_check(self, before_closing=False):
         """Shows the check; before closing, returns True when the user goes on."""
         year = int(getattr(self, "current_fiscal_year", 0) or 0)
@@ -299,7 +406,7 @@ class AccountingSetupMixin:
         for key, label, width in (("status", "Status", 80), ("check", "Check", 230), ("result", "Result", 470), ("fix", "What to do", 330)):
             tree.heading(key, text=label); tree.column(key, width=width, anchor="w", stretch=key in ("result", "fix"))
         scroll = ttk.Scrollbar(frame, orient="vertical", command=tree.yview); tree.configure(yscrollcommand=scroll.set)
-        tree.pack(side="left", fill="both", expand=True); scroll.pack(side="right", fill="y")
+        tree.grid(row=0, column=0, sticky="nsew"); scroll.grid(row=0, column=1, sticky="ns"); frame.grid_rowconfigure(0, weight=1); frame.grid_columnconfigure(0, weight=1)
         for status, tint in (("ERROR", "#f8d7d7"), ("WARNING", "#fdf0d5"), ("OK", "#e3f2ea")): tree.tag_configure(status, background=tint)
         for item in check["results"]: tree.insert("", "end", values=(item["status"], item["check"], item["detail"], item["fix"]), tags=(item["status"],))
         detail = tk.Label(window, text="Select a line to read it in full.", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=1050); detail.pack(fill="x", padx=12)

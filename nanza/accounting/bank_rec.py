@@ -18,7 +18,7 @@ def migrate(db):
 
 def _d(value):
     try: return Decimal(str(value if value not in (None, "") else 0).replace(",", ""))
-    except Exception: raise ValueError(f"'{value}' is not an amount")
+    except (ArithmeticError, ValueError, TypeError, KeyError): raise ValueError(f"'{value}' is not an amount")
 
 
 def add_statement_lines(database, account, currency, rows, user_id):

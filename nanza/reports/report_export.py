@@ -93,8 +93,42 @@ def pdf_paragraph(text, style, bold=False):
     text = _escape(str(text or ""))
     return Paragraph(f"<b>{text}</b>" if bold and text else text, style)
 
+# ---------------------------------------------------------------- 2.9.119: reports in Arabic (right to left)
+# When the program is in Arabic (arabic_ui switched on), the exports show their titles, headings, column titles and the
+# fixed words of the rows in Arabic, the Excel sheets read from right to left and the PDF tables start from the right.
+# In English nothing changes.
+def arabic_reports():
+    module = _sys.modules.get("arabic_ui")
+    return bool(module is not None and module.active())
+
+
+def _ar(text):
+    if not isinstance(text, str) or not arabic_reports(): return text
+    return _sys.modules["arabic_ui"].translate(text)
+
+
+def _arabic_sections(title, meta, sections):
+    """Title, meta lines and sections with their fixed texts in Arabic (amounts and names stay as they are)."""
+    if not arabic_reports() or is_financial_pack(title): return title, meta, sections
+    translated = []
+    for section in sections:
+        copy = dict(section)
+        copy["heading"] = _ar(section.get("heading"))
+        copy["headers"] = [_ar(h) for h in section.get("headers") or []]
+        copy["rows"] = [[_ar(v) if isinstance(v, str) else v for v in row] for row in section.get("rows") or []]
+        translated.append(copy)
+    return _ar(title), [_ar(line) for line in meta or []], translated
+
+
+def _right_to_left(workbook):
+    if arabic_reports():
+        for sheet in workbook.worksheets: sheet.sheet_view.rightToLeft = True
+
+
 def export_excel(path, title, headers, rows):
-    wb = Workbook(); ws = wb.active; ws.title = title[:31]
+    if arabic_reports():  # 2.9.119
+        title = _ar(title); headers = [_ar(h) for h in headers]; rows = [[_ar(v) if isinstance(v, str) else v for v in row] for row in rows]
+    wb = Workbook(); ws = wb.active; ws.title = _safe_sheet_title(title) if arabic_reports() else title[:31]
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
     cell = ws.cell(1, 1, title); cell.font = Font(size=16, bold=True, color="FFFFFF")
     cell.fill = PatternFill("solid", fgColor=NAVY); cell.alignment = Alignment(horizontal="center")
@@ -108,9 +142,12 @@ def export_excel(path, title, headers, rows):
         width = min(35, max(12, max(len(str(c.value or "")) for c in column) + 2))
         ws.column_dimensions[get_column_letter(index)].width = width
     ws.freeze_panes = "A5"; ws.auto_filter.ref = f"A4:{ws.cell(4, len(headers)).coordinate}"
-    wb.save(path)
+    _right_to_left(wb); wb.save(path)
 
 def export_pdf(path, title, headers, rows):
+    if arabic_reports():  # 2.9.119: Arabic words, the first column on the right
+        title = _ar(title); headers = [_ar(h) for h in headers][::-1]
+        rows = [[_ar(v) if isinstance(v, str) else v for v in row][::-1] for row in rows]
     doc = SimpleDocTemplate(str(path), pagesize=landscape(A4), rightMargin=10*mm, leftMargin=10*mm, topMargin=10*mm, bottomMargin=10*mm)
     styles = getSampleStyleSheet()
     from reportlab.lib.styles import ParagraphStyle
@@ -153,6 +190,12 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
     doc=SimpleDocTemplate(str(path),pagesize=A4,rightMargin=MR,leftMargin=ML,topMargin=13*mm,bottomMargin=16*mm)
     styles=getSampleStyleSheet(); story=[]; money=lambda v: f"{float(v or 0):,.2f}"
     company=company or {}
+    arabic=arabic_reports()  # 2.9.119: the invoice in Arabic, laid out from the right
+    def lab(text,style,bold=False):
+        """A fixed label: as before in English; in Arabic, the Arabic words with the Arabic font."""
+        if not arabic: return Paragraph(text,style)
+        return pdf_paragraph(_ar(_re.sub(r"<[^>]+>","",text)),style,bold)
+    flip=(lambda cells: cells[::-1]) if arabic else (lambda cells: cells)
 
     small=ParagraphStyle("inv-small",parent=styles["Normal"],fontSize=8,leading=10.5,textColor=colors.HexColor("#243544"))
     small_r=ParagraphStyle("inv-small-r",parent=small,alignment=TA_RIGHT)
@@ -165,7 +208,7 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
     section_s=ParagraphStyle("inv-sec",parent=label_s,textColor=GOLD_C,fontSize=8)
 
     subtype=str(invoice.get("doc_subtype") or "invoice"); kind=str(invoice.get("kind") or "sale")
-    title=("RETURN NOTE" if invoice.get("is_return") else {"credit_note":"CREDIT NOTE","debit_note":"DEBIT NOTE"}.get(subtype,"SALES INVOICE" if kind=="sale" else "PURCHASE INVOICE"))
+    title=_ar("RETURN NOTE" if invoice.get("is_return") else {"credit_note":"CREDIT NOTE","debit_note":"DEBIT NOTE"}.get(subtype,"SALES INVOICE" if kind=="sale" else "PURCHASE INVOICE"))
 
     subtotal=float(invoice.get("subtotal") or 0); vat=float(invoice.get("vat") or 0); total=float(invoice.get("total") or subtotal+vat)
     cur=invoice.get("currency") or ""; paid=float(invoice.get("amount_paid") or 0); balance=total-paid
@@ -175,13 +218,13 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
     left=[pdf_paragraph(company_name,co_style,True)]
     for key in ("company_address","company_phone","company_email","company_website"):
         if company.get(key): left.append(pdf_paragraph(str(company[key]),co_line))
-    if company.get("company_mof"): left.append(pdf_paragraph(f'VAT No.: {company["company_mof"]}',co_line))
+    if company.get("company_mof"): left.append(pdf_paragraph(f'{_ar("VAT No.")}: {company["company_mof"]}',co_line))
     _vat_reg=str(company.get("company_vat_registered") or "").strip().lower()
     if _vat_reg in ("yes","1","true"):
         _vd=str(company.get("company_vat_date") or "").strip()
-        left.append(pdf_paragraph(f'Registered in VAT since {_vd}' if _vd else 'Registered in VAT',co_line))
+        left.append(pdf_paragraph(f'{_ar("Registered in VAT since")} {_vd}' if _vd else _ar('Registered in VAT'),co_line))
     elif _vat_reg in ("no","0","false"):
-        left.append(pdf_paragraph('Not registered in VAT',co_line))
+        left.append(pdf_paragraph(_ar('Not registered in VAT'),co_line))
     logo_cell=None
     if logo_path and os.path.exists(str(logo_path)):
         try: logo_cell=Image(str(logo_path),width=20*mm,height=20*mm)
@@ -194,39 +237,39 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
         left_stack=left
     right=[pdf_paragraph(title,title_style,True)]
     if status[0]!="DUE":
-        badge=Table([[Paragraph(status[0],ParagraphStyle("badge",parent=styles["Normal"],fontName="Helvetica-Bold",fontSize=9,textColor=colors.white,alignment=TA_CENTER))]],colWidths=[24*mm])
+        badge=Table([[lab(status[0],ParagraphStyle("badge",parent=styles["Normal"],fontName="Helvetica-Bold",fontSize=9,textColor=colors.white,alignment=TA_CENTER))]],colWidths=[24*mm])
         badge.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),status[1]),("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3)]))
         right+=[Spacer(1,2*mm),Table([[badge]],colWidths=[24*mm],hAlign="RIGHT",style=[("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0),
                 ("TOPPADDING",(0,0),(-1,-1),0),("BOTTOMPADDING",(0,0),(-1,-1),0)])]
-    band=Table([[left_stack,right]],colWidths=[CONTENT_W*0.60,CONTENT_W*0.40])
+    band=Table([flip([left_stack,right])],colWidths=flip([CONTENT_W*0.60,CONTENT_W*0.40]))
     band.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"),("BACKGROUND",(0,0),(-1,-1),NAVY_C),("LEFTPADDING",(0,0),(-1,-1),10),
         ("RIGHTPADDING",(0,0),(-1,-1),10),("TOPPADDING",(0,0),(-1,-1),9),("BOTTOMPADDING",(0,0),(-1,-1),9),("LINEBELOW",(0,0),(-1,-1),2.2,GOLD_C)]))
     story.extend([band,Spacer(1,5*mm)])
 
     info=[["Invoice Date",invoice.get("invoice_date") or ""],["Invoice No.",invoice.get("invoice_number") or ""],
           ["Currency",invoice.get("currency") or ""],["Due Date",invoice.get("due_date") or "-"]]
-    info_table=Table([[pdf_paragraph(k,label_s),pdf_paragraph(str(v),small_r,True)] for k,v in info],colWidths=[26*mm,None])
+    info_table=Table([flip([pdf_paragraph(_ar(k),label_s),pdf_paragraph(str(v),small_r,True)]) for k,v in info],colWidths=flip([26*mm,None]))
     info_table.setStyle(TableStyle([("LINEBELOW",(0,0),(-1,-2),.4,LINE),("BACKGROUND",(0,0),(0,-1),SOFT),
         ("TOPPADDING",(0,0),(-1,-1),3.5),("BOTTOMPADDING",(0,0),(-1,-1),3.5),("LEFTPADDING",(0,0),(-1,-1),7),("RIGHTPADDING",(0,0),(-1,-1),7),("BOX",(0,0),(-1,-1),.5,LINE)]))
 
     party_lines=[pdf_paragraph(invoice.get("party_name") or "",party_name_s,True)]
     for lbl,val in (("Code",invoice.get("party_code")),("Address",invoice.get("party_address")),("MOF No.",invoice.get("party_mof"))):
         if not val: continue
-        if has_arabic(val): party_lines.append(pdf_paragraph(f"{lbl}: {val}",small))
+        if has_arabic(val) or arabic: party_lines.append(pdf_paragraph(f"{_ar(lbl)}: {val}",small))
         else: party_lines.append(Paragraph(f"<b>{_escape(lbl)}:</b> {_escape(str(val))}",small))
-    party_inner=Table([[pdf_paragraph("BILL TO",section_s,True)]]+[[p] for p in party_lines],colWidths=[None])
+    party_inner=Table([[pdf_paragraph(_ar("BILL TO"),section_s,True)]]+[[p] for p in party_lines],colWidths=[None])
     party_inner.setStyle(TableStyle([("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),7),("TOPPADDING",(0,0),(-1,-1),2),
         ("BOTTOMPADDING",(0,0),(-1,-1),2),("TOPPADDING",(0,0),(0,0),6),("BOTTOMPADDING",(0,-1),(-1,-1),6),
         ("BOX",(0,0),(-1,-1),.5,LINE),("LINEBEFORE",(0,0),(0,-1),2.2,GOLD_C),("BACKGROUND",(0,0),(-1,-1),colors.white)]))
 
-    two_col=Table([[party_inner,info_table]],colWidths=[CONTENT_W*0.56,CONTENT_W*0.44])
+    two_col=Table([flip([party_inner,info_table])],colWidths=flip([CONTENT_W*0.56,CONTENT_W*0.44]))
     two_col.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(0,0),8),("RIGHTPADDING",(1,0),(1,0),0)]))
     story.extend([two_col,Spacer(1,5*mm)])
 
     head_s=ParagraphStyle("inv-head",parent=styles["Normal"],fontName="Helvetica-Bold",fontSize=8.5,textColor=colors.white,leading=10)
     head_r=ParagraphStyle("inv-head-r",parent=head_s,alignment=TA_RIGHT)
-    headers=[pdf_paragraph("Item",head_s,True),pdf_paragraph("Description",head_s,True),pdf_paragraph("Quantity",head_r,True),
-             pdf_paragraph("Unit Price",head_r,True),pdf_paragraph("Net before VAT",head_r,True)]
+    headers=[pdf_paragraph(_ar("Item"),head_s,True),pdf_paragraph(_ar("Description"),head_s,True),pdf_paragraph(_ar("Quantity"),head_r,True),
+             pdf_paragraph(_ar("Unit Price"),head_r,True),pdf_paragraph(_ar("Net before VAT"),head_r,True)]
     rows=[]; net_total=0.0
     for x in items:
         qty=float(x.get("quantity") or 0); price=float(x.get("unit_price") or 0); gross=float(x.get("gross_amount") or qty*price)
@@ -234,12 +277,12 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
         net=gross-discount; net_total+=net; unit=x.get("unit") or ""
         qty_text=f"{qty:g}"+(f" {unit}" if unit else "")
         rows.append([x.get("item_code") or "",pdf_paragraph(x.get("description",""),cell),qty_text,money(price),money(net)])
-    if not rows: rows=[["",pdf_paragraph("Invoice total",cell),"1","",money(invoice.get("subtotal"))]]; net_total=float(invoice.get("subtotal") or 0)
+    if not rows: rows=[["",pdf_paragraph(_ar("Invoice total"),cell),"1","",money(invoice.get("subtotal"))]]; net_total=float(invoice.get("subtotal") or 0)
     col_w=[22*mm,None,26*mm,26*mm,30*mm]
     used=sum(w for w in col_w if w); col_w=[w if w else (CONTENT_W-used) for w in col_w]
-    table=Table([headers]+rows,repeatRows=1,colWidths=col_w)
+    table=Table([flip(headers)]+[flip(r) for r in rows],repeatRows=1,colWidths=flip(col_w))
     table.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,0),NAVY_C),("LINEBELOW",(0,0),(-1,0),1.6,GOLD_C),
-        ("FONTSIZE",(0,1),(-1,-1),8.5),("ALIGN",(2,1),(-1,-1),"RIGHT"),("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+        ("FONTSIZE",(0,1),(-1,-1),8.5),("ALIGN",(2,1),(-1,-1),"RIGHT") if not arabic else ("ALIGN",(0,1),(-1,-1),"RIGHT"),("VALIGN",(0,0),(-1,-1),"MIDDLE"),
         ("TOPPADDING",(0,0),(-1,0),6),("BOTTOMPADDING",(0,0),(-1,0),6),("TOPPADDING",(0,1),(-1,-1),4.5),("BOTTOMPADDING",(0,1),(-1,-1),4.5),
         ("LEFTPADDING",(0,0),(-1,-1),7),("RIGHTPADDING",(0,0),(-1,-1),7),("TEXTCOLOR",(0,1),(-1,-1),colors.HexColor("#243544")),
         ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,ZEBRA]),("LINEBELOW",(0,1),(-1,-1),.3,LINE),("BOX",(0,0),(-1,-1),.5,LINE)]))
@@ -258,22 +301,22 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
     disc_pct=float(invoice.get("invoice_discount_percent") or 0)
     trows=[]
     if inv_discount>0.004 or disc_pct>0:
-        trows.append([Paragraph("Total",tl),Paragraph(f"{money(gross_total)} {cur}",tr)])
+        trows.append([lab("Total",tl),Paragraph(f"{money(gross_total)} {cur}",tr)])
         disc_label=f"Discount {disc_pct:g}%" if disc_pct else "Discount"
-        trows.append([Paragraph(disc_label,tl),Paragraph(f"-{money(inv_discount)} {cur}",tr)])
-    trows+=[[Paragraph("Total HT (before VAT)",tl),Paragraph(f"{money(subtotal)} {cur}",tr)],
-           [Paragraph(vat_label,tl),Paragraph(f"{money(vat)} {cur}",tr)],
-           [Paragraph("TOTAL",tlw),Paragraph(f"{money(total)} {cur}",trw)]]
+        trows.append([lab(disc_label,tl),Paragraph(f"-{money(inv_discount)} {cur}",tr)])
+    trows+=[[lab("Total HT (before VAT)",tl),Paragraph(f"{money(subtotal)} {cur}",tr)],
+           [lab(vat_label,tl),Paragraph(f"{money(vat)} {cur}",tr)],
+           [lab("TOTAL",tlw,True),Paragraph(f"{money(total)} {cur}",trw)]]
     total_row=len(trows)-1; grey_rows=[]
     if invoice.get("lbp_rate"):
         rate_value=float(invoice['lbp_rate']); rate_shown=f"{rate_value:,.0f}" if rate_value>=100 else f"{rate_value:,.4f}"
-        trows.append([Paragraph(f"VAT {vat_cur} Rate",tlg),Paragraph(rate_shown,trg)]); grey_rows.append(len(trows)-1)
+        trows.append([lab(f"VAT {vat_cur} Rate",tlg),Paragraph(rate_shown,trg)]); grey_rows.append(len(trows)-1)
     if invoice.get("vat_lbp") is not None:
         amount_shown=f"{float(invoice['vat_lbp']):,.0f}" if vat_cur=="LBP" else money(float(invoice['vat_lbp']))
-        trows.append([Paragraph(f"VAT {rate_text} ({vat_cur})",tlg),Paragraph(f"{amount_shown} {vat_cur}",trg)]); grey_rows.append(len(trows)-1)
-    trows.append([Paragraph("Balance Due",tlw),Paragraph(f"{money(balance)} {'DB' if balance>=0 else 'CR'}",trw)])
+        trows.append([lab(f"VAT {rate_text} ({vat_cur})",tlg),Paragraph(f"{amount_shown} {vat_cur}",trg)]); grey_rows.append(len(trows)-1)
+    trows.append([lab("Balance Due",tlw,True),Paragraph(f"{money(balance)} {'DB' if balance>=0 else 'CR'}",trw)])
     balance_row=len(trows)-1
-    totals_table=Table(trows,colWidths=[42*mm,38*mm])
+    totals_table=Table([flip(r) for r in trows],colWidths=flip([42*mm,38*mm]))
     ts=[("TOPPADDING",(0,0),(-1,-1),3.5),("BOTTOMPADDING",(0,0),(-1,-1),3.5),("LEFTPADDING",(0,0),(-1,-1),8),("RIGHTPADDING",(0,0),(-1,-1),8),
         ("LINEBELOW",(0,0),(-1,1),.4,LINE),("BACKGROUND",(0,total_row),(-1,total_row),NAVY_C),("BACKGROUND",(0,balance_row),(-1,balance_row),GOLD_C),
         ("TEXTCOLOR",(0,balance_row),(-1,balance_row),NAVY_C),("BOX",(0,0),(-1,-1),.5,LINE)]
@@ -282,21 +325,22 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
 
     words=amount_in_words(total,cur)
     words_style=ParagraphStyle("words",parent=small,leading=11)
-    words_flow=[pdf_paragraph("AMOUNT IN WORDS",section_s,True),Spacer(1,1.5*mm),
+    words_flow=[pdf_paragraph(_ar("AMOUNT IN WORDS"),section_s,True),Spacer(1,1.5*mm),
                 Paragraph(f"<b>{words['en']}</b>",words_style),Spacer(1,1*mm),pdf_paragraph(words["ar"],words_style)]
+    if arabic: words_flow=[words_flow[0],words_flow[1],words_flow[4],words_flow[3],words_flow[2]]  # the Arabic words first
     words_box=Table([[words_flow]],colWidths=[CONTENT_W-84*mm])
     words_box.setStyle(TableStyle([("BOX",(0,0),(-1,-1),.5,LINE),("BACKGROUND",(0,0),(-1,-1),SOFT),("LINEBEFORE",(0,0),(0,-1),2.2,GOLD_C),
         ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7)]))
-    summary=Table([[words_box,totals_table]],colWidths=[CONTENT_W-84*mm+2,84*mm-2])
+    summary=Table([flip([words_box,totals_table])],colWidths=flip([CONTENT_W-84*mm+2,84*mm-2]))
     summary.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(0,0),8),("RIGHTPADDING",(1,0),(1,0),0)]))
     story.extend([summary,Spacer(1,5*mm)])
 
     story.append(pdf_paragraph("رسم الطابع المالي يسدد لاحقاً بموجب التصريح (20 ع)",ParagraphStyle("stamp",parent=small,textColor=GREY,fontSize=7.5))
     )
-    if invoice.get("notes"): story.append(pdf_paragraph(f'Notes: {invoice["notes"]}',small))
+    if invoice.get("notes"): story.append(pdf_paragraph(f'{_ar("Notes")}: {invoice["notes"]}',small))
     story.append(Spacer(1,12*mm))
     sign_s=ParagraphStyle("sign",parent=small,alignment=TA_CENTER,textColor=GREY,fontSize=8)
-    signs=Table([[pdf_paragraph("Prepared by",sign_s),pdf_paragraph("Approved by",sign_s),pdf_paragraph("Received by",sign_s)]],colWidths=[CONTENT_W/3]*3)
+    signs=Table([flip([pdf_paragraph(_ar("Prepared by"),sign_s),pdf_paragraph(_ar("Approved by"),sign_s),pdf_paragraph(_ar("Received by"),sign_s)])],colWidths=[CONTENT_W/3]*3)
     signs.setStyle(TableStyle([("LINEABOVE",(0,0),(-1,0),.6,GREY),("TOPPADDING",(0,0),(-1,0),5),("LEFTPADDING",(0,0),(-1,-1),14),("RIGHTPADDING",(0,0),(-1,-1),14)]))
     story.append(signs)
 
@@ -305,9 +349,15 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
         canvas.setFillColor(GOLD_C); canvas.rect(0, PAGE_H-3*mm, PAGE_W, 3*mm, stroke=0, fill=1)
         canvas.setStrokeColor(GOLD_C); canvas.setLineWidth(1); canvas.line(ML, 11*mm, PAGE_W-MR, 11*mm)
         canvas.setFont("Helvetica", 7); canvas.setFillColor(GREY)
-        canvas.drawString(ML, 7*mm, company_name)
-        canvas.drawCentredString(PAGE_W/2, 7*mm, f"Generated {datetime.now():%d-%m-%Y %H:%M}")
-        canvas.drawRightString(PAGE_W-MR, 7*mm, f"Page {document.page}")
+        if arabic and arabic_fonts()[0]:  # 2.9.119: the footer in Arabic too
+            canvas.setFont(arabic_fonts()[0], 8)
+            canvas.drawRightString(PAGE_W-MR, 7*mm, shape_arabic(company_name) if has_arabic(company_name) else company_name)
+            canvas.drawCentredString(PAGE_W/2, 7*mm, shape_arabic(f"{_ar('Generated')} {datetime.now():%d-%m-%Y %H:%M}"))
+            canvas.drawString(ML, 7*mm, shape_arabic(f"{_ar('Page')} {document.page}"))
+        else:
+            canvas.drawString(ML, 7*mm, company_name)
+            canvas.drawCentredString(PAGE_W/2, 7*mm, f"Generated {datetime.now():%d-%m-%Y %H:%M}")
+            canvas.drawRightString(PAGE_W-MR, 7*mm, f"Page {document.page}")
         canvas.restoreState()
     doc.build(story, onFirstPage=_decorate, onLaterPages=_decorate)
 
@@ -514,6 +564,7 @@ def export_sections_excel(path, title, meta, sections):
     if is_financial_pack(title):  # 2.9.83: the audit report pack has its own print-ready layout
         return export_financial_excel(path, title, meta, sections)
     sections = tidy_sections(sections)
+    title, meta, sections = _arabic_sections(title, meta, sections)  # 2.9.119
     wb = Workbook(); ws = wb.active; ws.title = _safe_sheet_title(title)
     width = max([len(section["headers"]) for section in sections] + [2])
     navy = PatternFill("solid", fgColor=NAVY); total_fill = PatternFill("solid", fgColor="E8EDF2")
@@ -568,7 +619,7 @@ def export_sections_excel(path, title, meta, sections):
             row = _excel_chart(ws, row, section["chart"])
     for column, value in widths.items(): ws.column_dimensions[get_column_letter(column)].width = value
     ws.sheet_view.showGridLines = True
-    wb.save(path)
+    _right_to_left(wb); wb.save(path)
 
 
 def _excel_chart(ws, row, spec):
@@ -675,6 +726,7 @@ def _financial_cover(doc, styles, regular, bold_font, meta, sections, pages=None
 def export_sections_pdf(path, title, meta, sections):
     """2.9.97: the financial statements are built twice - the first pass finds the page of each part for the contents."""
     sections = tidy_sections(sections)
+    title, meta, sections = _arabic_sections(title, meta, sections)  # 2.9.119
     if is_financial_pack(title):
         import io
         pages = {}
@@ -726,7 +778,7 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
         story = _financial_cover(doc, styles, regular, bold_font, meta, sections, contents_pages)  # 2.9.83: centred front page
     else:
         story = [pdf_paragraph(title, styles["Title"], True)]
-        for line in list(meta or []) + [f"Generated: {datetime.now():%d-%m-%Y %H:%M}"]: story.append(pdf_paragraph(line, styles["Normal"]))
+        for line in list(meta or []) + [f"{_ar('Generated')}: {datetime.now():%d-%m-%Y %H:%M}"]: story.append(pdf_paragraph(line, styles["Normal"]))
         story.append(Spacer(1, 4*mm))
     centred = ParagraphStyle("centred-heading", parent=styles["Heading3"], alignment=1)
     subheading = ParagraphStyle("sub-heading", parent=styles["Normal"], fontName=bold_font, spaceBefore=4)
@@ -806,6 +858,7 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
             parts = [p.strip() for p in str(text).split(" | ")]
             if len(parts) == 1: return pdf_paragraph(parts[0], header_style, True)
             return [pdf_paragraph(p, header_style, True) for p in parts]  # English above, Arabic below
+        if arabic_reports() and len(bands) == 1: bands = [bands[0][::-1]]  # 2.9.119: the first column on the right
         for band in bands:
             if len(bands) > 1:
                 story.append(pdf_paragraph(f"Columns {band[1] + 1}–{band[-1] + 1} of {count} (first column repeated)", styles["Normal"]))
@@ -832,7 +885,9 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
     def footer(canvas, document):
         canvas.saveState(); canvas.setFont(regular, 7); canvas.setFillColor(colors.HexColor("#5F6B76"))
         footer_title = title.split(" | ")[0] if has_arabic(title) else title
-        canvas.drawString(8*mm, 6*mm, footer_title); canvas.drawRightString(page[0] - 8*mm, 6*mm, f"Page {document.page}")
+        if has_arabic(footer_title) and arabic_fonts()[0]:  # 2.9.119: an Arabic title is drawn with the Arabic font
+            canvas.setFont(arabic_fonts()[0], 8); footer_title = shape_arabic(footer_title)
+        canvas.drawString(8*mm, 6*mm, footer_title); canvas.setFont(regular, 7); canvas.drawRightString(page[0] - 8*mm, 6*mm, f"Page {document.page}")
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
 

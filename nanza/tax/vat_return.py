@@ -4,7 +4,9 @@ from __future__ import annotations
 import calendar
 import json
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+import logging
+import sqlite3
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from database import display_date, iso_date, utcnow
 
@@ -57,9 +59,13 @@ def previous_quarter(year, quarter):
     return (int(year), int(quarter) - 1) if int(quarter) > 1 else (int(year) - 1, 4)
 
 
+log = logging.getLogger("saber.vat")
+
+
 def _money(value):
     try: return Decimal(str(value or 0)).quantize(CENT, rounding=ROUND_HALF_UP)
-    except Exception: return ZERO
+    except (InvalidOperation, ValueError, TypeError):  # 2.9.119: said in the log, not silent
+        log.warning("VAT: amount %r is not a number - counted as 0", value); return ZERO
 
 
 def _lbp(value):
@@ -69,9 +75,11 @@ def _lbp(value):
 def _vat_setup(db):
     """2.9.72: (standard rate as a fraction, VAT currency, second VAT currency) of this company: 0.11, LBP, USD in Lebanon."""
     try: rate = Decimal(str(db.vat_rate_percent())) / Decimal("100")
-    except Exception: rate = RATE
+    except (InvalidOperation, ValueError, TypeError, AttributeError, sqlite3.Error):
+        log.warning("VAT rate of the company not readable - %s used", RATE, exc_info=True); rate = RATE
     try: first, second = db.vat_currencies()
-    except Exception: first, second = "LBP", "USD"
+    except (ValueError, TypeError, AttributeError, sqlite3.Error):
+        log.warning("VAT currencies of the company not readable - LBP / USD used", exc_info=True); first, second = "LBP", "USD"
     return rate, str(first or "LBP").upper(), str(second or "USD").upper()
 
 
@@ -82,7 +90,7 @@ def vat_ratio_method(db):
     """2.9.83: how the Art. 31 deduction ratio is set - 'quarter' (default: each quarter from its own turnover, no
     year-end adjustment) or 'annual' (provisional / year-to-date for Q1-Q3, final annual ratio and adjustment in Q4)."""
     try: value = str(db.settings().get("vat_ratio_method") or "quarter").strip().lower()
-    except Exception: value = "quarter"
+    except (AttributeError, sqlite3.Error): value = "quarter"
     return value if value in RATIO_METHODS else "quarter"
 
 
@@ -102,6 +110,7 @@ def _documents(db, start, end, currency, include_review, memo=None):
         try: day = iso_date(row["invoice_date"])
         except ValueError: skipped.append(row["invoice_number"]); continue
         if not start <= day <= end or (currency and row["currency"] != currency): continue
+        if row.get("source_file") == "Opening balances": continue  # 2.9.119: open invoices brought from the previous program (declared there)
         if row["status"] not in statuses:
             if row["status"] == "review": review_excluded += 1
             continue
@@ -181,8 +190,8 @@ def _restricted_share(db, doc):
     if doc.get("category") == "sales" or doc.get("date", "") < BUDGET_2026_FROM: return ZERO
     if use == "utilities": return Decimal("1")
     if use == "passenger_car":
-        try: base_usd = db._converted_amount(doc["base"] + doc["exempt"], doc["currency"], "USD", doc["date"])
-        except Exception: return ZERO
+        # 2.9.119: a missing USD rate stops the return with its reason (before, the whole VAT of the car was deducted)
+        base_usd = db._converted_amount(doc["base"] + doc["exempt"], doc["currency"], "USD", doc["date"])
         if base_usd <= PASSENGER_CAR_CAP_USD or base_usd <= 0: return ZERO
         return ((base_usd - PASSENGER_CAR_CAP_USD) / base_usd).quantize(Decimal("0.000001"))
     return ZERO
@@ -349,7 +358,7 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
         for candidate in ([db] if previous_year == int(year) else [previous_year_db, db]):
             if candidate is None: continue
             try: previous = saved_return(candidate, previous_year, previous_q)
-            except Exception: previous = None
+            except sqlite3.OperationalError: previous = None  # 2.9.119: a file without saved returns; any other error is shown
             if previous:
                 credit_bf = rnd(previous["credit_carried_forward_lbp"]); source = f"Q{previous_q} {previous_year} saved return"; break
         else:
@@ -379,7 +388,7 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
     changed = bool(saved) and (rnd(saved["net_lbp"]) != rnd(totals_lbp["net"]) or rnd(saved["credit_brought_forward_lbp"]) != credit_bf)
     # 2.9.72: the main figures also in the second VAT currency, at the rate of the last day of the period
     try: second_rate = db._converted_amount(Decimal("1"), vat_currency, vat_second, end) if vat_second != vat_currency else Decimal("1")
-    except Exception: second_rate = None
+    except (ValueError, ArithmeticError): second_rate = None  # no rate for the second VAT currency: that column stays empty
     second = {key: (_money(value * second_rate) if second_rate is not None else None) for key, value in
               (("net", totals_lbp["net"]), ("payable", payable), ("credit_carried_forward", credit_cf), ("credit_brought_forward", credit_bf))}
     return {"year": int(year), "quarter": int(quarter), "date_from": start, "date_to": end, "due_date": due_date(year, quarter), "currency_filter": currency or "All",
@@ -418,7 +427,7 @@ def add_adjustment(db, item, user_id, user_name=""):
     currency = str(item.get("currency") or "LBP").upper()
     if currency not in db.currency_codes(): raise ValueError(f"Currency {currency} is not set up (Security / Backup / Rates > Exchange Rates)")
     try: amount = Decimal(str(item.get("amount") or "").replace(",", ""))
-    except Exception as exc: raise ValueError("Adjustment amount must be a number (use a minus sign to reduce)") from exc
+    except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Adjustment amount must be a number (use a minus sign to reduce)") from exc
     if not amount: raise ValueError("Adjustment amount cannot be zero")
     reason = str(item.get("reason") or "").strip()
     if len(reason) < 3: raise ValueError("Enter the reason for the adjustment")
@@ -572,7 +581,8 @@ def settlement_lines(db, result, payable_account=None, credit_account=None, non_
     and the rest is VAT payable (Cr 4425) or VAT to recover (Dr 4429)."""
     vc = result.get("vat_currency") or "LBP"; rnd = _lbp if vc == "LBP" else _money
     try: chosen = db.default_accounts()  # 2.9.81: Settings > Accounting Settings
-    except Exception: chosen = {}
+    except (ValueError, AttributeError, sqlite3.Error):
+        log.warning("Default accounts not readable - the settlement uses the standard VAT accounts", exc_info=True); chosen = {}
     payable_account = str(payable_account or chosen.get("vat_payable") or SETTLEMENT_DEFAULTS["payable_account"]).split(" - ", 1)[0].strip()
     credit_account = str(credit_account or chosen.get("vat_credit") or SETTLEMENT_DEFAULTS["credit_account"]).split(" - ", 1)[0].strip()
     non_deductible_account = str(non_deductible_account or chosen.get("vat_non_deductible") or SETTLEMENT_DEFAULTS["non_deductible_account"]).split(" - ", 1)[0].strip()

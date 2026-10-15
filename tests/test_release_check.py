@@ -16,7 +16,7 @@ def ALL_FILES():
 # Code-health ratchet: these numbers may only go DOWN. Lower them when screens are tidied.
 MAX_LINES_OVER_200 = 106  # 2.9.102: 505 -> 106
 STAR_IMPORT_FILES = set()  # 2.9.102: none left (there were 26)
-MAX_BROAD_EXCEPTS = 733  # 2.9.105: "except Exception" in the program (not tests) - may only go down
+MAX_BROAD_EXCEPTS = 679  # 2.9.119: 733 -> 679 (money paths catch the specific errors) - may only go down
 
 
 class ReleaseCheckTest(unittest.TestCase):

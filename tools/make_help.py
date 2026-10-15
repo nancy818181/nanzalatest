@@ -30,7 +30,7 @@ from tkinter import messagebox  # noqa: E402
 for _name in ("showerror", "showwarning", "showinfo"): setattr(messagebox, _name, lambda *a, **k: None)
 messagebox.askyesno = lambda *a, **k: True
 
-from help_topics import TOPICS, WIZARD  # noqa: E402
+from help_topics import EXTRA_TOPICS, SUBTABS, TOPICS, WIZARD  # noqa: E402
 
 GOLD, NAVY = (208, 165, 87), (16, 42, 67)
 ARABIC = None  # arabic_ui while the Arabic pictures are made
@@ -76,6 +76,30 @@ def find(widget, text):
         except tkinter.TclError:
             continue
     return None
+
+
+def open_tab(page, tab, steps, app):
+    """2.9.119: select a tab inside the screen and scroll to the first marked widget."""
+    from tkinter import ttk
+    stack = [page]
+    while stack:
+        item = stack.pop(0)
+        if isinstance(item, ttk.Notebook):
+            for tab_id in item.tabs():
+                if item.tab(tab_id, "text") == tab: item.select(tab_id); app.update(); break
+            else:
+                stack.extend(item.winfo_children()); continue
+            break
+        stack.extend(item.winfo_children())
+    for _ in range(5): app.update()
+    target = next((find(page, text) for text, _e, _a in steps if text and find(page, text)), None)
+    canvas = target
+    while canvas is not None and not getattr(canvas, "_saber_scroll_page", False): canvas = canvas.master
+    if target is not None and canvas is not None:
+        inner = canvas.winfo_children()[0] if canvas.winfo_children() else None
+        height = max(1, (inner or canvas).winfo_height())
+        offset = target.winfo_rooty() - canvas.winfo_rooty() - 160
+        canvas.yview_moveto(max(0.0, offset / height)); app.update()
 
 
 def picture(window, marks, name):
@@ -125,15 +149,17 @@ def shots(url, company, year, language):
     app.client.select_company_year(company["id"], year); app.current_company = company; app.current_fiscal_year = int(year)
     app.main_screen(); app.update()
     pages = dict(zip(app._page_attributes, app.main_tab_pages)); done = {}
-    for attribute, _title_en, _title_ar, _intro_en, _intro_ar, steps in TOPICS:
+    for key, _title_en, _title_ar, _intro_en, _intro_ar, steps in TOPICS + EXTRA_TOPICS:
+        attribute = SUBTABS.get(key, (key,))[0]
         if attribute not in pages: continue
         app.select_main_tab(pages[attribute]); app.update()
         page = getattr(app, attribute)
+        if key in SUBTABS: open_tab(page, SUBTABS[key][1], steps, app)
         marks = [(n, find(page, text) if text else None) for n, (text, _en, _ar) in enumerate(steps, 1)]
         missing = [text for (n, w), (text, _e, _a) in zip(marks, steps) if text and w is None]
-        if missing: print(f"  {attribute} ({language}): not found on the screen: {missing}")
-        done[attribute] = picture(app, marks, attribute + suffix)
-        print("picture", attribute, language)
+        if missing: print(f"  {key} ({language}): not found on the screen: {missing}")
+        done[key] = picture(app, marks, key + suffix)
+        print("picture", key, language)
     key, _title_en, _title_ar, _intro_en, _intro_ar, steps = WIZARD
     window = app.create_company_dialog(); window.geometry("640x520+200+120"); app.update()
     find(window, "Next").invoke(); app.update()
@@ -148,7 +174,7 @@ def build():
     english = shots(url, company, year, "en")
     arabic = shots(url, company, year, "ar")  # 2.9.118: the help in Arabic shows the program in Arabic
     done = [(key, title_en, title_ar, intro_en, intro_ar, steps, english[key], arabic.get(key))
-            for key, title_en, title_ar, intro_en, intro_ar, steps in list(TOPICS) + [WIZARD] if key in english]
+            for key, title_en, title_ar, intro_en, intro_ar, steps in list(TOPICS) + list(EXTRA_TOPICS) + [WIZARD] if key in english]
     done.insert(1, done.pop())  # the new company wizard comes second, after the dashboard
     (OUT / "help.html").write_text(page_html(done), encoding="utf-8")
     print("written", OUT / "help.html")
