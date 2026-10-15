@@ -315,10 +315,23 @@ def _install_column_fit():
 
     def insert(self, parent, index, iid=None, **kw):
         new_iid = real_insert(self, parent, index, iid, **kw)
-        if self.__dict__.get("_fit_bound") and len(self.get_children("")) <= 30: schedule(self)
+        if self.__dict__.get("_fit_bound"):
+            # 2.9.120: the rows are counted once and then followed (asking Tk for every row at each insert made a table of
+            # 80,000 lines take minutes); the columns still fit the first 30 rows as before
+            count = self.__dict__.get("_fit_rows")
+            if count is None: count = len(self.get_children(""))
+            elif not parent: count += 1
+            self.__dict__["_fit_rows"] = count
+            if count <= 30: schedule(self)
         return new_iid
 
-    ttk.Treeview.heading, ttk.Treeview.column, ttk.Treeview.insert = heading, column, insert
+    real_delete = ttk.Treeview.delete
+
+    def delete(self, *items):
+        self.__dict__["_fit_rows"] = None  # counted again at the next insert
+        return real_delete(self, *items)
+
+    ttk.Treeview.heading, ttk.Treeview.column, ttk.Treeview.insert, ttk.Treeview.delete = heading, column, insert, delete
     ttk.Treeview._saber_fit = True
 
 
@@ -401,6 +414,36 @@ def flow_toolbar(frame, gap=4):
     for widget, *_rest in order: widget.bind("<Configure>", lambda _e, f=frame: f._flow_schedule(), add="+")
     schedule()
     return frame
+
+
+def fill_tree(tree, rows, first=500, step=2000):
+    """2.9.120: insert [(args, kwargs)] rows - the first ones now and the others in steps right after, so a screen with tens
+    of thousands of lines opens at once instead of waiting for all of them. Filling again (a refresh) stops the previous one."""
+    token = object(); tree.__dict__["_fill_token"] = token
+    def insert(start, stop):
+        for args, kwargs in rows[start:stop]: tree.insert(*args, **kwargs)
+    def done():  # the zebra stripes are drawn once, at the end (not again after each step)
+        if tree.__dict__.get("_stripe_after") == "filling": tree.__dict__["_stripe_after"] = None
+        try:
+            from desktop_theme import restripe
+            restripe(tree)
+        except (ImportError, tk.TclError): pass
+    if len(rows) > first and "_stripe_after" in tree.__dict__:
+        pending = tree.__dict__["_stripe_after"]
+        if pending not in (None, "filling"):
+            try: tree.after_cancel(pending)
+            except tk.TclError: pass
+        tree.__dict__["_stripe_after"] = "filling"
+    insert(0, first)
+    def more(start):
+        try:
+            if tree.__dict__.get("_fill_token") is not token or not tree.winfo_exists(): return
+            insert(start, start + step)
+            if start + step < len(rows): tree.after(1, lambda: more(start + step))
+            else: done()
+        except tk.TclError: return  # the table was closed
+    if len(rows) > first: tree.after(1, lambda: more(first))
+    return tree
 
 
 def flow_toolbars(*frames):

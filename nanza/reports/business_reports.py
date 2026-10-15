@@ -39,16 +39,19 @@ class _Converter:
         return _d(amount) * self.cache[key]
 
 
-def _documents(db, kind, start, end, options):
+def _documents(db, kind, start, end, options, lines=True):
+    """The posted documents of a kind in the period; lines=False (totals only) does not read the invoice lines (2.9.120)."""
     statuses = ("posted", "review") if options.get("include_review") else ("posted",)
     only = str(options.get("only_currency") or "").upper()
     with db.connect() as connection:
         invoices = [dict(r) for r in connection.execute("""SELECT i.*,p.name party_name,p.account_number,p.tax_number party_vat_number,p.mof_number party_mof_number FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
             WHERE i.kind=? AND i.status<>'cancelled'""", (kind,))]
         items = {}
-        for row in connection.execute("SELECT x.* FROM invoice_items x JOIN invoices i ON i.id=x.invoice_id WHERE i.kind=? ORDER BY x.id", (kind,)):  # 2.9.91: only this kind
+        for row in (connection.execute("SELECT x.* FROM invoice_items x JOIN invoices i ON i.id=x.invoice_id WHERE i.kind=? ORDER BY x.id", (kind,))
+                    if lines else ()):  # 2.9.91: only this kind
             items.setdefault(row["invoice_id"], []).append(dict(row))
-        catalogue = {r["sku"]: dict(r) for r in connection.execute("SELECT * FROM inventory_items")} if _has_table(connection, "inventory_items") else {}
+        catalogue = ({r["sku"]: dict(r) for r in connection.execute("SELECT * FROM inventory_items")}
+                     if lines and _has_table(connection, "inventory_items") else {})
     result = []
     for invoice in invoices:
         try: day = iso_date(invoice["invoice_date"])
@@ -231,7 +234,7 @@ def top_parties(db, options):
     try: limit = max(1, min(500, int(options.get("top") or 20)))
     except ValueError: raise ValueError("Top must be a number")
     totals = {}
-    for invoice in _documents(db, kind, start, end, options):
+    for invoice in _documents(db, kind, start, end, options, lines=False):
         ht = convert(_d(invoice["subtotal"]) * invoice["sign"], invoice["currency"], invoice["iso_date"])
         vat = convert(_d(invoice["vat"]) * invoice["sign"], invoice["currency"], invoice["iso_date"])
         # 2.9.69: the VAT number of the client / supplier (MOF number when no VAT number was entered)
@@ -283,7 +286,7 @@ def dashboard_charts(db, options):
     year = int(options.get("year") or datetime.now().year); convert = _Converter(db, options.get("basis")); basis = convert.basis
     start, end = f"{year}-01-01", f"{year}-12-31"; months = [[ZERO, ZERO] for _ in range(12)]
     for index, kind in enumerate(("sale", "purchase")):
-        for invoice in _documents(db, kind, start, end, {}):
+        for invoice in _documents(db, kind, start, end, {}, lines=False):
             months[int(invoice["iso_date"][5:7]) - 1][index] += convert(_d(invoice["subtotal"]) * invoice["sign"], invoice["currency"], invoice["iso_date"])
     with db.connect() as connection: expenses = [dict(r) for r in connection.execute("SELECT expense_date,currency,with_vat_subtotal,without_vat_subtotal FROM expenses")]
     for e in expenses:
@@ -297,7 +300,7 @@ def dashboard_charts(db, options):
     from ledger_reports import _load_lines, _digits
     cash = {}
     column = basis
-    for line in _load_lines(db, {"posting_status": "posted", "first_column": column, "second_column": "none"}):
+    for line in _load_lines(db, {"posting_status": "posted", "first_column": column, "second_column": "none", "code_prefixes": ("51", "53")}):
         code = _digits(line["code"])
         if code.startswith(("51", "53")) and line["iso_date"] <= end: cash[line["code"]] = cash.get(line["code"], ZERO) + line["signed"][column]
     return {"basis": basis, "year": year, "months": [[calendar.month_abbr[i + 1], float(m[0]), float(m[1])] for i, m in enumerate(months)],

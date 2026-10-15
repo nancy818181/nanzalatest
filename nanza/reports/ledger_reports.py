@@ -71,6 +71,9 @@ def _load_lines(db, options):
                           " WHERE x.source_type='invoice' AND x.source_id=e.source_id))")  # 2.9.113: income not subject to income tax (with its reason)
     if department_ids: among("j.department_id", department_ids)
     if project_ids: among("j.project_id", project_ids)
+    prefixes = [str(p) for p in options.get("code_prefixes") or () if str(p).isdigit()]
+    if prefixes:  # 2.9.120: only these accounts (the dashboard's cash and bank: 51 / 53), read by the database
+        conditions.append("(" + " OR ".join("a.code LIKE ?" for _p in prefixes) + ")"); parameters.extend(f"{p}%" for p in prefixes)
     where = " WHERE " + " AND ".join(conditions) if conditions else ""
     with db.connect() as connection:
         rows = [dict(row) for row in connection.execute(f"""SELECT j.id,a.code,a.name_en,a.type account_type,e.id entry_id,e.entry_number,e.entry_date,

@@ -480,13 +480,26 @@ class SalesInvoiceMixin:
         self.calculate_sales_line(); self.update_sales_totals()
 
     def exchange_equivalents(self,amount,currency,rates):
+        # 2.9.120: the rate of each currency pair is looked up once per list of rates (Uploaded Data with 20,000 invoices
+        # read the whole rate table for every line); the same rate is used as before (the first matching row of the list)
+        store=getattr(self,"__dict__",None) if self is not None else None
+        cache=store.get("_rate_lookup") if store is not None else None
+        if not cache or cache[0] is not rates:
+            cache=(rates,{})
+            if store is not None: store["_rate_lookup"]=cache
+        memo=cache[1]
         def convert(value,source,target):
             if source==target: return value
-            for row in rates:
-                rate=float(row["rate"])
-                if row["from_currency"]==source and row["to_currency"]==target: return value*rate
-                if row["from_currency"]==target and row["to_currency"]==source and rate: return value/rate
-            return None
+            if (source,target) not in memo:
+                found=None
+                for row in rates:
+                    rate=float(row["rate"])
+                    if row["from_currency"]==source and row["to_currency"]==target: found=(False,rate); break
+                    if row["from_currency"]==target and row["to_currency"]==source and rate: found=(True,rate); break
+                memo[(source,target)]=found
+            found=memo[(source,target)]
+            if found is None: return None
+            return value/found[1] if found[0] else value*found[1]
         if currency=="LBP": return amount,convert(amount,"LBP","USD")
         lbp=convert(amount,currency,"LBP"); usd=amount if currency=="USD" else convert(amount,currency,"USD")
         if usd is None and lbp is not None: usd=convert(lbp,"LBP","USD")

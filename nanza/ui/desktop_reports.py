@@ -16,6 +16,10 @@ FIN_FILTERS = {"branch": ("Branch", "branch_name"), "project": ("Project", "proj
 JOURNAL_SHOWN = 5000
 
 
+
+def _financial_filter_sets(app):
+    return [(FIN_FILTERS[key][1], {value.casefold() for value in chosen_values(app.fin_filters[key].get())}) for key in app.shown_financial_filters()]
+
 class ReportsMixin:
     def build_journal(self):
         filters=tk.Frame(self.journal_tab,bg=LIGHT); filters.pack(fill="x",padx=10,pady=(10,0))
@@ -466,10 +470,13 @@ class ReportsMixin:
             values=sorted({str(row.get(field) or "") for row in rows if str(row.get(field) or "").strip()},key=str.casefold)
             if box.winfo_exists(): box["values"]=["All"]+values
 
-    def financial_filter_ok(self,row):
-        for key in self.shown_financial_filters():
-            wanted={value.casefold() for value in chosen_values(self.fin_filters[key].get())}
-            if wanted and str(row.get(FIN_FILTERS[key][1]) or "").strip().casefold() not in wanted: return False
+    def financial_filter_sets(self):
+        """2.9.120: [(field, values ticked)] read once per load (the filter file was read again for every ledger line)."""
+        return _financial_filter_sets(self)
+
+    def financial_filter_ok(self,row,filters=None):
+        for field,wanted in (_financial_filter_sets(self) if filters is None else filters):
+            if wanted and str(row.get(field) or "").strip().casefold() not in wanted: return False
         return True
 
     def choose_financial_filters(self):
@@ -517,15 +524,16 @@ class ReportsMixin:
             comparative=self.client.comparative_reports(dates[0],dates[1],currency)
         except Exception as exc: return messagebox.showerror("Financial Reports",str(exc))
         account_from=self.report_account_from.get().split(" - ",1)[0].strip(); account_to=self.report_account_to.get().split(" - ",1)[0].strip()
+        low=int(''.join(c for c in account_from if c.isdigit()) or 0); high=int(''.join(c for c in account_to if c.isdigit()) or 999999999999)
         def in_account_range(code):
             digits=int(''.join(c for c in str(code) if c.isdigit()) or 0)
-            low=int(''.join(c for c in account_from if c.isdigit()) or 0); high=int(''.join(c for c in account_to if c.isdigit()) or 999999999999)
             return low<=digits<=high
-        self.refresh_financial_filter_choices(ledger["items"])
-        self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row)]; self.balance_rows=[row for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
+        self.refresh_financial_filter_choices(ledger["items"]); filters=self.financial_filter_sets()
+        self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row,filters)]; self.balance_rows=[row for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
         self.ledger_tree.delete(*self.ledger_tree.get_children()); self.balance_tree.delete(*self.balance_tree.get_children()); self.vat_tree.delete(*self.vat_tree.get_children()); self.cash_tree.delete(*self.cash_tree.get_children()); self.comparative_tree.delete(*self.comparative_tree.get_children())
-        for r in self.ledger_rows: self.ledger_tree.insert("","end",values=(r["entry_date"],r["entry_number"],r["account_code"],r["currency"],r["account_name"],
-                r["description"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}'))
+        from desktop_common import fill_tree  # 2.9.120: a long ledger shows its first lines at once, the rest follows
+        fill_tree(self.ledger_tree,[(("","end"),{"values":(r["entry_date"],r["entry_number"],r["account_code"],r["currency"],r["account_name"],
+                r["description"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}')}) for r in self.ledger_rows])
         for r in balance: self.balance_tree.insert("","end",values=(r["type"],r["code"],r["currency"],r["name_en"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}'))
         for r in self.vat_rows: self.vat_tree.insert("","end",values=(r["currency"],r["kind"],r["invoices"],f'{r["subtotal"] or 0:,.2f}',f'{r["vat"] or 0:,.2f}',f'{r["total"] or 0:,.2f}'))
         for r in self.cash_rows: self.cash_tree.insert("","end",values=(r["currency"],r["category"],f'{r["inflow"]:,.2f}',f'{r["outflow"]:,.2f}',f'{r["net"]:,.2f}'))
