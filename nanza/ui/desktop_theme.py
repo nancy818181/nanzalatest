@@ -260,6 +260,16 @@ def _more_menu(frame, button):
     finally: menu.grab_release()
 
 
+def _english(button):
+    """The English text of a button (2.9.118: in Arabic the screen shows the Arabic one)."""
+    text = str(button.cget("text"))
+    try:
+        import arabic_ui
+        return arabic_ui.english(text) if arabic_ui.active() else text
+    except ImportError:
+        return text
+
+
 def fold_toolbar(frame):
     """Fold one row (safe to call again; buttons added to the row later are folded too)."""
     items, mode = _row_items(frame)
@@ -269,7 +279,7 @@ def fold_toolbar(frame):
     folded = [w for w in getattr(frame, "_saber_folded", []) if w.winfo_exists()]
     if len(light) + len(folded) < FOLD_AT or len(light) <= KEEP_VISIBLE: return False
     # the everyday actions stay in view first (New / Add / Print / Refresh ...), then the others in their order
-    everyday = [w for w in light if str(w.cget("text")).strip().split(" ")[0].lower() in EVERYDAY]
+    everyday = [w for w in light if _english(w).strip().split(" ")[0].lower() in EVERYDAY]
     chosen = set((everyday + [w for w in light if w not in everyday])[:KEEP_VISIBLE])
     keep, hide = [w for w in light if w in chosen], [w for w in light if w not in chosen]
     more = getattr(frame, "_saber_more_button", None)

@@ -362,7 +362,7 @@ class PurchasesMixin:
             f["pdf_label"].config(text=f"{Path(path).name} attached to purchase {f['id']}", fg=NAVY)
             self.load_purchases()
             return
-        if path.lower().endswith(".pdf"):  # 2.9.85: read off the screen (a scanned PDF takes seconds per page)
+        if path.lower().endswith((".pdf", ".png", ".jpg", ".jpeg")):  # 2.9.85: read off the screen; 2.9.118: photos are read too
             prepare_pdf_reading(self)
             return run_with_progress(self, "Purchase PDF", lambda _progress, _cancel: read_invoice_pdf(path), lambda data: PurchasesMixin._apply_purchase_pdf(self, path, data))
         PurchasesMixin._apply_purchase_pdf(self, path, None)

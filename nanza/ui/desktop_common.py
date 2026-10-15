@@ -343,6 +343,11 @@ def flow_toolbar(frame, gap=4):
     first_time = not getattr(frame, "_saber_flow", False)
     frame._flow_order = [e for e in getattr(frame, "_flow_order", []) if e[0].winfo_exists()] + order
     frame._saber_flow = True; frame._flow_pending = False
+    try:
+        import arabic_ui
+        if arabic_ui.active(): frame._flow_rtl = True
+    except ImportError: pass
+    mirrored = getattr(frame, "_flow_rtl", False)
 
     def inner_offsets():
         """2.9.97: a titled box (LabelFrame) or a padded frame. Tk already places the rows inside the border and below the
@@ -372,7 +377,9 @@ def flow_toolbar(frame, gap=4):
             if not widget.winfo_exists() or getattr(widget, "_flow_hidden", False): continue
             w, h = widget.winfo_reqwidth(), widget.winfo_reqheight()
             if x > 0 and x + left + w + right > width: x = 0; y += row + gap; row = 0
-            widget.place(x=left0 + x + left, y=top0 + y + top); x += left + w + right; row = max(row, top + h + bottom)
+            if mirrored: widget.place(x=left0 + width - x - left - w, y=top0 + y + top)  # 2.9.118: Arabic, from the right
+            else: widget.place(x=left0 + x + left, y=top0 + y + top)
+            x += left + w + right; row = max(row, top + h + bottom)
         height = max(1, y + row + extra_height)
         if int(frame.cget("height") or 0) != height: frame.configure(height=height)
 

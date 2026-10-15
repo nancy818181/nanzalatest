@@ -223,28 +223,25 @@ class BrainsScreensMixin(BalanceReportsMixin):
         self.manual_type = tk.StringVar(value=VOUCHER_TYPES[0]); self.manual_no = tk.StringVar(); self.manual_date = tk.StringVar(value=self.fiscal_today())
         self.manual_currency = tk.StringVar(value="USD"); self.manual_find = tk.StringVar()
         self.manual_not_deductible = tk.BooleanVar(value=False); place_tick(tax_tick(header, self.manual_not_deductible, LIGHT), side="right", padx=6)
-        tk.Label(header, text="Type", bg=LIGHT).pack(side="left")
-        self.manual_type_box=ttk.Combobox(header, textvariable=self.manual_type, values=VOUCHER_TYPES, state="readonly", width=17)
-        self.manual_type_box.pack(side="left", padx=(4, 8))
-        tk.Label(header, text="Number", bg=LIGHT).pack(side="left")
-        tk.Entry(header, textvariable=self.manual_no, width=15, state="readonly", takefocus=0, readonlybackground="white", font=("Segoe UI", 10, "bold")).pack(side="left", padx=(4, 8))
-        tk.Label(header, text="Date", bg=LIGHT).pack(side="left")
-        self.manual_date_box=self.date_entry(header, self.manual_date, 12)
-        self.manual_date_box.pack(side="left", padx=(4, 12))
-        tk.Label(header, text="Currency", bg=LIGHT).pack(side="left")
-        voucher_currency_box=ttk.Combobox(header, textvariable=self.manual_currency, values=self.currency_codes, state="readonly", width=6)
-        voucher_currency_box.pack(side="left", padx=(4, 12))
+        # 2.9.118: two columns of label | field that line up (Zoho / Odoo); the same fields, made in the same order
+        fields = tk.Frame(header, bg=LIGHT); fields.pack(side="left", anchor="w")
+        def put(row, column, label, widget):
+            tk.Label(fields, text=label, bg=LIGHT).grid(row=row, column=2 * column, sticky="w", padx=(0 if column == 0 else 28, 8), pady=1)
+            widget.grid(row=row, column=2 * column + 1, sticky="w", pady=1)
+            return widget
+        self.manual_type_box=put(0, 0, "Type", ttk.Combobox(fields, textvariable=self.manual_type, values=VOUCHER_TYPES, state="readonly", width=17))
+        put(0, 1, "Number", tk.Entry(fields, textvariable=self.manual_no, width=15, state="readonly", takefocus=0, readonlybackground="white",
+                                     font=("Segoe UI", 10, "bold")))
+        self.manual_date_box=put(1, 0, "Date", self.date_entry(fields, self.manual_date, 12))
+        voucher_currency_box=put(1, 1, "Currency", ttk.Combobox(fields, textvariable=self.manual_currency, values=self.currency_codes, state="readonly", width=6))
         def select_currency_initial(event):
             if len(event.keysym)==1 and event.keysym.isalpha():
                 matched=currency_from_prefix(event.char,self.currency_codes)
                 if matched in self.currency_codes: self.manual_currency.set(matched)
                 return "break"
         voucher_currency_box.bind("<KeyPress>",select_currency_initial)
-        tk.Label(header, text="Branch", bg=LIGHT).pack(side="left")
-        branch_box=self.branch_selector(header, self.manual_branch, 12, False)
-        branch_box.pack(side="left", padx=(4, 8))
-        tk.Label(header, text="Find", bg=LIGHT).pack(side="left")
-        self.manual_find_box = ttk.Combobox(header, textvariable=self.manual_find, width=24); self.manual_find_box.pack(side="left", padx=4)
+        branch_box=put(2, 0, "Branch", self.branch_selector(fields, self.manual_branch, 12, False))
+        self.manual_find_box = put(2, 1, "Find", ttk.Combobox(fields, textvariable=self.manual_find, width=24))
         self.manual_find_box.bind("<<ComboboxSelected>>", lambda _e: self.open_found_voucher()); self.manual_find_box.bind("<KeyRelease>", self.search_vouchers)
         def find_or_edit(_event=None):
             if self.manual_find.get().strip(): self.open_found_voucher()

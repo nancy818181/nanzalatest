@@ -1,5 +1,14 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.118 (the program in Arabic, right to left; tidy forms as in Zoho; totals card)
+- **The program in Arabic (right to left):** the **عربي** button at the top (or Language = ar at sign-in) turns every screen to Arabic: the menu on the right, buttons, labels, box titles, tabs, table titles, menus, window titles and messages, laid out from right to left (tables start from the right). **English** at the top turns it back, on the same company, year and screen. Nothing changes in English, and the program keeps working with the same values (lists such as Invoice / Services and the data stay as they are). About 1,700 texts in nanza/ui/arabic_texts.py.
+- **Tidy forms (as in Zoho / Odoo):** the sales invoice, the customer receipt / supplier payment and the journal voucher show their fields in two columns of label | field that line up. The same fields, made in the same order (the Tab key goes through them as before), with the same keys and actions. The NEW INVOICE badge is at the end of the Find invoice row.
+- **Totals card on the sales invoice:** Total, Discount, Total HT, VAT and the TOTAL TTC to pay in a white card at the bottom right.
+- **Photos of invoices and bills are read (JPG / PNG):** Purchases (Upload PDF), Expenses and Uploaded Data > Choose PDF Invoice(s) read a phone photo or a picture of a scan like a scanned PDF (before, a picture was only attached).
+- **EDL bills photographed:** the dot-matrix amounts on the pink form are read better (an extra reading without the coloured background); the VAT number printed at the top ("N° TVA : 241559") is no longer taken as the VAT amount; and when only the base (total of the tranches) can be read, the VAT 11%, the 100,000 stamp and the total rounded up to the thousand are filled in (671,250 + 73,838 + 100,000 -> 846,000), marked "please check". The supplier is suggested as Electricité du Liban (EDL) and the account as Electricity Expenses.
+- **Help with pictures in Arabic too:** in Arabic the help shows pictures of the Arabic screens.
+- **Releases:** a GitHub Release (read by the update check) is published only by "Run workflow" on main, as since 2.9.42; pushes build the installer only.
+
 ## Version 2.9.117 (the code in folders; code signing in the cloud; commercial register in the wizard)
 - **The program is now in folders by subject** - nothing it does changes:
 

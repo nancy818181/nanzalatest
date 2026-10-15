@@ -243,7 +243,10 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         except Exception: return False
         for sibling in reversed(siblings[:index]):
             if sibling.winfo_class()=="Label":
-                text=str(sibling.cget("text") or "").strip().lower().rstrip(":")
+                text=str(sibling.cget("text") or "").strip()
+                if getattr(self,"language",None) is not None and self.language.get()=="ar":
+                    import arabic_ui; text=arabic_ui.english(text.rstrip(":")) or text
+                text=text.lower().rstrip(":")
                 return text in self.DATE_LABEL_EXACT or any(word in text for word in self.DATE_LABEL_WORDS)
             if sibling.winfo_class() in ("Entry","TCombobox","Checkbutton","Button"): return False
         return False
@@ -404,6 +407,8 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
 
     def login_screen(self):
         self.clear()
+        import arabic_ui
+        arabic_ui.switch(self, "en")  # 2.9.118: the sign-in screen is in English; Arabic starts after signing in
         card = tk.Frame(self, bg="white", padx=42, pady=36)
         card.place(relx=.5, rely=.5, anchor="center")
         try:
@@ -426,7 +431,7 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
             entry.grid(row=row,column=1,pady=7)
             if secret:
                 entry.bind("<Return>",lambda _event:self.login())
-        tk.Label(card,text="Language",bg="white").grid(row=5,column=0,sticky="w",pady=7)
+        tk.Label(card,text="Language | اللغة",bg="white").grid(row=5,column=0,sticky="w",pady=7)
         ttk.Combobox(card,textvariable=self.language,values=["en","ar","fr"],state="readonly",width=31).grid(row=5,column=1,pady=7)
         tk.Button(card,text="Sign in",command=self.login,bg=NAVY,fg="white",activebackground=GOLD,width=29,pady=8,border=0).grid(row=6,column=0,columnspan=2,pady=(22,0))
 
@@ -436,6 +441,8 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
             self.client.confirm_negative_stock=lambda text: messagebox.askyesno("Stock below zero | مخزون سالب",text,icon="warning")
             self.client.confirm_duplicate=lambda text: messagebox.askyesno("Already saved | مكرر",text,icon="warning",default="no")  # 2.9.103
             self.current_user=self.client.login(self.username.get(), self.password.get())
+            import arabic_ui
+            arabic_ui.switch(self, self.language.get())  # 2.9.118: Language = ar -> the screens in Arabic, right to left
             self.last_activity=time.monotonic(); self.bind_all("<Any-KeyPress>",self.record_activity); self.bind_all("<Any-Button>",self.record_activity); self.after(60000,self.check_auto_logout)
             self.company_selection_screen()
         except Exception as exc:
@@ -574,6 +581,11 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         tk.Label(top,text=tr(lang,"title"),bg=NAVY,fg="white",font=("Segoe UI",16,"bold")).pack(side="left",padx=8,pady=12)
         tk.Label(top,text="11% VAT  |  " + " · ".join(self.currency_codes[:5]),bg=NAVY,fg=GOLD,font=("Segoe UI",10,"bold")).pack(side="right",padx=28)
         tk.Button(top,text="Help / مساعدة",command=self.open_user_guide,bg=NAVY,fg="white",activebackground=GOLD,border=0,padx=10).pack(side="right",padx=4)
+        # 2.9.118: one click turns every screen to Arabic (right to left) or back to English
+        language_button=tk.Button(top,text="English" if lang=="ar" else "عربي",command=lambda:self.switch_language("en" if lang=="ar" else "ar"),
+                                  bg=NAVY,fg=GOLD,activebackground=GOLD,border=1,padx=10,cursor="hand2",font=("Segoe UI",9,"bold"))
+        language_button.pack(side="right",padx=4)
+        if lang=="ar": language_button.configure(text="English | الإنكليزية")
         self.bind_all("<F1>",lambda _e: self.open_user_guide())  # 2.9.106: F1 opens the guide (tabs like the menu, with a search box)
         self.update_notice_bar=top; self.start_update_check()
         tk.Button(top,text="Switch Company / Year",command=self.company_selection_screen,bg=GOLD,fg=NAVY,border=0,padx=10,pady=5).pack(side="right",padx=5)
@@ -628,6 +640,7 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         notebook=ttk.Notebook(host,style="Tabless.TNotebook"); self.main_notebook=notebook
         filter_bar=tk.Frame(host,bg=LIGHT); filter_bar.pack(fill="x",padx=28 if not side_menu else 14,pady=(6 if side_menu else 0,0))
         notebook.pack(fill="both",expand=True,padx=18 if not side_menu else 8,pady=(6,16 if not side_menu else 8))
+        import arabic_ui
         pages=[("dashboard_tab",tr(lang,"dashboard")),("invoices_tab",tr(lang,"invoices")),("sales_tab","Sales Invoice"),("manual_tab",tr(lang,"manual_entry")),
             ("import_tab",tr(lang,"import")),("parties_tab",tr(lang,"customers_suppliers")),("transactions_tab",tr(lang,"payments_expenses")),("purchases_tab",
                     "Purchases & Expenses"),("inventory_tab","Inventory")]
@@ -667,6 +680,7 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
                 view.itemconfigure(window,width=max(view.winfo_width(),page.winfo_reqwidth()),
                                    height=max(view.winfo_height(),page.winfo_reqheight()))
                 view.configure(scrollregion=view.bbox("all"))
+                if arabic_ui.active() and page.winfo_reqwidth()>view.winfo_width()+1: arabic_ui.show_right_end(view)  # 2.9.118
             frame.bind("<Configure>",resize_page)
             canvas.bind("<Configure>",resize_page)
             setattr(self,attribute,frame); notebook.add(container,text=name); self.main_tab_pages.append(container)
@@ -880,6 +894,17 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         pages=getattr(self,"main_tab_pages",[]); widget=page
         while widget is not None and widget not in pages: widget=getattr(widget,"master",None)
         return widget if widget is not None else page
+
+    def switch_language(self,language):
+        """2.9.118: the whole program in Arabic (right to left) or English, on the same company, year and screen."""
+        import arabic_ui
+        try:
+            current=self.main_notebook.select(); attribute=self._page_attributes[[str(p) for p in self.main_tab_pages].index(str(current))]
+        except (AttributeError,ValueError,IndexError,tk.TclError): attribute=None
+        self.language.set(language); arabic_ui.switch(self,language)
+        self.main_screen()
+        if attribute in getattr(self,"_page_attributes",[]):
+            self.select_main_tab(self.main_tab_pages[self._page_attributes.index(attribute)])
 
     def select_main_tab(self,page):
         page=self.main_tab_container(page)

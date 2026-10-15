@@ -323,7 +323,16 @@ def _read_photo(pytesseract, image, language):
     first = pytesseract.image_to_string(gray, lang="eng", config="--psm 4")
     second = pytesseract.image_to_string(_otsu(gray.resize((gray.width // 2, gray.height // 2))), lang="eng", config="--psm 11")
     arabic = pytesseract.image_to_string(gray, lang=language, config="--psm 6") if "ara" in language else ""
-    return _fix_ocr_text("\n".join((first, second, arabic)))
+    # 2.9.118: dot-matrix amounts on a coloured form (EDL): the red channel drops the pink background, enlarged and
+    # softened the dots join into digits
+    try:
+        from PIL import Image, ImageFilter
+        red = image.convert("RGB").split()[0]
+        red = red.resize((red.width * 2, red.height * 2), Image.LANCZOS).filter(ImageFilter.GaussianBlur(1.2))
+        dots = pytesseract.image_to_string(red.point(lambda p: 255 if p > 110 else 0), lang="eng", config="--psm 11")
+    except (OSError, ValueError, RuntimeError):
+        dots = ""
+    return _fix_ocr_text("\n".join((first, second, arabic, dots)))
 
 
 def _remove_table_lines(image):
@@ -487,6 +496,8 @@ def _vat_amount_after(text, invoice_currency=""):
             continue
         if re.search(r"\b(?:vat|tva|tax)\s*#", line, re.I):
             continue
+        if re.search(r"(?:\bn\s*[°o]\.?|\bno\.?|\bnum[ée]ro|\bnumber)\s*(?:de\s+)?(?:vat|tva|tax)\b", line, re.I):
+            continue  # 2.9.118: "N° TVA : 241559" is the VAT registration number (EDL), not an amount
         if re.search(
             r"\bpaid\s+on\s+behalf\b|\bbefore\s+vat\b|\btotal\s+(?:ht|excl|without)\s+vat\b",
             line, re.I,
@@ -990,9 +1001,31 @@ def _first_invoice(path, pages):
     return "\n".join(texts), ocr_used
 
 
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp")
+
+
+def _image_as_pdf(path):
+    """2.9.118: a photo / scan saved as a picture (JPG, PNG ...) becomes a one-page PDF in a temporary folder, so it is read
+    like a scanned PDF (OCR, photo handling, EDL bills)."""
+    import tempfile
+    from PIL import Image, ImageOps
+    folder = Path(tempfile.mkdtemp(prefix="nanza_image_"))
+    target = folder / (Path(path).stem + ".pdf")
+    with Image.open(path) as picture:
+        ImageOps.exif_transpose(picture).convert("RGB").save(target, "PDF", resolution=150)
+    return target
+
+
 def read_invoice_pdf(path):
     """Best guess of invoice number, date, party, currency and amounts. Always review before saving."""
     path = Path(path)
+    if path.suffix.lower() in IMAGE_SUFFIXES:  # 2.9.118: a photo of the invoice / bill is read too
+        import shutil
+        converted = _image_as_pdf(path)
+        try: result = read_invoice_pdf(converted)
+        finally: shutil.rmtree(converted.parent, ignore_errors=True)
+        result["file"], result["path"] = path.name, str(path)
+        return result
     text_error = ""
     pages = _page_count(path)
     if pages > 3:
@@ -1204,12 +1237,41 @@ def _parse_invoice_text(path, text):
         if True:
             result.update(bill); inferred.append("amounts found by the 11% VAT check of a utility bill (base + VAT + stamp / rounding)")
             if not result.get("currency"): result["currency"] = "LBP"
-    if re.search(r"(?i)\bedl\b|ed[li]\W{0,2}[gq]ov|électricité\s+du\s+liban|كهرباء\s+لبنان|\btranches?\b.*\bbranchement|\bbranchement\b.*\btranches?\b", text, re.S) \
-            and not (result.get("supplier_hint") or "").strip():
+    is_edl = bool(re.search(r"(?i)\bedl\b|ed[li]\W{0,2}[gq]ov|électricité\s+du\s+liban|كهرباء\s+لبنان|\btranches?\b.*\bbranchement|\bbranchement\b.*\btranches?\b", text, re.S))
+    if is_edl and not (result.get("supplier_hint") or "").strip():
         result["supplier_hint"] = "Electricité du Liban (EDL)"
+    if is_edl and not bill and (result.get("total") is None or result.get("subtotal") is None):
+        edl = _edl_from_base(text)  # 2.9.118: a photo where only the base amount could be read
+        if edl:
+            result.update(edl); result["currency"] = result.get("currency") or "LBP"
+            inferred.append("EDL bill: VAT 11% of the base, 100,000 stamp, total rounded up to the thousand - check against the bill")
     result["inferred"] = inferred
     result["notes"] = _invoice_notes(result, text)
     return result
+
+
+def _edl_from_base(text):
+    """2.9.118: an EDL bill prints its base (total of the tranches) several times: TOTAL TRANCHES, the fixed fees total, the
+    energy services total. When OCR could read only that amount: VAT = 11% of it, the stamp 100,000 and the total rounded up
+    to the thousand (EDL: 671,250 + 73,838 + 100,000 = 845,088 -> 846,000). Used only when one amount stands out: its total
+    is printed too, or it is the only one repeated, or the only amount read."""
+    skip = set(re.findall(r"(?i)(?:n\s*[°o]\.?|no\.?)\s*(?:de\s+)?tva\s*[:\-]?\s*(\d{5,9})", text or ""))
+    counts = {}
+    for found in re.findall(r"(?<![\d.,])(\d{1,3}(?:,\d{3})+|[1-9]\d{4,7})(?![\d,])", text or ""):
+        if found in skip: continue
+        value = int(found.replace(",", ""))
+        if 10000 <= value <= 500000000 and value % 50 == 0: counts[value] = counts.get(value, 0) + 1
+    def billed(base):
+        return -(-(base + int(base * 0.11 + 0.5) + 100000) // 1000) * 1000
+    confirmed = [value for value in counts if billed(value) in counts]  # the base whose total is printed too
+    repeated = [value for value, count in counts.items() if count >= 2]
+    if len(confirmed) == 1: base = confirmed[0]
+    elif len(repeated) == 1: base = repeated[0]
+    elif len(counts) == 1: base = next(iter(counts))
+    else: return None
+    vat = int(base * 0.11 + 0.5); total = billed(base)
+    return {"subtotal": float(base), "vat": float(vat), "total": float(total), "taxable_subtotal": float(base),
+            "exempt_subtotal": float(total - base - vat), "acquisition_cost": float(base)}
 
 
 def _utility_bill(text):
@@ -1370,6 +1432,9 @@ def read_invoice_pdf_pages(path, progress=None, cancel=None):
     """
     from pypdf import PdfReader
     path = Path(path)
+    if path.suffix.lower() in IMAGE_SUFFIXES:  # 2.9.118: a photo is one invoice
+        result = read_invoice_pdf(path); result.update(pages=[1], support_pages=[], page_range="Page 1")
+        return [result]
     reader = PdfReader(str(path))
     page_texts = [_better_text(path, _page_text(page), _page_text(page, True)) for page in reader.pages]  # 2.9.85: plain or layout
     blank_pages = {index for index, text in enumerate(page_texts) if len(text.strip()) < 20}

@@ -33,6 +33,8 @@ messagebox.askyesno = lambda *a, **k: True
 from help_topics import TOPICS, WIZARD  # noqa: E402
 
 GOLD, NAVY = (208, 165, 87), (16, 42, 67)
+ARABIC = None  # arabic_ui while the Arabic pictures are made
+ENGLISH = {}  # text shown -> English text (on Linux the Arabic shown is joined / reordered first)
 WIDTH = 1200  # pictures are scaled to this width
 
 
@@ -66,6 +68,9 @@ def find(widget, text):
         try:
             if isinstance(item, (tkinter.Button, tkinter.Label, tkinter.Radiobutton, tkinter.Checkbutton)) and item.winfo_ismapped():
                 value = str(item.cget("text")).strip()
+                if ARABIC:  # 2.9.118: the Arabic screens - the English behind the text, or the text itself in Arabic
+                    if value == str(ARABIC.translate(text)).strip(): return item
+                    value = ENGLISH.get(value) or ARABIC.english(value).strip()
                 if value == text or (starts and value.startswith(text)): return item
             stack.extend(item.winfo_children())
         except tkinter.TclError:
@@ -96,42 +101,75 @@ def picture(window, marks, name):
     return f"img/{name}.png"
 
 
-def build():
-    url, company, year = demo_company()
+def shots(url, company, year, language):
+    """The pictures of every topic in one language ('en' / 'ar'): {key: image}."""
+    global ARABIC
     import desktop
+    suffix = "" if language == "en" else "_" + language
+    if language == "ar":
+        import arabic_ui
+        ARABIC = arabic_ui
+        if sys.platform != "win32":  # Linux Tk: join and order the Arabic letters (see arabic_preview.py)
+            import arabic_preview
+            plain = arabic_ui.translate
+
+            def shown(text):
+                result = arabic_preview.visual(plain(text))
+                if isinstance(text, str) and result != text: ENGLISH[str(result).strip()] = text.strip()
+                return result
+            arabic_ui.translate = shown
+            to_english = arabic_ui.english
+            arabic_ui.english = lambda text: ENGLISH.get(str(text).strip()) or to_english(text)
     app = desktop.SaberApp(); app.geometry("1440x900+0+0"); app.update()
-    app.server.set(url); app.password.set("admin12345"); app.login(); app.update()
+    app.server.set(url); app.password.set("admin12345"); app.language.set(language); app.login(); app.update()
     app.client.select_company_year(company["id"], year); app.current_company = company; app.current_fiscal_year = int(year)
     app.main_screen(); app.update()
-    pages = dict(zip(app._page_attributes, app.main_tab_pages)); done = []
-    for attribute, title_en, title_ar, intro_en, intro_ar, steps in TOPICS:
+    pages = dict(zip(app._page_attributes, app.main_tab_pages)); done = {}
+    for attribute, _title_en, _title_ar, _intro_en, _intro_ar, steps in TOPICS:
         if attribute not in pages: continue
         app.select_main_tab(pages[attribute]); app.update()
         page = getattr(app, attribute)
         marks = [(n, find(page, text) if text else None) for n, (text, _en, _ar) in enumerate(steps, 1)]
         missing = [text for (n, w), (text, _e, _a) in zip(marks, steps) if text and w is None]
-        if missing: print(f"  {attribute}: not found on the screen: {missing}")
-        done.append((attribute, title_en, title_ar, intro_en, intro_ar, steps, picture(app, marks, attribute)))
-        print("picture", attribute)
-    key, title_en, title_ar, intro_en, intro_ar, steps = WIZARD
+        if missing: print(f"  {attribute} ({language}): not found on the screen: {missing}")
+        done[attribute] = picture(app, marks, attribute + suffix)
+        print("picture", attribute, language)
+    key, _title_en, _title_ar, _intro_en, _intro_ar, steps = WIZARD
     window = app.create_company_dialog(); window.geometry("640x520+200+120"); app.update()
     find(window, "Next").invoke(); app.update()
     marks = [(n, find(window, text) if text else None) for n, (text, _en, _ar) in enumerate(steps, 1)]
-    done.insert(1, (key, title_en, title_ar, intro_en, intro_ar, steps, picture(window, marks, key))); window.destroy()
+    done[key] = picture(window, marks, key + suffix); window.destroy()
     app.destroy()
+    return done
+
+
+def build():
+    url, company, year = demo_company()
+    english = shots(url, company, year, "en")
+    arabic = shots(url, company, year, "ar")  # 2.9.118: the help in Arabic shows the program in Arabic
+    done = [(key, title_en, title_ar, intro_en, intro_ar, steps, english[key], arabic.get(key))
+            for key, title_en, title_ar, intro_en, intro_ar, steps in list(TOPICS) + [WIZARD] if key in english]
+    done.insert(1, done.pop())  # the new company wizard comes second, after the dashboard
     (OUT / "help.html").write_text(page_html(done), encoding="utf-8")
     print("written", OUT / "help.html")
+
+
+def pictures(image, image_ar, title_en, title_ar):
+    e = html.escape
+    if not image_ar: return f'<a href="{image}" target="_blank"><img src="{image}" alt="{e(title_en)}" loading="lazy"></a>'
+    return (f'<a class="en" href="{image}" target="_blank"><img src="{image}" alt="{e(title_en)}" loading="lazy"></a>'
+            f'<a class="ar" href="{image_ar}" target="_blank"><img src="{image_ar}" alt="{e(title_ar)}" loading="lazy"></a>')
 
 
 def page_html(topics):
     e = html.escape
     nav = "".join(f'<a href="#{t[0]}"><span class="en">{e(t[1])}</span><span class="ar">{e(t[2])}</span></a>' for t in topics)
     cards = []
-    for key, title_en, title_ar, intro_en, intro_ar, steps, image in topics:
+    for key, title_en, title_ar, intro_en, intro_ar, steps, image, image_ar in topics:
         items = "".join(f'<li><b>{n}</b><span class="en">{e(en)}</span><span class="ar">{e(ar)}</span></li>' for n, (_t, en, ar) in enumerate(steps, 1))
         cards.append(f'''<section class="topic" id="{key}"><h2><span class="en">{e(title_en)}</span><span class="ar">{e(title_ar)}</span></h2>
 <p class="intro"><span class="en">{e(intro_en)}</span><span class="ar">{e(intro_ar)}</span></p>
-<a href="{image}" target="_blank"><img src="{image}" alt="{e(title_en)}" loading="lazy"></a><ol>{items}</ol></section>''')
+{pictures(image, image_ar, title_en, title_ar)}<ol>{items}</ol></section>''')
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nanza Accounting - Help</title><style>
 :root{{--navy:#102A43;--gold:#D0A557;--page:#F4F7FA;--line:#DDE4EC;--muted:#5F6B76}}
@@ -147,7 +185,7 @@ nav a{{display:block;padding:7px 10px;border-radius:6px;color:var(--navy);text-d
 .topic img{{width:100%;border:1px solid var(--line);border-radius:8px}}
 ol{{list-style:none;padding:0;margin:16px 0 0}} li{{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-top:1px solid #EEF2F6;font-size:15px}}
 li b{{flex:none;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;border:2px solid var(--gold);display:grid;place-items:center;font-size:14px}}
-.ar{{display:none}} body.arabic .en{{display:none}} body.arabic .ar{{display:inline}} body.arabic{{direction:rtl}}
+.ar{{display:none}} body.arabic .en{{display:none}} body.arabic .ar{{display:inline}} body.arabic a.ar{{display:block}} body.arabic{{direction:rtl}}
 body.arabic nav a .ar{{display:block}} nav a .en{{display:block}} body.arabic nav a .en{{display:none}}
 @media (max-width:820px){{.wrap{{grid-template-columns:1fr}} nav{{position:static}}}}
 </style></head><body>
