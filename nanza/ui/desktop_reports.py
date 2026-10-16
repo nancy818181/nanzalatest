@@ -427,7 +427,7 @@ class ReportsMixin:
             ttk.Combobox(range_row,textvariable=var,values=choices,width=27).pack(side="left",padx=(2,8))
         self.action_button(range_row,"Apply",self.load_ageing_report).pack(side="left",padx=4)
         tk.Label(range_row,text="Type a number or name, or choose from the list.",bg=LIGHT,fg="#5f6b76").pack(side="left",padx=8)
-        tk.Label(aging,text="Past dates use the current invoice outstanding balance; future dates show the expected lateness if no further payment is made.",
+        tk.Label(aging,text="A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made.",
             bg=LIGHT,fg="#5f6b76",anchor="w").pack(fill="x",padx=12)
         self.aging_tree=self.table(aging,[("kind","Type",85),("party","Customer / Supplier",220),("invoice","Invoice",110),("due","Due Date",100),("currency",
                 "Currency",75),("outstanding","Outstanding",120),("days","Days Overdue",110),("bucket","Aging Bucket",100)]); self.report_buttons(aging,"aging")

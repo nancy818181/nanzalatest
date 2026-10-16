@@ -109,6 +109,7 @@ TEXTS = {
     "Additional disclosures": ("Informations complémentaires", "إفصاحات إضافية"),
     "Approval of the financial statements": ("Approbation des états financiers", "الموافقة على البيانات المالية"),
     "Financial Statements, Notes and Audit Report": ("États financiers, notes annexes et rapport d'audit", "البيانات المالية والإيضاحات وتقرير التدقيق"),
+    "Financial Statements and Notes": ("États financiers et notes annexes", "البيانات المالية والإيضاحات"),  # 2.9.121
     "Year ended ": ("Exercice clos le ", "السنة المنتهية في "), "Period ended ": ("Période close le ", "الفترة المنتهية في "),
     " - with comparative figures": (" - avec chiffres comparatifs", " - مع أرقام المقارنة"),
     "Presentation currency: {basis}": ("Monnaie de présentation : {basis}", "عملة العرض: {basis}"), "Auditor: {firm}": ("Auditeur : {firm}", "مدقق الحسابات: {firm}"),

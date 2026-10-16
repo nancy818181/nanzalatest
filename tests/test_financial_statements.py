@@ -85,6 +85,13 @@ class FinancialStatementsTest(unittest.TestCase):
         self.assertEqual(wb.sheetnames[:3],['Cover',"Auditor's Report",'Financial Position']);wb.close()
         text=' '.join(p.extract_text() for p in PdfReader(pdf).pages)
         self.assertIn("INDEPENDENT AUDITOR",text);self.assertIn('2025',text);self.assertIn('STATEMENT OF FINANCIAL POSITION',text)
+        # 2.9.121: management financial statements: no auditor's report at all
+        management=fs.build({2025:self.db},{'years':'2025','auditor_report':False})
+        self.assertFalse([s for s in management['sections'] if s.get('kind')=='audit'])
+        export_sections_excel(xlsx,management['title'],management['meta'],management['sections'])
+        export_sections_pdf(pdf,management['title'],management['meta'],management['sections'])
+        wb=load_workbook(xlsx); self.assertNotIn("Auditor's Report",wb.sheetnames); self.assertEqual(wb.sheetnames[:2],['Cover','Financial Position']); wb.close()
+        self.assertNotIn("INDEPENDENT AUDITOR",' '.join(p.extract_text() for p in PdfReader(pdf).pages))
 
 
 class FinancialStatementsApiTest(unittest.TestCase):

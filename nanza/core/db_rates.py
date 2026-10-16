@@ -268,6 +268,14 @@ class RatesStore:
         state["table"]=table; state["table_signature"]=state["signature"]
         return table
 
+    def require_eur_rate(self, currency):
+        """2.9.121: an EUR document needs a real EUR rate (before, 1 EUR = 1 USD was used when none was entered)."""
+        if str(currency or "").upper() != "EUR": return
+        table=self._rate_table()
+        if not (table.get(("EUR","USD")) or table.get(("USD","EUR")) or table.get(("EUR","LBP")) or table.get(("LBP","EUR"))):
+            raise ValueError("No EUR exchange rate is entered: enter the EUR rate first (Settings > Exchange Rates), "
+                             "so the amounts and the VAT of this EUR document are converted at a real rate")
+
     def _rate_factor(self, source, target, rate_date, target_key):
         amount=Decimal("1")
         import bisect
@@ -292,9 +300,9 @@ class RatesStore:
             return None
         direct=find_rate(source,target)
         if direct is not None: return amount*direct
-        eur=find_rate("EUR","USD") or first_after("EUR","USD")
-        if eur is None and "EUR" in (source,target):  # 2.9.121: before, 1 EUR = 1 USD was assumed (wrong amounts and VAT)
-            raise ValueError(f"No EUR rate for {rate_date}: enter the EUR rate (Settings > Exchange Rates)")
+        eur=find_rate("EUR","USD") or first_after("EUR","USD")  # 2.9.121: a real rate (after the day when none before)
+        # no EUR rate at all: the equivalent columns of other documents keep the old reference; an EUR DOCUMENT is refused
+        # before it is saved (require_eur_rate), so its amounts and VAT are never converted with a made-up rate
         usd_rates={"USD":Decimal("1"),"LBP":Decimal("1")/Decimal("89500"),
                    "EUR":eur or Decimal("1"),
                    "AED":Decimal("1")/Decimal("3.6725")}

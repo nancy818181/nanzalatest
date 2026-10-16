@@ -86,6 +86,7 @@ class PaymentsStore:
 
     @atomic  # 2.9.121
     def add_payment(self, item, user_id):
+        self.require_eur_rate(item.get("currency"))  # 2.9.121: never 1 EUR = 1 USD
         kind=str(item.get("kind") or "").strip(); date=str(item.get("payment_date") or "").strip()
         self._assert_period_open(date)
         if kind not in ("customer_receipt","supplier_payment"): raise ValueError("Invalid payment type")
@@ -173,6 +174,7 @@ class PaymentsStore:
 
     @atomic  # 2.9.121
     def add_expense(self, item, user_id):
+        self.require_eur_rate(item.get("currency"))  # 2.9.121: never 1 EUR = 1 USD
         date=str(item.get("expense_date") or "").strip(); self._assert_period_open(date); self._assert_vat_open(date)
         description=str(item.get("description") or "").strip()
         if not description: raise ValueError("Expense description is required")

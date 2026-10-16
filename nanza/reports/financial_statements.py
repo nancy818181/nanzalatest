@@ -431,7 +431,9 @@ def build(databases, options, others=(), master=None):
         if title: audit_rows.append([t(title).upper()])
         audit_rows += [[line] for line in text.splitlines() if line.strip()]
     signature = [line for line in _text(cfg, 'audit', 'Signature, address and report date', AUDIT, values, language).splitlines() if line.strip()]
-    sections.append(dict(kind='audit', heading=t("INDEPENDENT AUDITOR'S REPORT"), headers=['Text'], rows=audit_rows, total_rows=[], narrative=True, page_break=True, center=True,
+    if options.get('auditor_report', True) is False:  # 2.9.121: management financial statements - no auditor's report at all
+        audit_rows = None
+    if audit_rows is not None: sections.append(dict(kind='audit', heading=t("INDEPENDENT AUDITOR'S REPORT"), headers=['Text'], rows=audit_rows, total_rows=[], narrative=True, page_break=True, center=True,
                          keep_last=len(signature), logo_b64=cfg.get('auditor_logo') or ''))  # 2.9.97: the auditor's logo on top of his report
 
     # ---- note numbers for the statement lines that have amounts
@@ -568,7 +570,7 @@ def build(databases, options, others=(), master=None):
         if not d['count']: warnings.append(f"{d['label']}: no posted movements in the period.")
         if not d['cash']['reviewed']: warnings.append(f"{d['label']}: cash flows are calculated from the balance sheet movements (indirect method); review the classification of investing and financing items.")
     if len(data) == 1: warnings.append('Single period: IAS 1 requires comparative figures for the preceding period.')
-    warnings.append("The auditor's report is a template: the auditor completes and signs it after the audit. Remove this page before issuing.")
+    if audit_rows is not None: warnings.append("The auditor's report is a template: the auditor completes and signs it after the audit. Remove this page before issuing.")
     sections.append(dict(kind='review', heading='PREPARER REVIEW POINTS (remove before issue)', headers=['Point'], rows=[[w] for w in warnings], total_rows=[], narrative=True, page_break=True))
     for key, label in INFO_FIELDS.items():
         if values[key] in (f'[{label}]', f"[{i18n.INFO_LABELS.get(language, {}).get(key, label)}]") and key not in ('tax_number',):
@@ -578,7 +580,8 @@ def build(databases, options, others=(), master=None):
             t('Presentation currency: {basis}', basis=basis)]
     firm = str((cfg.get('info') or {}).get('auditor_firm') or '').strip()
     if firm: meta.append(t('Auditor: {firm}', firm=firm))
-    return dict(title=t('Financial Statements, Notes and Audit Report'), meta=meta, sections=sections, language=language, rtl=language == 'ar')
+    title = t('Financial Statements, Notes and Audit Report') if audit_rows is not None else t('Financial Statements and Notes')  # 2.9.121
+    return dict(title=title, meta=meta, sections=sections, language=language, rtl=language == 'ar')
 
 
 def year_data(db, year, basis):

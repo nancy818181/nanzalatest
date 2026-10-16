@@ -810,7 +810,7 @@ class FinalFeaturesMixin:
     def choose_user_companies(self):
         """2.9.121: the companies this user may open (none ticked = every company, as before). Administrators open every company."""
         try: companies = self.client.companies()
-        except Exception as exc: return messagebox.showerror("Users", str(exc))
+        except (RuntimeError, OSError, ValueError) as exc: return messagebox.showerror("Users", str(exc))
         window = tk.Toplevel(self); window.title("Companies of this user"); window.configure(bg=LIGHT, padx=14, pady=10); window.transient(self)
         tk.Label(window, text="Tick the companies this user may open. None ticked = every company.", bg=LIGHT, fg=MUTED).pack(anchor="w", pady=(0, 6))
         ticks = {}

@@ -271,6 +271,9 @@ class V22Mixin:
         tk.Label(fsbar, text="Language", bg=LIGHT).pack(side="left", padx=(8, 2))
         ttk.Combobox(fsbar, textvariable=self.br_fs_language, values=["English", "Français", "العربية"], state="readonly", width=9).pack(side="left", padx=2)
         tk.Button(fsbar, text="Edit Notes / Audit / Mapping", command=self.edit_financial_report, bg=NAVY, fg="white").pack(side="left", padx=5)
+        # 2.9.121: management accounts without the auditor's report (ticked = as before, with the auditor's report)
+        self.br_fs_audit = tk.BooleanVar(value=True)
+        tk.Checkbutton(fsbar, text="With the auditor's report", variable=self.br_fs_audit, bg=LIGHT).pack(side="left", padx=5)
         bar3 = tk.Frame(page, bg=LIGHT); bar3.pack(fill="x", padx=8, pady=(2, 4))
         tk.Button(bar3, text="Show", command=self.run_business_report, bg=GOLD, fg=NAVY, border=0, padx=22, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
         for text, fmt in (("Print Preview", "preview"), ("Print", "print"), ("Excel", "xlsx"), ("PDF", "pdf")):
@@ -303,6 +306,7 @@ class V22Mixin:
         options.pop("only", None)
         if hasattr(self, "br_fs_mode"):
             options.update(fs_mode="period" if self.br_fs_mode.get().startswith("Period") else "years", fs_compare=bool(self.br_fs_compare.get()))
+        if hasattr(self, "br_fs_audit"): options["auditor_report"] = bool(self.br_fs_audit.get())  # 2.9.121
         if hasattr(self, "br_fs_language"):
             options["language"] = {"Français": "fr", "العربية": "ar"}.get(self.br_fs_language.get(), "en")
         return options

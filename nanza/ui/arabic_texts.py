@@ -3660,6 +3660,10 @@ PATTERNS = PATTERNS + (
     (r"(\d+) sales invoice\(s\) with a VAT typed by hand that is not the rate: (.+)", "{1} فاتورة مبيع فيها ضريبة مكتوبة يدوياً لا تطابق النسبة: {2}"),
     (r"(.+): only (\S+) (\w+) is still open - allocate at most that; the rest of the payment stays unapplied \(an advance\) on the account",
      "{1}: المتبقي غير المسدد {2} {3} فقط - خصّص هذا المبلغ كحد أقصى؛ الباقي يبقى دفعة مسبقة على الحساب"),
-    (r"No EUR rate for (.+): enter the EUR rate \(Settings > Exchange Rates\)", "لا يوجد سعر يورو بتاريخ {1}: أدخل سعر اليورو (الإعدادات > أسعار الصرف)"),
+    (r"No EUR exchange rate is entered: enter the EUR rate first \(Settings > Exchange Rates\), so the amounts and the VAT of this EUR document are converted at a real rate",
+     "لا يوجد سعر صرف لليورو: أدخل سعر اليورو أولاً (الإعدادات > أسعار الصرف) لتُحوَّل مبالغ وضريبة هذا المستند باليورو بسعر حقيقي"),
     (r"Posted like (.+) of (.+) \(learned from (\d+) invoice\(s\)\)", "قُيّدت مثل {1} من {2} (متعلَّمة من {3} فاتورة)"),
 )
+AR.setdefault("A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made.",
+              "التاريخ الماضي يعرض ما كان مفتوحاً في ذلك التاريخ (لا تُحتسب المقبوضات / المدفوعات بعده)؛ التاريخ المستقبلي يعرض التأخير المتوقع إذا لم يُدفع شيء آخر.")
+AR.setdefault("With the auditor's report", "مع تقرير مدقق الحسابات")

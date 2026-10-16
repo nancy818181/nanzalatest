@@ -42,8 +42,9 @@ class ReviewFixesTest(unittest.TestCase):
         with sqlite3.connect(self.db.path) as connection:
             connection.execute("DELETE FROM exchange_rates WHERE from_currency='EUR' OR to_currency='EUR'")
         self.db.__dict__.pop("_rate_state", None)
-        with self.assertRaisesRegex(ValueError, "No EUR rate"):
-            self.db._converted_amount(Decimal("1000"), "EUR", "USD", "15-03-2026")
+        with self.assertRaisesRegex(ValueError, "No EUR exchange rate"):  # an EUR document waits for a real rate
+            self.db.create_manual_invoice({"invoice_number": "E-1", "invoice_date": "15-03-2026", "party_name": "Cedar Trading", "kind": "sale",
+                                           "currency": "EUR"}, [{"description": "Consulting", "quantity": 1, "unit_price": 1000}], self.user)
         self.db.save_exchange_rate({"rate_date": "20-03-2026", "from_currency": "EUR", "to_currency": "USD", "rate": "1.2"}, self.user)
         self.assertEqual(round(Decimal(str(self.db._converted_amount(Decimal("1000"), "EUR", "USD", "15-03-2026"))), 2), Decimal("1200.00"))
         self.db.save_exchange_rate({"rate_date": "10-03-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, self.user)

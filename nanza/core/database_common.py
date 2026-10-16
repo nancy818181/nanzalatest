@@ -363,6 +363,9 @@ def atomic(method):
 
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
-        with self.connect():
+        with self.connect() as connection:
+            # the write lock is taken at the start (waiting for another program's save, up to the busy timeout): a transaction
+            # that first reads and then writes could otherwise be refused at once ("database is locked") by SQLite
+            if not connection.in_transaction: connection.execute("BEGIN IMMEDIATE")
             return method(self, *args, **kwargs)
     return wrapper

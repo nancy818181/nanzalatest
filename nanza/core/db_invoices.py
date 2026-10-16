@@ -59,6 +59,7 @@ class InvoicesStore:
             return {"deleted": deleted, "backup": backup_path}
 
     def import_invoice(self, item, user_id):
+        self.require_eur_rate(item.get("currency"))  # 2.9.121: never 1 EUR = 1 USD
         # No uniqueness constraint is applied to invoice numbers: duplicates are intentionally retained.
         self._assert_period_open(item.get("invoice_date")); self._assert_vat_open(item.get("invoice_date"))
         defaults=self.default_accounts()  # 2.9.81: Settings > Accounting Settings
@@ -241,6 +242,7 @@ class InvoicesStore:
 
     @atomic  # 2.9.121
     def create_manual_invoice(self, item, line_items, user_id):
+        self.require_eur_rate(item.get("currency"))  # 2.9.121: never 1 EUR = 1 USD
         if not isinstance(line_items, list) or not line_items:
             raise ValueError("Add at least one invoice item")
         normalized = []
@@ -709,7 +711,6 @@ class InvoicesStore:
                 FROM invoice_items ii WHERE ii.invoice_id=? ORDER BY ii.id""",(invoice_id,invoice_id,invoice_id,invoice_id,invoice_id))]
         return {"invoice":invoice,"items":items}
 
-    @atomic  # 2.9.121
     def create_invoice_return(self, invoice_id, returns, return_date, user_id, request_id):
         request_id=str(request_id or "").strip()
         if not request_id or len(request_id)>128:
@@ -717,7 +718,7 @@ class InvoicesStore:
         request_hash=hashlib.sha256(json.dumps({"invoice_id":int(invoice_id),"items":returns,"return_date":return_date},
             sort_keys=True,separators=(",",":"),default=str).encode("utf-8")).hexdigest()
         with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
+            if not db.in_transaction: db.execute("BEGIN IMMEDIATE")  # its own transaction (2.9.121: or the one of a larger save)
             previous=db.execute("SELECT * FROM invoices WHERE return_request_id=?",(request_id,)).fetchone()
             if previous:
                 if int(previous["linked_invoice_id"] or 0)!=int(invoice_id):

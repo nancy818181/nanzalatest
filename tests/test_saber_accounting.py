@@ -70,6 +70,7 @@ class SaberAccountingTest(unittest.TestCase):
             self.assertEqual(rows[5]["currency_issue"], "")
 
             db=Database(Path(folder)/"currency.db"); db.initialize("secret")
+            db.save_exchange_rate({"rate_date": "01-09-2026", "from_currency": "EUR", "to_currency": "USD", "rate": "1.1"}, 1)  # 2.9.121: EUR documents need a real rate
             user=db.user_for_token(db.login("admin","secret")["token"])
             for row in rows: db.import_invoice(row,user["id"])
             self.assertEqual({r["currency"] for r in db.dashboard()}, {"USD","EUR","LBP","AED"})
@@ -479,6 +480,7 @@ class SaberAccountingTest(unittest.TestCase):
     def test_account_name_edit_and_split_expense(self):
         with tempfile.TemporaryDirectory() as folder:
             db=Database(Path(folder)/"expense_split.db"); db.initialize("secret")
+            db.save_exchange_rate({"rate_date": "01-09-2026", "from_currency": "EUR", "to_currency": "USD", "rate": "1.1"}, 1)  # 2.9.121
             user=db.user_for_token(db.login("admin","secret")["token"])
             created=db.save_account({"code":"","name_en":"Original name","type":"expense","parent_code":"6011"},user["id"])
             db.rename_account(created["code"],"Updated expense name",user["id"])

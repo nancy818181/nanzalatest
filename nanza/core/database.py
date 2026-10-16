@@ -752,7 +752,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 saved_id=db.execute("INSERT INTO users(username,password_hash,role,language,active,expires_at,permissions,companies,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
                     (username,hash_password(password),role,language,active,expires,permissions,companies,utcnow())).lastrowid
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (acting_user_id,"save","user",saved_id,json.dumps({"username":username,"role":role,"active":active,"expires_at":expires,"permissions":json.loads(permissions),"companies":companies}),utcnow()))
+                (acting_user_id,"save","user",saved_id,json.dumps({"username":username,"role":role,"active":active,"expires_at":expires,
+                           "permissions":json.loads(permissions),"companies":companies}),utcnow()))
         return next(row for row in self.list_users() if row["id"]==saved_id)
 
     def _account_id(self, db, code):

@@ -486,7 +486,8 @@ def export_financial_excel(path, title, meta, sections):
     cover = wb.active; cover.title = words["sheets"]["cover"]; setup(cover, [14, 30, 30, 14])
     row = 8; centred(cover, row, company.upper(), 4, 20, True, height=34); row += 2
     centred(cover, row, words["title"], 4, 15, True, height=22); row += 1
-    centred(cover, row, words["sub"], 4, 12, True, height=20); row += 2
+    if any(s.get("kind") == "audit" for s in sections): centred(cover, row, words["sub"], 4, 12, True, height=20)  # 2.9.121: management accounts: no auditor
+    row += 2
     if period: centred(cover, row, period, 4, 12); row += 1
     if currency: centred(cover, row, currency, 4, 10, colour="5F6B76"); row += 1
     if auditor: row += 4; centred(cover, row, auditor, 4, 11, True)
@@ -553,7 +554,8 @@ def export_financial_excel(path, title, meta, sections):
     wb.save(path)
 
 
-FINANCIAL_TITLES = ("Financial Statements,", "États financiers,", "البيانات المالية والإيضاحات")  # 2.9.109: the pack in English, French, Arabic
+FINANCIAL_TITLES = ("Financial Statements,", "États financiers,", "البيانات المالية والإيضاحات",
+                    "Financial Statements and Notes", "États financiers et notes")  # 2.9.121: management accounts (no auditor's report)  # 2.9.109: the pack in English, French, Arabic
 
 
 def is_financial_pack(title):
@@ -696,8 +698,9 @@ def _financial_cover(doc, styles, regular, bold_font, meta, sections, pages=None
                                                                                  leading=size * 1.3, textColor=colors.HexColor(colour), spaceAfter=space)
     story = [Spacer(1, doc.height * 0.22),
              pdf_paragraph(company.upper(), centre("cover-company", 22, bold_font, space=6*mm), True),
-             pdf_paragraph(words["title"], centre("cover-title", 16, bold_font, space=2*mm), True),
-             pdf_paragraph(words["sub"], centre("cover-sub", 12, bold_font, space=8*mm), True)]
+             pdf_paragraph(words["title"], centre("cover-title", 16, bold_font, space=2*mm), True)]
+    if any(s.get("kind") == "audit" for s in sections): story.append(pdf_paragraph(words["sub"], centre("cover-sub", 12, bold_font, space=8*mm), True))  # 2.9.121
+    else: story.append(Spacer(1, 8*mm))
     for suffix in (" - with comparative figures", " - avec chiffres comparatifs", " - مع أرقام المقارنة"): period = period.replace(suffix, "")
     if period: story.append(pdf_paragraph(period, centre("cover-period", 12, regular, space=2*mm)))
     if currency: story.append(pdf_paragraph(currency, centre("cover-currency", 10, regular, "#5F6B76", space=14*mm)))
