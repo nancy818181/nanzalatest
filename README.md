@@ -1,5 +1,8 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.122 (VAT payable rounding confirmed)
+- **VAT payable rounded up to the next LBP 10,000 (MoF decision 1195, from 25-11-2024):** confirmed by the accountant (LACPA). The amount is unchanged; the "unverified estimate" warnings on the VAT return, the export and the filing worksheet are removed.
+
 ## Version 2.9.121 (every document saved whole; reviewed with ChatGPT; users per company; licence ended = read only)
 - **Reviewed by two AIs and checked in the code:** ChatGPT reviewed the architecture and then the posting code (invoices, payments, VAT return, exchange rates); every point was checked in the code before anything was changed. What was confirmed is fixed below; what was not accurate was left as it is.
 - **Every document is saved whole, or not at all:** an invoice (with its lines, entry, stock, VAT reclass and payment), a receipt / payment and its allocations, an expense, a journal voucher, a return, a credit note, a cancellation is ONE transaction. Before, an invoice was saved in several steps; a power cut between two steps could leave an invoice without its lines or its stock. A test stops the program in the middle of an invoice and checks that nothing of it is in the file and the file is intact. The data file now writes each saved document to the disk before Save answers (SQLite synchronous FULL).
