@@ -93,6 +93,8 @@ TOPICS = [
     ("settings_tab", "Settings, users and backups", "الإعدادات والمستخدمون والنسخ الاحتياطي",
      "Users and permissions, backups, rates, numbering and accounting settings.", "المستخدمون والصلاحيات والنسخ الاحتياطي وأسعار الصرف والترقيم وإعدادات المحاسبة.",
      [("Save User", "Users & Permissions: add a user with a role and the screens he may use.", "المستخدمون والصلاحيات: أضف مستخدماً مع دوره والشاشات المسموحة له."),
+      ("Companies...", "Companies...: the companies this user may open (none ticked = every company). An accounting office gives each clerk only his clients.",
+       "الشركات...: الشركات التي يحق لهذا المستخدم فتحها (لا شيء محدد = كل الشركات). مكتب المحاسبة يعطي كل موظف زبائنه فقط."),
       (None, "Backup & Restore: Create Backup Now, and a second copy on OneDrive or a USB disk.", "النسخ الاحتياطي: Create Backup Now، ونسخة ثانية على OneDrive أو قرص USB."),
       (None, "Numbering: the prefix of each document, the branch in the number, and Renumber by date.", "الترقيم: بادئة كل مستند، والفرع في الرقم، وإعادة الترقيم حسب التاريخ.")]),
 ]

@@ -433,7 +433,8 @@ def build(databases, options, others=(), master=None):
     signature = [line for line in _text(cfg, 'audit', 'Signature, address and report date', AUDIT, values, language).splitlines() if line.strip()]
     if options.get('auditor_report', True) is False:  # 2.9.121: management financial statements - no auditor's report at all
         audit_rows = None
-    if audit_rows is not None: sections.append(dict(kind='audit', heading=t("INDEPENDENT AUDITOR'S REPORT"), headers=['Text'], rows=audit_rows, total_rows=[], narrative=True, page_break=True, center=True,
+    if audit_rows is not None:
+        sections.append(dict(kind='audit', heading=t("INDEPENDENT AUDITOR'S REPORT"), headers=['Text'], rows=audit_rows, total_rows=[], narrative=True, page_break=True, center=True,
                          keep_last=len(signature), logo_b64=cfg.get('auditor_logo') or ''))  # 2.9.97: the auditor's logo on top of his report
 
     # ---- note numbers for the statement lines that have amounts
