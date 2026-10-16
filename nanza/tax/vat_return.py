@@ -179,10 +179,9 @@ def list_saved_returns(db):
 
 
 def _rounded_up(value, day):
-    """Legacy worksheet estimate: 10,000 LBP ceiling from 25-11-2024.
+    """The VAT payable in LBP is rounded up to the next 10,000 LBP from 25-11-2024 (MoF decision 1195).
 
-    The cited MoF decision 1195 has not been verified as a VAT payable rule.
-    Do not treat this estimate as a filing instruction.
+    2.9.122: confirmed by the accountant (LACPA) - before, it was shown as an unverified estimate.
     """
     if value <= 0 or day < "2024-11-25": return _lbp(value)
     step = Decimal("10000")
@@ -396,8 +395,7 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
                 except ValueError: pass
     net_after_credit = totals_lbp["net"] - credit_bf
     payable = (_rounded_up(net_after_credit, end) if vat_currency == "LBP" else rnd(net_after_credit)) if net_after_credit > 0 else ZERO
-    if net_after_credit > 0 and end >= "2024-11-25" and vat_currency == "LBP":
-        warnings.append("Payable is estimated by rounding up to LBP 10,000; the cited MoF decision 1195 has not been verified as a VAT payable rule. Confirm the current filing/payment rounding with the VAT Directorate before filing.")
+    # 2.9.122: the rounding to LBP 10,000 (MoF decision 1195) is the rule - no more "unverified" warning
     credit = -net_after_credit if net_after_credit < 0 else ZERO
     refund = rnd(refund_requested) if refund_requested not in (None, "") else ZERO
     if refund < 0: raise ValueError("The refund requested cannot be negative")
@@ -680,7 +678,7 @@ def export_sections(result):
     meta = [f"Period: {display_date(result['date_from'])} to {display_date(result['date_to'])}   Due date: {display_date(result['due_date'])}   Currency filter: {result['currency_filter']}",
             f"Partial deduction ratio (Art. 31): {ratio * 100:.2f}% ({result.get('ratio_source', '')})   Status: {result['status']}",
             "Internal schedule references only: A-F labels are not certified Ministry of Finance form box numbers.",
-            "Conversion uses saved accounting rates at each document date; the legally applicable tax-point/rate can differ (Decree 11230/2023). The 10,000 LBP payable ceiling from 25-11-2024 is an unverified worksheet estimate, not a certified VAT filing rule."
+            "Conversion uses saved accounting rates at each document date; the legally applicable tax-point/rate can differ (Decree 11230/2023). The payable is rounded up to the next LBP 10,000 from 25-11-2024 (MoF decision 1195)."
             if vc == "LBP" else f"VAT return in {vc} at {rate_text}, converted at the saved accounting rate of each document date; second currency {vc2} at the rate of the last day of the period."]
     if result["review_excluded"]: meta.append(f"Note: {result['review_excluded']} document(s) in Review status are excluded from this return")
     for warning in result.get("warnings", []): meta.append("Check: " + warning)

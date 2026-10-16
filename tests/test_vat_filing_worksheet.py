@@ -10,7 +10,7 @@ from pdf_import import _parse_invoice_text
 
 
 class VATFilingWorksheetTest(unittest.TestCase):
-    def test_payable_rounding_boundary_is_explicitly_an_unverified_estimate(self):
+    def test_payable_rounding_to_10000_from_25_11_2024(self):  # 2.9.122: MoF decision 1195, confirmed
         for day, amount, expected in (
             ("2024-11-24", "9999.49", "9999"),
             ("2024-11-24", "9999.50", "10000"),
@@ -57,11 +57,11 @@ class VATFilingWorksheetTest(unittest.TestCase):
             self.assertEqual(result["net_after_credit_lbp"], Decimal("7000"))
             self.assertEqual(result["payable_lbp"], Decimal("10000"))
             self.assertTrue(any("customs rate" in warning for warning in result["warnings"]))
-            self.assertTrue(any("has not been verified" in warning for warning in result["warnings"]))
+            self.assertFalse(any("has not been verified" in warning for warning in result["warnings"]))  # 2.9.122: the rule, not an estimate
             _, meta, _ = export_sections(result)
-            self.assertTrue(any("unverified worksheet estimate" in note for note in meta))
+            self.assertTrue(any("rounded up to the next LBP 10,000" in note for note in meta))
             notices, _ = filing_worksheet(result, {})
-            self.assertTrue(any("has not been verified" in note for note in notices))
+            self.assertFalse(any("has not been verified" in note for note in notices))
 
     def test_filing_values_and_employer_details(self):
         with tempfile.TemporaryDirectory() as folder:
