@@ -216,6 +216,9 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                            "notes": (data.get("notes", "") + "; " + type_note).strip("; "), "_path": path, "_items": data.get("items") or [],
                            "_asset_name":asset_details["name"],"_asset_date":asset_details["acquired_on"],
                            "_asset_currency":asset_details["currency"],"_asset_cost":asset_details["cost"]})
+                if suggested != "Sales" and hasattr(self, "import_row_rule"):  # 2.9.121: posted like this supplier's last invoice
+                    note = self.import_row_rule(rows[-1], data)
+                    if note: rows[-1]["notes"] = f"{note}; {rows[-1]['notes']}".strip("; ")
         self.import_mode = "pdf"; self.import_rows = rows
         self.file_label.config(text=f"{len(paths)} PDF file(s). Confirm each Type and amount; VAT 0 if none. Expenses are paid transactions.", fg=NAVY); self.populate_import_preview()
         if rows and auto_upload_on(self): self.after_idle(self.auto_send_import)

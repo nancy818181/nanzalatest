@@ -49,7 +49,8 @@ class RatesStore:
                     usd_lbp=next((Decimal(x[3]) for x in averaged if x[0]==rate_date),None) if (source,target)==("USD","LBP") else None
                     if eur_usd is None:
                         found=db.execute("SELECT rate FROM exchange_rates WHERE rate_date=? AND from_currency='EUR' AND to_currency='USD'",(rate_date,)).fetchone()
-                        eur_usd=Decimal(str(found["rate"])) if found else Decimal("1")
+                        eur_usd=Decimal(str(found["rate"])) if found else None
+                    if eur_usd is None: continue  # 2.9.121: no EUR rate that day: no EUR/LBP is made up (it was 1 EUR = 1 USD)
                     if usd_lbp is None:
                         found=db.execute("SELECT rate FROM exchange_rates WHERE rate_date=? AND from_currency='USD' AND to_currency='LBP'",(rate_date,)).fetchone()
                         usd_lbp=Decimal(str(found["rate"])) if found else Decimal("89500")
@@ -281,10 +282,21 @@ class RatesStore:
             if row: return Decimal(str(row[2]))
             row=latest(to,frm)
             return Decimal("1")/Decimal(str(row[2])) if row and Decimal(str(row[2])) else None
+        def first_after(frm,to):  # 2.9.121: no rate on or before the day: the first one entered after it (never a made-up 1)
+            for pair,invert in (((frm,to),False),((to,frm),True)):
+                found=table.get(pair)
+                if not found: continue
+                keys,rows=found; index=bisect.bisect_right(keys,target_key)
+                if index<len(rows) and Decimal(str(rows[index][2])):
+                    value=Decimal(str(rows[index][2])); return Decimal("1")/value if invert else value
+            return None
         direct=find_rate(source,target)
         if direct is not None: return amount*direct
+        eur=find_rate("EUR","USD") or first_after("EUR","USD")
+        if eur is None and "EUR" in (source,target):  # 2.9.121: before, 1 EUR = 1 USD was assumed (wrong amounts and VAT)
+            raise ValueError(f"No EUR rate for {rate_date}: enter the EUR rate (Settings > Exchange Rates)")
         usd_rates={"USD":Decimal("1"),"LBP":Decimal("1")/Decimal("89500"),
-                   "EUR":find_rate("EUR","USD") or Decimal("1"),
+                   "EUR":eur or Decimal("1"),
                    "AED":Decimal("1")/Decimal("3.6725")}
         if source in usd_rates and target in usd_rates:
             to_usd=find_rate(source,"USD") or usd_rates[source]

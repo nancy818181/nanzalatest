@@ -164,6 +164,13 @@ def _invoice_arithmetic(connection, add):
     if differ: add(WARNING, "Invoices equal their entries", f"{len(differ)} invoice(s) whose entry does not carry the invoice total: " + _quote(differ),
                    "Open each invoice and save it again so the entry is written from the invoice", differ)
     else: add(OK, "Invoices equal their entries", "Each invoice entry carries the invoice total")
+    # 2.9.121: sales lines whose VAT was typed by hand and is not the rate (allowed on purpose - shown so it is a choice)
+    typed = [dict(r) for r in connection.execute("""SELECT DISTINCT i.id, i.invoice_number number FROM invoice_items l JOIN invoices i ON i.id=l.invoice_id
+        WHERE i.kind='sale' AND i.status='posted' AND COALESCE(l.vat_rate,'')<>'' AND
+        ABS(CAST(l.vat AS REAL) - ROUND(CAST(COALESCE(NULLIF(l.deductible_subtotal,''), l.subtotal) AS REAL) * CAST(l.vat_rate AS REAL) / 100.0, 2)) > 0.05""")]
+    if typed: add(WARNING, "Sales VAT = rate x amount", f"{len(typed)} sales invoice(s) with a VAT typed by hand that is not the rate: " + _quote(typed),
+                  "Open each invoice: keep the typed VAT only when it is right (e.g. the VAT shown on a contract), otherwise retype the line", typed)
+    else: add(OK, "Sales VAT = rate x amount", "Every sales line has the VAT of its rate")
 
 
 # ---------------------------------------------------------------- 5. numbering

@@ -2,6 +2,7 @@
 
 Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from PaymentsStore."""
 from __future__ import annotations
+from database_common import atomic  # 2.9.121
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     closing, datetime, Decimal, DEFAULT_LEBANESE_ACCOUNTS, display_date, iso_date, json, Path, sqlite3, tempfile,
@@ -83,6 +84,7 @@ class PaymentsStore:
                 (user_id,"save","party",row["id"],json.dumps({"name":name,"kind":kind}),utcnow()))
             return dict(row)
 
+    @atomic  # 2.9.121
     def add_payment(self, item, user_id):
         kind=str(item.get("kind") or "").strip(); date=str(item.get("payment_date") or "").strip()
         self._assert_period_open(date)
@@ -169,6 +171,7 @@ class PaymentsStore:
                 FROM payments x JOIN parties p ON p.id=x.party_id LEFT JOIN departments d ON d.id=x.department_id LEFT JOIN projects pr ON pr.id=x.project_id
                 ORDER BY x.id DESC""")]
 
+    @atomic  # 2.9.121
     def add_expense(self, item, user_id):
         date=str(item.get("expense_date") or "").strip(); self._assert_period_open(date); self._assert_vat_open(date)
         description=str(item.get("description") or "").strip()
@@ -294,6 +297,7 @@ class PaymentsStore:
         db.execute("DELETE FROM journal_entries WHERE source_type=? AND source_id=?", (source_type, int(source_id)))
         for number in extra_numbers: db.execute("DELETE FROM journal_entries WHERE entry_number=?", (number,))
 
+    @atomic  # 2.9.121
     def delete_payment(self, payment_id, user_id):
         with self.connect() as db:
             row = db.execute("SELECT * FROM payments WHERE id=?", (int(payment_id),)).fetchone()
@@ -305,6 +309,7 @@ class PaymentsStore:
                 (user_id, "delete", "payment", int(payment_id), json.dumps({"number": row["payment_number"], "amount": row["amount"]}), utcnow()))
         return {"deleted": int(payment_id)}
 
+    @atomic  # 2.9.121
     def update_payment(self, payment_id, item, user_id):
         return self._safe_replacement("payment", payment_id, item, user_id)
 
@@ -332,6 +337,7 @@ class PaymentsStore:
             return new_id
 
     # ---------------------------------------------------------------- expenses: edit / delete / attachments
+    @atomic  # 2.9.121
     def delete_expense(self, expense_id, user_id):
         with self.connect() as db:
             row = db.execute("SELECT * FROM expenses WHERE id=?", (int(expense_id),)).fetchone()
@@ -343,6 +349,7 @@ class PaymentsStore:
                 (user_id, "delete", "expense", int(expense_id), json.dumps({"number": row["expense_number"], "total": row["total"]}), utcnow()))
         return {"deleted": int(expense_id)}
 
+    @atomic  # 2.9.121
     def update_expense(self, expense_id, item, user_id):
         return self._safe_replacement("expense", expense_id, item, user_id)
 
@@ -386,6 +393,7 @@ class PaymentsStore:
             row["open_amount"] = round(sign * (row["total"] - row["paid"] - row["allocated"]), 2)
         return [r for r in rows if abs(r["open_amount"]) >= 0.01]
 
+    @atomic  # 2.9.121
     def save_allocations(self, payment_id, allocations, user_id):
         # An offset between documents needs its own party-control journal entry;
         # payment allocations represent cash settlement only.
@@ -412,6 +420,13 @@ class PaymentsStore:
                     raise ValueError(f"{invoice['invoice_number']} cannot be settled with this payment type; use {action}. To offset a credit note against an invoice, record a separate journal adjustment.")
                 total += amount
                 db.execute("INSERT INTO payment_allocations(payment_id,invoice_id,amount,created_at) VALUES(?,?,?,?)", (int(payment_id), invoice["id"], str(amount), utcnow()))
+                # 2.9.121: never more than what is still open on the document (all payments together) - the rest stays unapplied
+                allocated = Decimal(str(db.execute("SELECT COALESCE(DSUM(amount),0) FROM payment_allocations WHERE invoice_id=?", (invoice["id"],)).fetchone()[0] or 0))
+                open_amount = Decimal(str(invoice["total"] or 0)) - Decimal(str(invoice["amount_paid"] or 0))
+                if allocated > open_amount + Decimal("0.005"):
+                    left = max(Decimal("0"), open_amount - (allocated - amount))
+                    raise ValueError(f"{invoice['invoice_number']}: only {left:,.2f} {invoice['currency']} is still open - allocate at most that; "
+                                     "the rest of the payment stays unapplied (an advance) on the account")
             if total > Decimal(str(payment["amount"])) + Decimal("0.005"): raise ValueError(f"Allocated {total:,.2f} is more than the payment {Decimal(str(payment['amount'])):,.2f}")
         return self.payment_allocations(payment_id)
 

@@ -24,6 +24,25 @@ class LearningMixin:
                  "Without it the free local reading is used, as before.", bg=LIGHT, fg=MUTED, wraplength=760, justify="left").pack(side="left")
         tk.Button(azure, text="Azure Settings", command=self.azure_settings_window, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
 
+    # ------------------------------------------------------------ 2.9.121: many PDFs at once (Uploaded Data)
+    def import_row_rule(self, row, data):
+        """Fill an Uploaded Data row read from a PDF the way its supplier was posted before (type, cost / asset account, VAT
+        account). Returns the note ('' when nothing was learned for this supplier)."""
+        import posting_rules
+        name = data.get("supplier_hint") or data.get("party_name") or ""
+        if not name: return ""
+        try: found = self.client.posting_suggestion("purchase", name, data.get("party_tax_number") or posting_rules.numbers_in(data.get("text") or ""),
+                                                    data.get("text") or "", [i.get("description") or "" for i in data.get("items") or []])
+        except (RuntimeError, OSError, ValueError, AttributeError): return ""
+        rule = (found or {}).get("rule") if isinstance(found, dict) else None
+        if not rule: return ""
+        learned = rule["data"]
+        row["entry_type"] = "Assets" if learned.get("entry_type") == "assets" else "Purchases"
+        for key in ("expense_account", "vat_account"):
+            if learned.get(key): row[key] = learned[key]
+        if not row.get("party_name"): row["party_name"] = rule.get("label") or name
+        return f"Posted like {rule.get('last_reference') or 'the last invoice'} of {rule['label']} (learned from {rule['times']} invoice(s))"
+
     # ------------------------------------------------------------ the rules learned
     def show_posting_rules(self):
         try: rows = self.client.posting_rules()

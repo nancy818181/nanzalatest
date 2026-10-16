@@ -2,6 +2,7 @@
 
 Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from VatStore."""
 from __future__ import annotations
+from database_common import atomic  # 2.9.121
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     Decimal, json, utcnow
@@ -11,6 +12,7 @@ from database_common import _soft_iso  # noqa: F401
 
 class VatStore:
     # ---------------------------------------------------------------- VAT recoverability
+    @atomic  # 2.9.121
     def set_vat_recoverable(self, source, document_id, recoverable, user_id):
         """Mark purchase/expense VAT as deductible or non-deductible.
 
@@ -65,6 +67,7 @@ class VatStore:
         if use not in self.VAT_USES: raise ValueError("VAT use must be taxable, mixed, exempt, export, utilities or passenger car")
         return treatment, use
 
+    @atomic  # 2.9.121
     def set_vat_classification(self, source, document_id, treatment=None, use=None, user_id=None):
         source = str(source or "").lower(); document_id = int(document_id)
         table = {"invoice": "invoices", "expense": "expenses"}.get(source)

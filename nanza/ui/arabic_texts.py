@@ -3642,3 +3642,24 @@ PATTERNS = PATTERNS + (
     (r"Delete (\d+) rule\(s\)\? Invoices already saved are not changed\.", "حذف {1} قاعدة؟ الفواتير المحفوظة لا تتغيّر."),
     (r"Reading (.+) with Azure\.\.\.", "قراءة {1} بـ Azure..."),
 )
+# 2.9.121: companies per user, licence read only, Books Health Check, uploads posted by memory
+for _english, _arabic in {
+    "Companies...": "الشركات...", "Companies: all": "الشركات: الكل", "Companies of this user": "شركات هذا المستخدم",
+    "Tick the companies this user may open. None ticked = every company.": "اختر الشركات التي يحق لهذا المستخدم فتحها. لا شيء محدد = كل الشركات.",
+    "You do not have access to this company. Ask the administrator (Settings > Users > Companies).":
+        "لا يحق لك فتح هذه الشركة. اطلب من المسؤول (الإعدادات > المستخدمون > الشركات).",
+    "Sales VAT = rate x amount": "ضريبة المبيعات = النسبة × المبلغ", "Every sales line has the VAT of its rate": "كل سطر مبيع ضريبته حسب نسبته",
+}.items():
+    AR.setdefault(_english, _arabic)
+PATTERNS = PATTERNS + (
+    (r"Companies: (.+)", "الشركات: {1}"),
+    (r"(.+) - the books open READ ONLY: reports, exports and backups work; nothing new can be saved until a new code is entered\.",
+     "{1} - تُفتح الدفاتر للقراءة فقط: التقارير والتصدير والنسخ الاحتياطي تعمل؛ لا يُحفظ شيء جديد حتى إدخال رمز جديد."),
+    (r"(.+) - the books are open read only \(reports, exports, backups\)\. Enter a new licence code: Settings > Users > Licence\.",
+     "{1} - الدفاتر مفتوحة للقراءة فقط (التقارير، التصدير، النسخ الاحتياطي). أدخل رمز ترخيص جديد: الإعدادات > المستخدمون > الترخيص."),
+    (r"(\d+) sales invoice\(s\) with a VAT typed by hand that is not the rate: (.+)", "{1} فاتورة مبيع فيها ضريبة مكتوبة يدوياً لا تطابق النسبة: {2}"),
+    (r"(.+): only (\S+) (\w+) is still open - allocate at most that; the rest of the payment stays unapplied \(an advance\) on the account",
+     "{1}: المتبقي غير المسدد {2} {3} فقط - خصّص هذا المبلغ كحد أقصى؛ الباقي يبقى دفعة مسبقة على الحساب"),
+    (r"No EUR rate for (.+): enter the EUR rate \(Settings > Exchange Rates\)", "لا يوجد سعر يورو بتاريخ {1}: أدخل سعر اليورو (الإعدادات > أسعار الصرف)"),
+    (r"Posted like (.+) of (.+) \(learned from (\d+) invoice\(s\)\)", "قُيّدت مثل {1} من {2} (متعلَّمة من {3} فاتورة)"),
+)

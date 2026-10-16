@@ -792,6 +792,10 @@ class FinalFeaturesMixin:
         self.action_button(buttons, "Save User", self.add_user).pack(side="left", padx=3)
         self.action_button(buttons, "Renew 1 Year", self.renew_selected_user).pack(side="left", padx=3)
         self.action_button(buttons, "New / Clear", self.clear_user_form).pack(side="left", padx=3)
+        self.user_companies = []  # 2.9.121: [] = every company
+        self.user_companies_label = tk.Label(form, text="Companies: all", bg=LIGHT, fg=MUTED)
+        self.user_companies_label.grid(row=2, column=1, columnspan=4, sticky="w", padx=4)
+        self.action_button(form, "Companies...", self.choose_user_companies).grid(row=2, column=0, sticky="w", padx=4)
         tk.Label(users, text="Roles: Admin = everything; Accountant = enter and post; Viewer = read only. New non-admin users are valid for 1 year; "
                  "leave 'Valid until' empty for no expiry. Payroll and VAT access can be removed per user. 'Can delete / cancel' allows deleting or cancelling posted documents (new users: off).",
                          bg=LIGHT, fg=MUTED, wraplength=1050, justify="left").pack(fill="x", padx=12)
@@ -803,7 +807,28 @@ class FinalFeaturesMixin:
             import desktop_licence
             desktop_licence.licence_box(self, users)
 
+    def choose_user_companies(self):
+        """2.9.121: the companies this user may open (none ticked = every company, as before). Administrators open every company."""
+        try: companies = self.client.companies()
+        except Exception as exc: return messagebox.showerror("Users", str(exc))
+        window = tk.Toplevel(self); window.title("Companies of this user"); window.configure(bg=LIGHT, padx=14, pady=10); window.transient(self)
+        tk.Label(window, text="Tick the companies this user may open. None ticked = every company.", bg=LIGHT, fg=MUTED).pack(anchor="w", pady=(0, 6))
+        ticks = {}
+        for company in companies:
+            ticks[str(company["id"])] = tk.BooleanVar(value=str(company["id"]) in self.user_companies)
+            tk.Checkbutton(window, text=company.get("name") or str(company["id"]), variable=ticks[str(company["id"])], bg=LIGHT).pack(anchor="w")
+
+        def done():
+            self.user_companies = [key for key, var in ticks.items() if var.get()]; self.show_user_companies(companies); window.destroy()
+        self.action_button(window, "OK", done).pack(anchor="w", pady=(8, 0))
+
+    def show_user_companies(self, companies=None):
+        names = {str(c["id"]): c.get("name") or str(c["id"]) for c in (companies or getattr(self, "available_companies", None) or [])}
+        text = "Companies: all" if not self.user_companies else "Companies: " + ", ".join(names.get(c, c) for c in self.user_companies)
+        if hasattr(self, "user_companies_label"): self.user_companies_label.config(text=text)
+
     def clear_user_form(self):
+        self.user_companies = []; self.show_user_companies()
         self.edit_user_id = None; self.user_name.set(""); self.user_password.set(""); self.user_role.set("accountant"); self.user_active.set(True)
         self.user_payroll.set(True); self.user_vat.set(True); self.user_delete.set(False); self.user_approve.set(False)
         self.user_expiry.set((datetime.now() + timedelta(days=365)).strftime("%d-%m-%Y"))
@@ -825,7 +850,8 @@ class FinalFeaturesMixin:
         if expiry: _user_date(expiry)
         return {"id": self.edit_user_id, "username": self.user_name.get().strip(), "password": self.user_password.get(), "role": self.user_role.get(),
                 "language": self.user_language.get(), "active": self.user_active.get(), "expires_at": expiry,
-                "permissions": {"payroll": self.user_payroll.get(), "vat": self.user_vat.get(), "delete": self.user_delete.get(), "approve": self.user_approve.get()}}
+                "permissions": {"payroll": self.user_payroll.get(), "vat": self.user_vat.get(), "delete": self.user_delete.get(), "approve": self.user_approve.get()},
+                "companies": list(getattr(self, "user_companies", []))}
 
     def add_user(self):
         try: payload = self.user_payload(); saved = self.client.save_user(payload)
@@ -852,3 +878,4 @@ class FinalFeaturesMixin:
         self.user_password.set(""); self.user_active.set(bool(row["active"])); self.user_expiry.set(_display(row.get("expires_at")))
         permissions = row.get("permissions") or {}; self.user_payroll.set(permissions.get("payroll", True)); self.user_vat.set(permissions.get("vat", True))
         self.user_delete.set(permissions.get("delete", True)); self.user_approve.set(permissions.get("approve", False))
+        self.user_companies = list(row.get("companies") or []); self.show_user_companies()

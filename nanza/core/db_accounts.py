@@ -4,6 +4,7 @@ balance with a journal voucher.
 
 Part of the Database class: Database inherits from AccountsStore."""
 from __future__ import annotations
+from database_common import atomic  # 2.9.121
 
 import re
 
@@ -127,6 +128,7 @@ class AccountsStore:
         if not row: raise ValueError(f"{label} account {_code(code) or '(empty)'} was not found")
         return row
 
+    @atomic  # 2.9.121
     def move_account(self, source, target, user_id, merge_party=False):
         """Every transaction of `source` moves to `target` (journal lines and the documents that name the account).
         With merge_party, the customer / supplier of `source` is merged into the one of `target` and deleted."""
@@ -201,6 +203,7 @@ class AccountsStore:
                               "expense_no_vat_account": "Non-deductible account", "supplier_account": "Customer / Supplier account",
                               "payment_account": "Cash / Bank account (paid invoices)"}  # 2.9.78
 
+    @atomic  # 2.9.121
     def set_invoices_account(self, invoice_ids, field, code, user_id):
         """2.9.71 (Uploaded Data, one account for all the selected rows): the chosen account replaces, on every selected invoice,
         the account of `field` - in the invoice and on its own journal lines (invoice, payment on the spot, VAT reclass).
@@ -285,6 +288,7 @@ class AccountsStore:
             (skipped.append(f"{problem['invoice_number']}: {'; '.join(failed)}") if failed else done.append(problem["invoice_number"]))
         return {"done": done, "skipped": skipped}
 
+    @atomic  # 2.9.121
     def move_lines(self, source, target, line_ids, user_id, change_party=True):
         """The chosen lines of `source` are booked on `target` instead (a replacement, no new voucher). The document
         behind each line (invoice, payment, expense) gets the new account too, so editing it later keeps the change.

@@ -2,6 +2,7 @@
 
 Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from InvoicesStore."""
 from __future__ import annotations
+from database_common import atomic  # 2.9.121
 import logging
 import sqlite3
 
@@ -214,6 +215,7 @@ class InvoicesStore:
                 (entry, self._account_id(db, code), invoice["party_id"], f"Payment {invoice['invoice_number']}", str(debit), str(credit)))
         return entry
 
+    @atomic  # 2.9.121
     def create_missing_invoice_payments(self, user_id):
         """Invoices saved before 2.9.47 as paid (Cash, Bank ...) but without a settlement entry: create it now.
         Each invoice is done on its own; one in a locked or closed period is skipped and reported."""
@@ -237,6 +239,7 @@ class InvoicesStore:
                     (user_id, "create_missing_payments", "invoice", json.dumps({"created": created, "skipped": skipped}), utcnow()))
         return {"created": created, "skipped": skipped}
 
+    @atomic  # 2.9.121
     def create_manual_invoice(self, item, line_items, user_id):
         if not isinstance(line_items, list) or not line_items:
             raise ValueError("Add at least one invoice item")
@@ -365,6 +368,7 @@ class InvoicesStore:
         if row and row["doc_subtype"]=="credit_note" and row["status"] not in ("cancelled","deleted"):
             raise ValueError("A posted credit note cannot be edited; cancel it and create a new reviewed return instead")
 
+    @atomic  # 2.9.121
     def delete_invoice(self,invoice_id,user_id):
         with self.connect() as db:
             invoice=db.execute("SELECT * FROM invoices WHERE id=?",(int(invoice_id),)).fetchone()
@@ -404,6 +408,7 @@ class InvoicesStore:
                        (user_id,"mark_deleted","invoice",int(invoice_id),json.dumps({"invoice_number":invoice["invoice_number"]}),utcnow()))
         return {"deleted":int(invoice_id),"invoice_number":invoice["invoice_number"]}
 
+    @atomic  # 2.9.121
     def approve_invoices(self, invoice_ids, user, require_other=True):
         """2.9.93: approval - the selected drafts (review) are posted by a user with the "approve" permission; a draft is
         never approved by the user who prepared it (administrators excepted). Each approval is in the audit trail."""
@@ -572,6 +577,7 @@ class InvoicesStore:
                 (invoice_id,)).fetchone()
             return dict(row)
 
+    @atomic  # 2.9.121
     def add_invoice_item(self, invoice_id, line, user_id):
         with self.connect() as db:
             old=db.execute("SELECT invoice_date FROM invoices WHERE id=?",(int(invoice_id),)).fetchone()
@@ -620,6 +626,7 @@ class InvoicesStore:
                        (user_id, "add_item", "invoice", invoice_id, json.dumps({"description": description}), utcnow()))
         return updated
 
+    @atomic  # 2.9.121
     def cancel_invoice(self, invoice_id, reason, user_id):
         reason = str(reason or "").strip()
         if not reason:
@@ -654,6 +661,7 @@ class InvoicesStore:
                        (user_id,"cancel","invoice",invoice_id,json.dumps({"reason":reason}),utcnow()))
         return self.get_invoice(invoice_id)
 
+    @atomic  # 2.9.121
     def duplicate_invoice(self, invoice_id, user_id):
         with self.connect() as db:
             row = db.execute("""SELECT i.*,p.name party_name FROM invoices i
@@ -701,6 +709,7 @@ class InvoicesStore:
                 FROM invoice_items ii WHERE ii.invoice_id=? ORDER BY ii.id""",(invoice_id,invoice_id,invoice_id,invoice_id,invoice_id))]
         return {"invoice":invoice,"items":items}
 
+    @atomic  # 2.9.121
     def create_invoice_return(self, invoice_id, returns, return_date, user_id, request_id):
         request_id=str(request_id or "").strip()
         if not request_id or len(request_id)>128:
@@ -894,6 +903,7 @@ class InvoicesStore:
                 FROM invoices i LEFT JOIN parties p ON p.id=i.party_id LEFT JOIN branches b ON b.id=i.branch_id ORDER BY i.id DESC LIMIT ?""", (limit,))]
 
     # ---------------------------------------------------------------- invoices: edit keeping attachments, landed cost
+    @atomic  # 2.9.121
     def replace_manual_invoice(self, invoice_id, item, line_items, user_id):
         """Replace an invoice and its linked records in one transaction."""
         with self.connect() as db:
@@ -924,6 +934,7 @@ class InvoicesStore:
                 logging.getLogger("saber").warning("Change of invoice %s not written to the audit trail", invoice_id, exc_info=True)
             return new_id
 
+    @atomic  # 2.9.121
     def add_landed_cost(self, purchase_id, item, user_id):
         """Customs / freight / insurance on a purchase, booked as a linked 'Customs Case' invoice so import VAT reaches the VAT return."""
         with self.connect() as db:

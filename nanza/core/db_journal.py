@@ -2,6 +2,7 @@
 
 Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from JournalStore."""
 from __future__ import annotations
+from database_common import atomic  # 2.9.121
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, Decimal, display_date, iso_date, json, utcnow
@@ -38,6 +39,7 @@ class JournalStore:
                 (user_id,"delete","opening_voucher",int(entry_id),json.dumps(details),utcnow()))
         return {"deleted":int(entry_id)}
 
+    @atomic  # 2.9.121
     def save_journal_voucher(self,item,lines,user_id,entry_id=None):
         date=str(item.get("entry_date") or "").strip(); self._assert_period_open(date)
         description=str(item.get("description") or "").strip() or f"Journal Voucher {str(item.get('entry_number') or '').strip() or 'Entry'}"

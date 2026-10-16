@@ -445,6 +445,11 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
             import arabic_ui
             arabic_ui.switch(self, self.language.get())  # 2.9.118: Language = ar -> the screens in Arabic, right to left
             self.last_activity=time.monotonic(); self.bind_all("<Any-KeyPress>",self.record_activity); self.bind_all("<Any-Button>",self.record_activity); self.after(60000,self.check_auto_logout)
+            if (self.current_user or {}).get("read_only"):  # 2.9.121: the licence ended - the books open read only (no more locked out)
+                import desktop_licence
+                message = ((self.current_user.get("licence") or {}).get("message") or "The licence has ended") + \
+                    " - the books open READ ONLY: reports, exports and backups work; nothing new can be saved until a new code is entered."
+                if desktop_licence.enter_code_dialog(self, self.client, message): return self.login()
             self.company_selection_screen()
         except Exception as exc:
             text=str(exc)

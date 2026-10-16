@@ -63,14 +63,17 @@ class SignedLicenceTest(unittest.TestCase):
         self.assertTrue(state["licensed"]); self.assertEqual(state["company"], "Client Co"); self.assertEqual(state["valid_until"], "2027-12-31")
         admin = self.api(); session = admin.login("admin", "Admin-2025!")
         self.assertEqual(session["licence"]["valid_until"], "2027-12-31")
-        # an ended licence blocks sign-in and open sessions; a new code opens them again
+        # 2.9.121: an ended licence opens the books READ ONLY (reports, exports, backups); a new code opens them again
         yesterday = (date.today() - timedelta(days=1)).strftime("%d-%m-%Y")
         api.install_licence(self.code(ident, yesterday))
-        with self.assertRaises(Exception) as caught: self.api().login("admin", "Admin-2025!")
-        self.assertIn("ended", str(caught.exception))
-        with self.assertRaises(Exception): admin.users()
+        ended = self.api(); session = ended.login("admin", "Admin-2025!")
+        self.assertTrue(session["read_only"]); self.assertIn("ended", session["licence"]["message"])
+        self.assertTrue(admin.users())  # reading still works
+        with self.assertRaises(Exception) as caught: admin.save_user({"username": "clerk", "password": "Clerk-2025!", "role": "accountant"})
+        self.assertIn("read only", str(caught.exception))
         api.install_licence(self.code(ident, "31-12-2030"))
-        self.api().login("admin", "Admin-2025!")
+        self.assertFalse(self.api().login("admin", "Admin-2025!")["read_only"])
+        admin.save_user({"username": "clerk", "password": "Clerk-2025!", "role": "accountant"})
 
     def test_seller_key_password_can_be_changed(self):
         new = licence.change_key_password(self.key_file, "Seller-Test-Pass", "A-New-Seller-Pass")

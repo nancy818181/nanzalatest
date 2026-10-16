@@ -354,3 +354,15 @@ def register_money_functions(connection):
     connection.create_aggregate("DSUM", 1, DecimalSum)
     return connection
 
+
+def atomic(method):
+    """2.9.121: the whole method is ONE transaction: a document is saved completely (invoice, its lines, its entry, the stock,
+    the VAT reclass, the payment) or not at all - also when the program or the computer stops halfway. Database.connect()
+    is re-entrant: the steps inside join this transaction, and an error anywhere rolls all of them back."""
+    import functools
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self.connect():
+            return method(self, *args, **kwargs)
+    return wrapper

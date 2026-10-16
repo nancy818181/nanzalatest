@@ -89,6 +89,13 @@ def admin_only(method, path):
 EXPECTED_ERRORS = (ValueError, PermissionError, KeyError, LookupError, FileNotFoundError)
 
 
+def _companies_of(user):
+    """2.9.121: the company ids this user may open ([] = every company)."""
+    if not user: return []
+    from database import user_companies
+    return user_companies(user)
+
+
 def _learn(action, *args):
     """2.9.120: remember how a purchase / expense was posted (posting_rules). Never stops the save it follows."""
     try:
@@ -185,10 +192,25 @@ class ApiHandler(BaseHTTPRequestHandler):
             other = None
         return other or self.db
 
+    def _licence_ended(self, path):
+        """2.9.121: the licence (or trial) has ended: the books stay open READ ONLY - reports, exports and backups -
+        nothing new is saved until a new licence code is entered. Answers the refusal itself; True = refused."""
+        if path in ("/api/logout", "/api/backups/create", "/api/licence"): return False
+        import licence
+        with self.master_db.connect() as connection: state = licence.status(connection)
+        if not state.get("expired"): return False
+        self._json(403, {"error": f"{state.get('message') or 'The licence has ended'} - the books are open read only (reports, exports, backups). "
+                                  "Enter a new licence code: Settings > Users > Licence."})
+        return True
+
     def _select_database(self):
         if not self.headers.get("X-Company-ID") and not self.company_manager.list_companies(True):
             self.db = self.master_db; return True  # 2.9.74: new installation, no company created yet
         try:
+            allowed = _companies_of(self._user())  # 2.9.121: a user limited to some companies opens only those
+            wanted = self.headers.get("X-Company-ID") or (self.company_manager.list_companies(True)[0]["id"])
+            if allowed and str(wanted) not in allowed:
+                self._json(403,{"error":"You do not have access to this company. Ask the administrator (Settings > Users > Companies)."}); return False
             self.db=self.company_manager.database(self.headers.get("X-Company-ID"),self.headers.get("X-Fiscal-Year"))
             # 2.9.52: users are kept in the main file; the company-year file needs the same user row so that what a
             # non-administrator saves can record who made it (it used to fail with "FOREIGN KEY constraint failed").
@@ -213,7 +235,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not user:
             return self._json(401, {"error": "Unauthorized"})
         if admin_only("GET", path) and user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})  # 2.9.103
-        if path == "/api/companies": return self._json(200,{"items":self.company_manager.list_companies(user["role"]=="admin")})
+        if path == "/api/companies":  # 2.9.121: only the companies this user may open
+            allowed = _companies_of(user); items = self.company_manager.list_companies(user["role"]=="admin")
+            return self._json(200,{"items":[c for c in items if not allowed or str(c["id"]) in allowed]})
         if not self._select_database(): return
         if self._module_denied(user, path): return
         if path in ("/api/backups/download","/api/backups/folder","/api/backups") and user["role"]=="viewer":
@@ -778,6 +802,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         user = self._user()
         if not user:
             return self._json(401, {"error": "Unauthorized"})
+        if self._licence_ended(path): return  # 2.9.121: an ended licence: read only
         if admin_only("POST", path) and user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})  # 2.9.103
         if path == "/api/companies":
             if user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})
@@ -1275,6 +1300,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         user = self._user()
         if not user:
             return self._json(401, {"error": "Unauthorized"})
+        if self._licence_ended(path): return  # 2.9.121: an ended licence: read only
         if admin_only("PUT", path) and user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})  # 2.9.103
         if path.startswith("/api/companies/"):
             if user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})
@@ -1340,6 +1366,7 @@ class ApiHandler(BaseHTTPRequestHandler):
     def _do_DELETE(self):
         path=urlparse(self.path).path; user=self._user()
         if not user: return self._json(401,{"error":"Unauthorized"})
+        if self._licence_ended(path): return  # 2.9.121: an ended licence: read only
         if admin_only("DELETE", path) and user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})  # 2.9.103
         if not self._select_database(): return
         if self.headers.get("X-Company-ID") and self.headers.get("X-Fiscal-Year") and self.company_manager.year_status(self.headers.get("X-Company-ID"),self.headers.get("X-Fiscal-Year"))=="closed":

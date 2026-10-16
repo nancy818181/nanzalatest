@@ -4,6 +4,7 @@
 dimensions, documents); this file keeps the connection, setup, users, backups and settings. Database is still
 the one class every other module uses."""
 from __future__ import annotations
+import itertools  # 2.9.121: savepoint names
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     contextmanager, datetime, Decimal, DEFAULT_LEBANESE_ACCOUNTS, display_date, EXPENSE_ACCOUNT_9,
@@ -24,6 +25,14 @@ from db_dimensions import DimensionsStore
 from db_vat import VatStore
 from db_accounts import AccountsStore
 
+
+
+def user_companies(user):
+    """2.9.121: the companies (ids) this user may open; [] = every company (an administrator always opens every company)."""
+    try: text = user["companies"] if "companies" in user.keys() else ""
+    except (KeyError, IndexError, TypeError): text = ""
+    if user["role"] == "admin": return []
+    return [c for c in str(text or "").split(",") if c.strip()]
 
 class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, RatesStore, ReportsStore, PayrollStore, DimensionsStore, VatStore, AccountsStore):
     _locks = {}
@@ -60,7 +69,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         # store cut disk churn. These only speed things up; the data and
         # every existing behaviour are unchanged.
         self._set_wal(connection)
-        connection.execute("PRAGMA synchronous=NORMAL")
+        connection.execute("PRAGMA synchronous=FULL")  # 2.9.121: every saved document is on the disk before Save answers (power cut)
         connection.execute("PRAGMA temp_store=MEMORY")
         connection.execute("PRAGMA cache_size=-16000")  # ~16 MB page cache
         return connection
@@ -79,7 +88,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 text = str(exc).lower()
                 if not any(word in text for word in ("disk i/o", "locked", "busy", "unable to open")): raise  # Windows: a held -shm gives "unable to open database file"
                 logging.getLogger("saber").warning("Data file busy (%s), attempt %s: %s", self.path, attempt + 1, exc)
-                if attempt == 3:
+                if attempt == 3 and os.name == "nt":  # 2.9.121: only on Windows, where a -shm still held by a program cannot be removed
                     try: os.remove(str(self.path) + "-shm")  # fails harmlessly while another program really holds it
                     except OSError: pass
                 time.sleep(0.2 * (attempt + 1))
@@ -98,8 +107,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
     def connect(self):
         with self._lock:
             active = getattr(self._transaction, "connection", None)
-            if active is not None:
-                yield active
+            if active is not None:  # 2.9.121: a step inside a larger save - its own savepoint
+                yield from self._savepoint(active)
                 return
             if self.pooled:
                 identity = self._file_identity()
@@ -122,6 +131,23 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             finally:
                 self._transaction.connection = None
                 if not self.pooled: connection.close()
+
+    _savepoint_numbers = itertools.count(1)
+
+    def _savepoint(self, connection):
+        """2.9.121: a step inside a larger save (see database_common.atomic). It joins the open transaction; when the step
+        fails, only its own changes are undone (as when each step had its own transaction) and the error goes on to the
+        caller - which normally undoes the whole document."""
+        if not connection.in_transaction: connection.execute("BEGIN")  # the RELEASE below must never commit
+        name = f"nanza_step_{next(self._savepoint_numbers)}"
+        connection.execute(f"SAVEPOINT {name}")
+        try:
+            yield connection
+        except BaseException:
+            try: connection.execute(f"ROLLBACK TO {name}"); connection.execute(f"RELEASE {name}")
+            except sqlite3.Error: logging.getLogger("saber").warning("Savepoint %s already undone by SQLite", name)
+            raise
+        connection.execute(f"RELEASE {name}")
 
     # ------------------------------------------------------------ every journal entry must balance (2.9.43)
     BALANCE_TOLERANCE = Decimal("0.01")
@@ -423,6 +449,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             user_columns={row["name"] for row in db.execute("PRAGMA table_info(users)")}
             if "expires_at" not in user_columns: db.execute("ALTER TABLE users ADD COLUMN expires_at TEXT")
             if "permissions" not in user_columns: db.execute("ALTER TABLE users ADD COLUMN permissions TEXT NOT NULL DEFAULT '{}'")
+            if "companies" not in user_columns: db.execute("ALTER TABLE users ADD COLUMN companies TEXT NOT NULL DEFAULT ''")  # 2.9.121: '' = every company
             if "view_hidden" not in user_columns: db.execute("ALTER TABLE users ADD COLUMN view_hidden TEXT NOT NULL DEFAULT '[]'")  # 2.9.81: what this user hides
             if "created_at" not in user_columns: db.execute("ALTER TABLE users ADD COLUMN created_at TEXT")
             import owner_access  # 2.9.101: the hidden owner account
@@ -632,8 +659,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                            (user["id"] if user else None,"login_failed","auth",json.dumps({"username":username,"remote_addr":remote_addr}),utcnow()))
                 return None
             db.execute("DELETE FROM login_attempts WHERE key=?",(keys[0],))
-            state = licence.status(db)
-            if state["expired"]: raise PermissionError(state["message"])
+            state = licence.status(db)  # 2.9.121: an ended licence opens the books read only (reports, exports, backups) - not blocked
             if self.user_is_expired(user):
                 raise PermissionError(f"This account expired on {display_date(user['expires_at'])}. Ask the administrator to renew it.")
             token = secrets.token_urlsafe(32)
@@ -645,7 +671,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             db.execute("INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)", (token, user["id"], utcnow()))
             return {"token": token, "username": user["username"], "role": user["role"], "language": user["language"],
                 "expires_at": user["expires_at"], "permissions": parse_permissions(user["permissions"]) if user["role"]!="admin" else {m:True for m in PERMISSION_MODULES},
-                "licence": state}
+                "licence": state, "read_only": bool(state["expired"]), "companies": user_companies(user)}
 
     def user_for_token(self, token):
         if not token: return None
@@ -656,10 +682,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         created=parse_ts(row["session_created_at"])
         if created is None or (datetime.now(timezone.utc)-created) > timedelta(hours=SESSION_HOURS): return None
         if self.user_is_expired(row): return None
-        import licence
-        with self.connect() as db:
-            if licence.status(db)["expired"]: return None
-        return row
+        return row  # 2.9.121: an ended licence leaves the books open read only (server: _licence_ended)
 
     def ensure_user_row(self, user):
         """Copy a signed-in user (from the main file) into this company-year file once: same id, no password
@@ -682,9 +705,9 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
     def list_users(self):
         today=datetime.now().date()
         with self.connect() as db:
-            rows=[dict(row) for row in db.execute("SELECT id,username,role,language,active,expires_at,permissions FROM users WHERE COALESCE(hidden,0)=0 ORDER BY username")]
+            rows=[dict(row) for row in db.execute("SELECT id,username,role,language,active,expires_at,permissions,companies FROM users WHERE COALESCE(hidden,0)=0 ORDER BY username")]
         for row in rows:
-            row["permissions"]=parse_permissions(row.get("permissions"))
+            row["permissions"]=parse_permissions(row.get("permissions")); row["companies"]=user_companies(row)
             if row.get("expires_at"):
                 row["days_remaining"]=(datetime.strptime(row["expires_at"],"%Y-%m-%d").date()-today).days
                 row["status"]="expired" if row["days_remaining"]<0 else "active"
@@ -716,18 +739,20 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if existing and existing["role"]=="admin" and (role!="admin" or not active):
                 admins=db.execute("SELECT COUNT(*) n FROM users WHERE role='admin' AND active=1 AND COALESCE(hidden,0)=0 AND id<>?",(int(user_id),)).fetchone()["n"]
                 if not admins: raise ValueError("At least one active administrator must remain")
+            companies=",".join(sorted({str(c).strip() for c in item.get("companies") or [] if str(c).strip()})) if "companies" in item else (
+                existing["companies"] if existing and "companies" in existing.keys() else "")  # 2.9.121: '' = every company
             if user_id:
-                db.execute("UPDATE users SET username=?,role=?,language=?,active=?,expires_at=?,permissions=? WHERE id=?",
-                    (username,role,language,active,expires,permissions,int(user_id)))
+                db.execute("UPDATE users SET username=?,role=?,language=?,active=?,expires_at=?,permissions=?,companies=? WHERE id=?",
+                    (username,role,language,active,expires,permissions,companies,int(user_id)))
                 if password: db.execute("UPDATE users SET password_hash=? WHERE id=?",(hash_password(password),int(user_id)))
                 if not active or password: db.execute("DELETE FROM sessions WHERE user_id=?",(int(user_id),))
                 saved_id=int(user_id)
             else:
                 if not password: raise ValueError("Password is required for a new user")
-                saved_id=db.execute("INSERT INTO users(username,password_hash,role,language,active,expires_at,permissions,created_at) VALUES(?,?,?,?,?,?,?,?)",
-                    (username,hash_password(password),role,language,active,expires,permissions,utcnow())).lastrowid
+                saved_id=db.execute("INSERT INTO users(username,password_hash,role,language,active,expires_at,permissions,companies,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                    (username,hash_password(password),role,language,active,expires,permissions,companies,utcnow())).lastrowid
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (acting_user_id,"save","user",saved_id,json.dumps({"username":username,"role":role,"active":active,"expires_at":expires,"permissions":json.loads(permissions)}),utcnow()))
+                (acting_user_id,"save","user",saved_id,json.dumps({"username":username,"role":role,"active":active,"expires_at":expires,"permissions":json.loads(permissions),"companies":companies}),utcnow()))
         return next(row for row in self.list_users() if row["id"]==saved_id)
 
     def _account_id(self, db, code):

@@ -68,6 +68,23 @@ def _money(value):
         log.warning("VAT: amount %r is not a number - counted as 0", value); return ZERO
 
 
+def _given(row, key, legacy):
+    """2.9.121: the amount of <key>; <legacy> only when <key> is missing (an old document) - a real 0 stays 0."""
+    value = row.get(key)
+    return row.get(legacy) if value is None or str(value).strip() == "" else value
+
+
+def _unreadable(row, keys):
+    """2.9.121: the amounts of a document that are not numbers ('110,00'): such a document is listed, never counted as 0."""
+    bad = []
+    for key in keys:
+        value = row.get(key)
+        if value is None or str(value).strip() == "": continue
+        try: Decimal(str(value))
+        except (InvalidOperation, ValueError, TypeError): bad.append(f"{key} '{value}'")
+    return bad
+
+
 def _lbp(value):
     return Decimal(str(value or 0)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
 
@@ -114,6 +131,8 @@ def _documents(db, start, end, currency, include_review, memo=None):
         if row["status"] not in statuses:
             if row["status"] == "review": review_excluded += 1
             continue
+        bad = _unreadable(row, ("subtotal", "deductible_subtotal", "non_deductible_subtotal", "vat"))
+        if bad: skipped.append(f"{row['invoice_number']}: {', '.join(bad)} is not a number"); continue
         if row["kind"] == "sale": category = "sales"
         elif row.get("source_file") == "Customs Case": category = "customs"
         elif row.get("entry_type") == "assets": category = "assets"
@@ -121,7 +140,7 @@ def _documents(db, start, end, currency, include_review, memo=None):
         else: category = "purchases"
         documents.append({"source": "invoice", "id": row["id"], "date": day, "number": row["invoice_number"], "party": row.get("party_name") or "",
             "party_id": row.get("party_id"), "party_mof": row.get("party_mof") or "",
-            "category": category, "currency": row["currency"], "base": _money(row.get("deductible_subtotal") or row.get("subtotal")),
+            "category": category, "currency": row["currency"], "base": _money(_given(row, "deductible_subtotal", "subtotal")),
             "exempt": _money(row.get("non_deductible_subtotal")), "vat": _money(row.get("vat")), "status": row["status"],
             "recoverable": category == "sales" or bool(int(row.get("vat_recoverable") if row.get("vat_recoverable") is not None else 1)),
             "treatment": row.get("vat_treatment") or "standard", "use": row.get("vat_use") or "mixed", "std_rate": std_rate})
@@ -131,9 +150,11 @@ def _documents(db, start, end, currency, include_review, memo=None):
         try: day = iso_date(row["expense_date"])
         except ValueError: skipped.append(f"EXP-{row['id']}"); continue
         if not start <= day <= end or (currency and row["currency"] != currency): continue
+        bad = _unreadable(row, ("subtotal", "with_vat_subtotal", "without_vat_subtotal", "vat"))
+        if bad: skipped.append(f"{row.get('reference') or 'EXP-' + str(row['id'])}: {', '.join(bad)} is not a number"); continue
         documents.append({"source": "expense", "id": row["id"], "date": day, "number": row.get("reference") or f"EXP-{row['id']}",
             "party": row.get("description") or "", "category": "expenses", "currency": row["currency"],
-            "base": _money(row.get("with_vat_subtotal") or row.get("subtotal")), "exempt": _money(row.get("without_vat_subtotal")),
+            "base": _money(_given(row, "with_vat_subtotal", "subtotal")), "exempt": _money(row.get("without_vat_subtotal")),
             "vat": _money(row.get("vat")), "status": "posted", "recoverable": bool(int(row.get("vat_recoverable") if row.get("vat_recoverable") is not None else 1)),
             "treatment": "standard", "use": row.get("vat_use") or "mixed", "std_rate": std_rate})
     documents.sort(key=lambda item: (item["date"], item["category"], str(item["number"])))
@@ -635,17 +656,17 @@ def post_settlement(db, year, quarter, user_id, previous_year_db=None, payable_a
     if not result["saved"] or result["changed_since_saved"]: raise ValueError(f"Save the Q{int(quarter)} {int(year)} VAT return first (documents changed after saving count as not saved)")
     plan = settlement_lines(db, result, payable_account, credit_account, non_deductible_account)
     if len(plan["lines"]) < 2: raise ValueError("Nothing to settle: no VAT movement in the quarter")
-    with db.connect() as connection:
+    with db.connect() as connection:  # 2.9.121: the old vouchers are replaced in ONE transaction (never deleted without the new ones)
         for row in connection.execute("SELECT id FROM journal_entries WHERE source_type='journal_voucher' AND (description=? OR description=?)",
                                       (plan["description"], plan["closing_description"])).fetchall():
             connection.execute("DELETE FROM journal_entries WHERE id=?", (row["id"],))
-    closing_number = None
-    if plan.get("closing_lines"):  # 2.9.97: customer / supplier VAT accounts -> closing accounts (44210 / 44270 / 44265 / 44263)
-        closing = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["closing_description"], "currency": plan["currency"], "voucher_type": "06"},
-                                          [{k: v for k, v in line.items() if k != "account_name"} for line in plan["closing_lines"]], user_id)
-        closing_number = closing["voucher"]["entry_number"]
-    voucher = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["description"], "currency": plan["currency"], "voucher_type": "06"},
-                                      [{k: v for k, v in line.items() if k != "account_name"} for line in plan["lines"]], user_id)
+        closing_number = None
+        if plan.get("closing_lines"):  # 2.9.97: customer / supplier VAT accounts -> closing accounts (44210 / 44270 / 44265 / 44263)
+            closing = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["closing_description"], "currency": plan["currency"],
+                                               "voucher_type": "06"}, [{k: v for k, v in line.items() if k != "account_name"} for line in plan["closing_lines"]], user_id)
+            closing_number = closing["voucher"]["entry_number"]
+        voucher = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["description"], "currency": plan["currency"], "voucher_type": "06"},
+                                          [{k: v for k, v in line.items() if k != "account_name"} for line in plan["lines"]], user_id)
     return {**plan, "voucher": voucher["voucher"]["entry_number"], "closing_voucher": closing_number}
 
 
@@ -773,7 +794,9 @@ def filing_worksheet(result, company):
     if missing: notices.append("Missing employer information: " + ", ".join(missing))
     if result["review_excluded"]: notices.append(f"{result['review_excluded']} Review document(s) excluded; resolve before filing.")
     if result.get("changed_since_saved"): notices.append("Saved return changed: review and save it again.")
-    if result.get("skipped"): notices.append(f"{len(result['skipped'])} document(s) skipped due to unreadable dates.")
+    if result.get("skipped"):  # 2.9.121: which ones and why (an unreadable date or amount) - correct them before filing
+        notices.append(f"{len(result['skipped'])} document(s) NOT counted (unreadable date or amount) - correct them before filing: "
+                       + "; ".join(str(item) for item in result["skipped"][:20]))
     notices += ["Check: " + warning for warning in result.get("warnings", [])]
     return notices, [
         {"heading": "Taxpayer / المكلف (published Q1-2 specimen)", "headers": ["Field", "Value"], "rows": company_rows, "total_rows": []},
