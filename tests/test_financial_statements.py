@@ -92,6 +92,10 @@ class FinancialStatementsTest(unittest.TestCase):
         export_sections_pdf(pdf,management['title'],management['meta'],management['sections'])
         wb=load_workbook(xlsx); self.assertNotIn("Auditor's Report",wb.sheetnames); self.assertEqual(wb.sheetnames[:2],['Cover','Financial Position']); wb.close()
         self.assertNotIn("INDEPENDENT AUDITOR",' '.join(p.extract_text() for p in PdfReader(pdf).pages))
+        for language in ('fr','ar'):  # the same in French and Arabic: no audit section, no auditor line
+            pack=fs.build({2025:self.db},{'years':'2025','auditor_report':False,'language':language})
+            self.assertFalse([s for s in pack['sections'] if s.get('kind')=='audit'])
+            self.assertFalse([m for m in pack['meta'] if 'udit' in m or 'مدقق' in m])
 
 
 class FinancialStatementsApiTest(unittest.TestCase):

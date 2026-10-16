@@ -579,7 +579,7 @@ def build(databases, options, others=(), master=None):
     meta = [company, t('Year ended ' if full_year else 'Period ended ') + end_text + t(' - with comparative figures') * (len(data) > 1),
             t('Presentation currency: {basis}', basis=basis)]
     firm = str((cfg.get('info') or {}).get('auditor_firm') or '').strip()
-    if firm: meta.append(t('Auditor: {firm}', firm=firm))
+    if firm and audit_rows is not None: meta.append(t('Auditor: {firm}', firm=firm))  # 2.9.121: management accounts name no auditor
     title = t('Financial Statements, Notes and Audit Report') if audit_rows is not None else t('Financial Statements and Notes')  # 2.9.121
     return dict(title=title, meta=meta, sections=sections, language=language, rtl=language == 'ar')
 

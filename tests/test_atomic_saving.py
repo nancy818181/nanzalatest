@@ -133,3 +133,63 @@ class CompanyAccessTest(unittest.TestCase):
         api2 = ApiClient(self.url); api2.login("clerk1", "Clerk-2025!")
         self.assertEqual(len(api2.companies()), 2)
         api.close(); api2.close()
+
+
+class RollbackAfterStockTest(unittest.TestCase):
+    """2.9.121 (review): an error AFTER the stock and the VAT reclass are posted undoes every record of the invoice."""
+    def setUp(self):
+        import inventory
+        self.folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(self.folder.cleanup)
+        self.db, self.user = new_db(self.folder.name)
+        self.item = inventory.save_item(self.db, {"name": "HPL Sheet", "unit": "sheet", "sales_price": "120"}, self.user)
+
+    def tables(self):
+        with sqlite3.connect(self.db.path) as connection:
+            names = [r[0] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+            return {n: connection.execute(f"SELECT COUNT(*) FROM {n}").fetchone()[0] for n in names if n not in ("audit_log", "settings")}
+
+    def test_failure_after_stock_and_vat_reclass_leaves_nothing(self):
+        before = self.tables()
+        cls = type(self.db); original = cls.set_vat_recoverable
+
+        def broken(*_args, **_kwargs): raise RuntimeError("stopped after the stock")
+        cls.set_vat_recoverable = broken
+        try:
+            with self.assertRaisesRegex(RuntimeError, "after the stock"):
+                self.db.create_manual_invoice({"invoice_number": "P-1", "invoice_date": "05-03-2026", "party_name": "Supplier", "kind": "purchase",
+                                               "currency": "USD", "vat_use": "exempt"},
+                                              [{"description": "HPL", "item_code": self.item["sku"], "quantity": 3, "unit_price": 80}], self.user)
+        finally:
+            cls.set_vat_recoverable = original
+        changed = {k: (before.get(k), v) for k, v in self.tables().items() if before.get(k) != v}
+        self.assertEqual(changed, {})
+
+    def test_a_released_step_is_still_undone_when_the_save_fails_later(self):
+        before = self.tables()
+        with self.assertRaises(ValueError):
+            with self.db.connect() as connection:
+                with self.db.connect() as step:  # the step succeeds (RELEASE) ...
+                    step.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                                 (self.user, "step", "test", 1, "{}", "2026-01-01"))
+                    step.execute("INSERT INTO parties(kind,name,currency) VALUES('customer','Step Customer','USD')")
+                self.assertTrue(connection.in_transaction)  # ... and RELEASE did not commit the larger save
+                raise ValueError("the save fails after the step")
+        self.assertEqual(self.tables(), before)
+
+
+class HistoricalAgeingTest(unittest.TestCase):
+    """2.9.121 (review): a receipt dated after the ageing date and a credit note do not change the ageing at that date."""
+    def test_later_receipt_and_credit_note(self):
+        folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
+        db, user = new_db(folder.name)
+        customer = db.save_party({"kind": "customer", "name": "Cedar", "currency": "USD"}, user)
+        db.create_manual_invoice({"invoice_number": "S1", "invoice_date": "10-01-2026", "due_date": "10-01-2026", "party_name": "Cedar", "kind": "sale",
+                                  "currency": "USD"}, [{"description": "x", "quantity": 1, "unit_price": 100, "vat_rate": 0}], user)
+        db.add_payment({"kind": "customer_receipt", "payment_date": "20-02-2026", "party_id": customer["id"], "currency": "USD", "amount": "40",
+                        "cash_account": "531", "party_account": customer["account_number"]}, user)  # not allocated, after 31-01
+        db.create_manual_invoice({"invoice_number": "CN1", "invoice_date": "25-02-2026", "party_name": "Cedar", "kind": "sale", "currency": "USD",
+                                  "doc_subtype": "credit_note"}, [{"description": "x", "quantity": 1, "unit_price": 10, "vat_rate": 0}], user)
+        at_january = {r["invoice_number"]: r["outstanding"] for r in db.aging_report("31-01-2026", "sale")}
+        self.assertEqual(at_january, {"S1": 100.0})
+        at_march = sum(r["outstanding"] for r in db.aging_report("31-03-2026", "sale"))
+        self.assertAlmostEqual(at_march, 50.0)  # 100 - 40 unallocated - 10 credit note
