@@ -311,7 +311,6 @@ class PaymentsStore:
                 (user_id, "delete", "payment", int(payment_id), json.dumps({"number": row["payment_number"], "amount": row["amount"]}), utcnow()))
         return {"deleted": int(payment_id)}
 
-    @atomic  # 2.9.121
     def update_payment(self, payment_id, item, user_id):
         return self._safe_replacement("payment", payment_id, item, user_id)
 
@@ -351,7 +350,6 @@ class PaymentsStore:
                 (user_id, "delete", "expense", int(expense_id), json.dumps({"number": row["expense_number"], "total": row["total"]}), utcnow()))
         return {"deleted": int(expense_id)}
 
-    @atomic  # 2.9.121
     def update_expense(self, expense_id, item, user_id):
         return self._safe_replacement("expense", expense_id, item, user_id)
 
