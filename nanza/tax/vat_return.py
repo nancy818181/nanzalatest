@@ -379,7 +379,7 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
             annual_adjustment += change
         totals_lbp["annual_adjustment"] = annual_adjustment
         totals_lbp["total_input"] += annual_adjustment; totals_lbp["net"] -= annual_adjustment; totals_lbp["non_deductible"] -= annual_adjustment
-    source = "none"
+    source = "none"; dependency_errors = []
     if credit_brought_forward not in (None, ""):
         credit_bf = rnd(credit_brought_forward); source = "manual"
     else:
@@ -394,12 +394,25 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
             # 2.9.80: the previous quarter was not saved (a quiet quarter, or forgotten): its credit carried forward is
             # calculated (and so on back to the first quarter of the books), so an older credit is never lost.
             chain_db = db if previous_year == int(year) else previous_year_db
-            if chain_db is not None and _has_vat_history(chain_db, previous_year, previous_q):
-                previous = build_vat_return(chain_db, previous_year, previous_q, None, include_review, None if chain_db is previous_year_db else previous_year_db, _memo=memo)
-                credit_bf = rnd(previous["credit_carried_forward_lbp"])
-                source = f"Q{previous_q} {previous_year} not saved - calculated"
-                if credit_bf or previous["payable_lbp"]:
-                    warnings.append(f"Q{previous_q} {previous_year} is not saved: its credit carried forward ({credit_bf:,.2f}) is calculated. Save Q{previous_q} {previous_year} first.")
+            if chain_db is not None and _has_vat_history(chain_db, previous_year, previous_q, memo):
+                # 2.9.126: a failure in an earlier quarter no longer stops this preview; the credit brought forward is
+                # marked unreliable and the return cannot be saved or settled until that quarter is corrected.
+                try:
+                    previous = build_vat_return(chain_db, previous_year, previous_q, None, include_review, None if chain_db is previous_year_db else previous_year_db, _memo=memo)
+                except (ValueError, ArithmeticError, LookupError, sqlite3.Error) as exc:
+                    previous = None
+                    dependency_errors.append(f"Q{previous_q} {previous_year}: {exc}")
+                    source = f"Q{previous_q} {previous_year} could not be calculated - credit brought forward UNKNOWN (0 shown)"
+                if previous is not None:
+                    dependency_errors.extend(previous.get("dependency_errors") or [])
+                    credit_bf = rnd(previous["credit_carried_forward_lbp"])
+                    source = (f"Q{previous_q} {previous_year} not saved - calculated, UNRELIABLE (an earlier quarter failed; credit brought forward UNKNOWN)"
+                              if previous.get("dependency_errors") else f"Q{previous_q} {previous_year} not saved - calculated")
+                    if credit_bf or previous["payable_lbp"]:
+                        warnings.append(f"Q{previous_q} {previous_year} is not saved: its credit carried forward ({credit_bf:,.2f}) is calculated. Save Q{previous_q} {previous_year} first.")
+    if dependency_errors:
+        warnings.insert(0, "PROVISIONAL - not reliable: an earlier quarter could not be calculated, so the credit brought forward, "
+                           "the payable and the credit carried forward are incomplete. Correct: " + "; ".join(dependency_errors))
     net_after_credit = totals_lbp["net"] - credit_bf
     payable = (_rounded_up(net_after_credit, end) if vat_currency == "LBP" else rnd(net_after_credit)) if net_after_credit > 0 else ZERO
     # 2.9.122: the rounding to LBP 10,000 (MoF decision 1195) is the rule - no more "unverified" warning
@@ -423,22 +436,52 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
                 "ytd_turnover_detail": ytd_detail if int(quarter) != 4 else final_detail, "annual_adjustment_detail": adjustment_detail,
         "credit_brought_forward_lbp": credit_bf, "credit_source": source, "net_after_credit_lbp": net_after_credit,
         "payable_lbp": payable, "refund_requested_lbp": refund, "credit_carried_forward_lbp": credit_cf, "documents": documents, "adjustments": adjustments,
-        "skipped": skipped, "blocking_documents": sorted(memo.get("unreadable_documents", set())), "review_excluded": review_excluded, "warnings": warnings, "saved": saved, "changed_since_saved": changed,
-        "status": "saved" if saved and not changed else "changed after saving" if changed else "not saved",
+        "skipped": skipped, "blocking_documents": sorted(memo.get("unreadable_documents", set())), "dependency_errors": dependency_errors,
+        "provisional": bool(dependency_errors), "review_excluded": review_excluded, "warnings": warnings, "saved": saved, "changed_since_saved": changed,
+        "status": "provisional - earlier quarter failed" if dependency_errors else "saved" if saved and not changed else "changed after saving" if changed else "not saved",
         "vat_currency": vat_currency, "vat_second_currency": vat_second, "vat_rate": (std_rate * 100).normalize(), "second_rate": second_rate, "second": second}
 
 
-def _has_vat_history(db, year, quarter):
-    """A saved return or a VAT document on or before the end of this quarter (else the chain of credits stops)."""
+_DMY = "[0-3][0-9]-[01][0-9]-[12][0-9][0-9][0-9]"
+_YMD = "[12][0-9][0-9][0-9]-[01][0-9]-[0-3][0-9]"
+
+
+def _earliest_vat_document(db, memo=None):
+    """(earliest readable document date, an unreadable date exists) over invoices and expenses: one pass over the dates
+    per calculation, shared by every quarter of the credit chain (2.9.126). Clean DD-MM-YYYY / YYYY-MM-DD dates are
+    compared in SQL; any other text is read one by one."""
+    key = ("vat_earliest", str(getattr(db, "path", id(db))))
+    if memo is not None and key in memo: return memo[key]
+    earliest = None; unreadable = False
+    with db.connect() as connection:
+        for table, column in (("invoices", "invoice_date"), ("expenses", "expense_date")):
+            normalized = (f"CASE WHEN {column} GLOB '{_DMY}' THEN substr({column},7,4)||'-'||substr({column},4,2)||'-'||substr({column},1,2) "
+                          f"WHEN {column} GLOB '{_YMD}' THEN {column} END")
+            # date(n) is NULL or differs from n for an impossible day (31-02, 29-02 outside a leap year, 31-04, month 13)
+            row = connection.execute(f"""SELECT MIN(CASE WHEN date(n,'+0 days')=n THEN n END) first, SUM(n IS NULL) other,
+                    SUM(n IS NOT NULL AND (date(n,'+0 days') IS NULL OR date(n,'+0 days')<>n)) bad
+                    FROM (SELECT {normalized} n FROM {table})""").fetchone()
+            if row["bad"]: unreadable = True
+            if row["first"] and (earliest is None or row["first"] < earliest): earliest = row["first"]
+            if row["other"]:
+                for item in connection.execute(f"""SELECT {column} d FROM {table}
+                        WHERE {column} IS NULL OR NOT ({column} GLOB '{_DMY}' OR {column} GLOB '{_YMD}')"""):
+                    try: day = iso_date(item["d"])
+                    except ValueError: unreadable = True; continue
+                    if earliest is None or day < earliest: earliest = day
+    result = (earliest, unreadable)
+    if memo is not None: memo[key] = result
+    return result
+
+
+def _has_vat_history(db, year, quarter, memo=None):
+    """A saved return or a VAT document on or before the end of this quarter (else the chain of credits stops).
+    An unreadable document date keeps the chain open: it must be inspected, not erase the credit chain."""
     end = quarter_range(year, quarter)[1]
     with db.connect() as connection:
         if connection.execute("SELECT 1 FROM vat_returns WHERE year*4+quarter<=? LIMIT 1", (int(year) * 4 + int(quarter),)).fetchone(): return True
-        for table, column in (("invoices", "invoice_date"), ("expenses", "expense_date")):
-            for row in connection.execute(f"SELECT {column} d FROM {table}"):
-                try:
-                    if iso_date(row["d"]) <= end: return True
-                except ValueError: return True  # Unknown date must be inspected, not erase the credit chain.
-    return False
+    earliest, unreadable = _earliest_vat_document(db, memo)
+    return unreadable or (earliest is not None and earliest <= end)
 
 
 def _ensure_not_saved(db, year, quarter):
@@ -483,6 +526,9 @@ def save_return(db, year, quarter, user_id, previous_year_db=None, credit_brough
     if result["blocking_documents"]:
         raise ValueError("Cannot save VAT return: correct these unreadable documents first: "
                          + "; ".join(result["blocking_documents"]))
+    if result["dependency_errors"]:
+        raise ValueError("Cannot save VAT return: an earlier quarter could not be calculated, so the credit brought forward is unknown. "
+                         "Correct first: " + "; ".join(result["dependency_errors"]))
     snapshot = json.dumps(json_ready({k: result[k] for k in ("per_currency", "totals_lbp", "credit_source", "review_excluded")}))
     with db.connect() as connection:
         connection.execute("""INSERT INTO vat_returns(year,quarter,net_lbp,credit_brought_forward_lbp,payable_lbp,credit_carried_forward_lbp,snapshot,saved_by,saved_by_name,saved_at)
@@ -661,6 +707,8 @@ def settlement_lines(db, result, payable_account=None, credit_account=None, non_
 def post_settlement(db, year, quarter, user_id, previous_year_db=None, payable_account=None, credit_account=None, non_deductible_account=None):
     """Post (or replace) the settlement voucher of a SAVED quarterly return."""
     result = build_vat_return(db, year, quarter, None, False, previous_year_db)
+    if result.get("dependency_errors"):
+        raise ValueError("Cannot settle VAT: an earlier quarter could not be calculated. Correct first: " + "; ".join(result["dependency_errors"]))
     if not result["saved"] or result["changed_since_saved"]: raise ValueError(f"Save the Q{int(quarter)} {int(year)} VAT return first (documents changed after saving count as not saved)")
     plan = settlement_lines(db, result, payable_account, credit_account, non_deductible_account)
     if len(plan["lines"]) < 2: raise ValueError("Nothing to settle: no VAT movement in the quarter")

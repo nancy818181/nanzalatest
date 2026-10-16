@@ -385,7 +385,17 @@ def _parent_name(db, code):
 
 
 def json_ready(value):
-    if isinstance(value, Decimal): return float(value)
+    if isinstance(value, Decimal):
+        # 2.9.126: the screens need numbers. A float keeps every cent exactly up to about 8.8 trillion and every whole
+        # amount (LBP) up to 9,000 trillion; an amount with cents beyond that is logged, never lost silently.
+        number = float(value)
+        if value.is_finite() and abs(value) >= Decimal("1000000000000"):
+            try: lost = Decimal(repr(number)) != value
+            except (ArithmeticError, ValueError): lost = True
+            if lost:
+                import logging
+                logging.getLogger("saber.reports").warning("Amount %s exceeds exact report precision; shown as %r", value, number)
+        return number
     if isinstance(value, list): return [json_ready(v) for v in value]
     if isinstance(value, dict): return {k: json_ready(v) for k, v in value.items()}
     return value

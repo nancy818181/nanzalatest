@@ -551,6 +551,82 @@ class ReportsStore:
         for row in combined.values(): row["variance"]=row["current"]-row["prior"]
         return {"from_date":from_date,"to_date":to_date,"prior_from":prior_start,"prior_to":prior_end,"items":sorted(combined.values(),key=lambda row:(row["currency"],row["code"]))}
 
+    def _native_trial_balance(self,from_date,to_date,currency=None):
+        """2.9.126: balances in each line's own currency, as exact Decimals from the stored text (no exchange rate is
+        needed, so a missing EUR rate cannot stop a USD comparison; no REAL cast). Same posted-entries rule as the
+        trial balance. A date that cannot be read stops the report with the entry number."""
+        from database_common import iso_date
+        normalized="""CASE WHEN e.entry_date GLOB '??-??-????'
+            THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
+            ELSE e.entry_date END"""
+        conditions=["(e.source_type!='invoice' OR i.status IN ('posted','cancelled'))"]; parameters=[]
+        if currency: conditions.append("e.currency=?"); parameters.append(currency)
+        totals={}
+        with self.connect() as db:
+            for row in db.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_number,{normalized} day,j.debit,j.credit
+                    FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
+                    LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
+                    WHERE {' AND '.join(conditions)}""",parameters):
+                try: day=iso_date(row["day"])
+                except ValueError as exc:
+                    raise ValueError(f"Invalid date for entry {row['entry_number']}: correct it before reporting") from exc
+                if day>to_date: continue
+                try: movement=Decimal(str(row["debit"] or 0))-Decimal(str(row["credit"] or 0))
+                except ArithmeticError as exc: raise ValueError(f"Invalid amount for entry {row['entry_number']}") from exc
+                if not movement.is_finite(): raise ValueError(f"Invalid amount for entry {row['entry_number']}")
+                item=totals.setdefault((row["code"],row["currency"]),{"code":row["code"],"name_en":row["name_en"],"currency":row["currency"],
+                    "opening":Decimal("0"),"debit":Decimal("0"),"credit":Decimal("0")})
+                if day<from_date: item["opening"]+=movement
+                else:
+                    item["debit"]+=Decimal(str(row["debit"] or 0)); item["credit"]+=Decimal(str(row["credit"] or 0))
+        for item in totals.values(): item["closing_balance"]=item["opening"]+item["debit"]-item["credit"]
+        return list(totals.values())
+
+    def comparative_trial_balance(self,from_date,to_date,currency=None,prior_db=None):
+        """2.9.126: trial balance of the period against the same period one year earlier, account by account:
+        opening, movement and closing (closing = every posted movement up to the end date, opening balances included).
+        The prior year is read from its own fiscal-year file when the company keeps one file per year."""
+        from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)
+        start=datetime.strptime(from_date,"%Y-%m-%d"); end=datetime.strptime(to_date,"%Y-%m-%d")
+        if start>end: raise ValueError("From Date cannot be after To Date")
+        def year_before(day):
+            try: return day.replace(year=day.year-1)
+            except ValueError: return day.replace(year=day.year-1,day=28)  # 29 February
+        prior_start=year_before(start).strftime("%Y-%m-%d"); prior_end=year_before(end).strftime("%Y-%m-%d")
+        current=self._native_trial_balance(from_date,to_date,currency)
+        # One file per year: the prior-year file is THE source of the prior year (not a fallback when this file is empty).
+        if prior_db is not None and prior_db is not self:
+            prior=prior_db._native_trial_balance(prior_start,prior_end,currency); source="prior-year file"
+        else:
+            prior=self._native_trial_balance(prior_start,prior_end,currency); source="this file"
+        prior_available=bool(prior)
+        combined={}
+        fields=("opening","movement","closing")
+        for label,items in (("current",current),("prior",prior)):
+            for r in items:
+                key=(r["currency"],r["code"])
+                item=combined.setdefault(key,{"currency":r["currency"],"code":r["code"],"name_en":r["name_en"],
+                    **{f"{period}_{field}":Decimal("0") for period in ("current","prior") for field in fields}})
+                if label=="current" or not item["name_en"]: item["name_en"]=r["name_en"]
+                item[f"{label}_opening"]+=r["opening"]
+                item[f"{label}_movement"]+=r["debit"]-r["credit"]
+                item[f"{label}_closing"]+=r["closing_balance"]
+        items=[]
+        for item in combined.values():
+            item["variance"]=item["current_closing"]-item["prior_closing"]  # signed: debit balances positive, credit negative
+            if all(item[f"{p}_{f}"]==0 for p in ("current","prior") for f in fields): continue
+            items.append(item)
+        items.sort(key=lambda r:(r["currency"],r["code"]))
+        totals={}
+        for r in items:
+            t=totals.setdefault(r["currency"],{k:Decimal("0") for k in ("current_closing","prior_closing","variance")})
+            for k in t: t[k]+=r[k]
+        # exact Decimals here; the API turns them into numbers once (json_ready logs any amount that would lose a cent)
+        warning="" if prior_available else (f"Prior period {prior_start} to {prior_end} is unavailable (no posted entries in this file"
+                                             +(" or in the prior-year file" if prior_db is not None and prior_db is not self else "")+"): prior columns are blank, not zero balances")
+        return {"from_date":from_date,"to_date":to_date,"prior_from":prior_start,"prior_to":prior_end,"prior_available":prior_available,
+                "prior_source":source if prior_available else "","warning":warning,"items":items,"totals":totals}
+
     def vat_report(self, from_date=None, to_date=None, currency=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
         normalized="""CASE WHEN invoice_date GLOB '??-??-????'

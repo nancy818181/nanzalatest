@@ -1,5 +1,6 @@
 """Journal, profit & loss, fiscal year and financial reports screens. (moved out of desktop.py in 2.9.41, unchanged)."""
 from __future__ import annotations
+import logging
 
 from desktop_common import (  # 2.9.102: the names this module uses (no more 'import *')
     bulk_action, chosen_values, datetime, export_excel, export_pdf, filedialog, flow_toolbars, GOLD, json, LIGHT,
@@ -358,7 +359,7 @@ class ReportsMixin:
                 bg=LIGHT); aging=self.ageing_tab; comparative=tk.Frame(nested,bg=LIGHT)
         nested.add(gl,text="General Ledger"); nested.add(bs,text="Balance Sheet"); nested.add(vat,text="Lebanese VAT Report"); nested.add(cash,
                 text="Cash Flow"); nested.add(cash_outlook,text="Cash Flow Outlook"); nested.add(comparative,
-                text="Comparative P&L"); self.ageing_page=aging; self.build_budget_page(nested); self.build_projection_page(nested); self.build_business_reports_page(nested)
+                text="Comparative P&L"); ctb_page=tk.Frame(nested,bg=LIGHT); nested.add(ctb_page,text="Comparative Trial Balance"); self.ageing_page=aging; self.build_budget_page(nested); self.build_projection_page(nested); self.build_business_reports_page(nested)
         self.build_management_pack_page(nested)  # 2.9.82
         self.ledger_tree=self.table(gl,[("date","Date",95),("entry","Entry",90),("account","Account",85),("currency","Currency",70),("name","Account Name",180),
                 ("description","Description",200),("debit","Debit",105),("credit","Credit",105),("balance","Balance",110)])
@@ -434,6 +435,11 @@ class ReportsMixin:
         self.comparative_tree=self.table(comparative,[("currency","Currency",75),("type","Type",85),("account","Account",95),("name","Account Name",260),
                 ("current","Current Period",130),("prior","Prior Year",130),("variance","Variance",130)]); self.report_buttons(comparative,"comparative")
         self.enable_drill_down(self.comparative_tree,2,lambda:(self.financial_report_range() or (None,None)))  # 2.9.82
+        # 2.9.126: comparative trial balance - this period against the same period one year earlier
+        self.ctb_note=tk.Label(ctb_page,text="",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left"); self.ctb_note.pack(fill="x",padx=12,pady=(6,0))
+        self.ctb_tree=self.table(ctb_page,[("currency","Currency",75),("account","Account",95),("name","Account Name",240),("opening","Opening",120),
+                ("movement","Movement",120),("closing","Closing",120),("prior","Prior Year Closing",130),("variance","Variance",120)]); self.report_buttons(ctb_page,"ctb")
+        self.enable_drill_down(self.ctb_tree,1,lambda:(self.financial_report_range() or (None,None)))
         self.enable_drill_down(self.balance_tree,1,lambda:(None,(self.financial_report_range() or (None,None))[1]))
         self.load_financial_reports()
         self.load_ageing_report()
@@ -511,36 +517,94 @@ class ReportsMixin:
         return values
 
     def load_financial_reports(self):
+        """2.9.126: the reports are fetched and calculated in a background thread; only the tables are filled on the
+        screen thread. A newer request (filters changed quickly) wins: an older result never overwrites it."""
         if not hasattr(self,"ledger_tree"): return
         dates=self.financial_report_range()
         if dates is None: return
         currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
-        try:
-            ledger=self.client.general_ledger(None,dates[0],dates[1],currency)
-            balance=self.client.balance_sheet(dates[1],currency)
-            # 2.9.63: a user without the VAT right still gets the ledger, balance sheet and cash flow (the whole page failed)
-            vat=self.client.vat_report(dates[0],dates[1],currency) if self.can_use("vat") else {"items":[],"summary":[],"_hidden":True}
-            cash=self.client.cash_flow(dates[0],dates[1],currency)
-            comparative=self.client.comparative_reports(dates[0],dates[1],currency)
-        except Exception as exc: return messagebox.showerror("Financial Reports",str(exc))
-        account_from=self.report_account_from.get().split(" - ",1)[0].strip(); account_to=self.report_account_to.get().split(" - ",1)[0].strip()
-        low=int(''.join(c for c in account_from if c.isdigit()) or 0); high=int(''.join(c for c in account_to if c.isdigit()) or 999999999999)
-        def in_account_range(code):
-            digits=int(''.join(c for c in str(code) if c.isdigit()) or 0)
-            return low<=digits<=high
-        self.refresh_financial_filter_choices(ledger["items"]); filters=self.financial_filter_sets()
-        self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row,filters)]; self.balance_rows=[row for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
-        self.ledger_tree.delete(*self.ledger_tree.get_children()); self.balance_tree.delete(*self.balance_tree.get_children()); self.vat_tree.delete(*self.vat_tree.get_children()); self.cash_tree.delete(*self.cash_tree.get_children()); self.comparative_tree.delete(*self.comparative_tree.get_children())
-        from desktop_common import fill_tree  # 2.9.120: a long ledger shows its first lines at once, the rest follows
-        fill_tree(self.ledger_tree,[(("","end"),{"values":(r["entry_date"],r["entry_number"],r["account_code"],r["currency"],r["account_name"],
-                r["description"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}')}) for r in self.ledger_rows])
-        for r in self.balance_rows: self.balance_tree.insert("","end",values=(r["type"],r["code"],r["currency"],r["name_en"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}'))
-        for r in self.vat_rows: self.vat_tree.insert("","end",values=(r["currency"],r["kind"],r["invoices"],f'{r["subtotal"] or 0:,.2f}',f'{r["vat"] or 0:,.2f}',f'{r["total"] or 0:,.2f}'))
-        for r in self.cash_rows: self.cash_tree.insert("","end",values=(r["currency"],r["category"],f'{r["inflow"]:,.2f}',f'{r["outflow"]:,.2f}',f'{r["net"]:,.2f}'))
-        for r in self.comparative_rows: self.comparative_tree.insert("","end",values=(r["currency"],r["type"],r["code"],r["name_en"],f'{r["current"]:,.2f}',
-                f'{r["prior"]:,.2f}',f'{r["variance"]:,.2f}'))
-        self.vat_summary.config(text="VAT figures need the VAT right (ask the administrator)." if vat.get("_hidden") else
-                                "   ".join(f'{r["currency"]} VAT payable: {r["vat_payable"]:,.2f}' for r in vat["summary"]) or "No VAT activity")
+        client=self.client
+        # 2.9.63: a user without the VAT right still gets the ledger, balance sheet and cash flow (the whole page failed)
+        vat_hidden=None if self.can_use("vat") else {"items":[],"summary":[],"_hidden":True}
+        self._financial_generation=getattr(self,"_financial_generation",0)+1; generation=self._financial_generation
+        self._financial_loading=True
+        # 2.9.126: what these figures are for - exports print THIS, never the filters typed after the request
+        requested={"dates":list(dates),"currency":self.view_currency.get()}
+
+        def fetch():
+            ledger=client.general_ledger(None,dates[0],dates[1],currency)
+            balance=client.balance_sheet(dates[1],currency)
+            vat=vat_hidden or client.vat_report(dates[0],dates[1],currency)
+            cash=client.cash_flow(dates[0],dates[1],currency)
+            comparative=client.comparative_reports(dates[0],dates[1],currency)
+            ctb={"items":[],"warning":""}
+            if hasattr(client,"comparative_trial_balance"):
+                try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+                except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:  # one report never hides the others
+                    logging.getLogger("saber").warning("Comparative trial balance failed", exc_info=True)
+                    ctb={"items":[],"prior_available":False,"failed":True,"warning":f"Comparative Trial Balance unavailable: {exc}"}
+            return ledger,balance,vat,cash,comparative,ctb
+
+        def apply(result):
+            if generation!=getattr(self,"_financial_generation",generation): return  # a newer request is on its way
+            ledger,balance,vat,cash,comparative,ctb=result
+            account_from=self.report_account_from.get().split(" - ",1)[0].strip(); account_to=self.report_account_to.get().split(" - ",1)[0].strip()
+            low=int(''.join(c for c in account_from if c.isdigit()) or 0); high=int(''.join(c for c in account_to if c.isdigit()) or 999999999999)
+            def in_account_range(code):
+                digits=int(''.join(c for c in str(code) if c.isdigit()) or 0)
+                return low<=digits<=high
+            self.refresh_financial_filter_choices(ledger["items"]); filters=self.financial_filter_sets()
+            self._financial_loading=False
+            self.financial_snapshot={**requested,"account_from":self.report_account_from.get(),"account_to":self.report_account_to.get(),"filters":filters}
+            self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row,filters)]; self.balance_rows=[row for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
+            self.ctb_rows=[row for row in ctb.get("items",[]) if in_account_range(row["code"])]; self.ctb_info=ctb
+            self.ledger_tree.delete(*self.ledger_tree.get_children()); self.balance_tree.delete(*self.balance_tree.get_children()); self.vat_tree.delete(*self.vat_tree.get_children()); self.cash_tree.delete(*self.cash_tree.get_children()); self.comparative_tree.delete(*self.comparative_tree.get_children())
+            from desktop_common import fill_tree  # 2.9.120: a long ledger shows its first lines at once, the rest follows
+            fill_tree(self.ledger_tree,[(("","end"),{"values":(r["entry_date"],r["entry_number"],r["account_code"],r["currency"],r["account_name"],
+                    r["description"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}')}) for r in self.ledger_rows])
+            for r in self.balance_rows: self.balance_tree.insert("","end",values=(r["type"],r["code"],r["currency"],r["name_en"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}'))
+            for r in self.vat_rows: self.vat_tree.insert("","end",values=(r["currency"],r["kind"],r["invoices"],f'{r["subtotal"] or 0:,.2f}',f'{r["vat"] or 0:,.2f}',f'{r["total"] or 0:,.2f}'))
+            for r in self.cash_rows: self.cash_tree.insert("","end",values=(r["currency"],r["category"],f'{r["inflow"]:,.2f}',f'{r["outflow"]:,.2f}',f'{r["net"]:,.2f}'))
+            for r in self.comparative_rows: self.comparative_tree.insert("","end",values=(r["currency"],r["type"],r["code"],r["name_en"],f'{r["current"]:,.2f}',
+                    f'{r["prior"]:,.2f}',f'{r["variance"]:,.2f}'))
+            if hasattr(self,"ctb_tree"):
+                self.ctb_tree.delete(*self.ctb_tree.get_children())
+                prior=ctb.get("prior_available",True)
+                money=lambda value,show=True:f'{value:,.2f}' if show else ""
+                for r in self.ctb_rows: self.ctb_tree.insert("","end",values=(r["currency"],r["code"],r["name_en"],money(r["current_opening"]),
+                        money(r["current_movement"]),money(r["current_closing"]),money(r["prior_closing"],prior),money(r["variance"],prior)))
+                if hasattr(self,"ctb_note"):
+                    self.ctb_note.config(text=ctb.get("warning") or (f'Prior period: {ctb.get("prior_from","")} to {ctb.get("prior_to","")} '
+                                         f'({ctb.get("prior_source","")}). Balances: debit positive, credit negative.'))
+            self.vat_summary.config(text="VAT figures need the VAT right (ask the administrator)." if vat.get("_hidden") else
+                                    "   ".join(f'{r["currency"]} VAT payable: {r["vat_payable"]:,.2f}' for r in vat["summary"]) or "No VAT activity")
+
+        def failed(message):
+            if generation!=getattr(self,"_financial_generation",generation): return
+            self._financial_loading=False
+            messagebox.showerror("Financial Reports",message)
+
+        if not (hasattr(self,"after") and hasattr(self,"winfo_exists")):  # no screen loop (tests, scripts): in line
+            try: result=fetch()
+            except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc: return failed(str(exc))
+            return apply(result)
+        import queue, threading
+        events=queue.Queue()
+        def run():
+            try: events.put(("done",fetch()))
+            except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:  # the client's errors (server, network, data)
+                logging.getLogger("saber").warning("Financial reports failed", exc_info=True)
+                events.put(("error",str(exc)))
+        def poll():
+            try:
+                if not self.winfo_exists(): return
+            except tk.TclError: return  # the window was closed
+            try: kind,value=events.get_nowait()
+            except queue.Empty: return self.after(100,poll)
+            if kind=="error": failed(value)
+            else: apply(value)
+        threading.Thread(target=run,daemon=True,name="NanzaFinancialReports").start()
+        self.after(100,poll)
 
     def load_ageing_report(self):
         try: as_of=parse_user_date(self.ageing_as_of.get()).strftime("%Y-%m-%d")
@@ -729,25 +793,45 @@ class ReportsMixin:
         elif report=="aging": title=f"Customer and Supplier Ageing as of {self.ageing_as_of.get()}"; headers=["Type","Party","Invoice","Due Date","Currency",
                 "Outstanding","Days Overdue","Bucket"]; rows=[["Receivable" if r["kind"]=="sale" else "Payable",r["party_name"],r["invoice_number"],
                 r.get("due_date") or r["invoice_date"],r["currency"],r["outstanding"],r["days_overdue"],r["bucket"]] for r in self.visible_ageing_rows()]
+        elif report=="ctb":
+            title="Comparative Trial Balance"; info=getattr(self,"ctb_info",{}) or {}; prior=info.get("prior_available",True)
+            headers=["Currency","Account","Name","Opening","Movement","Closing",f'Prior Year Closing ({info.get("prior_to","")})',"Variance"]
+            rows=[[r["currency"],r["code"],r["name_en"],r["current_opening"],r["current_movement"],r["current_closing"],
+                   r["prior_closing"] if prior else "",r["variance"] if prior else ""] for r in getattr(self,"ctb_rows",[])]
         else: title="Comparative Profit and Loss"; headers=["Currency","Type","Account","Name","Current Period","Prior Year","Variance"]; rows=[[r["currency"],
                 r["type"],r["code"],r["name_en"],r["current"],r["prior"],r["variance"]] for r in getattr(self,"comparative_rows",[])]
+        loaded=report in ("ledger","balance","vat","cash","comparative","ctb")
+        snapshot=getattr(self,"financial_snapshot",None) if loaded else None
+        if loaded and getattr(self,"_financial_loading",False):
+            return messagebox.showwarning(title,"The reports are still loading: export when they are shown")
         if not rows: return messagebox.showwarning(title,"No data to export")
         try:
             meta=[self.client.settings().get("company_name") or ""]
+            currency_label=self.view_currency.get()
+            account_from=self.report_account_from.get() if loaded else ""; account_to=self.report_account_to.get() if loaded else ""
             if report=="aging":meta.append(f"As of: {self.ageing_as_of.get()}")
             else:
                 dates=self.financial_report_range()
                 if dates is None:return
+                if snapshot:
+                    # 2.9.126: the figures on screen belong to the last loaded request; changed filters must be loaded first
+                    if (list(dates),currency_label,account_from,account_to)!=(snapshot["dates"],snapshot["currency"],snapshot["account_from"],snapshot["account_to"]):
+                        return messagebox.showwarning(title,"The dates, currency or account range changed since these figures were loaded. "
+                                                            "Refresh the reports, then export.")
                 meta.append(f"As at: {dates[1]}" if report=="balance" else f"Period: {dates[0]} to {dates[1]}")
-            meta.append(f"Currency: {self.view_currency.get()}")
-            if report in ("ledger","balance"):
-                meta.append(f"Account range: {self.report_account_from.get() or 'All'} to {self.report_account_to.get() or 'All'}")
+            meta.append(f"Currency: {currency_label}")
+            if report in ("ledger","balance","ctb"):
+                meta.append(f"Account range: {account_from or 'All'} to {account_to or 'All'}")
+            if report=="ctb":
+                info=getattr(self,"ctb_info",{}) or {}
+                meta.append(info.get("warning") or f'Prior period: {info.get("prior_from","")} to {info.get("prior_to","")}')
             if report=="ledger":
-                filters=self.financial_filter_sets()
-                active=[f"{key}: {', '.join(sorted(values))}" for key,values in filters.items() if values]
+                filters=snapshot["filters"] if snapshot else self.financial_filter_sets()
+                pairs=filters.items() if isinstance(filters,dict) else filters  # [(field, values)] from financial_filter_sets
+                active=[f"{key}: {', '.join(sorted(values))}" for key,values in pairs if values]
                 if active:meta.append("Ledger filters: "+"; ".join(active))
             weights={"ledger":[8,10,9,6,16,22,10,10,11],"balance":[9,10,8,30,14,14,15],
-                     "vat":[9,12,8,16,16,18],"cash":[10,35,18,18,19]}
+                     "vat":[9,12,8,16,16,18],"cash":[10,35,18,18,19],"ctb":[8,9,25,12,12,12,13,12]}
             section={"heading":title,"headers":headers,"rows":rows,"total_rows":[]}
             if report in weights:section['column_weights']=weights[report]
             sections=[section]

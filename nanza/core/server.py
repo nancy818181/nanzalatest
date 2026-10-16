@@ -732,6 +732,14 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/aging":
             query=parse_qs(parsed.query)
             return self._json(200,{"items":self.db.aging_report(query.get("as_of_date",[None])[0],query.get("kind",[None])[0],query.get("currency",[None])[0])})
+        if path == "/api/comparative-trial-balance":  # 2.9.126
+            query=parse_qs(parsed.query)
+            try:
+                from_date=query.get("from_date",[""])[0]
+                prior_db=self._year_db(int(str(from_date)[:4])-1) if str(from_date)[:4].isdigit() else self.db
+                result=self.db.comparative_trial_balance(from_date,query.get("to_date",[""])[0],query.get("currency",[None])[0],prior_db=None if prior_db is self.db else prior_db)
+            except Exception as exc: return self._json(400,{"error":str(exc)})
+            return self._json(200,result)  # exact decimal strings; this report's client restores Decimals
         if path == "/api/comparative-reports":
             query=parse_qs(parsed.query)
             try:

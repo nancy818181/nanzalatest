@@ -71,6 +71,7 @@ def _fmt(value):
 
 def payload_for(row, period_end):
     payload = {"employee_id": row["employee_id"], "period_date": period_end, "allowances": {}}
+    if row.get("payroll_id"): payload["id"] = row["payroll_id"]  # 2.9.126: update that record (its number is kept)
     for key, _ in BASE_COLUMNS:
         value = str(row.get(key) or "").replace(",", "").strip()
         if key == "transport_days":

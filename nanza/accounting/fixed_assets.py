@@ -416,7 +416,7 @@ def post_category_month(database, account_code, month, user_id, fiscal_year=None
     for group,pending in batches:
         amount=sum((a["current"] for a in pending),Decimal("0"))
         voucher=database.save_journal_voucher({"entry_date":datetime.strptime(end,"%Y-%m-%d").strftime("%d-%m-%Y"),
-            "description":f"Depreciation {group['name'] or account_code} ({account_code}) - {end[:7]}","currency":group["currency"],"voucher_type":"06"},
+            "description":f"Depreciation {group['name'] or group['account']} ({group['account']}, {group['currency']}) - {end[:7]}","currency":group["currency"],"voucher_type":"06"},
             [{"account_code":group["depreciation_account"],"debit":str(amount)},
              {"account_code":group["accumulated_account"],"credit":str(amount)}],user_id)
         with database.connect() as db:

@@ -1,6 +1,7 @@
 """Optional local neural OCR: isolated runtime, explicit setup, bounded document reads."""
 from __future__ import annotations
 import json
+import logging
 import os
 from pathlib import Path
 import subprocess
@@ -79,21 +80,156 @@ def _environment():
     return env
 
 
+IDLE_SECONDS = 300
+READ_TIMEOUT = 120
+START_TIMEOUT = 180
+
+
+class _Worker:
+    """2.9.126: one PaddleOCR process kept loaded between invoices (the models load once, not for every photo).
+    Requests are serialized; a timeout or crash kills the process and the next reading starts a clean one; the
+    process stops after IDLE_SECONDS without a request."""
+
+    def __init__(self):
+        self.process=None; self.lines=None; self.next_id=0; self.last_used=0.0; self.timer=None
+
+    def _start(self):
+        import queue, time
+        try:
+            process=subprocess.Popen([str(runtime()),str(worker()),"--serve"],stdin=subprocess.PIPE,stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,text=True,encoding="utf-8",errors="replace",bufsize=1,env=_environment(),
+                                     creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
+        except OSError as exc:
+            raise _ProtocolError(f"Advanced OCR could not start: {exc}") from exc
+        lines=queue.Queue(); tail=[]
+        def pump_out():
+            try:
+                for line in process.stdout: lines.put(line)
+            except (OSError,ValueError): logging.getLogger("saber.ocr").debug("Advanced OCR output ended", exc_info=True)
+            finally:
+                lines.put(None)
+                try: process.stdout.close()
+                except OSError: logging.getLogger("saber.ocr").debug("ignored error", exc_info=True)
+        def pump_err():
+            try:
+                for line in process.stderr:
+                    tail.append(line)
+                    if len(tail)>200: del tail[:100]
+            except (OSError,ValueError): logging.getLogger("saber.ocr").debug("Advanced OCR log ended", exc_info=True)
+            finally:
+                try: process.stderr.close()
+                except OSError: logging.getLogger("saber.ocr").debug("ignored error", exc_info=True)
+        threading.Thread(target=pump_out,daemon=True,name="NanzaOcrOut").start()
+        threading.Thread(target=pump_err,daemon=True,name="NanzaOcrErr").start()
+        self.process,self.lines,self.tail=process,lines,tail
+        try: hello=self._receive(START_TIMEOUT)
+        except TimeoutError as exc:
+            self.stop(); raise _ProtocolError("Advanced OCR did not start in time") from exc
+        except _ProtocolError:
+            self.stop(); raise  # never leave a half-started reader running without its idle stop
+        if not isinstance(hello,dict) or not hello.get("ready"):
+            self.stop()
+            raise _ProtocolError((hello or {}).get("error") if isinstance(hello,dict) else "Advanced OCR did not start")
+        self.last_used=time.monotonic()
+
+    def _receive(self, timeout):
+        import queue
+        try: line=self.lines.get(timeout=timeout)
+        except queue.Empty: raise TimeoutError
+        if line is None: raise _ProtocolError("Advanced OCR stopped unexpectedly")
+        try: return json.loads(line)
+        except ValueError as exc: raise _ProtocolError("Advanced OCR sent an unreadable answer") from exc
+
+    def alive(self):
+        return self.process is not None and self.process.poll() is None
+
+    def read(self, path):
+        import time
+        if not self.alive(): self._start()
+        self.next_id+=1; request_id=self.next_id
+        try:
+            self.process.stdin.write(json.dumps({"id":request_id,"path":str(Path(path).resolve())})+"\n"); self.process.stdin.flush()
+        except OSError as exc:
+            self.stop(); raise _ProtocolError("Advanced OCR could not receive the invoice") from exc
+        try:
+            while True:
+                answer=self._receive(READ_TIMEOUT)
+                if isinstance(answer,dict) and answer.get("id")==request_id: break  # an older, abandoned answer is skipped
+        except TimeoutError:
+            self.stop()  # a stuck reading never blocks the next one
+            raise NeuralReaderError("Advanced OCR took too long; use the local reading or enter the missing fields")
+        except _ProtocolError:
+            import logging
+            logging.getLogger("saber.ocr").error("Advanced OCR worker failed: %s","".join(getattr(self,"tail",[]))[-6000:])
+            self.stop(); raise
+        self.last_used=time.monotonic(); self._schedule_idle()
+        if answer.get("error"):
+            import logging
+            logging.getLogger("saber.ocr").warning("Advanced OCR could not read %s: %s",path,answer["error"])
+            raise NeuralReaderError("Advanced OCR could not read this document; review the local reading")
+        return answer.get("readings")
+
+    def _schedule_idle(self):
+        import time
+        if self.timer is not None: self.timer.cancel()
+        def check():
+            if _LOCK.acquire(blocking=False):  # never stopped while a reading is running
+                try:
+                    if time.monotonic()-self.last_used>=IDLE_SECONDS: self.stop()
+                    else: self._schedule_idle()
+                finally: _LOCK.release()
+            else: self._schedule_idle()
+        self.timer=threading.Timer(IDLE_SECONDS,check); self.timer.daemon=True; self.timer.start()
+
+    def stop(self):
+        process,self.process=self.process,None
+        if process is None: return
+        import logging
+        log=logging.getLogger("saber.ocr")
+        try:
+            if process.poll() is None:
+                try: process.stdin.write(json.dumps({"quit":True})+"\n"); process.stdin.flush()
+                except (OSError,ValueError): log.debug("Advanced OCR worker closed its input", exc_info=True)
+                try: process.wait(timeout=3)
+                except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=5)
+        except (OSError,subprocess.SubprocessError):  # cleanup must never raise
+            log.warning("Advanced OCR worker did not stop cleanly", exc_info=True)
+            try: process.kill()
+            except OSError: log.debug("Advanced OCR worker already ended", exc_info=True)
+        finally:
+            try: process.stdin.close()
+            except (OSError,ValueError): log.debug("Advanced OCR input already closed", exc_info=True)
+
+
+class _ProtocolError(NeuralReaderError):
+    pass
+
+
+_WORKER=_Worker()
+import atexit as _atexit
+_atexit.register(lambda: _WORKER.stop())
+
+
 def read(path):
     if not ready(): raise NeuralReaderError("Install Advanced Local OCR in Settings first")
-    if not _LOCK.acquire(blocking=False):
+    # One invoice at a time; a second request is answered within seconds (its local reading stays) instead of
+    # queuing behind a long reading. The short wait only covers the idle check, which holds the lock for an instant.
+    if not _LOCK.acquire(timeout=2):
         raise NeuralReaderError("Advanced OCR is busy; review the local reading or try again after it finishes")
     try:
-        text=_run([runtime(),worker(),Path(path).resolve()],120,env=_environment())
+        try:
+            readings=_WORKER.read(path)
+        except _ProtocolError:
+            # The kept-loaded worker could not start or broke its protocol: the one-shot reader is the fallback.
+            # A timeout or a failed reading is NOT retried (the same image would wait as long again).
+            text=_run([runtime(),worker(),Path(path).resolve()],READ_TIMEOUT,env=_environment())
+            try: readings=json.loads(text).get("readings")
+            except (ValueError,AttributeError) as exc: raise NeuralReaderError("Advanced OCR returned an unreadable response") from exc
     finally:
         _LOCK.release()
-    try:
-        result=json.loads(text)
-        if not isinstance(result,dict) or not isinstance(result.get("readings"),list): raise ValueError("missing readings")
-        if not all(isinstance(reading,dict) for reading in result["readings"]): raise ValueError("invalid reading")
-        return result["readings"]
-    except (ValueError,TypeError) as exc:
-        raise NeuralReaderError("Advanced OCR returned an unreadable response") from exc
+    if not isinstance(readings,list) or not all(isinstance(reading,dict) for reading in readings):
+        raise NeuralReaderError("Advanced OCR returned an unreadable response")
+    return readings
 
 
 def reading_text(reading):

@@ -82,8 +82,35 @@ def read(reader, path, english=None):
         return readings
 
 
+def serve():
+    """2.9.126: stay loaded and read one invoice per request (JSON lines). stdout carries only the protocol;
+    model and progress messages go to stderr."""
+    protocol=sys.stdout
+    sys.stdout=sys.stderr
+    def send(message):
+        protocol.write(json.dumps(message, ensure_ascii=False)+"\n"); protocol.flush()
+    try:
+        arabic=create_reader(); english=create_english()
+    except Exception as exc:
+        send({"ready": False, "error": f"{type(exc).__name__}: {exc}"}); return
+    send({"ready": True, "pid": os.getpid()})
+    for line in sys.stdin:
+        line=line.strip()
+        if not line: continue
+        try: request=json.loads(line)
+        except ValueError:
+            send({"id": None, "error": "invalid request"}); continue
+        if request.get("quit"): break
+        try:
+            send({"id": request.get("id"), "readings": read(arabic, Path(request["path"]), english)})
+        except Exception as exc:  # one bad image never stops the worker
+            send({"id": request.get("id"), "error": f"{type(exc).__name__}: {exc}"})
+
+
 def main():
     from contextlib import redirect_stdout
+    if len(sys.argv) > 1 and sys.argv[1] == "--serve":
+        return serve()
     # Keep the wire format separate from model initialization/progress messages.
     with redirect_stdout(sys.stderr):
         prepare=sys.argv[1] == "--prepare"

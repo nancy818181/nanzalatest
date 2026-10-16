@@ -349,6 +349,18 @@ class ApiClient:
         query=urlencode({k:v for k,v in {"as_of_date":as_of_date,"kind":kind,"currency":currency}.items() if v}); return self.request("GET","/api/aging"+(f"?{query}" if query else ""))["items"]
     def comparative_reports(self,from_date,to_date,currency=None):
         query=urlencode({k:v for k,v in {"from_date":from_date,"to_date":to_date,"currency":currency}.items() if v}); return self.request("GET",f"/api/comparative-reports?{query}")
+    def comparative_trial_balance(self,from_date,to_date,currency=None):  # 2.9.126
+        from decimal import Decimal
+        query=urlencode({k:v for k,v in {"from_date":from_date,"to_date":to_date,"currency":currency}.items() if v})
+        result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+        # This report sends exact decimal strings; restore numeric values for both Tk and exports.
+        fields={f"{period}_{field}" for period in ("current","prior") for field in ("opening","movement","closing")}|{"variance"}
+        for row in result.get("items",[]):
+            for field in fields:
+                if field in row: row[field]=Decimal(str(row[field]))
+        for totals in result.get("totals",{}).values():
+            for field in totals: totals[field]=Decimal(str(totals[field]))
+        return result
     def users(self): return self.request("GET","/api/users")["items"]
     def save_user(self,item): return self.request("POST","/api/users",item)["user"]
     def backups(self): return self.request("GET","/api/backups")["items"]

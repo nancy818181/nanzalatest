@@ -573,7 +573,20 @@ class PayrollStore:
                              (employee_id,self.month_end(period),period[:4])).fetchone()
             if later:
                 raise ValueError(f"Cannot change {period[:7]} payroll: later payroll {later['period_date']} is posted; its cumulative tax would become incorrect")
-            if not number:
+            # 2.9.126: an update keeps its record and its number; a number is allocated only for a new record.
+            record_id=item.get("id") or item.get("payroll_id")
+            if record_id not in (None,""):
+                existing=db.execute("SELECT id,employee_id,period_date,status,payroll_number FROM payroll_records WHERE id=?",(int(record_id),)).fetchone()
+                if not existing: raise KeyError("Payroll record not found")
+                if int(existing["employee_id"])!=employee_id: raise ValueError("This payroll record belongs to another employee")
+                if existing["period_date"]!=period:
+                    raise ValueError(f"This payroll record is for {existing['period_date']}; it cannot be moved to {period}")
+            else:
+                existing=db.execute("SELECT id,employee_id,period_date,status,payroll_number FROM payroll_records WHERE employee_id=? AND period_date=?",
+                                    (employee_id,period)).fetchone()
+            if existing and existing["status"]=="posted": raise ValueError("Posted payroll cannot be changed")
+            if existing: number=existing["payroll_number"]
+            elif not number:
                 prefix=f"PAY-{period[:7].replace('-','')}-"; row=db.execute("SELECT payroll_number FROM payroll_records WHERE payroll_number LIKE ? ORDER BY payroll_number DESC LIMIT 1",
                         (prefix+"%",)).fetchone()
                 number=f"{prefix}{(int(row['payroll_number'].rsplit('-',1)[-1])+1 if row else 1):06d}"
@@ -582,8 +595,6 @@ class PayrollStore:
                 "nssf_base","employee_nssf","employer_medical","employer_end_service","employer_family","net_salary","retro_tax",
                 "transport_days","exempt_transport","exempt_schooling","family_allowance","regular_tax","one_off_tax","compliance_notes","allowances")
             values=[json.dumps(calc[field]) if field in ("compliance_notes","allowances") else str(calc[field]) for field in fields]
-            existing=db.execute("SELECT id,status FROM payroll_records WHERE employee_id=? AND period_date=?",(employee_id,period)).fetchone()
-            if existing and existing["status"]=="posted": raise ValueError("Posted payroll cannot be changed")
             if existing:
                 db.execute(f"UPDATE payroll_records SET payroll_number=?,currency=?,{','.join(field+'=?' for field in fields)},retro_from=?,retro_to=?,reference=?,notes=? WHERE id=?",
                     (number,calc["currency"],*values,retro_from,retro_to,item.get("reference"),item.get("notes"),existing["id"])); saved_id=existing["id"]
@@ -592,7 +603,7 @@ class PayrollStore:
                 saved_id=db.execute(f"INSERT INTO payroll_records(payroll_number,employee_id,period_date,currency,{columns},retro_from,retro_to,reference,notes,created_by,created_at) VALUES(?,?,?,?,{marks},?,?,?,?,?,?)",
                     (number,employee_id,period,calc["currency"],*values,retro_from,retro_to,item.get("reference"),item.get("notes"),user_id,utcnow())).lastrowid
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (user_id,"save","payroll",saved_id,json.dumps({"payroll_number":number}),utcnow()))
+                (user_id,"update" if existing else "save","payroll",saved_id,json.dumps({"payroll_number":number}),utcnow()))
         return next(row for row in self.list_payroll() if row["id"]==saved_id)
 
     @atomic
