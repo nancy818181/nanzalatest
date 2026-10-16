@@ -149,7 +149,12 @@ class V22Mixin:
         path = filedialog.askopenfilename(filetypes=[("PDF", "*.pdf")])
         if not path: return
         from desktop_stage3_common import prepare_pdf_reading; prepare_pdf_reading(self)  # 2.9.87: our name is the seller, the party is the customer
-        data = read_invoice_pdf(path); self.new_sales_invoice(confirm=False); self.sales_pdf_path = path  # attached when the invoice is saved
+        from desktop_stage3_common import run_with_progress
+        return run_with_progress(self, "Sales PDF", lambda _progress, _cancel: read_invoice_pdf(path),
+                                 lambda data: V22Mixin._apply_sales_pdf(self, path, data))
+
+    def _apply_sales_pdf(self, path, data):
+        self.new_sales_invoice(confirm=False); self.sales_pdf_path = path  # attached when saved
         if data.get("invoice_date"): self.sales_date.set(data["invoice_date"])
         if data.get("invoice_number"): self.sales_no.set(str(data["invoice_number"]).strip())
         if data.get("party_name"): self.sales_party.set(data["party_name"])
@@ -229,7 +234,8 @@ class V22Mixin:
     # ------------------------------------------------------------ business reports (ageing, item sales, 3D, top)
     BUSINESS_REPORTS = {"Receivables Ageing (customers)": "receivables", "Payables Ageing (suppliers)": "payables", "Client Items: Qty & Value": "item_sales_client",
                         "Client Quantities by Item": "item_sales_item", "Sales Analysis (3D pivot)": "analysis", "Top Clients (HT + VAT = TTC)": "top_clients",
-                        "Top Suppliers (HT + VAT = TTC)": "top_suppliers", "Financial Statements + Audit + Notes": "financial_statements"}
+                        "Top Suppliers (HT + VAT = TTC)": "top_suppliers", "Financial Statements + Audit + Notes": "financial_statements",
+                        "Financial Statement Reconciliation":"financial_checks"}
 
     def build_business_reports_page(self, nested):
         page = tk.Frame(nested, bg=LIGHT); nested.add(page, text="Business Reports"); self.business_reports_page=page
@@ -315,7 +321,9 @@ class V22Mixin:
         self.business_result = None
         try: result = self.client.business_report(self.BUSINESS_REPORTS[self.br["report"].get()], self.business_options())
         except Exception as exc: return messagebox.showerror("Business Reports", str(exc))
-        if self.BUSINESS_REPORTS[self.br["report"].get()] == "financial_statements":
+        if self.BUSINESS_REPORTS[self.br["report"].get()] == "financial_checks":
+            for index,width in enumerate([430,180,180,120,120]):self.br_viewer.column(f"c{index}",width=width)
+        elif self.BUSINESS_REPORTS[self.br["report"].get()] == "financial_statements":
             for index, width in enumerate([380, 70, 170, 170, 160]): self.br_viewer.column(f"c{index}",width=width)
         else:
             for index, width in enumerate([170, 150, 110, 110, 110]): self.br_viewer.column(f"c{index}",width=width)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import functools
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from database import display_date, iso_date
 
@@ -78,7 +78,7 @@ def _load_lines(db, options):
     with db.connect() as connection:
         rows = [dict(row) for row in connection.execute(f"""SELECT j.id,a.code,a.name_en,a.type account_type,e.id entry_id,e.entry_number,e.entry_date,
             e.description entry_description,COALESCE(j.description,'') line_description,e.currency,e.source_type,COALESCE(b.name,'Head Office') branch_name,
-            CAST(j.debit AS REAL) debit,CAST(j.credit AS REAL) credit,j.line_currency,j.amount,j.amount_lbp,j.amount_usd,j.due_date,j.reference,j.revalue_currency,j.revalue_amount,
+            j.debit,j.credit,j.line_currency,j.amount,j.amount_lbp,j.amount_usd,j.due_date,j.reference,j.revalue_currency,j.revalue_amount,
             COALESCE(p.name,'') party_name,i.invoice_number,i.due_date invoice_due_date,
             COALESCE(d.code,'') department_code,COALESCE(d.name,'') department_name,COALESCE(pr.code,'') project_code,COALESCE(pr.name,'') project_name
             FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
@@ -93,7 +93,8 @@ def _load_lines(db, options):
     requested = {options.get("first_column", "account"), options.get("second_column", "LBP")}
     for row in rows:
         try: row["iso_date"] = iso_date(row["entry_date"])
-        except ValueError: continue
+        except ValueError as exc:
+            raise ValueError(f"Invalid date for entry {row['entry_number']}: {row['entry_date']}; correct it before reporting") from exc
         code_key = _key(row["code"])
         if low and code_key < low: continue
         if high and code_key > high: continue
@@ -102,6 +103,13 @@ def _load_lines(db, options):
         if result and not bilan and first not in "67": continue
         row["account_currency"] = (row.get("line_currency") or row["currency"] or "USD").upper()
         if currencies and row["account_currency"] not in currencies: continue
+        for field in ("debit", "credit", "amount", "amount_lbp", "amount_usd", "revalue_amount"):
+            value = row.get(field)
+            if value in (None, ""): continue
+            try:
+                if not Decimal(str(value)).is_finite(): raise ValueError("non-finite amount")
+            except (InvalidOperation, ValueError, TypeError) as exc:
+                raise ValueError(f"Invalid {field} amount for entry {row['entry_number']}: {value}; correct it before reporting") from exc
         signed = Decimal(str(row["debit"] or 0)) - Decimal(str(row["credit"] or 0))
         row["signed"] = {"entry": signed}
         # Amount in the account (line) currency, LBP and USD for every line.

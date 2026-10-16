@@ -22,6 +22,7 @@ class SpeedAndLimitsTest(unittest.TestCase):
         self.assertEqual(len(self.db.list_invoices()), 620)
 
     def test_cached_rate_follows_a_new_rate(self):
+        self.db.save_exchange_rate({"rate_date": "04-03-2026", "from_currency": "EUR", "to_currency": "USD", "rate": "1.2"}, 1)
         first = self.db._converted_amount(Decimal("100"), "EUR", "USD", "2026-03-05")
         self.db.save_exchange_rate({"rate_date": "05-03-2026", "from_currency": "EUR", "to_currency": "USD", "rate": "2"}, 1)
         self.assertEqual(self.db._converted_amount(Decimal("100"), "EUR", "USD", "2026-03-05"), Decimal("200"))

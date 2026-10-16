@@ -48,6 +48,34 @@ class PostingRulesTest(unittest.TestCase):
         found = posting_rules.suggest(self.db, "purchase", "Cedar Rentals SARL", None, "", ["rent"])
         self.assertEqual((found["account"]["code"], found["account"]["confidence"]), ("6263.1", 0.95))
 
+    def test_buyer_and_supplier_numbers_are_disambiguated_by_supplier_name(self):
+        for name, number, mof in (("Cedar Rentals SARL", "R-1", "3344556"), ("Buyer Trading", "B-1", "998877")):
+            self.db.save_party({"kind": "supplier", "name": name, "currency": "USD", "mof_number": mof}, self.user)
+            invoice = purchase(self.db, self.user, name, number, [{"description": "Rent", "quantity": 1, "unit_price": 20}])
+            posting_rules.learn_invoice(self.db, invoice)
+        found = posting_rules.find_rule(self.db, "purchase", "Cedar Rentals SARL", "998877,3344556")
+        self.assertEqual(found["label"], "Cedar Rentals SARL")
+        self.assertIsNone(posting_rules.find_rule(self.db, "purchase", "Unreadable", "998877,3344556"))
+
+    def test_ocr_invoice_reuses_the_posting_of_a_previous_invoice(self):
+        import azure_reader
+        invoice=purchase(self.db,self.user,"Cedar Rentals SARL","MEM-1",[{"description":"Office rent","quantity":1,"unit_price":900}],
+                         expense_account="6263.1",vat_account="4426",vat_use="taxable")
+        posting_rules.learn_invoice(self.db,invoice)
+        parsed=azure_reader.to_result(Path(self.folder.name)/"handwritten.jpg",{"content":"", "documents":[{"confidence":0.95,"fields":{
+            "VendorName":{"valueString":"Cedar Rentals"},"VendorTaxId":{"valueString":"3344556-601"},
+            "InvoiceId":{"valueString":"MEM-2"},"InvoiceDate":{"valueDate":"2026-04-10"},
+            "SubTotal":{"valueCurrency":{"amount":900,"currencyCode":"USD"}},
+            "TotalTax":{"valueCurrency":{"amount":99,"currencyCode":"USD"}},
+            "InvoiceTotal":{"valueCurrency":{"amount":999,"currencyCode":"USD"}}}}]})
+        suggested=posting_rules.suggest(self.db,"purchase",parsed["party_name"],parsed["party_tax_number"])
+        self.assertEqual(suggested["rule"]["matched"],"number")
+        self.assertEqual(suggested["rule"]["last_reference"],"MEM-1")
+        self.assertEqual(suggested["rule"]["data"]["expense_account"],"6263.1")
+        self.assertEqual(suggested["rule"]["data"]["vat_account"],"4426")
+        self.assertTrue(parsed["review_warnings"])
+        self.assertTrue(parsed["review_required"])
+
     def test_only_purchases_of_the_purchases_screen_are_learned(self):
         sale = self.db.create_manual_invoice({"invoice_number": "S-1", "invoice_date": "10-03-2026", "party_name": "Client", "kind": "sale", "currency": "USD"},
                                              [{"description": "Consulting", "quantity": 1, "unit_price": 10}], self.user)
@@ -56,6 +84,17 @@ class PostingRulesTest(unittest.TestCase):
                                                   "currency": "USD"}, [{"description": "Rent", "quantity": 1, "unit_price": 10}], self.user)
         self.assertEqual(posting_rules.learn_invoice(self.db, imported["id"] if isinstance(imported, dict) else imported), [])
         self.assertEqual(posting_rules.list_rules(self.db), [])
+
+    def test_confirmed_uploaded_invoice_can_teach_memory_without_learning_opening_balances(self):
+        saved=self.db.create_manual_invoice({"invoice_number":"SCAN-1","invoice_date":"10-03-2026","party_name":"Cedar Rentals SARL",
+            "kind":"purchases","currency":"USD","status":"posted","source_file":"rent.pdf - Page 1","expense_account":"6263.1"},
+            [{"description":"Office rent","quantity":1,"unit_price":900}],self.user)
+        invoice_id=saved["id"] if isinstance(saved,dict) else int(saved)
+        self.assertEqual(posting_rules.learn_invoice(self.db,invoice_id),[])
+        self.assertTrue(posting_rules.learn_invoice(self.db,invoice_id,allow_imported=True))
+        self.assertEqual(posting_rules.find_rule(self.db,"purchase",None,"3344556")["last_reference"],"SCAN-1")
+        with self.db.connect() as c:c.execute("UPDATE invoices SET source_file='Opening balances' WHERE id=?",(invoice_id,))
+        self.assertEqual(posting_rules.learn_invoice(self.db,invoice_id,allow_imported=True),[])
 
     def test_classification_of_lines_and_fallbacks(self):
         invoice = purchase(self.db, self.user, "Cedar Rentals SARL", "R-1", [{"description": "Diesel generator fuel", "quantity": 1, "unit_price": 50}],
@@ -78,6 +117,49 @@ class PostingRulesTest(unittest.TestCase):
         self.assertTrue(posting_rules.find_rule(self.db, "purchase", None, "3344556")["data"]["not_deductible"])
         posting_rules.learn_tax_flag(self.db, "invoice", invoice, False)
         self.assertFalse(posting_rules.find_rule(self.db, "purchase", None, "3344556")["data"]["not_deductible"])
+
+    def test_expense_form_uses_learned_classification_for_a_new_supplier(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock,patch
+        from desktop_expenses import ExpensesMixin
+        class Field:
+            def __init__(self,value=""):self.value=value
+            def get(self):return self.value
+            def set(self,value):self.value=value
+        variables={key:Field() for key in ("account","no_vat_account","without_vat")}
+        variables["without_vat"].set("100")
+        app=SimpleNamespace(expense_form={"vars":variables},client=SimpleNamespace(posting_suggestion=Mock(return_value={"rule":None,
+            "account":{"code":"6263.1","confidence":0.9,"source":"lines saved before"}})))
+        with patch("desktop_common.account_label",side_effect=lambda app,code:code):
+            note=ExpensesMixin.apply_expense_rule(app,"New supplier",lines=["Office rent"])
+        self.assertEqual(variables["account"].get(),"6263.1")
+        self.assertEqual(variables["no_vat_account"].get(),"6263.1")
+        self.assertIn("lines saved before",note)
+
+    def test_bill_to_does_not_misidentify_the_currency_as_lbp(self):
+        import pdf_import
+        self.assertEqual(pdf_import._invoice_currency("Invoice\nBill to ABC\nSubtotal 60\nGrand Total 60"),"")
+        self.assertEqual(pdf_import._invoice_currency("Bill to ABC\nGrand Total LL 60000"),"LBP")
+        self.assertEqual(pdf_import._invoice_currency("Bill to ABC\nGrand Total $60"),"USD")
+
+    def test_arabic_repairs_and_advertising_classification(self):
+        import pdf_import
+        self.assertEqual(pdf_import.expense_category("تصليح دواليب سيارة وغيار بوجي")[0],"Maintenance")
+        self.assertEqual(pdf_import.expense_category("دعاية شهرية وتسويق")[0],"Advertising")
+        self.assertEqual(pdf_import.expense_category("اعلان تجاري")[0],"Advertising")
+
+    def test_expense_photo_is_sent_to_ocr_instead_of_only_attached(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock,patch
+        from desktop_expenses import ExpensesMixin
+        app=SimpleNamespace(expense_form={"id":None,"pdf_label":Mock()})
+        with patch("desktop_expenses.filedialog.askopenfilename",return_value="expense.jpg"), \
+             patch("desktop_expenses.prepare_pdf_reading"), \
+             patch("desktop_expenses.read_invoice_pdf",return_value={"party_name":"Supplier"}) as read, \
+             patch.object(ExpensesMixin,"fill_expense_from_reading") as fill:
+            ExpensesMixin.choose_expense_pdf(app)
+        read.assert_called_once_with("expense.jpg")
+        fill.assert_called_once_with(app,"expense.jpg",{"party_name":"Supplier"})
 
     def test_expense_rule_only_with_a_supplier(self):
         first = self.db.add_expense({"expense_date": "11-03-2026", "description": "Electricity March", "currency": "LBP", "with_vat_subtotal": "1000000",
@@ -114,6 +196,20 @@ class PostingRulesApiTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.client.close(); cls.folder.cleanup()
+
+    def test_confirmed_pdf_paths_teach_memory_through_the_api(self):
+        year=self.client.companies()[0]["years"][0]["year"]
+        self.client.create_manual_invoice({"invoice_number":"UPLOAD-API-1","invoice_date":f"10-03-{year}",
+            "party_name":"Upload memory supplier","kind":"purchases","currency":"USD","status":"posted",
+            "source_file":"uploaded.pdf - Page 1","remember_posting":True,"expense_account":"6263.1"},
+            [{"description":"Office rent","quantity":1,"unit_price":100}])
+        self.assertEqual(self.client.posting_suggestion("purchase","Upload memory supplier")["rule"]["last_reference"],"UPLOAD-API-1")
+        result=self.client.import_invoices([{"invoice_number":"UPLOAD-API-2","invoice_date":f"11-03-{year}",
+            "party_name":"Imported memory supplier","kind":"purchase","currency":"USD","status":"posted",
+            "subtotal":100,"vat":11,"total":111,"source_file":"imported.pdf - Page 1","remember_posting":True,"expense_account":"6263.1"}],replace_existing=False)
+        self.assertEqual(result["imported"],1)
+        self.assertEqual(self.client.posting_suggestion("purchase","Imported memory supplier")["rule"]["last_reference"],"UPLOAD-API-2")
+        for rule in self.client.posting_rules():self.client.delete_posting_rule(rule["id"])
 
     def test_saving_teaches_and_the_screen_gets_the_suggestion(self):
         year = self.client.companies()[0]["years"][0]["year"]

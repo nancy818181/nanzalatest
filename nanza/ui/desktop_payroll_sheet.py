@@ -14,7 +14,7 @@ RED = "#8B1E1E"
 
 BASE_COLUMNS = (("salary", "Salary | الراتب"), ("overtime", "Overtime"), ("commission", "Commission"), ("bonus", "Bonus"),
                 ("thirteenth_month", "13th"), ("transport", "Transport | نقل"), ("transport_days", "Days | أيام"))
-RESULT_COLUMNS = (("gross_salary", "Gross | المجموع"), ("income_tax", "Tax | الضريبة"), ("employee_nssf", "Emp. NSSF"),
+RESULT_COLUMNS = (("gross_salary", "Gross | المجموع"), ("income_tax", "Month tax | ضريبة الشهر"), ("employee_nssf", "Emp. NSSF"),
                   ("family_allowance", "Family alloc."), ("net_salary", "Net | الصافي"), ("status", "Status"))
 INPUT_KEYS = tuple(k for k, _ in BASE_COLUMNS) + PL.ALLOWANCE_CODES
 

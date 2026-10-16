@@ -99,13 +99,16 @@ def _code(connection, table, row_id):
     return found[0] if found else ""
 
 
-def learn_invoice(db, invoice_id):
+def learn_invoice(db, invoice_id, allow_imported=False):
     """A purchase saved on the Purchases screen: remember how it was posted. Returns the keys stored ([] when not learned)."""
     with db.connect() as connection:
         migrate(connection)
         row = connection.execute("""SELECT i.*, p.name party_name, p.mof_number, p.tax_number FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
             WHERE i.id=?""", (int(invoice_id),)).fetchone()
-        if not row or row["kind"] != "purchase" or str(row["source_file"] or "") != "Purchase Invoice" or row["status"] != "posted": return []
+        if not row or row["kind"] != "purchase" or row["status"] != "posted": return []
+        source=str(row["source_file"] or "")
+        if source in ("Opening balances", "Customs Case"): return []
+        if source != "Purchase Invoice" and not allow_imported: return []
         if str(row["doc_subtype"] if "doc_subtype" in row.keys() else "") in ("credit_note",): return []
         keys = keys_for(row["party_name"], row["mof_number"] or row["tax_number"])
         if not keys: return []
@@ -166,9 +169,25 @@ def find_rule(db, scope, name=None, number=None):
     """The rule of this supplier: by its MOF / VAT number first, then its name, then a name very close to it."""
     with db.connect() as connection:
         migrate(connection)
+        candidates = []
+        name_match = None
         for key in keys_for(name, number):
             row = connection.execute("SELECT * FROM posting_rules WHERE scope=? AND key=?", (scope, key)).fetchone()
-            if row: return {**dict(row), "data": json.loads(row["data"]), "matched": "number" if key.startswith("mof:") else "name"}
+            if not row: continue
+            if key.startswith("mof:"): candidates.append(row)
+            else: name_match = row
+        if candidates:
+            # A scanned invoice may show both buyer and supplier tax numbers.
+            # Prefer the supplier's named rule; never select an arbitrary first number.
+            identities = {row["label"] for row in candidates}
+            if len(identities) > 1:
+                matching = [row for row in candidates if name_key(row["label"]) == name_key(name)]
+                if len(matching) != 1: return None
+                row = matching[0]
+            else: row = candidates[0]
+            return {**dict(row), "data": json.loads(row["data"]), "matched": "number"}
+        if name_match:
+            return {**dict(name_match), "data": json.loads(name_match["data"]), "matched": "name"}
         wanted = name_key(name)
         if not wanted: return None
         from difflib import SequenceMatcher

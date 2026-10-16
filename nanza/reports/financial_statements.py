@@ -357,6 +357,21 @@ def period_data(db, start, end, basis, label, cfg=None):
                 names_all=raw.get('names_all', {}))
 
 
+def reconciliation_rows(data, translate=lambda text: text):
+    """Independent checks on the figures presented, not an audit opinion."""
+    def balance(d):
+        return sum((d['close'][g] for g in ASSETS + LIABILITIES), ZERO) - d['equity_close']
+    def cash(d):
+        movement=sum((d['cash'].get(g,ZERO) for g in ('operating','investing','financing','fx')),ZERO)
+        return d['close']['cash'] - d['open']['cash'] - movement
+    def unmapped(d):
+        return sum((abs(value) for _name,value in d['accounts'].get('unmapped',{}).values()),ZERO)
+    checks=[('Financial position: assets less equity and liabilities',balance),
+            ('Cash: closing less opening and reported movement',cash),
+            ('Unmapped accounts: gross absolute balance',unmapped)]
+    return [[translate(label)] + [money(fn(d)) for d in data] for label,fn in checks]
+
+
 def periods_from(options, available_years):
     """[(year of the file, start, end, label)] - newest first. Two years: full calendar years. Period: From / As of
     (inside one fiscal year), and the same period one year before when asked and available."""
@@ -563,16 +578,31 @@ def build(databases, options, others=(), master=None):
         text = _text(cfg, 'notes', name, NARRATIVES, values, language)
         sections.append(dict(kind='notes', heading=f'{n}. {t(name).upper()}', headers=[t('Text')], rows=[[p] for p in text.splitlines() if p.strip()], total_rows=[], narrative=True)); n += 1
 
+    # ---- financial control report, retained with the preparer's review points
+    checks=reconciliation_rows(data,t)
+    sections.append(dict(kind='checks',heading=t('FINANCIAL STATEMENT RECONCILIATION (preparer only)'),
+                         headers=[t('Check - expected zero')] + heads,rows=checks,total_rows=[],fixed=True,page_break=True,
+                         warning_rows=[i for i,row in enumerate(checks) if any(abs(v)>=Decimal('.01') for v in row[1:])]))
+
     # ---- review points for the preparer (last page, remove before issue)
     for d in data:
         difference = sum((d['close'][g] for g in ASSETS + LIABILITIES), ZERO) - d['equity_close']
         if abs(difference) >= Decimal('.01'): warnings.append(f"{d['label']}: the statement of financial position does not balance ({money(difference)} {basis}) - check classifications.")
-        if abs(d['close']['unmapped']) >= Decimal('.01') or d['pnl']['unmapped']: warnings.append(f"{d['label']}: accounts to classify ({money(d['close']['unmapped'] + d['pnl']['unmapped'])} {basis}) - Edit Notes / Audit / Mapping.")
+        if any(abs(value)>=Decimal('.01') for _name,value in d['accounts'].get('unmapped',{}).values()):
+            gross=reconciliation_rows([d])[2][1]
+            warnings.append(f"{d['label']}: accounts to classify (gross balance {gross} {basis}) - Edit Notes / Audit / Mapping.")
+        cash_difference=reconciliation_rows([d])[1][1]
+        if abs(cash_difference)>=Decimal('.01'):
+            warnings.append(f"{d['label']}: cash flow does not reconcile to opening and closing cash ({cash_difference} {basis}); check reviewed amounts and exchange effects.")
+        if d['extra'].get('oci',ZERO):
+            warnings.append(f"{d['label']}: other comprehensive income is entered separately; confirm its posting and presentation in equity movements before issue.")
+        if not d['cash']['reviewed'] and any(key in d['extra'] for key in ('cf_operating','cf_investing','cf_financing','cf_fx')):
+            warnings.append(f"{d['label']}: incomplete cash flow overrides were ignored; enter operating, investing and financing amounts together.")
         if not d['count']: warnings.append(f"{d['label']}: no posted movements in the period.")
         if not d['cash']['reviewed']: warnings.append(f"{d['label']}: cash flows are calculated from the balance sheet movements (indirect method); review the classification of investing and financing items.")
     if len(data) == 1: warnings.append('Single period: IAS 1 requires comparative figures for the preceding period.')
     if audit_rows is not None: warnings.append("The auditor's report is a template: the auditor completes and signs it after the audit. Remove this page before issuing.")
-    sections.append(dict(kind='review', heading='PREPARER REVIEW POINTS (remove before issue)', headers=['Point'], rows=[[w] for w in warnings], total_rows=[], narrative=True, page_break=True))
+    sections.append(dict(kind='review', heading='PREPARER REVIEW POINTS (remove before issue)', headers=['Point'], rows=[[w] for w in warnings], total_rows=[], narrative=True, page_break=False))
     for key, label in INFO_FIELDS.items():
         if values[key] in (f'[{label}]', f"[{i18n.INFO_LABELS.get(language, {}).get(key, label)}]") and key not in ('tax_number',):
             warnings.insert(0, f'Company & auditor information not entered: {label} (Edit Texts > Company & Auditor).'); break
@@ -582,6 +612,11 @@ def build(databases, options, others=(), master=None):
     firm = str((cfg.get('info') or {}).get('auditor_firm') or '').strip()
     if firm and audit_rows is not None: meta.append(t('Auditor: {firm}', firm=firm))  # 2.9.121: management accounts name no auditor
     title = t('Financial Statements, Notes and Audit Report') if audit_rows is not None else t('Financial Statements and Notes')  # 2.9.121
+    major_labels={t(label) for label in ('TOTAL ASSETS','TOTAL EQUITY AND LIABILITIES',
+                  'PROFIT / (LOSS) FOR THE YEAR','PROFIT / (LOSS) FOR THE PERIOD','TOTAL COMPREHENSIVE INCOME',
+                  'NET INCREASE / (DECREASE) IN CASH','CASH AND CASH EQUIVALENTS AT END')}
+    for section in sections:
+        section['major_total_rows']=[i for i,row in enumerate(section['rows']) if row and row[0] in major_labels]
     return dict(title=title, meta=meta, sections=sections, language=language, rtl=language == 'ar')
 
 
@@ -590,3 +625,11 @@ def year_data(db, year, basis):
     data = period_data(db, f'{int(year)}-01-01', f'{int(year)}-12-31', basis, f'31-12-{int(year)}')
     data.update(equity_start=data['equity_open'], equity_end=data['equity_close'], totals=data['close'])
     return data
+
+
+def reconciliation_report(databases,options,others=(),master=None):
+    pack=build(databases,{**options,'auditor_report':False},others,master)
+    import financial_statements_i18n as i18n
+    t=i18n.translator(pack['language'])
+    return {**pack,'title':t('Financial Statement Reconciliation'),
+            'sections':[section for section in pack['sections'] if section.get('kind') in ('checks','review')]}

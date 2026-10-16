@@ -15,6 +15,8 @@ class JournalStore:
         with self.connect() as db:
             entry=db.execute("SELECT * FROM journal_entries WHERE id=?",(int(entry_id),)).fetchone()
             if not entry: raise KeyError(entry_id)
+            if db.execute("SELECT 1 FROM fixed_asset_postings WHERE entry_id=? LIMIT 1",(int(entry_id),)).fetchone():
+                raise ValueError("This voucher is linked to fixed-asset depreciation and cannot be deleted here")
             self._assert_period_open(entry["entry_date"])
             invoice=None
             if entry["source_id"]:
@@ -75,6 +77,8 @@ class JournalStore:
         with self.connect() as db:
             branch_id=self._branch_id(db,item)
             if entry_id:
+                if db.execute("SELECT 1 FROM fixed_asset_postings WHERE entry_id=? LIMIT 1",(int(entry_id),)).fetchone():
+                    raise ValueError("This voucher is linked to fixed-asset depreciation and cannot be edited here")
                 existing=db.execute("SELECT * FROM journal_entries WHERE id=? AND source_type='journal_voucher'",(int(entry_id),)).fetchone()
                 if not existing: raise KeyError(entry_id)
                 self._assert_period_open(existing["entry_date"]); voucher_number=str(item.get("entry_number") or existing["entry_number"]).strip()

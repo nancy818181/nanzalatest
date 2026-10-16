@@ -159,11 +159,11 @@ def _ocr_pdf_pages(path, page_numbers=None, progress=None, cancel=None):
         if _is_photo(image):  # 2.9.97: a phone photo of a bill (dark background, often sideways)
             return _read_photo(pytesseract, image, language)
         image = _remove_table_lines(image)  # 2.9.97: the table borders hid most item rows from the OCR (1 row of 21 read)
-        text = _fix_ocr_text(pytesseract.image_to_string(image, lang=language, config=config))
+        text = _fix_ocr_text(_tesseract_text(pytesseract, image, lang=language, config=config))
         if _word_count(text) < 25:  # 2.9.97: almost nothing read - the page may be turned
             turned = _upright(pytesseract, image)
             if turned is not None:
-                image = turned; text = _fix_ocr_text(pytesseract.image_to_string(image, lang=language, config=config))
+                image = turned; text = _fix_ocr_text(_tesseract_text(pytesseract, image, lang=language, config=config))
         # PSM 6 with both languages can mistake a clear English invoice heading for another word. If key invoice
         # fields are missing, retry with English layout analysis and keep the better extraction.
         parsed = _parse_invoice_text(path, text)
@@ -171,7 +171,7 @@ def _ocr_pdf_pages(path, page_numbers=None, progress=None, cancel=None):
         amounts_conflict = all(value is not None for value in (subtotal, vat, total)) and abs(subtotal + vat - total) > max(0.05, abs(total) * 0.005)
         core_fields_missing = any(parsed.get(key) in (None, "") for key in ("invoice_number", "invoice_date", "total"))
         if "eng" in languages and (core_fields_missing or amounts_conflict):
-            alternate = _fix_ocr_text(pytesseract.image_to_string(image, lang="eng", config=english_config))
+            alternate = _fix_ocr_text(_tesseract_text(pytesseract, image, lang="eng", config=english_config))
             if _ocr_invoice_score(path, alternate) > _ocr_invoice_score(path, text): text = alternate
         if "eng" in languages and not _labelled_invoice_date(text):
             text = text + "\n" + _ocr_header_lines(pytesseract, image, english_config)
@@ -222,7 +222,7 @@ def _ocr_header_lines(pytesseract, image, config):
             crop = image.crop(box)
             crop = crop.resize((crop.width * 2, crop.height * 2), getattr(getattr(Image, "Resampling", Image), "LANCZOS"))
             sparse = config.replace("--psm 4", "--psm 11")
-            lines += [line.strip() for line in pytesseract.image_to_string(crop, lang="eng", config=sparse).splitlines()
+            lines += [line.strip() for line in _tesseract_text(pytesseract, crop, lang="eng", config=sparse).splitlines()
                       if re.search(r"(?i)\b(date|ref|invoice|facture|no\.?|nb)\b", line)]
         return "\n".join(lines) + "\n" if lines else ""
     except Exception:
@@ -284,7 +284,7 @@ def _is_photo(image):
 def _upright(pytesseract, image):
     """The page turned upright: Tesseract's orientation check when its data is there, else the better of 90 / 270 degrees."""
     try:
-        osd = pytesseract.image_to_osd(image)
+        osd = pytesseract.image_to_osd(image, timeout=30)
         angle = int(re.search(r"Rotate:\s*(\d+)", osd).group(1))
         return image.rotate(-angle, expand=True) if angle else None
     except Exception:
@@ -292,7 +292,7 @@ def _upright(pytesseract, image):
         try:
             for angle in (90, 270, 180):
                 turned = image.rotate(angle, expand=True)
-                words = _word_count(pytesseract.image_to_string(turned.resize((turned.width // 2, turned.height // 2)), lang="eng", config="--psm 6"))
+                words = _word_count(_tesseract_text(pytesseract, turned.resize((turned.width // 2, turned.height // 2)), lang="eng", config="--psm 6"))
                 if words > best_words: best, best_words = turned, words
         except Exception:
             return None  # not an image that can be turned (or no OCR engine): keep the page as it is
@@ -314,26 +314,55 @@ def _otsu(gray):
 
 
 def _read_photo(pytesseract, image, language):
-    """2.9.97: turn the photo upright, then read it twice (contrast-enhanced, and black-and-white at half size) and keep
-    both texts: on a photographed EDL bill each read finds amounts the other misses."""
+    """Turn the photo upright and choose one reading from contrast and layout variants."""
     from PIL import ImageOps
     turned = _upright(pytesseract, image)
     if turned is not None: image = turned
     gray = ImageOps.autocontrast(image.convert("L"), cutoff=2)
-    first = pytesseract.image_to_string(gray, lang="eng", config="--psm 4")
-    second = pytesseract.image_to_string(_otsu(gray.resize((gray.width // 2, gray.height // 2))), lang="eng", config="--psm 11")
-    arabic = pytesseract.image_to_string(gray, lang=language, config="--psm 6") if "ara" in language else ""
+    first = _tesseract_text(pytesseract, gray, lang="eng", config="--psm 4")
+    second = _tesseract_text(pytesseract, _otsu(gray.resize((gray.width // 2, gray.height // 2))), lang="eng", config="--psm 11")
+    arabic = _tesseract_text(pytesseract, gray, lang=language, config="--psm 6") if "ara" in language else ""
     # 2.9.118: dot-matrix amounts on a coloured form (EDL): the red channel drops the pink background, enlarged and
     # softened the dots join into digits
     try:
         from PIL import Image, ImageFilter
         red = image.convert("RGB").split()[0]
         red = red.resize((red.width * 2, red.height * 2), Image.LANCZOS).filter(ImageFilter.GaussianBlur(1.2))
-        dots = pytesseract.image_to_string(red.point(lambda p: 255 if p > 110 else 0), lang="eng", config="--psm 11")
+        dots = _tesseract_text(pytesseract, red.point(lambda p: 255 if p > 110 else 0), lang="eng", config="--psm 11")
     except (OSError, ValueError, RuntimeError):
         dots = ""
-    return _fix_ocr_text("\n".join((first, second, arabic, dots)))
+    candidates=[first,second,arabic,dots]
+    prepared=[]
+    try:
+        from ocr_photo import variants
+        prepared=variants(image)
+        for candidate in prepared:
+            candidates.append(_tesseract_text(pytesseract, candidate,lang=language,config="--psm 6"))
+    except (ImportError,OSError,ValueError,RuntimeError):
+        logging.getLogger("saber.pdf").debug("Photo preparation unavailable",exc_info=True)
+    finally:
+        for candidate in prepared: candidate.close()
+    # Do not concatenate alternative OCR readings: their digits can form a false balanced total.
+    candidates=[_fix_ocr_text(text) for text in candidates if text.strip()]
+    return max(candidates,key=_photo_reading_score) if candidates else ""
 
+
+
+def _tesseract_text(engine, image, **options):
+    """Terminate a stalled OCR subprocess instead of waiting indefinitely."""
+    return engine.image_to_string(image, timeout=30, **options)
+
+
+def _photo_reading_score(text):
+    parsed=_parse_invoice_text(Path("photo.pdf"),text)
+    score=_ocr_invoice_score(Path("photo.pdf"),text)-4*len(parsed.get("inferred") or [])
+    day=parsed.get("invoice_date") or ""
+    if day:
+        try:
+            year = datetime.strptime(day, "%d-%m-%Y").year
+            if not 2000 <= year <= 2100: score -= 6
+        except ValueError: score -= 6
+    return score
 
 def _remove_table_lines(image):
     """2.9.97: whiten the long horizontal / vertical rules of a table before OCR (they make Tesseract skip the rows)."""
@@ -571,14 +600,14 @@ def _invoice_number(text):
     proforma = re.search(r"(?i)pro-?\s?forma\s*(?:no\.?|number|#)?\s*[:#]\s*([A-Z\d][A-Z\d.\-/]{2,30})", text)  # 2.9.97: PROFORMA#:PF.HO.25.0000005
     if proforma and any(ch.isdigit() for ch in proforma.group(1)): return proforma.group(1).strip(".-/")
     same_line = re.compile(
-        r"(?:invoice|inv|facture|فاتورة|رقم[^\S\n]*(?:ال)?فاتورة|n°[^\S\n]*facture|bill)"
+        r"(?:invoice|inv\b|facture|فاتورة|رقم[^\S\n]*(?:ال)?فاتورة|n°[^\S\n]*facture|bill)"
         r"[^\S\n]*(?:no\.?|number|num|#|n°|رقم)?[^\S\n]*[:#.]?[^\S\n]*([A-Z\d][A-Z\d\-/]{1,24})", re.I)
     for match in same_line.finditer(text):  # 2.9.87
         candidate = _normalize_amount_line(match.group(1)).strip("-/")
         if any(char.isdigit() for char in candidate) and not re.fullmatch(r"\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4}", candidate):
             return candidate
     pattern = re.compile(
-        r"(?:invoice|inv|facture|فاتورة|رقم\s*(?:ال)?فاتورة|n°\s*facture|bill)"
+        r"(?:invoice|inv\b|facture|فاتورة|رقم\s*(?:ال)?فاتورة|n°\s*facture|bill)"
         r"\s*(?:no\.?|number|num|#|n°|رقم)?\s*[:#.]?\s*([A-Z\d][A-Z\d\-/]{1,24})",
         re.I,
     )
@@ -724,7 +753,7 @@ def _invoice_currency(text):
         ("AED", ("AED", "DHS")),
         ("USD", ("USD", "US$")),
     ):
-        if any(mark in upper for mark in marks):
+        if any(bool(re.search(r"\bLL\b",upper)) if mark=="LL " else mark in upper for mark in marks):
             return code
     return ""
 
@@ -898,9 +927,9 @@ EXPENSE_CATEGORIES = (
     ("Rent", "6263.1", "626310000", "Rent Expenses", (r"\b(?:office\s+)?rent(?:al)?\b", r"\bloyer", r"إيجار")),
     ("Water", "6263.3", "626330000", "Water Expenses", (r"\bwater\b", r"مياه")),
     ("Telecom", "6261.5", "626150000", "Telephone, Internet & Postage", (r"telephone", r"mobile\s+line", r"internet", r"telecom", r"courier", r"postage", r"اتصالات", r"هاتف")),
-    ("Maintenance", "6262", "626200000", "Maintenance & Repairs", (r"maintenance", r"\brepair", r"entretien", r"صيانة")),
+    ("Maintenance", "6262", "626200000", "Maintenance & Repairs", (r"maintenance", r"\brepair", r"entretien", r"صيانة", r"تصليح", r"[إا]صلاح", r"بواجي", r"بوجي")),
     ("Insurance", "6268", "626800000", "Insurance Premium", (r"insurance\s+(?:premium|policy)", r"\bpolicy\s+no", r"\bassurance", r"تأمين")),
-    ("Advertising", "6269.3", "626930000", "Advertising & Marketing", (r"advertis", r"publicit", r"marketing", r"إعلان")),
+    ("Advertising", "6269.3", "626930000", "Advertising & Marketing", (r"advertis", r"publicit", r"marketing", r"[إا]علان", r"دعاي[ةه]", r"تسويق")),
     ("Stationery", "6269.4", "626940000", "Stationery & Office Supplies", (r"stationery", r"office\s+supplies", r"papeterie", r"قرطاسية")),
     ("Professional fees", "6265.3", "626530000", "Legal & Consulting Fees", (r"\blegal\b", r"lawyer", r"consult", r"audit\s+fee", r"accounting\s+fee", r"avocat", r"محام", r"استشار")),
     ("Subscriptions", "6266.2", "626620000", "Subscriptions", (r"subscription", r"abonnement")),
@@ -1017,12 +1046,23 @@ def _image_as_pdf(path):
 
 
 def read_invoice_pdf(path):
+    """Read locally and use the installed neural reader for photos and single-page scans."""
+    result = _read_invoice_pdf_local(path)
+    import neural_reader
+    if neural_reader.ready() and (Path(path).suffix.lower() in IMAGE_SUFFIXES
+                                 or ((result.get("ocr_used") or not (result.get("text") or "").strip())
+                                     and _page_count(Path(path)) == 1)):
+        result = neural_reader.enhance(path, result)
+    return result
+
+
+def _read_invoice_pdf_local(path):
     """Best guess of invoice number, date, party, currency and amounts. Always review before saving."""
     path = Path(path)
     if path.suffix.lower() in IMAGE_SUFFIXES:  # 2.9.118: a photo of the invoice / bill is read too
         import shutil
         converted = _image_as_pdf(path)
-        try: result = read_invoice_pdf(converted)
+        try: result = _read_invoice_pdf_local(converted)
         finally: shutil.rmtree(converted.parent, ignore_errors=True)
         result["file"], result["path"] = path.name, str(path)
         return result
@@ -1035,6 +1075,7 @@ def read_invoice_pdf(path):
             result["notes"] = _invoice_notes(result, text, prefix="Local OCR suggestion - please check" if ocr_used else "")
             result["notes"] += f"; this PDF has {pages} pages: only the first invoice was read - for several invoices use Uploaded Data > Choose PDF Invoice(s)"
             _warn_on_invoice_total_mismatch(result)
+            if ocr_used: _require_ocr_review(result)
             return result
         except Exception:
             pass  # read it the usual way
@@ -1060,7 +1101,7 @@ def read_invoice_pdf(path):
         if text_error:
             ocr_note += f"; PDF text extraction failed ({text_error})"
         result["notes"] = f'{result.get("notes", "")}; {ocr_note}'.strip("; ")
-        return result
+        return _require_ocr_review(result)
 
     if not ocr_text.strip():
         result["ocr_used"] = False
@@ -1068,7 +1109,7 @@ def read_invoice_pdf(path):
         if text_error:
             ocr_note += f"; PDF text extraction failed ({text_error})"
         result["notes"] = f'{result.get("notes", "")}; {ocr_note}'.strip("; ")
-        return result
+        return _require_ocr_review(result)
 
     ocr_result = _parse_invoice_text(path, ocr_text)
     if text.count("\x1f") > 5:
@@ -1088,6 +1129,28 @@ def read_invoice_pdf(path):
         prefix += f"; PDF text extraction failed ({text_error})"
     result["notes"] = _invoice_notes(result, combined_text, prefix=prefix)
     _warn_on_invoice_total_mismatch(result)
+    _require_ocr_review(result)
+    return result
+
+
+def _require_ocr_review(result):
+    """OCR confidence is an estimate; require explicit review even at 100%."""
+    warning = "OCR reading requires review against the original before Save; confidence is not a guarantee"
+    warnings = result.setdefault("review_warnings", [])
+    if warning not in warnings: warnings.insert(0, warning)
+    result["review_required"] = True
+    for key, label in (("invoice_number", "invoice number"), ("invoice_date", "invoice date"),
+                       ("party_name", "supplier/customer"), ("currency", "currency"),
+                       ("subtotal", "subtotal"), ("vat", "VAT"), ("total", "total")):
+        if result.get(key) in (None, ""):
+            missing = f"Could not reliably read {label}"
+            if missing not in warnings: warnings.append(missing)
+    if result.get("inferred"):
+        inferred = "Some amounts were calculated/inferred, not read directly: check against the original"
+        if inferred not in warnings: warnings.append(inferred)
+    warning = " | ".join(warnings)
+    if warning not in result.get("notes", ""):
+        result["notes"] = f'{result.get("notes", "")}; {warning}'.strip("; ")
     return result
 
 
@@ -1101,6 +1164,7 @@ def _warn_on_invoice_total_mismatch(result):
         result["vat"] = None
         result["acquisition_cost"] = None
         warning = "OCR VAT, subtotal and total do not reconcile; VAT suggestion cleared. Enter and verify the amounts before posting"
+        if warning not in result.setdefault("review_warnings", []): result["review_warnings"].append(warning)
         if warning not in result.get("notes", ""):
             result["notes"] = (result.get("notes", "") + "; " + warning).strip("; ")
 
@@ -1246,6 +1310,10 @@ def _parse_invoice_text(path, text):
             result.update(edl); result["currency"] = result.get("currency") or "LBP"
             inferred.append("EDL bill: VAT 11% of the base, 100,000 stamp, total rounded up to the thousand - check against the bill")
     result["inferred"] = inferred
+    result["review_warnings"] = []
+    if inferred: result["review_warnings"].append("Some amounts were calculated/inferred, not read directly: check against the original")
+    for key,label in (("invoice_number","invoice number"),("invoice_date","invoice date"),("currency","currency"),("total","total")):
+        if result.get(key) in (None,""): result["review_warnings"].append(f"Could not reliably read {label}")
     result["notes"] = _invoice_notes(result, text)
     return result
 
@@ -1284,7 +1352,8 @@ def _utility_bill(text):
         for vat in values:
             if vat < base and abs(vat - base * 0.11) <= 2:
                 totals = [t for t in values if base + vat <= t <= base + vat + 250000]
-                total = totals[0] if totals else base + vat
+                if not totals: continue
+                total = totals[0]
                 if best is None or base > best[0]: best = (base, vat, total)
     if not best: return None
     base, vat, total = best
@@ -1378,6 +1447,9 @@ def _merge_invoice_suggestions(primary, fallback):
             replacement = fallback.get(key)
             if replacement is not None and replacement != "" and replacement != []:
                 result[key] = replacement
+    for key in ("inferred", "review_warnings"):
+        combined = list(dict.fromkeys(list(primary.get(key) or []) + list(fallback.get(key) or [])))
+        if combined: result[key] = combined
     return result
 
 
@@ -1437,6 +1509,13 @@ def read_invoice_pdf_pages(path, progress=None, cancel=None):
         return [result]
     reader = PdfReader(str(path))
     page_texts = [_better_text(path, _page_text(page), _page_text(page, True)) for page in reader.pages]  # 2.9.85: plain or layout
+    import neural_reader
+    if (len(page_texts)==1 and _page_needs_ocr(path,page_texts[0]) and neural_reader.ready()
+            and not (cancel is not None and cancel.is_set())):
+        result=read_invoice_pdf(path)
+        result.update(pages=[1],support_pages=[],page_range="Page 1")
+        if progress:progress(1,1,"Advanced Local OCR")
+        return [result]
     blank_pages = {index for index, text in enumerate(page_texts) if len(text.strip()) < 20}
     ocr_candidate_pages = [
         index for index, text in enumerate(page_texts)
@@ -1481,6 +1560,7 @@ def read_invoice_pdf_pages(path, progress=None, cancel=None):
                 parsed, group["text"], prefix=prefix + "Local OCR suggestion - please check",
             )
             _warn_on_invoice_total_mismatch(parsed)
+            _require_ocr_review(parsed)
         elif needs_ocr:
             note = (f"Local OCR unavailable ({ocr_error})" if ocr_error
                     else "Local OCR found no readable text")

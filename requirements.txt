@@ -11,3 +11,4 @@ pillow>=10
 cryptography>=42
 numpy>=1.26
 tzdata>=2024.1
+opencv-python-headless==4.10.0.84

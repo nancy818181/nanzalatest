@@ -7,7 +7,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     datetime, Decimal, display_date, iso_date, json, timedelta, utcnow
 )
 from decimal import InvalidOperation
-from database_common import _soft_iso  # noqa: F401
+from database_common import _soft_iso, atomic  # noqa: F401
 
 
 class PayrollStore:
@@ -417,29 +417,37 @@ class PayrollStore:
                     notes.append(f"Retro {month[:7]}: no payroll saved for that month - this month's pay used as its pay")
         # Salary tax withholding is cumulative across payrolls saved this year.
         # Retros use the separate prior-period treatment above.
-        if not money["retro_salary"]:
-            with self.connect() as db:
-                previous=db.execute("""SELECT * FROM payroll_records
-                    WHERE employee_id=? AND period_date>=? AND period_date<? ORDER BY period_date""",
-                    (employee_id,period[:4]+"-01-01",month_start)).fetchall()
-            if previous:
-                prior_base=D("0"); prior_withheld=D("0")
-                for record in previous:
-                    gross=sum((D(str(record[key] or 0)) for key in
-                        ("salary","transport","overtime","commission","schooling","bonus","thirteenth_month")),D("0"))
-                    exempt=D(str(record["exempt_transport"] or 0))+D(str(record["exempt_schooling"] or 0))
-                    gross+=self._record_taxable_allowances(record)
-                    prior_base+=self._converted_amount(max(D("0"),gross-exempt),record["currency"],"LBP",record["period_date"])
-                    prior_withheld+=D(str(record["income_tax_lbp"] or 0))
-                elapsed=D(len(previous))+tax_fraction
-                bands=[[D(str(ceiling))*elapsed/12 if ceiling is not None else None,rate] for ceiling,rate in brackets]
-                def cumulative(base):
-                    return self._progressive_tax(max(D("0"),prior_base+base-allowance*elapsed/12),bands)
-                base_due=cumulative(regular_lbp)
-                full_due=cumulative(regular_lbp+one_off_lbp)
-                regular_tax=max(D("0"),base_due-prior_withheld)
-                one_off_tax=max(D("0"),full_due-base_due)
-                notes.append(f"Cumulative tax includes {len(previous)} earlier payroll(s) this year")
+        with self.connect() as db:
+            previous=db.execute("""SELECT * FROM payroll_records
+                WHERE employee_id=? AND period_date>=? AND period_date<? ORDER BY period_date""",
+                (employee_id,period[:4]+"-01-01",month_start)).fetchall()
+        if previous:
+            prior_base=D("0"); prior_withheld=D("0"); elapsed=tax_fraction
+            for record in previous:
+                gross=sum((D(str(record[key] or 0)) for key in
+                    ("salary","transport","overtime","commission","schooling","bonus","thirteenth_month")),D("0"))
+                exempt=D(str(record["exempt_transport"] or 0))+D(str(record["exempt_schooling"] or 0))
+                gross+=self._record_taxable_allowances(record)
+                prior_base+=self._converted_amount(max(D("0"),gross-exempt),record["currency"],"LBP",record["period_date"])
+                # Retro tax belongs to its own periods, outside this cumulative base.
+                prior_retro=self._converted_amount(D(str(record["retro_tax"] or 0)),record["currency"],"LBP",record["period_date"])
+                prior_withheld+=max(D("0"),D(str(record["income_tax_lbp"] or 0))-prior_retro)
+                prior_end=self.month_end(record["period_date"])
+                prior_start=prior_end[:8]+"01"
+                active_from=max(prior_start,iso_date(employee["hire_date"]) if employee["hire_date"] else prior_start)
+                active_to=min(prior_end,iso_date(employee["leave_date"]) if employee["leave_date"] else prior_end)
+                prior_days=max(0,(30 if active_to==prior_end else min(int(active_to[-2:]),30))-min(int(active_from[-2:]),30)+1)
+                elapsed+=D(prior_days)/30
+            bands=[[D(str(ceiling))*elapsed/12 if ceiling is not None else None,rate] for ceiling,rate in brackets]
+            def cumulative(base):
+                return self._progressive_tax(max(D("0"),prior_base+base-allowance*elapsed/12),bands)
+            base_due=cumulative(regular_lbp)
+            full_due=cumulative(regular_lbp+one_off_lbp)
+            regular_tax=max(D("0"),base_due-prior_withheld)
+            one_off_tax=max(D("0"),full_due-prior_withheld)-regular_tax
+            notes.append(f"Cumulative tax: {len(previous)+1} payroll months; total due {full_due:,.2f} LBP "
+                         f"less {prior_withheld:,.2f} LBP already withheld = "
+                         f"{regular_tax+one_off_tax:,.2f} LBP this month before rounding (retro tax separate)")
         rounding=setting("tax_rounding")
         def rounded(value):
             value=max(D("0"),value)
@@ -506,7 +514,7 @@ class PayrollStore:
         if not str(employee["mof_number"] or "").strip(): notes.append("MOF (tax) number missing in the employee file")
         gross=sum(money.values(),D("0"))+allowance_parts["total"]
         net=(gross-income_tax-nssf["employee"][1]+family_allowance).quantize(D("0.01"))
-        salary_base=money["salary"]+money["overtime"]+money["commission"]+money["retro_salary"]+money["bonus"]+money["thirteenth_month"]
+        salary_base=money["salary"]+money["overtime"]+money["commission"]+money["retro_salary"]+money["bonus"]+money["thirteenth_month"]+allowance_parts["nssf"]
         return {**{k:float(v) for k,v in money.items()},"gross_salary":float(gross),"taxable_salary":float(from_lbp(taxable_lbp).quantize(D("0.01"))),
             "income_tax":float(income_tax),"income_tax_lbp":float(income_tax_lbp),"nssf_base":float(salary_base),"employee_nssf":float(nssf["employee"][1]),
             "employee_nssf_lbp":float(nssf["employee"][0]),"employer_medical":float(nssf["medical"][1]),"employer_end_service":float(nssf["end_service"][1]),
@@ -547,6 +555,7 @@ class PayrollStore:
             return [dict(row) for row in db.execute(f"""SELECT p.*,e.employee_number,e.full_name FROM payroll_records p
                 JOIN employees e ON e.id=p.employee_id{where} ORDER BY p.period_date DESC,p.payroll_number DESC""",values)]
 
+    @atomic
     def save_payroll(self,item,user_id):
         calc=self.calculate_payroll(item); employee_id=int(item["employee_id"]); period=calc["period_date"]
         self._assert_period_open(period)
@@ -556,6 +565,14 @@ class PayrollStore:
         if retro_from and retro_to and retro_to<retro_from: raise ValueError("Retro To cannot be before Retro From")
         number=str(item.get("payroll_number") or "").strip()
         with self.connect() as db:
+            same_month=db.execute("SELECT period_date FROM payroll_records WHERE employee_id=? AND substr(period_date,1,7)=? AND period_date<>? LIMIT 1",
+                                  (employee_id,period[:7],period)).fetchone()
+            if same_month:
+                raise ValueError(f"Payroll is already saved for this employee in {period[:7]} on {same_month['period_date']}; open that record instead")
+            later=db.execute("SELECT period_date FROM payroll_records WHERE employee_id=? AND period_date>? AND substr(period_date,1,4)=? AND status='posted' ORDER BY period_date LIMIT 1",
+                             (employee_id,self.month_end(period),period[:4])).fetchone()
+            if later:
+                raise ValueError(f"Cannot change {period[:7]} payroll: later payroll {later['period_date']} is posted; its cumulative tax would become incorrect")
             if not number:
                 prefix=f"PAY-{period[:7].replace('-','')}-"; row=db.execute("SELECT payroll_number FROM payroll_records WHERE payroll_number LIKE ? ORDER BY payroll_number DESC LIMIT 1",
                         (prefix+"%",)).fetchone()
@@ -578,6 +595,7 @@ class PayrollStore:
                 (user_id,"save","payroll",saved_id,json.dumps({"payroll_number":number}),utcnow()))
         return next(row for row in self.list_payroll() if row["id"]==saved_id)
 
+    @atomic
     def post_payroll(self,payroll_id,user_id):
         with self.connect() as db:
             record=db.execute("""SELECT p.*,e.full_name,e.salary_account employee_salary_account,
@@ -585,6 +603,14 @@ class PayrollStore:
                 JOIN employees e ON e.id=p.employee_id WHERE p.id=?""",(int(payroll_id),)).fetchone()
             if not record: raise KeyError("Payroll record not found")
             if record["status"]=="posted": raise ValueError("Payroll is already posted")
+            duplicate=db.execute("SELECT 1 FROM payroll_records WHERE employee_id=? AND substr(period_date,1,7)=? AND id<>? LIMIT 1",
+                                 (record["employee_id"],record["period_date"][:7],record["id"])).fetchone()
+            if duplicate: raise ValueError("More than one payroll exists for this employee in this month; correct the duplicate before posting")
+            payload=dict(record); payload["allowances"]=self._record_allowances(record)
+            payload["family_allowance_override"]=record["family_allowance"]
+            current=self.calculate_payroll(payload)
+            if abs(Decimal(str(current["income_tax_lbp"]))-Decimal(str(record["income_tax_lbp"] or 0)))>Decimal("0.01"):
+                raise ValueError("Payroll tax is outdated: recalculate and save this payroll before posting")
             self._assert_period_open(record["period_date"])
             settings=self.payroll_settings_for(record["period_date"])
             mapping=dict(settings["manager_account_map"] if record["employee_group"]=="manager" else settings["employee_account_map"])

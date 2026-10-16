@@ -28,7 +28,7 @@ class RatesStore:
         if (end-start).days>3660: raise ValueError("Exchange-rate period cannot exceed 10 years")
         source=str(item.get("from_currency") or "").upper(); target=str(item.get("to_currency") or "").upper()
         rate=Decimal(str(item.get("rate") or 0))
-        if source not in self.currency_codes() or target not in self.currency_codes() or source==target or rate<=0:
+        if source not in self.currency_codes() or target not in self.currency_codes() or source==target or not rate.is_finite() or rate<=0:
             raise ValueError("Enter two different currencies and a positive rate")
         with self.connect() as db:
             rows=[]; current=start
@@ -135,15 +135,7 @@ class RatesStore:
             except (OSError, ValueError, KeyError, ArithmeticError) as exc:  # offline / no answer: that year is tried again later
                 logging.getLogger("saber.database").info("EUR rates of %s were not downloaded: %s", year, exc)
                 continue
-        if collected: previous=collected[min(collected)]
-        else:
-            try:
-                request=urllib.request.Request("https://api.frankfurter.app/latest?from=EUR&to=USD",headers={"User-Agent":"SaberAccounting/1.5"})
-                with urllib.request.urlopen(request,timeout=5) as response: previous=Decimal(str(json.loads(response.read().decode("utf-8"))["rates"]["USD"]))
-            except (OSError, ValueError, KeyError, ArithmeticError) as exc:
-                # 2.9.119: no EUR rate at all (offline). Before, 1 EUR = 1 USD was written for every day and kept for good;
-                # now no EUR rate is written and the download is tried again (a document in EUR asks for its rate).
-                logging.getLogger("saber.database").info("EUR rates were not downloaded: %s", exc); previous=None
+        # Only carry observations forward. A latest quote must never fill older days.
         rows=[]; current=start
         while current<=end:
             if current.isoformat() in collected: previous=collected[current.isoformat()]
@@ -207,12 +199,13 @@ class RatesStore:
             per_usd=None; days=collected.get(code,{})
             if code in downloadable:
                 if not days: skipped.append(code); continue
-                per_usd=days[min(days)]
+                per_usd=None
             current=start
             while current<=end:
                 if code in pegged: per_usd=Decimal(self.PEGGED_TO_USD[code])
                 elif current.isoformat() in days: per_usd=days[current.isoformat()]
-                rows.append((current.strftime("%d-%m-%Y"),code,"USD",str((Decimal("1")/per_usd).quantize(Decimal("0.0000000001"))),utcnow()))
+                if per_usd is not None:
+                    rows.append((current.strftime("%d-%m-%Y"),code,"USD",str((Decimal("1")/per_usd).quantize(Decimal("0.0000000001"))),utcnow()))
                 current+=timedelta(days=1)
             restored.append(code)
         self.__dict__.pop("_rate_state", None)
@@ -268,13 +261,16 @@ class RatesStore:
         state["table"]=table; state["table_signature"]=state["signature"]
         return table
 
-    def require_eur_rate(self, currency):
-        """2.9.121: an EUR document needs a real EUR rate (before, 1 EUR = 1 USD was used when none was entered)."""
+    def require_eur_rate(self, currency, rate_date=None):
+        """An EUR document needs an actual rate on or before its own date."""
         if str(currency or "").upper() != "EUR": return
-        table=self._rate_table()
-        if not (table.get(("EUR","USD")) or table.get(("USD","EUR")) or table.get(("EUR","LBP")) or table.get(("LBP","EUR"))):
-            raise ValueError("No EUR exchange rate is entered: enter the EUR rate first (Settings > Exchange Rates), "
-                             "so the amounts and the VAT of this EUR document are converted at a real rate")
+        if not rate_date:
+            raise ValueError("Enter the EUR document date before saving")
+        try:
+            self._converted_amount(1, "EUR", "USD", rate_date)
+        except ValueError as exc:
+            raise ValueError(f"No EUR exchange rate on or before {rate_date}: enter the rate first "
+                             "(Settings > Exchange Rates)") from exc
 
     def _rate_factor(self, source, target, rate_date, target_key):
         amount=Decimal("1")
@@ -287,25 +283,27 @@ class RatesStore:
             return rows[index-1] if index else None
         def find_rate(frm,to):
             row=latest(frm,to)
-            if row: return Decimal(str(row[2]))
+            if row:
+                value=Decimal(str(row[2]))
+                if not value.is_finite() or value<=0: raise ValueError(f"Invalid exchange rate for {frm} to {to} on {rate_date}")
+                return value
             row=latest(to,frm)
-            return Decimal("1")/Decimal(str(row[2])) if row and Decimal(str(row[2])) else None
-        def first_after(frm,to):  # 2.9.121: no rate on or before the day: the first one entered after it (never a made-up 1)
-            for pair,invert in (((frm,to),False),((to,frm),True)):
-                found=table.get(pair)
-                if not found: continue
-                keys,rows=found; index=bisect.bisect_right(keys,target_key)
-                if index<len(rows) and Decimal(str(rows[index][2])):
-                    value=Decimal(str(rows[index][2])); return Decimal("1")/value if invert else value
+            if row:
+                value=Decimal(str(row[2]))
+                if not value.is_finite() or value<=0: raise ValueError(f"Invalid exchange rate for {to} to {frm} on {rate_date}")
+                return Decimal("1")/value
             return None
         direct=find_rate(source,target)
         if direct is not None: return amount*direct
-        eur=find_rate("EUR","USD") or first_after("EUR","USD")  # 2.9.121: a real rate (after the day when none before)
-        # no EUR rate at all: the equivalent columns of other documents keep the old reference; an EUR DOCUMENT is refused
-        # before it is saved (require_eur_rate), so its amounts and VAT are never converted with a made-up rate
         usd_rates={"USD":Decimal("1"),"LBP":Decimal("1")/Decimal("89500"),
-                   "EUR":eur or Decimal("1"),
-                   "AED":Decimal("1")/Decimal("3.6725")}
+                   **{code: Decimal("1")/Decimal(value) for code,value in self.PEGGED_TO_USD.items()}}
+        if "EUR" in (source,target):
+            eur=find_rate("EUR","USD")
+            if eur is None:
+                eur_lbp=find_rate("EUR","LBP")
+                if eur_lbp is not None:
+                    eur=eur_lbp*(find_rate("LBP","USD") or usd_rates["LBP"])
+            if eur is not None: usd_rates["EUR"]=eur
         if source in usd_rates and target in usd_rates:
             to_usd=find_rate(source,"USD") or usd_rates[source]
             from_usd=find_rate("USD",target)

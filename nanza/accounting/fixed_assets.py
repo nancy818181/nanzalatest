@@ -2,6 +2,7 @@
 import calendar
 import hashlib
 import json
+from database_common import atomic
 from decimal import ROUND_CEILING
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -103,6 +104,7 @@ def get_attachment(database, attachment_id):
         return dict(row)
 
 
+@atomic
 def save_asset(database, payload, asset_id=None, user_id=None):
     name=str(payload.get("name") or "").strip(); code=str(payload.get("asset_code") or "").strip()
     if not name or not code: raise ValueError("Enter asset code and name")
@@ -110,8 +112,11 @@ def save_asset(database, payload, asset_id=None, user_id=None):
     if start<acquired: raise ValueError("Depreciation start cannot be before purchase date")
     cost=_money(payload.get("cost"),"Cost"); residual=_money(payload.get("residual") or 0,"Residual value")
     if cost<=0 or residual>=cost: raise ValueError("Cost must exceed residual value")
-    try: months=int(payload.get("useful_months"))
-    except (ValueError, TypeError): raise ValueError("Useful life must be a whole number of months")
+    try:
+        raw_months=Decimal(str(payload.get("useful_months")))
+        if not raw_months.is_finite() or raw_months!=raw_months.to_integral_value(): raise ValueError("fractional useful life")
+        months=int(raw_months)
+    except (InvalidOperation, ValueError, TypeError): raise ValueError("Useful life must be a whole number of months")
     if months<1 or months>1200: raise ValueError("Useful life must be between 1 and 1200 months")
     annual_rate=None
     if payload.get("annual_rate") not in (None, ""):
@@ -125,7 +130,7 @@ def save_asset(database, payload, asset_id=None, user_id=None):
         opening_date=_iso(payload.get("opening_date"))
         if opening_date<start: raise ValueError("'Depreciation booked before Nanza up to' cannot be before the depreciation start")
     currency=str(payload.get("currency") or "USD").upper(); frequency=str(payload.get("frequency") or "monthly").lower()
-    if currency not in ("USD","LBP","EUR","AED") or frequency not in ("monthly","yearly"):
+    if currency not in database.currency_codes() or frequency not in ("monthly","yearly"):
         raise ValueError("Choose a supported currency and monthly or yearly posting")
     accounts=[str(payload.get(k) or "").split(" - ",1)[0].strip() for k in ("asset_account","depreciation_account","accumulated_account")]
     with database.connect() as db:
@@ -133,11 +138,12 @@ def save_asset(database, payload, asset_id=None, user_id=None):
         if invoice_id:
             try: invoice_id=int(invoice_id)
             except (ValueError, TypeError): raise ValueError("Purchase invoice ID must be a number")
-            invoice=db.execute("SELECT kind,entry_type,currency FROM invoices WHERE id=? AND status<>'cancelled'",(invoice_id,)).fetchone()
-            if not invoice or invoice["kind"]!="purchase" or invoice["entry_type"]!="assets":
-                raise ValueError("Choose an existing Assets purchase invoice")
+            invoice=db.execute("SELECT kind,entry_type,currency,status,doc_subtype FROM invoices WHERE id=?",(invoice_id,)).fetchone()
+            if not invoice or invoice["kind"]!="purchase" or invoice["entry_type"]!="assets" or invoice["status"]!="posted" or invoice["doc_subtype"]=="credit_note":
+                raise ValueError("Choose an existing posted Assets purchase invoice (not a credit note)")
             if invoice["currency"]!=currency: raise ValueError("Asset currency must match the purchase invoice")
-        for account in accounts:
+        for label,account,prefix in zip(("Asset","Depreciation expense","Accumulated depreciation"),accounts,("2","6","2")):
+            if not account.startswith(prefix): raise ValueError(f"{label} account must be class {prefix}")
             if not db.execute("SELECT 1 FROM accounts WHERE code=?",(account,)).fetchone():
                 raise ValueError(f"Account {account} was not found")
         values=(code,name,acquired,start,currency,str(cost),str(residual),months,frequency,*accounts,invoice_id,str(annual_rate) if annual_rate else None)
@@ -250,6 +256,7 @@ def rollforward(database, fiscal_year):
         for currency,amounts in sorted(totals.items())}}
 
 
+@atomic
 def post_period(database, asset_id, period_end, user_id, fiscal_year=None):
     asset=next((item for item in list_assets(database) if item["id"]==int(asset_id)),None)
     if not asset: raise KeyError(asset_id)
@@ -374,8 +381,9 @@ def monthly_table(database, month, account_code=None):
         current_row = next((r for r in rows if r["period_end"] == end), None); current = Decimal(current_row["amount"]) if current_row else Decimal("0")
         before = min(before, cost - residual); current = max(Decimal("0"), min(current, cost - residual - before))  # net value never below the residual / zero
         total = before + current
-        group = groups.setdefault(asset["asset_account"], {"account": asset["asset_account"], "name": categories.get(asset["asset_account"], {}).get("name", ""),
-                                                           "rate": categories.get(asset["asset_account"], {}).get("annual_rate", asset.get("annual_rate") or ""),
+        group_key=(asset["asset_account"],asset["currency"],asset["depreciation_account"],asset["accumulated_account"],asset.get("annual_rate") or "")
+        group = groups.setdefault(group_key, {"account": asset["asset_account"], "name": categories.get(asset["asset_account"], {}).get("name", ""),
+                                                           "rate": asset.get("annual_rate") or "",
                                                            "depreciation_account": asset["depreciation_account"], "accumulated_account": asset["accumulated_account"],
                                                            "currency": asset["currency"], "assets": []})
         group["assets"].append({"id": asset["id"], "code": asset["asset_code"], "name": asset["name"], "acquired_on": asset["acquired_on"], "value": cost,
@@ -386,24 +394,37 @@ def monthly_table(database, month, account_code=None):
     return {"month": end, "groups": [groups[k] for k in sorted(groups)]}
 
 
+@atomic
 def post_category_month(database, account_code, month, user_id, fiscal_year=None):
-    """One depreciation entry per asset account for the month: Dr depreciation expense / Cr accumulated depreciation."""
+    """Depreciation vouchers grouped by currency and posting accounts, saved with all asset links atomically."""
     table = monthly_table(database, month, account_code)
     if not table["groups"]: raise ValueError("No asset in this account for this month")
-    group = table["groups"][0]; end = table["month"]
-    if fiscal_year is not None and int(end[:4]) != int(fiscal_year): raise ValueError(f"Select fiscal year {end[:4]} before posting this depreciation")
-    pending = [a for a in group["assets"] if not a["posted"] and a["current"] > 0]
-    if not pending: raise ValueError("The depreciation of this account for this month is already posted (or is zero)")
-    late = []
-    for asset in pending:
-        earlier = [r for r in schedule(database, asset["id"]) if r["period_end"] < end and not r["posted"] and Decimal(r["amount"]) > 0]
-        if earlier: late.append(asset["code"])
-    if late: raise ValueError("Post the earlier months first for: " + ", ".join(late))
-    amount = sum((a["current"] for a in pending), Decimal("0"))
-    voucher = database.save_journal_voucher({"entry_date": datetime.strptime(end, "%Y-%m-%d").strftime("%d-%m-%Y"),
-        "description": f"Depreciation {group['name'] or account_code} ({account_code}) - {end[:7]}", "currency": group["currency"], "voucher_type": "06"},
-        [{"account_code": group["depreciation_account"], "debit": str(amount)}, {"account_code": group["accumulated_account"], "credit": str(amount)}], user_id)
-    with database.connect() as db:
+    end=table["month"]
+    if fiscal_year is not None and int(end[:4])!=int(fiscal_year):
+        raise ValueError(f"Select fiscal year {end[:4]} before posting this depreciation")
+    batches=[]; late=[]
+    for group in table["groups"]:
+        pending=[a for a in group["assets"] if not a["posted"] and a["current"]>0]
+        if not pending: continue
         for asset in pending:
-            db.execute("INSERT OR IGNORE INTO fixed_asset_postings(asset_id,period_end,amount,entry_id) VALUES(?,?,?,?)", (asset["id"], end, str(asset["current"]), voucher["voucher"]["id"]))
-    return {"voucher": voucher["voucher"]["entry_number"], "amount": float(amount), "assets": len(pending)}
+            earlier=[r for r in schedule(database,asset["id"]) if r["period_end"]<end and not r["posted"] and Decimal(r["amount"])>0]
+            if earlier: late.append(asset["code"])
+        batches.append((group,pending))
+    if late: raise ValueError("Post the earlier months first for: "+", ".join(late))
+    if not batches: raise ValueError("The depreciation of this account for this month is already posted (or is zero)")
+    vouchers=[]; amounts={}; count=0
+    for group,pending in batches:
+        amount=sum((a["current"] for a in pending),Decimal("0"))
+        voucher=database.save_journal_voucher({"entry_date":datetime.strptime(end,"%Y-%m-%d").strftime("%d-%m-%Y"),
+            "description":f"Depreciation {group['name'] or account_code} ({account_code}) - {end[:7]}","currency":group["currency"],"voucher_type":"06"},
+            [{"account_code":group["depreciation_account"],"debit":str(amount)},
+             {"account_code":group["accumulated_account"],"credit":str(amount)}],user_id)
+        with database.connect() as db:
+            for asset in pending:
+                db.execute("INSERT INTO fixed_asset_postings(asset_id,period_end,amount,entry_id) VALUES(?,?,?,?)",
+                           (asset["id"],end,str(asset["current"]),voucher["voucher"]["id"]))
+        vouchers.append(voucher["voucher"]["entry_number"])
+        amounts[group["currency"]]=amounts.get(group["currency"],Decimal("0"))+amount
+        count+=len(pending)
+    return {"voucher":", ".join(vouchers),"vouchers":vouchers,"amounts":{code:float(amount) for code,amount in amounts.items()},
+            "amount":float(next(iter(amounts.values()))) if len(amounts)==1 else None,"assets":count}

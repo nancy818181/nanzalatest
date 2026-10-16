@@ -502,6 +502,7 @@ class SaberAccountingTest(unittest.TestCase):
             invoice={"invoice_number":"OLD-1","invoice_date":"01-09-2026","party_name":"Old Supplier",
                      "kind":"purchase","currency":"USD","subtotal":100,"vat":11,"total":111}
             invoice_id=db.import_invoice(invoice,user["id"])
+            db.save_exchange_rate({"rate_date":"20-09-2026","from_currency":"EUR","to_currency":"USD","rate":"1.2"},user["id"])
             updated=db.update_invoice(invoice_id,{
                 "invoice_number":"NEW-1","invoice_date":"20-09-2026","party_name":"New Supplier",
                 "kind":"purchase","currency":"EUR","subtotal":"200","vat":"22","total":"222",

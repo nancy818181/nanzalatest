@@ -180,9 +180,10 @@ def _audit(db, year, include_drafts):
             "ok": all(row[-1] == "OK" for row in check)}
 
 
-def _movement(db, year, month, include_drafts):
-    """One line per employee: this month and year-to-date (like the monthly / cumulative movement sheet)."""
-    month = int(month); start_m, end_m, label = period_range("monthly", year, month)
+def _movement(db, year, month, include_drafts, period_type="monthly"):
+    """One line per employee: the selected period and the year-to-date movement."""
+    month = int(month)
+    start_m, end_m, label = period_range(period_type, year, month)
     start_y = f"{int(year)}-01-01"
     rows = _load_records(db, start_y, end_m, include_drafts)
     month_rows = [r for r in rows if r["period_date"] >= start_m]
@@ -194,17 +195,18 @@ def _movement(db, year, month, include_drafts):
     body = []
     for employee_id, item in ytd_people.items():
         r = item["row"]; m = month_people.get(employee_id)
-        month_record = next((x for x in month_rows if x["employee_id"] == employee_id), None)
-        salary = (month_record["lbp"]["salary"] + month_record["lbp"]["retro_salary"]) if month_record else ZERO
+        period_records = [x for x in month_rows if x["employee_id"] == employee_id]
+        salary = sum((x["lbp"]["salary"] + x["lbp"]["retro_salary"] for x in period_records), ZERO)
         gross = m["total"] if m else ZERO; exempt = m["exempt"] if m else ZERO
         body.append([r["employee_number"], r["full_name"], r.get("unit_code") or "", r.get("job_title") or "", _family_en(r),
                      _money(salary), _money(gross - exempt - salary), _money(exempt), _money(gross),
                      _money(m["employee_nssf"] if m else 0), _money(m["tax"] if m else 0),
-                     _money(month_record["lbp"]["net_salary"] if month_record else 0),
+                     _money(sum((x["lbp"]["net_salary"] for x in period_records), ZERO)),
                      _money(item["total"]), _money(item["taxable"]), _money(item["tax"])])
     totals = ["TOTAL", f"{len(body)}", "", "", ""] + [sum((row[i] for row in body), Decimal(0)) for i in range(5, len(headers))]
     body.append(totals)
-    return {"report": "MOVEMENT", "title": OFFICIAL["MOVEMENT"], "period_label": label, "date_from": start_m, "date_to": end_m,
+    title = "Annual payroll movement | حركة الرواتب السنوية" if period_type == "yearly" else OFFICIAL["MOVEMENT"]
+    return {"report": "MOVEMENT", "title": title, "period_label": label, "date_from": start_m, "date_to": end_m,
             "meta": _company_meta(db, label, start_m, end_m, ["Year-to-date columns: 01-01 to the end of the month."]),
             "sections": [{"heading": f"{label}", "headers": headers, "rows": body, "total_rows": [len(body) - 1]}], "record_count": len(rows)}
 
@@ -250,6 +252,6 @@ def build_official(db, report, period_type="yearly", year=None, index=1, include
         return _returns(db, report, period_type, year, index, include_drafts)
     if report == "R6_LINES": return _r6(db, year, include_drafts, employee_id)
     if report == "AUDIT": return _audit(db, year, include_drafts)
-    if report == "MOVEMENT": return _movement(db, year, index if period_type == "monthly" else 12, include_drafts)
+    if report == "MOVEMENT": return _movement(db, year, index, include_drafts, period_type)
     if report in ("REGISTER", "LEAVERS"): return _register(db, year, report == "LEAVERS")
     raise ValueError("Unknown payroll statement")

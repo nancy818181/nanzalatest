@@ -80,6 +80,7 @@ class OcrPageTests(unittest.TestCase):
         self.assertEqual(image_to_string.call_args_list[1].kwargs["lang"], "eng")
         self.assertEqual(image_to_string.call_args_list[1].kwargs["config"], "--psm 4")
         self.assertEqual(image_to_string.call_count, 2)
+        self.assertTrue(all(call.kwargs["timeout"] == 30 for call in image_to_string.call_args_list))
         self.assertTrue(document.pages[1].bitmap.image.closed)
         self.assertTrue(document.closed)
 
@@ -95,6 +96,8 @@ class OcrPageTests(unittest.TestCase):
         self.assertEqual(result["invoice_date"], "15-03-2026")
         self.assertEqual(result["total"], 111.0)
         self.assertTrue(result["ocr_used"])
+        self.assertTrue(result["review_required"])
+        self.assertTrue(result["review_warnings"])
         self.assertIn("please check", result["notes"])
 
     def test_incomplete_nonempty_text_layer_falls_back_to_ocr(self):

@@ -214,6 +214,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                           **({"deductible": data["taxable_subtotal"], "non_deductible": data["exempt_subtotal"]} if data.get("taxable_subtotal") is not None else {}),  # 2.9.85
                           "entry_type": suggested, "source": f'{data["file"]} - {data["page_range"]}',
                            "notes": (data.get("notes", "") + "; " + type_note).strip("; "), "_path": path, "_items": data.get("items") or [],
+                           "_review_warnings": list(data.get("review_warnings") or []),
                            "_asset_name":asset_details["name"],"_asset_date":asset_details["acquired_on"],
                            "_asset_currency":asset_details["currency"],"_asset_cost":asset_details["cost"]})
                 if suggested != "Sales" and hasattr(self, "import_row_rule"):  # 2.9.121: posted like this supplier's last invoice
@@ -311,7 +312,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         """Rows that can be posted without a question, and the others (their Check note says why)."""
         ready = []; waiting = []
         for r in rows:
-            problems = []
+            problems = list(r.get("_review_warnings") or [])
             if not r.get("party_name"): problems.append("customer / supplier")
             if r.get("total") in (None, "", 0, 0.0): problems.append("total")
             if r.get("problem") and "date" in str(r.get("problem")): problems.append("date")
@@ -349,7 +350,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                           "unit_price": round(line_subtotal / float(it["quantity"]), 6), "discount_percent": 0, "vat_rate": line_rate, "warehouse": "MAIN",
                           "deductible_subtotal": line_subtotal, "vat": line_vat})
         invoice = {"invoice_number": r["invoice_number"], "invoice_date": r["invoice_date"], "party_name": r["party_name"], "kind": "purchases",
-                   "currency": r["currency"], "status": "posted", "source_file": r.get("source") or "PDF import",
+                   "currency": r["currency"], "status": "posted", "source_file": r.get("source") or "PDF import", "remember_posting": True,
                    "expense_account": str(r.get("expense_account") or "601100000").split(" - ", 1)[0].strip(),
                    "vat_account": str(r.get("vat_account") or "442660000").split(" - ", 1)[0].strip(), "vat_use": "mixed"}
         account = str(r.get("supplier_account") or "").split(" - ", 1)[0].strip()
@@ -459,7 +460,10 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                 return messagebox.showwarning("Import","Replace ALL previous invoices cannot be used with PDF expense rows. Uncheck Replace to import paid expenses")
             counts = ", ".join(f"{label}: {sum(r['entry_type']==label for r in rows)}" for label in TYPES if any(r["entry_type"]==label for r in rows))
             if not auto and not messagebox.askyesno("Confirm PDF types",
-                    f"Review the Type of every PDF row before posting.\n{counts}\n\nExpenses are recorded as PAID from the selected payment account; Purchases are supplier invoices and Assets require a fixed-asset account.\n\nAre these types and accounts correct?"):
+                    f"Review the Type of every PDF row before posting.\n{counts}\n\n"
+                    "Expenses are recorded as PAID from the selected payment account; "
+                    "Purchases are supplier invoices and Assets require a fixed-asset account.\n\n"
+                    "Are these types and accounts correct?"):
                 return
         if self.import_replace.get() and not messagebox.askyesno("Replace previous data", "ALL previous invoices will be removed and replaced. A safety backup is made first. Continue?"): return
         checker = getattr(self, "import_duplicates", None)
@@ -508,7 +512,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                     row_kind,row_type=TYPES[r["entry_type"]]
                     items.append({"invoice_number": r["invoice_number"], "invoice_date": r["invoice_date"], "party_name": r["party_name"],
                                   "kind": row_kind, "entry_type": row_type, "currency": r["currency"], "subtotal": r["subtotal"], "vat": r["vat"],
-                                  "total": r["total"], "source_file": r["source"],
+                                  "total": r["total"], "source_file": r["source"], "remember_posting": self.import_mode == "pdf",
                                   "supplier_account": r.get("supplier_account") or "", "vat_account": r.get("vat_account") or "",
                                   "expense_account": r.get("expense_account") or "", "expense_no_vat_account": r.get("expense_no_vat_account") or ""})
                 if items:

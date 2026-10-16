@@ -28,6 +28,8 @@ class CurrencyAgeingTest(unittest.TestCase):
         self.db.import_invoice({"invoice_number": "DEMO-1", "invoice_date": "20-09-2026",
                                 "party_name": "Example", "kind": "sale", "currency": "USD",
                                 "subtotal": 100, "vat": 11, "total": 111}, self.user)
+        self.db.save_exchange_rate({"rate_date": "01-09-2026", "from_currency": "EUR",
+                                    "to_currency": "USD", "rate": "1.2"}, self.user)
         for first, second in (("EUR", "AED"), ("GBP", "USD")):
             result = build_account_report(self.db, {"first_column": first, "second_column": second,
                                                      "date_from": "01-09-2026", "date_to": "30-09-2026"})

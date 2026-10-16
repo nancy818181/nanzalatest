@@ -23,6 +23,31 @@ class LearningMixin:
         tk.Label(azure, text="For handwritten or hard-to-read invoices: Microsoft Azure Document Intelligence, free tier F0 = 500 pages a month. "
                  "Without it the free local reading is used, as before.", bg=LIGHT, fg=MUTED, wraplength=760, justify="left").pack(side="left")
         tk.Button(azure, text="Azure Settings", command=self.azure_settings_window, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
+        advanced = tk.LabelFrame(page, text="Advanced Local OCR (Arabic and English)", bg=LIGHT, padx=8, pady=6)
+        advanced.pack(fill="x", padx=8, pady=6)
+        tk.Label(advanced, text="An extra neural reader for difficult photos. One-time download; invoices stay on this computer. "
+                 "Slower than normal OCR; handwriting still needs review before Save.", bg=LIGHT, fg=MUTED, wraplength=760, justify="left").pack(anchor="w")
+        advanced_controls=tk.Frame(advanced,bg=LIGHT);advanced_controls.pack(fill="x",pady=(6,0))
+        import neural_reader
+        self.neural_reader_enabled=tk.BooleanVar(value=neural_reader.ready())
+        def toggle_neural():
+            try:neural_reader.set_enabled(self.neural_reader_enabled.get())
+            except neural_reader.NeuralReaderError as exc:
+                self.neural_reader_enabled.set(False)
+                messagebox.showwarning("Advanced Local OCR",str(exc))
+        tk.Checkbutton(advanced_controls,text="Use advanced reader for photos / scans",variable=self.neural_reader_enabled,
+                       command=toggle_neural,bg=LIGHT).pack(side="left",padx=6)
+        tk.Button(advanced_controls, text="Install / Repair Advanced Reader", command=self.install_neural_reader,
+                  bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
+
+    def install_neural_reader(self):
+        import neural_reader
+        from desktop_stage3_common import run_with_progress
+        def installed(note):
+            if hasattr(self,"neural_reader_enabled"):self.neural_reader_enabled.set(True)
+            messagebox.showinfo("Advanced Local OCR",note)
+        return run_with_progress(self, "Advanced Local OCR setup", neural_reader.install,installed)
+
 
     # ------------------------------------------------------------ 2.9.121: many PDFs at once (Uploaded Data)
     def import_row_rule(self, row, data):
@@ -134,6 +159,7 @@ class LearningMixin:
             except azure_reader.AzureReaderError as exc:
                 data = pdf_import.read_invoice_pdf(path)
                 data["notes"] = f"Azure: {exc} - free local reading used; {data.get('notes') or ''}".strip("; ")
+                data.setdefault("review_warnings", []).append("Azure reading unavailable; check the free local reading against the original")
                 return data
         self.run_ai_task(work, done)
 

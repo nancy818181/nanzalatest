@@ -43,6 +43,8 @@ class InvoicesStore:
                 raise ValueError("Invoice replacement is blocked after a quarterly VAT return has been saved")
             if db.execute("SELECT 1 FROM fiscal_years WHERE status='closed' LIMIT 1").fetchone():
                 raise ValueError("Invoice replacement is blocked while a fiscal year is closed")
+            if db.execute("SELECT 1 FROM fixed_assets a JOIN invoices i ON i.id=a.invoice_id WHERE a.status='active' LIMIT 1").fetchone():
+                raise ValueError("Invoice replacement is blocked while invoices are linked to active fixed assets")
             if db.execute("SELECT 1 FROM invoices WHERE CAST(COALESCE(amount_paid,'0') AS REAL)>0 LIMIT 1").fetchone():
                 raise ValueError("Invoice replacement is blocked while existing invoices have payments recorded")
         backup_path = self.backup("safety") if make_backup else None
@@ -59,7 +61,7 @@ class InvoicesStore:
             return {"deleted": deleted, "backup": backup_path}
 
     def import_invoice(self, item, user_id):
-        self.require_eur_rate(item.get("currency"))  # 2.9.121: never 1 EUR = 1 USD
+        self.require_eur_rate(item.get("currency"), item.get("invoice_date"))
         # No uniqueness constraint is applied to invoice numbers: duplicates are intentionally retained.
         self._assert_period_open(item.get("invoice_date")); self._assert_vat_open(item.get("invoice_date"))
         defaults=self.default_accounts()  # 2.9.81: Settings > Accounting Settings
@@ -242,7 +244,7 @@ class InvoicesStore:
 
     @atomic  # 2.9.121
     def create_manual_invoice(self, item, line_items, user_id):
-        self.require_eur_rate(item.get("currency"))  # 2.9.121: never 1 EUR = 1 USD
+        self.require_eur_rate(item.get("currency"), item.get("invoice_date"))
         if not isinstance(line_items, list) or not line_items:
             raise ValueError("Add at least one invoice item")
         normalized = []
@@ -358,6 +360,12 @@ class InvoicesStore:
         return invoice_id
 
     @staticmethod
+    def _assert_no_active_linked_assets(db, invoice_id, action):
+        asset=db.execute("SELECT asset_code FROM fixed_assets WHERE invoice_id=? AND status='active' LIMIT 1",(int(invoice_id),)).fetchone()
+        if asset:
+            raise ValueError(f"Cannot {action} invoice: it is linked to active fixed asset {asset['asset_code']}; correct the asset link first")
+
+    @staticmethod
     def _assert_no_active_linked_returns(db,invoice_id,action):
         linked=db.execute("""SELECT invoice_number FROM invoices WHERE linked_invoice_id=?
             AND doc_subtype='credit_note' AND status NOT IN ('cancelled','deleted') LIMIT 1""",(int(invoice_id),)).fetchone()
@@ -376,6 +384,7 @@ class InvoicesStore:
             invoice=db.execute("SELECT * FROM invoices WHERE id=?",(int(invoice_id),)).fetchone()
             if not invoice: raise KeyError(invoice_id)
             self._assert_no_active_linked_returns(db,invoice_id,"delete")
+            self._assert_no_active_linked_assets(db,invoice_id,"delete")
             self._assert_period_open(invoice["invoice_date"]); self._assert_vat_open(invoice["invoice_date"])
             details=dict(invoice)
             db.execute("DELETE FROM journal_entries WHERE source_type IN ('invoice','journal_voucher','invoice_payment') AND source_id=?",(int(invoice_id),))
@@ -395,6 +404,7 @@ class InvoicesStore:
             if not invoice: raise KeyError(invoice_id)
             if invoice["status"]=="deleted": raise ValueError("Invoice is already deleted")
             self._assert_no_active_linked_returns(db,invoice_id,"delete")
+            self._assert_no_active_linked_assets(db,invoice_id,"delete")
             self._assert_period_open(invoice["invoice_date"]); self._assert_vat_open(invoice["invoice_date"])
             if db.execute("SELECT 1 FROM payment_allocations WHERE invoice_id=? LIMIT 1",(int(invoice_id),)).fetchone():
                 raise ValueError("Invoice has allocated payments. Remove the allocation before deleting it")
@@ -515,6 +525,7 @@ class InvoicesStore:
                 raise ValueError("Cancelled or deleted invoices cannot be edited")
             self._assert_credit_note_not_edited(db,invoice_id)
             self._assert_no_active_linked_returns(db,invoice_id,"edit")
+            self._assert_no_active_linked_assets(db,invoice_id,"edit")
             party_kind = "customer" if kind == "sale" else "supplier"
             party_name = str(item["party_name"]).strip()
             db.execute("INSERT OR IGNORE INTO parties(kind,name,currency) VALUES(?,?,?)", (party_kind, party_name, currency))
@@ -640,6 +651,7 @@ class InvoicesStore:
             if invoice["status"] in ("cancelled","deleted"):
                 raise ValueError("Cancelled or deleted invoices cannot be cancelled again")
             self._assert_no_active_linked_returns(db,invoice_id,"cancel")
+            self._assert_no_active_linked_assets(db,invoice_id,"cancel")
             self._assert_period_open(invoice["invoice_date"]); self._assert_vat_open(invoice["invoice_date"])
             original = db.execute("SELECT * FROM journal_entries WHERE source_type IN ('invoice','journal_voucher') AND source_id=?", (invoice_id,)).fetchone()
             if not original:
@@ -913,6 +925,7 @@ class InvoicesStore:
             if old["status"] in ("deleted","cancelled"): raise ValueError("Deleted or cancelled invoices cannot be edited")
             self._assert_credit_note_not_edited(db,invoice_id)
             self._assert_no_active_linked_returns(db,invoice_id,"edit")
+            self._assert_no_active_linked_assets(db,invoice_id,"edit")
             files = [dict(r) for r in db.execute("SELECT file_name,mime_type,content FROM invoice_attachments WHERE invoice_id=?", (int(invoice_id),))]
             linked = [r["id"] for r in db.execute("SELECT id FROM invoices WHERE linked_invoice_id=?", (int(invoice_id),))]
             self._assert_period_open(old["invoice_date"]); self._assert_vat_open(old["invoice_date"], item.get("invoice_date"))

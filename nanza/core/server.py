@@ -436,7 +436,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 import business_reports
                 report = self._query(parsed,"report","")
                 options = json.loads(self._query(parsed,"options","{}") or "{}")
-                if report == "financial_statements":
+                if report in ("financial_statements","financial_checks"):
                     import financial_statements
                     if options.get("fs_mode")=="period":  # 2.9.69: a period of one year, with the same period one year before
                         end_year=int(iso_date(options.get("date_to"))[:4]); databases={end_year:self.company_manager.database(self.headers.get("X-Company-ID"),end_year)}
@@ -447,7 +447,8 @@ class ApiHandler(BaseHTTPRequestHandler):
                         years = financial_statements.years_from(options.get("years"))
                         databases = {year:self.company_manager.database(self.headers.get("X-Company-ID"),year) for year in years}
                     others = list(self.company_manager.year_databases(self.headers.get("X-Company-ID")).values())  # 2.9.83
-                    result = financial_statements.build(databases,options,others,self.master_db)
+                    builder=financial_statements.reconciliation_report if report=="financial_checks" else financial_statements.build
+                    result = builder(databases,options,others,self.master_db)
                 else:
                     result=business_reports.build(self.db,report,options)
                 return self._json(200,ledger_reports.json_ready(result))
@@ -1252,7 +1253,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 invoice_id = self.db.create_manual_invoice(invoice, items, user["id"])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
-            _learn("learn_invoice", self.db, invoice_id)
+            _learn("learn_invoice", self.db, invoice_id, bool(invoice.get("remember_posting")))
             return self._json(201, {"invoice_id": invoice_id, **({"approval": note} if note else {})})
         if path == "/api/invoices/import":
             items = body.get("items", [])
@@ -1284,12 +1285,16 @@ class ApiHandler(BaseHTTPRequestHandler):
                         with closing(sqlite3.connect(stage_path)) as source,closing(sqlite3.connect(self.db.path)) as target:
                             source.backup(target)
                     except Exception as exc: return self._json(500,{"error":f"Replacement could not be saved: {exc}"})
+                    for invoice_id, item in zip(ids, items):
+                        if item.get("remember_posting"): _learn("learn_invoice", self.db, invoice_id, True)
                     return self._json(200,{"imported":len(ids),"ids":ids,"errors":[],"deleted":replacement["deleted"],"backup":safety})
             replacement={"deleted":0,"backup":None}
             ids, errors = [], []
             for index, item in enumerate(items):
                 try:
-                    ids.append(self.db.import_invoice(item, user["id"]))
+                    imported_id=self.db.import_invoice(item, user["id"])
+                    ids.append(imported_id)
+                    if item.get("remember_posting"): _learn("learn_invoice", self.db, imported_id, True)
                 except Exception as exc:
                     errors.append({"index": index, "invoice_number": item.get("invoice_number"), "error": str(exc)})
             return self._json(200, {"imported": len(ids), "ids": ids, "errors": errors, "deleted": replacement["deleted"], "backup": replacement["backup"]})

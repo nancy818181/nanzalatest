@@ -42,6 +42,22 @@ class AllowanceCalculationTest(_Base):
         self.assertGreater(taxable["income_tax"], plain["income_tax"]); self.assertGreater(taxable["employee_nssf"], plain["employee_nssf"])
         self.assertEqual(exempt["net_salary"], plain["net_salary"] + 5000000)
 
+    def test_reported_nssf_base_includes_the_allowances_used_in_contributions(self):
+        employee=self.employee()
+        result=self.db.calculate_payroll({"employee_id":employee["id"],"period_date":"31-01-2026",
+                                          "allowances":{"housing":"10000000","food_exempt":"2000000"}})
+        self.assertEqual(result["nssf_base"],70000000)
+        rules=self.db.payroll_settings_for("2026-01-31")
+        ceiling=Decimal(str(rules["employee_ceiling"]))
+        basis=min(Decimal(70000000),ceiling) if ceiling>0 else Decimal(70000000)
+        self.assertEqual(result["employee_nssf_lbp"],float(basis*Decimal(str(rules["employee_nssf_rate"]))))
+        saved=self.db.save_payroll({"employee_id":employee["id"],"period_date":"31-01-2026",
+                                    "allowances":{"housing":"10000000","food_exempt":"2000000"}},1)
+        self.assertEqual(Decimal(saved["nssf_base"]),Decimal(70000000))
+        report=build_payroll_report(self.db,"R6","monthly",2026,1,"employee",include_drafts=True)
+        nssf=next(section for section in report["sections"] if section["heading"].startswith("NSSF contributions"))
+        self.assertEqual(nssf["rows"][0][3],Decimal(70000000))
+
     def test_one_off_grant_is_taxed_like_a_bonus(self):
         e = self.employee()
         grant = self.db.calculate_payroll({"employee_id": e["id"], "period_date": "31-01-2026", "allowances": {"marriage_taxable": "30000000"}})
@@ -136,6 +152,53 @@ class OfficialStatementsTest(_Base):
         self.assertEqual(len(register), 2)
         leavers = self.rows("LEAVERS")["sections"][0]["rows"]
         self.assertEqual([(r[1], r[-1]) for r in leavers], [("Mgr B", "resigned")])
+
+
+class MonthlyAnnualReconciliationTest(_Base):
+    def test_full_year_employee_and_manager_tables_equal_twelve_months(self):
+        import calendar
+        employee=self.employee()
+        manager=self.employee(full_name="Manager annual",employee_number="2000",employee_group="manager",
+                              currency="USD",base_salary="2000")
+        for month in range(1,13):
+            period=f"{calendar.monthrange(2026,month)[1]:02d}-{month:02d}-2026"
+            for person in (employee,manager):
+                salary=(60000000+month*1000000) if person["id"]==employee["id"] else (2000+month*20)
+                record=self.db.save_payroll({"employee_id":person["id"],"period_date":period,"salary":str(salary)},1)
+                self.db.post_payroll(record["id"],1)
+        annual=build_payroll_report(self.db,"R5","yearly",2026)
+        monthly=[build_payroll_report(self.db,"R5","monthly",2026,month) for month in range(1,13)]
+        self.assertEqual(annual["record_count"],24)
+        for group in ("employee","manager"):
+            self.assertEqual(annual["summary"][group]["employees"],1)
+            for field in ("gross","income_tax","employee_nssf","employer_nssf"):
+                with self.subTest(group=group,field=field):
+                    self.assertAlmostEqual(annual["summary"][group][field],sum(m["summary"][group][field] for m in monthly),delta=0.01)
+        movement=build_payroll_report(self.db,"MOVEMENT","yearly",2026)
+        self.assertEqual((movement["date_from"],movement["date_to"]),("2026-01-01","2026-12-31"))
+        self.assertEqual(movement["period_label"],"Year 2026")
+        monthly_movement=[build_payroll_report(self.db,"MOVEMENT","monthly",2026,month)["sections"][0]["rows"] for month in range(1,13)]
+        for person in (employee,manager):
+            annual_row=next(row for row in movement["sections"][0]["rows"] if row[0]==person["employee_number"])
+            months=[next(row for row in rows if row[0]==person["employee_number"]) for rows in monthly_movement]
+            # Main annual columns aggregate the year, rather than displaying December alone.
+            for column in range(5,12):
+                self.assertEqual(annual_row[column],sum((row[column] for row in months),Decimal(0)))
+            self.assertEqual(annual_row[12],annual_row[8])
+            self.assertEqual(annual_row[14],annual_row[10])
+        quarter=build_payroll_report(self.db,"MOVEMENT","quarterly",2026,2)
+        self.assertEqual((quarter["date_from"],quarter["date_to"]),("2026-04-01","2026-06-30"))
+        for person in (employee,manager):
+            row=next(row for row in quarter["sections"][0]["rows"] if row[0]==person["employee_number"])
+            months=[next(row for row in rows if row[0]==person["employee_number"]) for rows in monthly_movement]
+            self.assertEqual(row[10],sum((m[10] for m in months[3:6]),Decimal(0)))
+            self.assertEqual(row[14],sum((m[10] for m in months[:6]),Decimal(0)))
+        r6=build_payroll_report(self.db,"R6","yearly",2026)
+        for name,group in ((employee["full_name"],"employee"),(manager["full_name"],"manager")):
+            section=next(section for section in r6["sections"] if name in section["heading"] and "Month" in section["headers"])
+            self.assertEqual(len(section["rows"]),13)
+            tax_column=section["headers"].index("Income Tax")
+            self.assertEqual(float(section["rows"][-1][tax_column]),annual["summary"][group]["income_tax"])
 
 
 class PayrollSheetTest(_Base):

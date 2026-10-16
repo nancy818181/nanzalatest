@@ -122,6 +122,9 @@ class FinancialStatementsApiTest(unittest.TestCase):
                 self.assertEqual(api.financial_config(2025),cfg)
                 pack=api.business_report('financial_statements',{'years':'2024,2025','basis':'USD'})
                 self.assertIn('31-12-2025 (USD)',pack['sections'][1]['headers'])
+                checks=api.business_report('financial_checks',{'years':'2024,2025','basis':'USD'})
+                self.assertEqual(checks['title'],'Financial Statement Reconciliation')
+                self.assertEqual({s['kind'] for s in checks['sections']},{'checks','review'})
                 with self.assertRaisesRegex(RuntimeError,'Fiscal year not found'):
                     api.business_report('financial_statements',{'years':'2023'})
                 registry=manager._read();registry['companies'][0]['years'][0]['status']='closed';manager._write(registry)

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
     bulk_action, filedialog, GOLD, LIGHT, messagebox, mimetypes, MUTED, NAVY, Path, prepare_pdf_reading, PURCHASE_USES,
-    read_invoice_pdf, RED, tk, ttk
+    read_invoice_pdf, run_with_progress, RED, tk, ttk
 )
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 from desktop_common import main_currency  # 2.9.71
@@ -91,9 +91,10 @@ class ExpensesMixin:
         path = filedialog.askopenfilename(filetypes=[("PDF", "*.pdf"), ("Images", "*.png *.jpg *.jpeg")])
         if not path: return
         f = self.expense_form; f["pdf"] = path; f["pdf_suggested_type"] = ""
-        if path.lower().endswith(".pdf") and not f["id"]:
-            prepare_pdf_reading(self); data = read_invoice_pdf(path)  # 2.9.85: the buyer is never the supplier
-            ExpensesMixin.fill_expense_from_reading(self, path, data)
+        if path.lower().endswith((".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp")) and not f["id"]:
+            prepare_pdf_reading(self)
+            return run_with_progress(self, "Expense invoice", lambda _progress, _cancel: read_invoice_pdf(path),
+                                     lambda data: ExpensesMixin.fill_expense_from_reading(self, path, data))
         else: f["pdf_label"].config(text=Path(path).name, fg=NAVY)
 
     def fill_expense_from_reading(self, path, data):
@@ -135,7 +136,14 @@ class ExpensesMixin:
         except (RuntimeError, OSError, ValueError, AttributeError): return ""
         if not isinstance(found, dict): return ""  # an old data service
         rule = (found or {}).get("rule")
-        if not rule: return ""
+        if not rule:
+            account=found.get("account") or {}
+            if account.get("code") and float(account.get("confidence") or 0)>=0.6 and not v["account"].get().strip():
+                v["account"].set(account_label(self,account["code"]))
+                if _num(v["without_vat"].get()) and not v["no_vat_account"].get().strip():
+                    v["no_vat_account"].set(account_label(self,account["code"]))
+                return f"Account {account['code']} suggested ({account.get('source') or 'classification'}, {float(account['confidence']):.0%} sure) - check before Save"
+            return ""
         data = rule["data"]
         for key, field in (("expense_account", "account"), ("expense_without_vat_account", "no_vat_account"), ("vat_account", "vat_account"),
                            ("payment_account", "payment_account")):

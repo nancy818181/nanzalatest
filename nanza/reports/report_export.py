@@ -366,7 +366,10 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
 def _plain(value):
     """Numbers stay numeric for Excel; Decimals become floats."""
     from decimal import Decimal
-    if isinstance(value, Decimal): return float(value)
+    if isinstance(value, Decimal):
+        # Excel stores only 15 significant digits; preserve larger exact amounts as decimal text.
+        significant=len(value.normalize().as_tuple().digits)
+        return format(value,'f') if significant>15 else float(value)
     return value
 
 
@@ -375,8 +378,10 @@ def _formatted(value):
     if value is None: return ""
     if isinstance(value, bool): return str(value)
     if isinstance(value, int): return f"{value:,}"
-    if isinstance(value, (float, Decimal)):
-        number = float(value)
+    if isinstance(value, Decimal):
+        return f"{value:,.0f}" if value == value.to_integral_value() else f"{value:,.2f}"
+    if isinstance(value, float):
+        number = value
         return f"{number:,.0f}" if abs(number - round(number)) < 1e-9 else f"{number:,.2f}"
     return str(value)
 
@@ -412,7 +417,10 @@ def tidy_sections(sections):
 
 def _accounting_text(value):
     from decimal import Decimal
-    if isinstance(value, (int, float, Decimal)) and not isinstance(value, bool) and float(value) < 0: return f"({_formatted(abs(value))})"
+    if isinstance(value, (int,float,Decimal)) and not isinstance(value,bool):
+        if value == 0:return "-"
+        amount=f"{abs(value):,.2f}"
+        return f"({amount})" if value<0 else amount
     return _cell_text(value)
 
 
@@ -437,7 +445,7 @@ def _safe_sheet_title(title):
 def _financial_sheet_name(heading, kind=None):
     if kind:  # 2.9.109: tagged by financial_statements.build (any language)
         return {"audit": "Auditor's Report", "position": "Financial Position", "profit": "Profit or Loss", "equity": "Changes in Equity",
-                "cash": "Cash Flows", "review": "Review Points"}.get(kind, "Notes")
+                "cash": "Cash Flows", "checks": "Review Points", "review": "Review Points"}.get(kind, "Notes")
     heading = str(heading or "")
     for prefix, name in (("INDEPENDENT AUDITOR", "Auditor's Report"), ("STATEMENT OF FINANCIAL POSITION", "Financial Position"),
                          ("STATEMENT OF PROFIT", "Profit or Loss"), ("STATEMENT OF CHANGES", "Changes in Equity"),
@@ -509,7 +517,10 @@ def export_financial_excel(path, title, meta, sections):
             if narrative or name == "Notes": widths = [95] if narrative else [50] + [18] * max(1, len(headers) - 1)
             elif headers[:1] == [""] and len(headers) > 1 and headers[1] in NOTES_HEADERS: widths = [52, 8] + [18] * (len(headers) - 2)
             else: widths = [44] + [17] * (len(headers) - 1)
-            if name == "Notes": widths = [60, 18, 18, 18]
+            if name == "Notes":
+                note_columns=max((len(part.get('headers') or []) for part in sections
+                                  if part.get('kind') in ('notes','notes_start') and not part.get('narrative')),default=2)
+                widths=[60]+[18]*max(1,note_columns-1)
             setup(ws, widths); sheets[name] = [ws, 1, len(widths)]
             centred(ws, 1, company.upper(), sheets[name][2], 13, True, height=22)
             sheets[name][1] = 3
@@ -534,23 +545,35 @@ def export_financial_excel(path, title, meta, sections):
             h.alignment = Alignment(horizontal="center" if column > 1 else "left", vertical="center", wrap_text=True)
         ws.row_dimensions[row].height = 28; row += 1
         totals = set(section.get("total_rows") or [])
+        major = set(section.get("major_total_rows") or [])
+        header_row=row-1
+        if ws.freeze_panes is None:ws.freeze_panes=f"B{row}"
+        if not ws.print_title_rows:
+            ws.print_title_rows=f"1:{header_row}" if name not in ("Notes","Review Points") else "1:1"
         for index, values in enumerate(section.get("rows") or []):
             caption = str(values[0]) if values else ""
             is_heading = len(values) > 1 and all(v in ("", None) for v in values[1:]) and caption
-            grand = index in totals and caption == caption.upper() and any(ch.isalpha() for ch in caption)
+            grand = index in major
             for column, value in enumerate(values, 1):
                 c = ws.cell(row, column, _plain(value))
-                if isinstance(c.value, (int, float)) and not isinstance(c.value, bool):
-                    c.number_format = accounting2 if isinstance(c.value, float) and abs(c.value - round(c.value)) > 1e-9 else accounting
+                if (isinstance(c.value, (int, float)) and not isinstance(c.value, bool)) or _looks_numeric(c.value):
+                    c.number_format = accounting2
                     c.alignment = Alignment(horizontal="right")
                     if index in totals: c.border = Border(top=thin, bottom=double if grand else None)
                 else:
                     c.alignment = Alignment(vertical="top", wrap_text=True, horizontal="center" if column == 2 and headers[1:2] and headers[1] in NOTES_HEADERS[1:] else None)
-                c.font = Font(size=10, bold=bool(index in totals or is_heading), color=NAVY if is_heading else "000000")
+                colour="9C2F24" if index in section.get('warning_rows',[]) else NAVY if is_heading else "000000"
+                c.font = Font(size=10, bold=bool(index in totals or is_heading), color=colour)
+            if is_heading:ws.row_dimensions[row].height=22
+            else:
+                label_width=ws.column_dimensions['A'].width
+                lines=max(1,(len(caption)+max(1,int(label_width))-1)//max(1,int(label_width)))
+                ws.row_dimensions[row].height=max(20,14*lines)
             row += 1
         sheets[name][1] = row + 1
-    for ws, _row, _width in sheets.values():
-        ws.print_title_rows = "1:1"
+    for ws, last_row, width in sheets.values():
+        if not ws.print_title_rows:ws.print_title_rows="1:1"
+        ws.print_area=f"A1:{get_column_letter(width)}{last_row-1}"
     wb.save(path)
 
 
@@ -766,13 +789,17 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
     doc = SimpleDocTemplate(path if hasattr(path, "write") else str(path), pagesize=page,  # 2.9.98: the first pass writes to memory, not to a file named "<_io.BytesIO ...>"
                              rightMargin=8*mm, leftMargin=8*mm, topMargin=10*mm, bottomMargin=12*mm, title=title)
     styles = getSampleStyleSheet()
-    regular, bold_font = arabic_fonts() if financial else (None, None)
-    regular = regular or "Helvetica"; bold_font = bold_font or "Helvetica-Bold"
+    regular,bold_font=arabic_fonts() if financial else (None,None)
+    regular=regular or "Helvetica";bold_font=bold_font or "Helvetica-Bold"
+    import financial_statements_i18n as i18n
+    report_rtl=(i18n.language_of(title)=="ar") if financial else arabic_reports()
     if financial:
         for style in styles.byName.values(): style.fontName = regular
         for key in ("Title", "Heading1", "Heading2", "Heading3"): styles[key].fontName = bold_font
         styles["Normal"].fontSize=11; styles["Normal"].leading=15
-    header_style = ParagraphStyle("header", parent=styles["Normal"], fontName=bold_font, fontSize=10 if financial else 8, leading=13 if financial else 10, textColor=colors.white, alignment=1)
+    header_style = ParagraphStyle("header", parent=styles["Normal"], fontName=bold_font,
+                                  fontSize=10 if financial else 8, leading=13 if financial else 10,
+                                  textColor=colors.HexColor("#071B2E") if financial else colors.white, alignment=1)
     cell_style = ParagraphStyle("cell", parent=styles["Normal"], fontSize=10 if financial else 8, leading=13 if financial else 10)
     number_style = ParagraphStyle("cell-number", parent=cell_style, alignment=2)  # amounts line up on the right
     # 2.9.83: totals and headings with the bold font itself (<b> has no effect on the Arabic-capable fonts)
@@ -834,13 +861,16 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
         if financial and count == 5:
             weights = [13, 24, 29, 20, 23] if headers[0] == "Account" else [35, 16, 23, 16, 16]
             widths = [weight * available / sum(weights) for weight in weights]
-        if financial and headers[0] == "Description" and count >= 2:
+        if financial and section.get("kind") in ("notes","notes_start") and count >= 2:
             # 2.9.83: the account tables of the notes use the whole page width like the statements
             first = available * (0.55 if count <= 3 else 0.42); widths = [first] + [(available - first) / (count - 1)] * (count - 1)
-        if financial and len(headers) >= 3 and headers[0] == "" and headers[1] in NOTES_HEADERS:
+        if financial and count >= 3 and section.get("kind") in ("position","profit","cash"):
             # 2.9.69: statements - wide caption column, narrow Notes column, equal amount columns
             amounts = count - 2; first = available * (0.55 if amounts <= 2 else 0.42); notes = available * 0.08
             widths = [first, notes] + [(available - first - notes) / amounts] * amounts
+        weights=section.get('column_weights')
+        if weights and len(weights)==count and all(weight>0 for weight in weights):
+            widths=[available*weight/sum(weights) for weight in weights]
         # Keep a readable minimum font and column width rather than shrinking the whole table.
         # Wide sections are divided into consecutive bands, repeating the identifying first column.
         bands = []
@@ -861,7 +891,7 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
             parts = [p.strip() for p in str(text).split(" | ")]
             if len(parts) == 1: return pdf_paragraph(parts[0], header_style, True)
             return [pdf_paragraph(p, header_style, True) for p in parts]  # English above, Arabic below
-        if arabic_reports() and len(bands) == 1: bands = [bands[0][::-1]]  # 2.9.119: the first column on the right
+        if report_rtl and len(bands) == 1: bands = [bands[0][::-1]]  # 2.9.119: the first column on the right
         for band in bands:
             if len(bands) > 1:
                 story.append(pdf_paragraph(f"Columns {band[1] + 1}–{band[-1] + 1} of {count} (first column repeated)", styles["Normal"]))
@@ -877,12 +907,30 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
                      ("GRID", (0, 0), (-1, -1), .25, colors.grey), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                      ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F3F6F8")]),
                      ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]
+            if financial:
+                style=[("BACKGROUND",(0,0),(-1,0),colors.HexColor("#EDF2F6")),
+                       ("LINEBELOW",(0,0),(-1,0),.7,colors.HexColor("#071B2E")),
+                       ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                       ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4)]
+                for index,row in enumerate(body):
+                    heading=row and row[0] and len(row)>1 and all(not value for value in row[1:])
+                    if heading:
+                        style += [("TEXTCOLOR",(0,index+1),(-1,index+1),colors.HexColor("#071B2E")),
+                                  ("TOPPADDING",(0,index+1),(-1,index+1),7)]
             for position, column in enumerate(band):
                 if any(value and _looks_numeric(value) for value in (row[column] for row in body)):
                     style.append(("ALIGN", (position, 1), (position, -1), "RIGHT"))
             for index in section.get("total_rows") or []:
                 if 0 <= index < len(body):
-                    style += [("BACKGROUND", (0, index + 1), (-1, index + 1), colors.HexColor("#E8EDF2"))]
+                    if financial:
+                        style += [("LINEABOVE",(0,index+1),(-1,index+1),.45,colors.HexColor("#9AAABA"))]
+                        if index>0:style.append(("NOSPLIT",(0,index),(-1,index+1)))
+                        if index in section.get("major_total_rows",[]):
+                            style += [("LINEBELOW",(0,index+1),(-1,index+1),1,colors.HexColor("#071B2E")),
+                                      ("BACKGROUND",(0,index+1),(-1,index+1),colors.HexColor("#F2F5F8"))]
+                    else:style += [("BACKGROUND", (0, index + 1), (-1, index + 1), colors.HexColor("#E8EDF2"))]
+            for index in section.get('warning_rows',[]):
+                if 0<=index<len(body):style.append(("BACKGROUND",(0,index+1),(-1,index+1),colors.HexColor("#FFF0EB")))
             table.setStyle(TableStyle(style)); story += [table, Spacer(1, 5*mm)]
 
     def footer(canvas, document):
@@ -890,6 +938,13 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
         footer_title = title.split(" | ")[0] if has_arabic(title) else title
         if has_arabic(footer_title) and arabic_fonts()[0]:  # 2.9.119: an Arabic title is drawn with the Arabic font
             canvas.setFont(arabic_fonts()[0], 8); footer_title = shape_arabic(footer_title)
+        if financial and document.page>2 and meta:
+            company=str(meta[0]); font=arabic_fonts()[0] if has_arabic(company) else bold_font
+            company=shape_arabic(company); font=font or regular
+            from reportlab.pdfbase.pdfmetrics import stringWidth
+            while company and stringWidth(company,font,8)>doc.width:company=company[:-1]
+            canvas.setFont(font,8);canvas.drawCentredString(page[0]/2,page[1]-6*mm,company)
+        canvas.setFont(regular,7)
         canvas.drawString(8*mm, 6*mm, footer_title); canvas.setFont(regular, 7); canvas.drawRightString(page[0] - 8*mm, 6*mm, f"Page {document.page}")
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)

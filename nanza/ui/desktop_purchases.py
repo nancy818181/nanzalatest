@@ -375,7 +375,7 @@ class PurchasesMixin:
     def new_purchase(self):
         f = self.purchase_form; v = f["vars"]; f["id"] = None; f["pdf"] = None; f["pdf_pending_invoice_id"] = None
         if "not_deductible" in f: f["not_deductible"].set(False)
-        f["vat_typed"] = False; f["pdf_vat_review"] = False; f["pdf_suggested_type"] = ""
+        f["vat_typed"] = False; f["pdf_vat_review"] = False; f["pdf_suggested_type"] = ""; f["pdf_review_warnings"] = []
         for key in ("supplier", "number", "due", "taxable", "exempt", "vat"): v[key].set("")
         v["date"].set(self.fiscal_today()); v["rate"].set("11"); v["type"].set("Purchases"); v["account"].set("601100000"); f["department"].set("(none)"); f["project"].set("(none)")
         f["use"].set("Mixed (partial deduction)"); f["reverse"].set(False)
@@ -412,6 +412,7 @@ class PurchasesMixin:
     def _apply_purchase_pdf(self, path, data):
         f = self.purchase_form; v = f["vars"]
         f["pdf"] = path; f["pdf_suggested_type"] = ""
+        f["pdf_review_warnings"] = list((data or {}).get("review_warnings") or [])
         if data is not None:
             f["pdf_suggested_type"] = data.get("suggested_type") or ""
             if not f["id"]:
@@ -508,14 +509,11 @@ class PurchasesMixin:
         from ai_service import read_invoice_pdf as read_ai_pdf
         def show(data):
             f=self.purchase_form; v=f["vars"]; f["pdf"]=path
+            f["pdf_review_warnings"] = list(data.get("review_warnings") or [])
+            f["pdf_vat_review"] = True; f["vat_typed"] = True
+            v["vat"].set(f'{data["vat"]:.2f}' if data.get("vat") is not None else "")
             for key,source in (("number","invoice_number"),("date","invoice_date"),("currency","currency"),("supplier","party_name")):
                 if data.get(source): v[key].set(data[source])
-            f["items_sheet"].clear()
-            for line in data.get("items", []):
-                qty, price, total = line.get("quantity"), line.get("unit_price"), line.get("total")
-                if qty and price is not None and total is not None and abs(qty * price - total) <= 0.02:
-                    self.purchase_item_line({"item_code": "", "name": line["description"], "quantity": qty,
-                                             "unit": "unit", "unit_cost": price, "discount_percent": 0})
             if data.get("subtotal") is not None: v["taxable"].set(f'{(data.get("deductible") if data.get("deductible") is not None else data["subtotal"] - (data.get("non_deductible") or 0)):.2f}')
             if data.get("non_deductible") is not None: v["exempt"].set(f'{data["non_deductible"]:.2f}')
             if data.get("vat") is not None: v["vat"].set(f'{data["vat"]:.2f}'); f["vat_typed"]=True
@@ -670,6 +668,10 @@ class PurchasesMixin:
         """After an upload: save, post the entry and receive the items at once when everything needed was read."""
         f = self.purchase_form
         if f.get("id"): return
+        warnings = f.get("pdf_review_warnings") or []
+        if warnings:
+            f["pdf_label"].config(text="Not saved automatically - review the original invoice: " + "; ".join(warnings) + "; then press Save Purchase", fg=RED)
+            return
         missing = self.purchase_upload_missing()
         if missing:
             f["pdf_label"].config(text=f"Not saved automatically - complete: {', '.join(missing)}; then press Save Purchase", fg=RED)

@@ -210,7 +210,11 @@ def _amount(field):
     if not isinstance(field, dict): return None, ""
     money = field.get("valueCurrency") or {}
     value = money.get("amount") if money else field.get("valueNumber")
-    try: return (round(float(value), 2) if value is not None else None), str(money.get("currencyCode") or "").upper()
+    try:
+        import math
+        amount = float(value) if value is not None else None
+        if amount is not None and not math.isfinite(amount): return None, ""
+        return (round(amount, 2) if amount is not None else None), str(money.get("currencyCode") or "").upper()
     except (TypeError, ValueError): return None, ""
 
 
@@ -258,9 +262,30 @@ def to_result(path, analysis):
         items.append({"description": description, "quantity": quantity, "unit_price": price, "total": total})
     if items: result["items"] = items
     confidence = documents[0].get("confidence") if documents else None
-    sure = f", {float(confidence):.0%} sure" if isinstance(confidence, (int, float)) else ""
+    sure = f", {float(confidence):.0%} model confidence" if isinstance(confidence, (int, float)) else ""
     result["ocr_used"] = True; result["reader"] = "azure"
+    checks = ["OCR reading requires review against the original before Save; confidence is not a guarantee"]
+    result["review_required"] = True
+    field_confidence = {}
+    if isinstance(confidence, (int, float)) and confidence < 0.8:
+        checks.append(f"Check the whole invoice: reading confidence {confidence:.0%}")
+    for key, label in (("party_name", "supplier"), ("invoice_number", "invoice number"), ("invoice_date", "invoice date"),
+                       ("subtotal", "subtotal"), ("vat", "VAT"), ("total", "invoice total")):
+        if result.get(key) in (None, ""):
+            checks.append(f"Check {label}: could not be read")
+    for name in ("VendorName", "VendorTaxId", "InvoiceId", "InvoiceDate", "SubTotal", "TotalTax", "InvoiceTotal"):
+        field = fields.get(name) or {}
+        score = field.get("confidence")
+        if isinstance(score, (int, float)):
+            field_confidence[name] = score
+            if score < 0.8: checks.append(f"Check {name}: reading confidence {score:.0%}")
+    if all(result.get(key) is not None for key in ("subtotal", "vat", "total")):
+        if abs(result["subtotal"] + result["vat"] - result["total"]) > 0.02:
+            checks.append("Subtotal + VAT does not equal invoice total: check the original")
+    result["field_confidence"] = field_confidence
+    result["review_warnings"] = checks
     result["notes"] = f"Read by Azure (your key{sure}) - please check every amount before Save"
+    if checks: result["notes"] += " | " + " | ".join(checks)
     return result
 
 

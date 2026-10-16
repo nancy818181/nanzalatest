@@ -5,7 +5,7 @@ from desktop_common import add_search_bar  # 2.9.78
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
     asset_pdf_details, export_excel, export_pdf, filedialog, GOLD, LIGHT, messagebox, MUTED, NAVY, os, Path,
-    read_invoice_pdf, RED, subprocess, sys, tempfile, tk, ttk
+    read_invoice_pdf, run_with_progress, RED, subprocess, sys, tempfile, tk, ttk
 )
 from desktop_stage3_common import _dd, _num
 
@@ -91,9 +91,12 @@ class AssetRegisterMixin:
             size=Path(path).stat().st_size
             if not size or size>15*1024*1024: raise ValueError("Choose a non-empty PDF smaller than 15 MB")
             from desktop_stage3_common import prepare_pdf_reading; prepare_pdf_reading(self)  # 2.9.85
-            data=read_invoice_pdf(path)
         except Exception as exc:
             return messagebox.showerror("Asset PDF",f"Could not read the PDF: {exc}")
+        return run_with_progress(self, "Asset PDF", lambda _progress, _cancel: read_invoice_pdf(path),
+                                 lambda data: AssetRegisterMixin._apply_asset_pdf(self, path, data))
+
+    def _apply_asset_pdf(self, path, data):
         details=asset_pdf_details(data)
         self.new_asset()
         for key in ("name","acquired_on","start_on","currency","cost"):

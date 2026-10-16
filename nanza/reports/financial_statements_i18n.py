@@ -347,6 +347,15 @@ def language_of(title):
     return next((language for start, language in TITLE_LANGUAGE.items() if str(title or "").startswith(start)), "en")
 
 
+TEXTS.update({
+    'Financial Statement Reconciliation': ('Rapprochement des états financiers','مطابقة البيانات المالية'),
+    'FINANCIAL STATEMENT RECONCILIATION (preparer only)': ('RAPPROCHEMENT DES ÉTATS FINANCIERS (préparateur uniquement)','مطابقة البيانات المالية (لمعدّ التقرير فقط)'),
+    'Check - expected zero': ('Contrôle - zéro attendu','فحص - المتوقع صفر'),
+    'Financial position: assets less equity and liabilities': ('Situation financière : actifs moins capitaux propres et passifs','المركز المالي: الموجودات ناقص حقوق الملكية والمطلوبات'),
+    'Cash: closing less opening and reported movement': ('Trésorerie : clôture moins ouverture et variation présentée','النقد: الختامي ناقص الافتتاحي والحركة المعروضة'),
+    'Unmapped accounts: gross absolute balance': ('Comptes non classés : soldes absolus bruts','الحسابات غير المصنّفة: مجموع الأرصدة المطلقة'),
+})
+
 def translator(language):
     """t(english_text, **values): the text in the chosen language (English when there is no translation)."""
     index = {"fr": 0, "ar": 1}.get(language)

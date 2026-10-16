@@ -78,8 +78,17 @@ class AzureReaderTest(unittest.TestCase):
         self.assertEqual((result["subtotal"], result["vat"], result["total"]), (60.0, 6.6, 66.6))
         self.assertEqual((result["party_name"], result["supplier_hint"], result["party_tax_number"]), ("شركة الأرز للتجارة",) * 2 + ("3344556-601",))
         self.assertEqual(result["items"], [{"description": "ورق A4", "quantity": 3.0, "unit_price": 20.0, "total": 60.0}])
-        self.assertEqual(result["reader"], "azure"); self.assertIn("91% sure", result["notes"])
+        self.assertEqual(result["reader"], "azure"); self.assertIn("91% model confidence", result["notes"])
         self.assertEqual(azure_reader.status(self.folder.name, self.today)["used"], 1)
+
+    def test_even_maximum_model_confidence_requires_review(self):
+        import copy
+        analysis = copy.deepcopy(ANSWER["analyzeResult"])
+        analysis["documents"][0]["confidence"] = 1.0
+        for field in analysis["documents"][0]["fields"].values(): field["confidence"] = 1.0
+        result = azure_reader.to_result(self.photo, analysis)
+        self.assertTrue(result["review_required"])
+        self.assertTrue(any("not a guarantee" in warning for warning in result["review_warnings"]))
 
     def test_the_monthly_limit_stops_before_azure_is_called(self):
         self.setup_key(limit=2)
@@ -106,6 +115,41 @@ class AzureReaderTest(unittest.TestCase):
             azure_reader.read_invoice(big, self.folder.name, FakeAzure(), lambda _s: None, self.today)
         with self.assertRaisesRegex(azure_reader.AzureReaderError, "PDF or a photo"):
             azure_reader.read_invoice(Path(self.folder.name) / "notes.txt", self.folder.name, FakeAzure(), lambda _s: None, self.today)
+
+    def test_uncertain_handwritten_amounts_and_mismatched_totals_are_identified(self):
+        import copy
+        analysis = copy.deepcopy(ANSWER["analyzeResult"])
+        fields = analysis["documents"][0]["fields"]
+        fields["InvoiceTotal"]["confidence"] = 0.45
+        fields["InvoiceTotal"]["valueCurrency"]["amount"] = 166.6
+        result = azure_reader.to_result(self.photo, analysis)
+        self.assertTrue(any("InvoiceTotal" in note for note in result["review_warnings"]))
+        self.assertTrue(any("does not equal" in note for note in result["review_warnings"]))
+        self.assertIn("45%", result["notes"])
+        self.assertEqual(azure_reader._amount({"valueNumber": float("nan")}), (None, ""))
+
+    def test_uncertain_reading_cannot_trigger_automatic_posting(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from desktop_purchases import PurchasesMixin
+        label=Mock(); save=Mock()
+        app=SimpleNamespace(purchase_form={"id":None,"pdf_review_warnings":["Check InvoiceTotal: reading confidence 45%"],"pdf_label":label},
+                            purchase_upload_missing=lambda:[],save_purchase=save)
+        PurchasesMixin.auto_save_purchase_upload(app)
+        save.assert_not_called()
+        self.assertIn("45%",label.config.call_args.kwargs["text"])
+
+    def test_azure_fallback_requires_review_before_automatic_posting(self):
+        from desktop_learning import LearningMixin
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        results=[]
+        app=SimpleNamespace(run_ai_task=lambda work,done:done(work(None)))
+        with patch("azure_reader.read_invoice",side_effect=azure_reader.AzureReaderError("offline")), \
+             patch("pdf_import.read_invoice_pdf",return_value={"notes":"local reading"}):
+            LearningMixin.read_with_azure(app,self.photo,results.append)
+        self.assertTrue(results[0]["review_warnings"])
+        self.assertIn("local reading",results[0]["notes"])
 
     def test_a_pdf_counts_at_most_two_pages(self):
         from pypdf import PdfWriter

@@ -80,7 +80,10 @@ def _unreadable(row, keys):
     for key in keys:
         value = row.get(key)
         if value is None or str(value).strip() == "": continue
-        try: Decimal(str(value))
+        try:
+            amount = Decimal(str(value))
+            if not amount.is_finite(): raise ValueError("non-finite amount")
+            amount.quantize(CENT, rounding=ROUND_HALF_UP)
         except (InvalidOperation, ValueError, TypeError): bad.append(f"{key} '{value}'")
     return bad
 
@@ -124,10 +127,14 @@ def _documents(db, start, end, currency, include_review, memo=None):
             expenses = [dict(row) for row in connection.execute("SELECT * FROM expenses")]
         if memo is not None: memo[key] = (invoices, expenses)
     for row in invoices:
+        if row["status"] not in statuses and row["status"] != "review": continue
+        if row.get("source_file") == "Opening balances": continue
+        if currency and row["currency"] != currency: continue
         try: day = iso_date(row["invoice_date"])
-        except ValueError: skipped.append(row["invoice_number"]); continue
+        except ValueError:
+            if row["status"] in statuses: skipped.append(row["invoice_number"] + ": invalid invoice date")
+            continue
         if not start <= day <= end or (currency and row["currency"] != currency): continue
-        if row.get("source_file") == "Opening balances": continue  # 2.9.119: open invoices brought from the previous program (declared there)
         if row["status"] not in statuses:
             if row["status"] == "review": review_excluded += 1
             continue
@@ -158,6 +165,8 @@ def _documents(db, start, end, currency, include_review, memo=None):
             "vat": _money(row.get("vat")), "status": "posted", "recoverable": bool(int(row.get("vat_recoverable") if row.get("vat_recoverable") is not None else 1)),
             "treatment": "standard", "use": row.get("vat_use") or "mixed", "std_rate": std_rate})
     documents.sort(key=lambda item: (item["date"], item["category"], str(item["number"])))
+    if memo is not None:
+        memo.setdefault("unreadable_documents", set()).update(skipped)
     return documents, skipped, review_excluded
 
 
@@ -386,13 +395,11 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
             # calculated (and so on back to the first quarter of the books), so an older credit is never lost.
             chain_db = db if previous_year == int(year) else previous_year_db
             if chain_db is not None and _has_vat_history(chain_db, previous_year, previous_q):
-                try:
-                    previous = build_vat_return(chain_db, previous_year, previous_q, None, include_review, None if chain_db is previous_year_db else previous_year_db, _memo=memo)
-                    credit_bf = rnd(previous["credit_carried_forward_lbp"])
-                    source = f"Q{previous_q} {previous_year} not saved - calculated"
-                    if credit_bf or previous["payable_lbp"]:
-                        warnings.append(f"Q{previous_q} {previous_year} is not saved: its credit carried forward ({credit_bf:,.2f}) is calculated. Save Q{previous_q} {previous_year} first.")
-                except ValueError: pass
+                previous = build_vat_return(chain_db, previous_year, previous_q, None, include_review, None if chain_db is previous_year_db else previous_year_db, _memo=memo)
+                credit_bf = rnd(previous["credit_carried_forward_lbp"])
+                source = f"Q{previous_q} {previous_year} not saved - calculated"
+                if credit_bf or previous["payable_lbp"]:
+                    warnings.append(f"Q{previous_q} {previous_year} is not saved: its credit carried forward ({credit_bf:,.2f}) is calculated. Save Q{previous_q} {previous_year} first.")
     net_after_credit = totals_lbp["net"] - credit_bf
     payable = (_rounded_up(net_after_credit, end) if vat_currency == "LBP" else rnd(net_after_credit)) if net_after_credit > 0 else ZERO
     # 2.9.122: the rounding to LBP 10,000 (MoF decision 1195) is the rule - no more "unverified" warning
@@ -416,7 +423,7 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
                 "ytd_turnover_detail": ytd_detail if int(quarter) != 4 else final_detail, "annual_adjustment_detail": adjustment_detail,
         "credit_brought_forward_lbp": credit_bf, "credit_source": source, "net_after_credit_lbp": net_after_credit,
         "payable_lbp": payable, "refund_requested_lbp": refund, "credit_carried_forward_lbp": credit_cf, "documents": documents, "adjustments": adjustments,
-        "skipped": skipped, "review_excluded": review_excluded, "warnings": warnings, "saved": saved, "changed_since_saved": changed,
+        "skipped": skipped, "blocking_documents": sorted(memo.get("unreadable_documents", set())), "review_excluded": review_excluded, "warnings": warnings, "saved": saved, "changed_since_saved": changed,
         "status": "saved" if saved and not changed else "changed after saving" if changed else "not saved",
         "vat_currency": vat_currency, "vat_second_currency": vat_second, "vat_rate": (std_rate * 100).normalize(), "second_rate": second_rate, "second": second}
 
@@ -427,10 +434,10 @@ def _has_vat_history(db, year, quarter):
     with db.connect() as connection:
         if connection.execute("SELECT 1 FROM vat_returns WHERE year*4+quarter<=? LIMIT 1", (int(year) * 4 + int(quarter),)).fetchone(): return True
         for table, column in (("invoices", "invoice_date"), ("expenses", "expense_date")):
-            for row in connection.execute(f"SELECT {column} d FROM {table} WHERE CAST(COALESCE(vat,'0') AS REAL)<>0"):
+            for row in connection.execute(f"SELECT {column} d FROM {table}"):
                 try:
                     if iso_date(row["d"]) <= end: return True
-                except ValueError: continue
+                except ValueError: return True  # Unknown date must be inspected, not erase the credit chain.
     return False
 
 
@@ -473,6 +480,9 @@ def delete_adjustment(db, adjustment_id, user_id):
 
 def save_return(db, year, quarter, user_id, previous_year_db=None, credit_brought_forward=None, user_name="", refund_requested=None):
     result = build_vat_return(db, year, quarter, None, False, previous_year_db, credit_brought_forward, refund_requested)
+    if result["blocking_documents"]:
+        raise ValueError("Cannot save VAT return: correct these unreadable documents first: "
+                         + "; ".join(result["blocking_documents"]))
     snapshot = json.dumps(json_ready({k: result[k] for k in ("per_currency", "totals_lbp", "credit_source", "review_excluded")}))
     with db.connect() as connection:
         connection.execute("""INSERT INTO vat_returns(year,quarter,net_lbp,credit_brought_forward_lbp,payable_lbp,credit_carried_forward_lbp,snapshot,saved_by,saved_by_name,saved_at)

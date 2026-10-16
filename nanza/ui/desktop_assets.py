@@ -123,33 +123,41 @@ class AssetsMixin:
         try: data = self.client.asset_depreciation(self.dt_month.get().strip(), self._dt_account())
         except Exception as exc: return messagebox.showerror("Depreciation", str(exc))
         self.depreciation_data = data; tree = self.dt_tree; tree.delete(*tree.get_children()); money = lambda v: f"{float(v):,.2f}"
-        grand = {k: 0.0 for k in ("value", "old", "current", "total", "net")}
-        for g in data["groups"]:
-            tree.insert("", "end", iid=f"g{g['account']}", values=(g["account"], f"{g['name']} - {float(g['rate'] or 0):g}% / year", "", "", "", "", "", "", ""), tags=("group",))
+        grand = {}
+        for index,g in enumerate(data["groups"]):
+            currency=g["currency"]
+            totals=grand.setdefault(currency,{k:0.0 for k in ("value","old","current","total","net")})
+            rate_label=f"{float(g['rate']):g}% / year" if g.get("rate") else "By useful life"
+            tree.insert("", "end", iid=f"g{g['account']}|{index}", values=(g["account"], f"{g['name']} ({currency}) - {rate_label}", "", "", "", "", "", "", ""), tags=("group",))
             for a in g["assets"]:
                 tree.insert("", "end", values=(a["code"], a["name"], _dd(a["acquired_on"]), money(a["value"]), money(a["old"]), money(a["current"]), money(a["total"]), money(a["net"]),
                                                "Posted" if a["posted"] else ("-" if not float(a["current"]) else "To post")))
-            tree.insert("", "end", iid=f"t{g['account']}", values=(f"Total {g['account']}", f"Entry: Dr {g['depreciation_account']} / Cr {g['accumulated_account']}", "", money(g["value"]),
+            tree.insert("", "end", iid=f"t{g['account']}|{index}", values=(f"Total {g['account']}", f"Entry: Dr {g['depreciation_account']} / Cr {g['accumulated_account']}", "", money(g["value"]),
                                                                    money(g["old"]), money(g["current"]), money(g["total"]), money(g["net"]),
                                                                            f"{float(g['to_post']):,.2f} to post" if float(g["to_post"]) else "Posted"),
                                                                            tags=("total",))
-            for k in grand: grand[k] += float(g[k])
-        if data["groups"]: tree.insert("", "end", values=("TOTAL", "All asset accounts", "", *[money(grand[k]) for k in ("value", "old", "current", "total", "net")], ""), tags=("total",))
-        self.dt_info.config(text=f"Depreciation of {_dd(data['month'])[3:]}: {len(data['groups'])} account(s), {sum(len(g['assets']) for g in data['groups'])} asset(s), "
-                                 f"month {grand['current']:,.2f}, net value {grand['net']:,.2f}. The net value never goes below zero.")
+            for k in totals: totals[k] += float(g[k])
+        for currency,totals in sorted(grand.items()):
+            tree.insert("", "end", values=("TOTAL",f"All asset accounts ({currency})","",*[money(totals[k]) for k in ("value","old","current","total","net")],""),tags=("total",))
+        amounts="; ".join(f"{currency}: month {totals['current']:,.2f}, net {totals['net']:,.2f}" for currency,totals in sorted(grand.items()))
+        self.dt_info.config(text=f"Depreciation of {_dd(data['month'])[3:]}: {sum(len(g['assets']) for g in data['groups'])} asset(s). {amounts}")
 
     def post_depreciation_entry(self, all_accounts=False):
         data = getattr(self, "depreciation_data", None)
         if not data: self.load_depreciation_table(); data = getattr(self, "depreciation_data", None)
         if not data: return
-        if all_accounts: accounts = [g["account"] for g in data["groups"] if float(g["to_post"]) > 0]
+        if all_accounts: accounts = list(dict.fromkeys(g["account"] for g in data["groups"] if float(g["to_post"]) > 0))
         else:
             selected = self.dt_tree.selection(); iid = selected[0] if selected else ""
-            accounts = [iid[1:]] if iid[:1] in ("g", "t") else ([self._dt_account()] if self._dt_account() else [])
+            accounts = [iid[1:].split("|",1)[0]] if iid[:1] in ("g", "t") else ([self._dt_account()] if self._dt_account() else [])
         if not accounts: return messagebox.showwarning("Depreciation", "Select an account line (grey) or choose the account, or nothing is left to post")
         done = []
         for account in accounts:
-            try: result = self.client.post_asset_depreciation(account, self.dt_month.get().strip()); done.append(f"{account}: {result['voucher']} ({result['amount']:,.2f})")
+            try:
+                result=self.client.post_asset_depreciation(account,self.dt_month.get().strip())
+                amounts=", ".join(f"{code} {value:,.2f}" for code,value in result.get("amounts",{}).items())
+                if not amounts: amounts=f"{result['amount']:,.2f}"
+                done.append(f"{account}: {result['voucher']} ({amounts})")
             except Exception as exc: done.append(f"{account}: {exc}")
         messagebox.showinfo("Depreciation", "\n".join(done)); self.load_depreciation_table(); self.load_journal(); self.load_trial()
 
@@ -161,6 +169,7 @@ class AssetsMixin:
         for g in data["groups"]:
             rows = [[a["code"], a["name"], _dd(a["acquired_on"]), a["value"], a["old"], a["current"], a["total"], a["net"], "Posted" if a["posted"] else ""] for a in g["assets"]]
             rows.append([f"Total {g['account']}", f"Dr {g['depreciation_account']} / Cr {g['accumulated_account']}", "", g["value"], g["old"], g["current"], g["total"], g["net"], ""])
-            sections.append({"heading": f"{g['account']} - {g['name']} ({float(g['rate'] or 0):g}% per year)", "headers": ["Asset", "Name", "Date of Purchase", "Value", "Old Depreciation",
+            rate_label=f"{float(g['rate']):g}% per year" if g.get("rate") else "By useful life"
+            sections.append({"heading": f"{g['account']} - {g['name']} ({g['currency']}, {rate_label})", "headers": ["Asset", "Name", "Date of Purchase", "Value", "Old Depreciation",
                              "Depreciation (month)", "Total Depreciation", "Net Value", "Entry"], "rows": rows, "total_rows": [len(rows) - 1]})
         self.output_sections("Monthly Depreciation Table", [f"Month: {_dd(data['month'])[3:]}"], sections, "Depreciation_Table", mode)

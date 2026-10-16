@@ -67,6 +67,13 @@ class ReportAccuracyTests(unittest.TestCase):
         lines = _load_lines(db, {"first_column": "LBP", "second_column": "none"})
         self.assertEqual(lines[0]["signed"]["LBP"], Decimal("100"))
 
+    def test_invalid_dates_and_amounts_cannot_silently_reduce_reports(self):
+        for changes in ({"entry_date": "bad date"}, {"debit": "bad amount"}, {"debit": "NaN"}, {"amount_usd": "Infinity"}):
+            with self.subTest(changes=changes):
+                db = _ReportDatabase(self._row(**changes))
+                with self.assertRaisesRegex(ValueError, "entry JV-1"):
+                    _load_lines(db, {"first_column": "account", "second_column": "none"})
+
     def test_cash_dashboard_uses_only_its_selected_currency(self):
         with tempfile.TemporaryDirectory() as folder:
             db = Database(Path(folder) / "company.db")

@@ -534,7 +534,7 @@ class ReportsMixin:
         from desktop_common import fill_tree  # 2.9.120: a long ledger shows its first lines at once, the rest follows
         fill_tree(self.ledger_tree,[(("","end"),{"values":(r["entry_date"],r["entry_number"],r["account_code"],r["currency"],r["account_name"],
                 r["description"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}')}) for r in self.ledger_rows])
-        for r in balance: self.balance_tree.insert("","end",values=(r["type"],r["code"],r["currency"],r["name_en"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}'))
+        for r in self.balance_rows: self.balance_tree.insert("","end",values=(r["type"],r["code"],r["currency"],r["name_en"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}'))
         for r in self.vat_rows: self.vat_tree.insert("","end",values=(r["currency"],r["kind"],r["invoices"],f'{r["subtotal"] or 0:,.2f}',f'{r["vat"] or 0:,.2f}',f'{r["total"] or 0:,.2f}'))
         for r in self.cash_rows: self.cash_tree.insert("","end",values=(r["currency"],r["category"],f'{r["inflow"]:,.2f}',f'{r["outflow"]:,.2f}',f'{r["net"]:,.2f}'))
         for r in self.comparative_rows: self.comparative_tree.insert("","end",values=(r["currency"],r["type"],r["code"],r["name_en"],f'{r["current"]:,.2f}',
@@ -733,8 +733,23 @@ class ReportsMixin:
                 r["type"],r["code"],r["name_en"],r["current"],r["prior"],r["variance"]] for r in getattr(self,"comparative_rows",[])]
         if not rows: return messagebox.showwarning(title,"No data to export")
         try:
-            if format_name=="print": print_rows(title,headers,rows); return
-            extension=".xlsx" if format_name=="xlsx" else ".pdf"; path=filedialog.asksaveasfilename(defaultextension=extension,initialfile=title.replace(" ","_")+extension)
-            if not path: return
-            (export_excel if format_name=="xlsx" else export_pdf)(path,title,headers,rows); messagebox.showinfo(title,f"Saved successfully:\n{path}")
+            meta=[self.client.settings().get("company_name") or ""]
+            if report=="aging":meta.append(f"As of: {self.ageing_as_of.get()}")
+            else:
+                dates=self.financial_report_range()
+                if dates is None:return
+                meta.append(f"As at: {dates[1]}" if report=="balance" else f"Period: {dates[0]} to {dates[1]}")
+            meta.append(f"Currency: {self.view_currency.get()}")
+            if report in ("ledger","balance"):
+                meta.append(f"Account range: {self.report_account_from.get() or 'All'} to {self.report_account_to.get() or 'All'}")
+            if report=="ledger":
+                filters=self.financial_filter_sets()
+                active=[f"{key}: {', '.join(sorted(values))}" for key,values in filters.items() if values]
+                if active:meta.append("Ledger filters: "+"; ".join(active))
+            weights={"ledger":[8,10,9,6,16,22,10,10,11],"balance":[9,10,8,30,14,14,15],
+                     "vat":[9,12,8,16,16,18],"cash":[10,35,18,18,19]}
+            section={"heading":title,"headers":headers,"rows":rows,"total_rows":[]}
+            if report in weights:section['column_weights']=weights[report]
+            sections=[section]
+            self.output_sections(title,meta,sections,title.replace(" ","_"),format_name)
         except Exception as exc: messagebox.showerror(title,str(exc))

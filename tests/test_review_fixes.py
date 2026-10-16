@@ -46,7 +46,9 @@ class ReviewFixesTest(unittest.TestCase):
             self.db.create_manual_invoice({"invoice_number": "E-1", "invoice_date": "15-03-2026", "party_name": "Cedar Trading", "kind": "sale",
                                            "currency": "EUR"}, [{"description": "Consulting", "quantity": 1, "unit_price": 1000}], self.user)
         self.db.save_exchange_rate({"rate_date": "20-03-2026", "from_currency": "EUR", "to_currency": "USD", "rate": "1.2"}, self.user)
-        self.assertEqual(round(Decimal(str(self.db._converted_amount(Decimal("1000"), "EUR", "USD", "15-03-2026"))), 2), Decimal("1200.00"))
+        with self.assertRaisesRegex(ValueError, "No exchange rate"):
+            self.db._converted_amount(1000, "EUR", "USD", "15-03-2026")
+        self.assertEqual(self.db._converted_amount(1000, "EUR", "USD", "20-03-2026"), Decimal("1200"))
         self.db.save_exchange_rate({"rate_date": "10-03-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, self.user)
         with sqlite3.connect(self.db.path) as connection:  # no EUR/LBP made from a missing EUR/USD
             made = connection.execute("SELECT rate FROM exchange_rates WHERE rate_date IN ('10-03-2026','2026-03-10') AND from_currency='EUR' AND to_currency='LBP'").fetchall()
