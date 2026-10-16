@@ -86,6 +86,7 @@ class AccountingSetupMixin:
         tk.Label(health, text="Is every number where it should be? Balanced entries, every document in the books, no gaps or duplicates, VAT returns unchanged. Nothing is changed.",
                  bg=LIGHT, fg=MUTED, wraplength=760, justify="left").pack(side="left")
         tk.Button(health, text="Run Books Health Check", command=self.show_books_check, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
+        self.build_learning_boxes(page)  # 2.9.120: posting rules learned, Azure reader (optional)
         check = tk.LabelFrame(page, text="Year-End Check", bg=LIGHT, padx=8, pady=6); check.pack(fill="x", padx=8, pady=6)
         tk.Label(check, text="The points an auditor checks before the books are closed. It runs again by itself when you close the year (Profit & Loss).", bg=LIGHT, fg=MUTED).pack(side="left")
         tk.Button(check, text="Run Year-End Check", command=self.show_year_end_check, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)

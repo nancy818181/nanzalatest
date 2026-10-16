@@ -19,6 +19,7 @@ import app_runtime
 log = logging.getLogger("saber.desktop")
 from desktop_final import FinalFeaturesMixin
 from desktop_accounting_setup import AccountingSetupMixin  # 2.9.81
+from desktop_learning import LearningMixin  # 2.9.120
 from desktop_payroll_extras import PayrollExtrasMixin  # 2.9.82
 from desktop_reports_extras import ReportsExtrasMixin  # 2.9.82
 from desktop_assets import AssetsMixin
@@ -41,7 +42,7 @@ from desktop_projection import ProjectionMixin
 from desktop_renumber import RenumberMixin  # 2.9.115
 from desktop_setup_wizard import SetupWizardMixin  # 2.9.116
 
-class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
+class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, LearningMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
         ReportsMixin, SettingsMixin, AssetsMixin, V22Mixin, InventoryMixin, ProductionMixin, AccountToolsMixin, Stage3Mixin, DimensionsMixin,
         BrainsScreensMixin, FinalFeaturesMixin, CNSSFormsMixin, tk.Tk):
     def __init__(self):

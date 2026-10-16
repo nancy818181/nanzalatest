@@ -3603,3 +3603,42 @@ PATTERNS = PATTERNS + (
 )
 AR.setdefault("Page", "صفحة")
 PATTERNS = PATTERNS + ((r"Period (\S+) - (\S+)", "الفترة {1} - {2}"),)
+# 2.9.120: posting rules learned, classification, optional Azure reader
+for _english, _arabic in {
+    "Posting rules (learned from your invoices)": "قواعد القيد (متعلَّمة من فواتيرك)",
+    "Each supplier's next invoice is filled the way you posted its last one (account, VAT, department, how it was paid). "
+    "Only a suggestion: you check it before Save.":
+        "تُعبّأ فاتورة كل مورد التالية كما قيّدت فاتورته السابقة (الحساب، الضريبة، القسم، طريقة الدفع). مجرد اقتراح: تراجعه قبل الحفظ.",
+    "Show Posting Rules": "عرض قواعد القيد", "Posting Rules": "قواعد القيد",
+    "What the program learned from the invoices you saved. Delete a rule to stop it (it is learned again from the next invoice saved).":
+        "ما تعلّمه البرنامج من الفواتير التي حفظتها. احذف قاعدة لإيقافها (يتعلّمها من جديد من الفاتورة التالية المحفوظة).",
+    "Screen": "الشاشة", "Supplier": "المورد", "Found by": "وُجد بواسطة", "Account": "الحساب", "VAT A/C": "حساب الضريبة",
+    "Paid from": "دُفع من", "Times": "عدد المرات", "Last": "الأخير", "Purchases": "المشتريات", "Expenses": "المصاريف",
+    "Select the rule(s) to delete": "اختر القاعدة (القواعد) للحذف",
+    "Read invoices with Azure (optional, your own free key)": "قراءة الفواتير بـ Azure (اختياري، بمفتاحك المجاني الخاص)",
+    "For handwritten or hard-to-read invoices: Microsoft Azure Document Intelligence, free tier F0 = 500 pages a month. "
+    "Without it the free local reading is used, as before.":
+        "للفواتير المكتوبة بخط اليد أو الصعبة القراءة: Microsoft Azure Document Intelligence، الفئة المجانية F0 = 500 صفحة بالشهر. "
+        "من دونه تُستعمل القراءة المحلية المجانية كما في السابق.",
+    "Azure Settings": "إعدادات Azure", "Read invoices with Azure": "قراءة الفواتير بـ Azure", "Read with Azure": "قراءة بـ Azure",
+    "Endpoint": "عنوان المورد (Endpoint)", "Key": "المفتاح", "Pages a month (limit)": "صفحات بالشهر (الحد)",
+    "(a key is kept: leave empty to keep it)": "(مفتاح محفوظ: اتركه فارغاً للإبقاء عليه)", "Remove Key": "إزالة المفتاح",
+    "The invoice is sent from this computer to YOUR Azure resource (Microsoft) only when you press Read with Azure. "
+    "The key stays on this computer. Nanza receives nothing.":
+        "تُرسَل الفاتورة من هذا الكمبيوتر إلى مورد Azure الخاص بك (Microsoft) فقط عند الضغط على قراءة بـ Azure. "
+        "يبقى المفتاح على هذا الكمبيوتر. Nanza لا تستلم شيئاً.",
+    "Saved on this computer. 'Read with Azure' is on the Purchases and Expenses screens.":
+        "حُفظ على هذا الكمبيوتر. زر 'قراءة بـ Azure' موجود على شاشتي المشتريات والمصاريف.",
+    "Azure is off.": "Azure متوقف.", "The key is removed from this computer. Azure is off.": "أُزيل المفتاح من هذا الكمبيوتر. Azure متوقف.",
+    "Press New first: the reading fills a new expense.": "اضغط جديد أولاً: القراءة تعبّئ مصروفاً جديداً.",
+}.items():
+    AR.setdefault(_english, _arabic)
+PATTERNS = PATTERNS + (
+    (r"Posted like (.+) of (.+) \(learned from (\d+) invoice\(s\)\) - check before Save", "قُيّدت مثل {1} من {2} (متعلَّمة من {3} فاتورة) - راجعها قبل الحفظ"),
+    (r"Posted like (.+) of (.+) \(learned from (\d+) expense\(s\)\) - check before Save", "قُيّدت مثل {1} من {2} (متعلَّمة من {3} مصروف) - راجعها قبل الحفظ"),
+    (r"Account (\S+) suggested \((.+), (\d+%) sure\) - check before Save", "الحساب {1} مقترح ({2}، بثقة {3}) - راجعه قبل الحفظ"),
+    (r"Used this month: (\d+) of (\d+) pages", "المستعمل هذا الشهر: {1} من {2} صفحة"),
+    (r"(\d+) rule\(s\)", "{1} قاعدة"),
+    (r"Delete (\d+) rule\(s\)\? Invoices already saved are not changed\.", "حذف {1} قاعدة؟ الفواتير المحفوظة لا تتغيّر."),
+    (r"Reading (.+) with Azure\.\.\.", "قراءة {1} بـ Azure..."),
+)

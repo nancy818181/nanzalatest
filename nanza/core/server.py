@@ -89,6 +89,15 @@ def admin_only(method, path):
 EXPECTED_ERRORS = (ValueError, PermissionError, KeyError, LookupError, FileNotFoundError)
 
 
+def _learn(action, *args):
+    """2.9.120: remember how a purchase / expense was posted (posting_rules). Never stops the save it follows."""
+    try:
+        import posting_rules
+        getattr(posting_rules, action)(*args)
+    except (sqlite3.Error, ValueError, KeyError, TypeError) as exc:
+        log.warning("Posting rule not learned (%s): %s", action, exc)
+
+
 def _log_unexpected(path, status):
     exc = sys.exc_info()[1]
     if exc is None or isinstance(exc, EXPECTED_ERRORS): return
@@ -243,6 +252,15 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/vat-ledgers/test":
             import vat_ledgers
             return self._json(200,vat_ledgers.test_vat_accounts(self.db))
+        if path in ("/api/posting-rules", "/api/posting-rules/suggest"):  # 2.9.120: what the program learned / proposes
+            import posting_rules
+            try:
+                if path.endswith("suggest"):
+                    lines=json.loads(self._query(parsed,"lines","[]") or "[]")
+                    return self._json(200,posting_rules.suggest(self.db,self._query(parsed,"scope","purchase"),self._query(parsed,"name"),
+                                                                self._query(parsed,"number"),self._query(parsed,"text",""),lines))
+                return self._json(200,{"items":posting_rules.list_rules(self.db)})
+            except (ValueError,KeyError,TypeError,sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/books-check":  # 2.9.119: Books Health Check (read only)
             import books_check
             try:
@@ -822,7 +840,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/invoices/") and path.endswith("/replace"):
             try:
                 self._approval_gate(user, body.get("invoice",{}), int(path.split("/")[-2]))
-                return self._json(200,{"invoice_id":self.db.replace_manual_invoice(int(path.split("/")[-2]),body.get("invoice",{}),body.get("items",[]),user["id"])})
+                new_id=self.db.replace_manual_invoice(int(path.split("/")[-2]),body.get("invoice",{}),body.get("items",[]),user["id"])
+                _learn("learn_invoice", self.db, new_id)
+                return self._json(200,{"invoice_id":new_id})
             except KeyError: return self._json(404,{"error":"Invoice not found"})
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/invoices/") and path.endswith("/returns"):
@@ -1038,6 +1058,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/expenses":
             try: expense_id=self.db.add_expense(body,user["id"])
             except Exception as exc: return self._json(400,{"error":str(exc)})
+            _learn("learn_expense", self.db, expense_id, body.get("supplier"))
             note=self._hold_for_approval(user,"expenses",expense_id)
             return self._json(201,{"expense_id":expense_id,**({"approval":note} if note else {})})
         if path == "/api/approvals/approve":  # 2.9.100: post the selected drafts (vouchers, payments, expenses, invoices)
@@ -1094,8 +1115,10 @@ class ApiHandler(BaseHTTPRequestHandler):
             try: return self._json(200,self.db.set_income_exemption(body.get("source_id"),body.get("reason"),body.get("article","")))
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/tax-flags":  # 2.9.113
-            try: return self._json(200,self.db.set_tax_flag(body.get("source_type"),body.get("source_id"),bool(body.get("not_deductible"))))
+            try: result=self.db.set_tax_flag(body.get("source_type"),body.get("source_id"),bool(body.get("not_deductible")))
             except Exception as exc: return self._json(400,{"error":str(exc)})
+            _learn("learn_tax_flag", self.db, body.get("source_type"), body.get("source_id"), bool(body.get("not_deductible")))
+            return self._json(200,result)
         if path == "/api/journal-vouchers":
             try: result=self.db.save_journal_voucher(body.get("voucher",{}),body.get("lines",[]),user["id"])
             except Exception as exc: return self._json(400,{"error":str(exc)})
@@ -1204,6 +1227,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 invoice_id = self.db.create_manual_invoice(invoice, items, user["id"])
             except Exception as exc:
                 return self._json(400, {"error": str(exc)})
+            _learn("learn_invoice", self.db, invoice_id)
             return self._json(201, {"invoice_id": invoice_id, **({"approval": note} if note else {})})
         if path == "/api/invoices/import":
             items = body.get("items", [])
@@ -1279,6 +1303,7 @@ class ApiHandler(BaseHTTPRequestHandler):
                 result=self.db.update_payment(record_id,body,user["id"]) if path.startswith("/api/payments/") else self.db.update_expense(record_id,body,user["id"])
             except KeyError as exc: return self._json(404,{"error":str(exc).strip("'")})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+            if path.startswith("/api/expenses/"): _learn("learn_expense", self.db, result, body.get("supplier"))
             return self._json(200,{"id":result})
         if path.startswith("/api/journal-vouchers/"):
             try:
@@ -1335,6 +1360,9 @@ class ApiHandler(BaseHTTPRequestHandler):
             elif path.startswith("/api/expenses/"): result=self.db.delete_expense(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/invoices/"): result=self.db.mark_invoice_deleted(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/journal/"): result=self.db.delete_journal_voucher(int(path.rsplit("/",1)[-1]),user["id"])
+            elif path.startswith("/api/posting-rules/"):
+                import posting_rules
+                result=posting_rules.delete_rule(self.db,int(path.rsplit("/",1)[-1]))
             elif path.startswith("/api/opening-vouchers/"):
                 if user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})
                 result=self.db.delete_opening_voucher(int(path.rsplit("/",1)[-1]),user["id"])

@@ -110,8 +110,22 @@ EXTRA_TOPICS = [
        "فحص سلامة الدفاتر: قيود متوازنة، كل مستند في الدفاتر، لا فجوات ولا أرقام مكررة، التصاريح الضريبية لم تتغير.")]),
 ]
 
+# 2.9.120: the program learns how each supplier is posted; the optional Azure reader
+EXTRA_TOPICS.append(
+    ("posting_rules", "Posting rules and reading invoices", "قواعد القيد وقراءة الفواتير",
+     "The program remembers how you posted each supplier and fills the next invoice the same way - free, on your computer.",
+     "يتذكّر البرنامج كيف قيّدت كل مورد ويعبّئ فاتورته التالية بالطريقة نفسها - مجاناً وعلى جهازك.",
+     [(None, "Save a purchase or an expense as usual: its account, VAT, department and payment are learned for that supplier (by MOF number or name).",
+       "احفظ فاتورة شراء أو مصروفاً كالمعتاد: يُحفظ حسابها وضريبتها وقسمها وطريقة دفعها لهذا المورد (بالرقم المالي أو بالاسم)."),
+      (None, "Next time, choose the supplier or upload its PDF: the form is filled and the note says 'Posted like ... - check before Save'.",
+       "في المرة التالية اختر المورد أو حمّل ملف PDF: تُعبّأ الشاشة وتظهر ملاحظة «قُيّدت مثل ... - راجعها قبل الحفظ»."),
+      ("Show Posting Rules", "Show Posting Rules lists what was learned. Delete a rule to stop it.",
+       "زر عرض قواعد القيد يُظهر ما تعلّمه البرنامج. احذف أي قاعدة لإيقافها."),
+      ("Azure Settings", "Optional, for handwritten invoices: your own free Azure key (500 pages a month). Then 'Read with Azure' appears on Purchases and Expenses.",
+       "اختياري للفواتير المكتوبة بخط اليد: مفتاح Azure المجاني الخاص بك (500 صفحة بالشهر). بعدها يظهر زر «قراءة بـ Azure» في المشتريات والمصاريف.")]))
+
 # 2.9.119: topics shown on a tab inside a screen: key -> (screen, tab)
-SUBTABS = {"start_with_nanza": ("settings_tab", "Accounting Settings")}
+SUBTABS = {"start_with_nanza": ("settings_tab", "Accounting Settings"), "posting_rules": ("settings_tab", "Accounting Settings")}
 
 # The new company wizard (Switch Company / Year > Create Company): taken from its own window.
 WIZARD = ("new_company", "Create a new company", "إنشاء شركة جديدة",

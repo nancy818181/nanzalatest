@@ -407,6 +407,11 @@ class ApiClient:
     def accounting_setup(self): return self.request("GET","/api/accounting-setup")
     def save_accounting_setup(self,item): return self.request("POST","/api/accounting-setup",item)
     def save_my_hidden(self,hidden): return self.request("POST","/api/accounting-setup/user",{"hidden":list(hidden)})["user_hidden"]
+    def posting_rules(self): return self.request("GET","/api/posting-rules")["items"]  # 2.9.120
+    def delete_posting_rule(self,rule_id): return self.request("DELETE",f"/api/posting-rules/{int(rule_id)}")
+    def posting_suggestion(self,scope="purchase",name=None,number=None,text="",lines=()):
+        query={k:v for k,v in {"scope":scope,"name":name,"number":number,"text":(text or "")[:1500],"lines":json.dumps(list(lines)[:60])}.items() if v}
+        return self.request("GET","/api/posting-rules/suggest?"+urlencode(query))
     def books_check(self,year=None,quick=False):  # 2.9.119
         query={k:v for k,v in {"year":year,"quick":"1" if quick else ""}.items() if v}
         return self.request("GET","/api/books-check"+(f"?{urlencode(query)}" if query else ""))

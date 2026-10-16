@@ -96,6 +96,7 @@ def open_tab(page, tab, steps, app):
     canvas = target
     while canvas is not None and not getattr(canvas, "_saber_scroll_page", False): canvas = canvas.master
     if target is not None and canvas is not None:
+        canvas.yview_moveto(0.0); app.update()  # 2.9.120: from the top (a topic before may have scrolled the same screen)
         inner = canvas.winfo_children()[0] if canvas.winfo_children() else None
         height = max(1, (inner or canvas).winfo_height())
         offset = target.winfo_rooty() - canvas.winfo_rooty() - 160

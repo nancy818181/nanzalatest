@@ -133,8 +133,9 @@ class PurchasesMixin:
         tk.Button(r4, text="Cancel Purchase", command=self.cancel_purchase, bg=RED, fg="white", border=0, padx=12, pady=6).pack(side="left", padx=3)  # 2.9.97
         tk.Button(r4, text="Return (goods back)", command=self.return_open_purchase, bg=NAVY, fg="white", border=0, padx=10, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
         self.action_button(r5, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=3)
-        self.action_button(r5, "Free PDF Read", self.ai_read_purchase_pdf).pack(side="left", padx=3)
+        free_read = self.action_button(r5, "Free PDF Read", self.ai_read_purchase_pdf); free_read.pack(side="left", padx=3)
         self.action_button(r5, "Attachments", lambda: self.purchase_attachments()).pack(side="left", padx=3)
+        self.azure_button(r5, self.azure_read_purchase, free_read)  # 2.9.120: only where Azure is set up
         tk.Checkbutton(r5, text="Save automatically after upload", variable=self.auto_upload_var(), bg=LIGHT, fg=NAVY,
                        command=self.remember_auto_upload).pack(side="left", padx=6)
         f["pdf_label"].pack(side="left", padx=8)
@@ -313,6 +314,47 @@ class PurchasesMixin:
     def purchase_supplier_chosen(self):
         f = self.purchase_form; party = f.get("supplier_map", {}).get(f["vars"]["supplier"].get())
         if party and party.get("currency"): f["vars"]["currency"].set(party["currency"])
+        if party and not f.get("id"):  # 2.9.120: posted like this supplier's last invoice
+            note = PurchasesMixin.apply_purchase_rule(self, party["name"], party.get("mof_number") or party.get("tax_number"))
+            if note: f["pdf_label"].config(text=note, fg=NAVY)
+
+    def apply_purchase_rule(self, name, number=None, text="", lines=()):
+        """2.9.120: fill the posting the program learned for this supplier (or the account of similar lines). Returns what was done."""
+        from desktop_common import account_label
+        f = self.purchase_form; v = f["vars"]
+        try: found = self.client.posting_suggestion("purchase", name, number, text, lines)
+        except (RuntimeError, OSError, ValueError, AttributeError): return ""
+        if not isinstance(found, dict): return ""  # an old data service
+        rule = found.get("rule"); account = found.get("account")
+        if rule:
+            data = rule["data"]
+            v["type"].set("Assets" if data.get("entry_type") == "assets" else "Purchases")
+            if data.get("expense_account"): v["account"].set(account_label(self, data["expense_account"]))
+            if data.get("vat_account"): v["vat_account"].set(account_label(self, data["vat_account"]))
+            use = next((label for label, key in PURCHASE_USES.items() if key == data.get("vat_use")), None)
+            if use: f["use"].set(use)
+            f["reverse"].set(data.get("vat_treatment") == "reverse_charge")
+            for key, variable, choices in (("department", f["department"], self.department_choices), ("project", f["project"], self.project_choices)):
+                code = data.get(key) or ""
+                match = next((c for c in choices() if self.dimension_code(c) == code), None) if code else None
+                if match: variable.set(match)
+            method = data.get("payment_method") or ""
+            if method in PAID_BY and "paid_by" in f:
+                f["paid_by"].set(method); f["paid_account"].set(account_label(self, data.get("payment_account") or "") if method != PAID_BY[0] else "")
+            if "not_deductible" in f: f["not_deductible"].set(bool(data.get("not_deductible")))
+            return (f"Posted like {rule.get('last_reference') or 'the last invoice'} of {rule['label']} "
+                    f"(learned from {rule['times']} invoice(s)) - check before Save")
+        if account and account.get("code") and float(account.get("confidence") or 0) >= 0.6 and v["account"].get().split(" - ", 1)[0].strip() in ("", "601100000"):
+            code = account["code"]
+            if account.get("parent"):  # a keyword category: its 9-digit account, opened under the chart account when missing
+                try:
+                    known = {str(a.get("code")) for a in self.client.accounts()}
+                    if code not in known: self.client.save_account({"code": code, "name_en": account.get("name") or f"Expense {code}", "type": "expense",
+                                                                     "parent_code": account["parent"] if account["parent"] in known else ""})
+                except (RuntimeError, OSError, ValueError): code = account["parent"]
+            v["account"].set(account_label(self, code))
+            return f"Account {code} suggested ({account['source']}, {float(account['confidence']):.0%} sure) - check before Save"
+        return ""
 
     def purchase_amounts_changed(self, key):
         f = self.purchase_form; v = f["vars"]
@@ -396,6 +438,11 @@ class PurchasesMixin:
                 if data.get("party_name") and not v["supplier"].get(): v["supplier"].set(data["party_name"])
                 item_note = self.add_purchase_pdf_items(data)
                 self.purchase_amounts_changed("none")
+                import posting_rules  # 2.9.120: how this supplier's invoices were posted before
+                party = f.get("supplier_map", {}).get(v["supplier"].get())
+                rule_note = PurchasesMixin.apply_purchase_rule(self, v["supplier"].get(), (party or {}).get("mof_number") or posting_rules.numbers_in(data.get("text") or ""),
+                                                     data.get("text") or "", [i.get("description") for i in data.get("items") or []])
+                if rule_note: item_note = f"{item_note}; {rule_note}"
             suggestion=f["pdf_suggested_type"]
             f["pdf_label"].config(text=f"{Path(path).name}: {data.get('notes', '')}" +
                                   (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
@@ -448,8 +495,9 @@ class PurchasesMixin:
         new = notify_new_items(self, "Purchase PDF")  # 2.9.86
         return f"{created} item(s) created or matched in Inventory ({len(new)} new); review quantity and price before Save"
 
-    def ai_read_purchase_pdf(self):
-        path=filedialog.askopenfilename(filetypes=[("PDF invoice","*.pdf")])
+    def ai_read_purchase_pdf(self, path=None, reader=None):
+        """Free PDF Read; 2.9.120: also 'Read with Azure' (path chosen, reader(done) reads it with Azure)."""
+        path=path or filedialog.askopenfilename(filetypes=[("PDF invoice","*.pdf")])
         if not path: return
         try:
             size = Path(path).stat().st_size
@@ -477,8 +525,15 @@ class PurchasesMixin:
                 f["items_sheet"].clear()
             item_note = self.add_purchase_pdf_items(data)
             self.purchase_amounts_changed("none")
-            f["pdf_label"].config(text=f"Local preview of page 1: {Path(path).name} — {item_note}; PDF attaches on Save",fg=NAVY)
+            import posting_rules  # 2.9.120: post it like this supplier's earlier invoices
+            text = data.get("text") or ""
+            rule_note = PurchasesMixin.apply_purchase_rule(self, v["supplier"].get(), data.get("party_tax_number") or posting_rules.numbers_in(text), text,
+                                                 [i.get("description") or "" for i in data.get("items") or []])
+            if rule_note: item_note = f"{item_note}; {rule_note}"
+            if reader: item_note = f"{data.get('notes') or ''}; {item_note}"
+            f["pdf_label"].config(text=f"{'Read' if reader else 'Local preview of page 1'}: {Path(path).name} — {item_note}; PDF attaches on Save",fg=NAVY)
             if not f["id"] and auto_upload_on(self): self.after_idle(self.auto_save_purchase_upload)
+        if reader: return reader(show)
         self.run_ai_task(lambda key:read_ai_pdf(path,key),show)
 
     def ai_read_sales_pdf(self):

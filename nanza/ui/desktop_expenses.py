@@ -58,8 +58,9 @@ class ExpensesMixin:
         self.action_button(r5, "New", self.new_expense).pack(side="left", padx=(0, 3))
         tk.Button(r5, text="Save Expense", command=self.save_expense, bg=GOLD, fg=NAVY, border=0, padx=18, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
         tk.Button(r5, text="Delete", command=self.delete_expense, bg=RED, fg="white", border=0, padx=12, pady=6).pack(side="left", padx=3)
-        self.action_button(r5, "Upload PDF", self.choose_expense_pdf).pack(side="left", padx=3)
+        upload = self.action_button(r5, "Upload PDF", self.choose_expense_pdf); upload.pack(side="left", padx=3)
         self.action_button(r5, "Attachments", self.expense_attachments_window).pack(side="left", padx=3)
+        self.azure_button(r5, self.azure_read_expense, upload)  # 2.9.120: only where Azure is set up
         self.action_button(r5, "Import Expenses Excel", self.import_expenses_excel).pack(side="left", padx=3)
         self.action_button(r5, "Non-deductible Expenses Report", self.non_deductible_report).pack(side="left", padx=3)  # 2.9.110
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
@@ -81,6 +82,7 @@ class ExpensesMixin:
 
     def new_expense(self):
         f = self.expense_form; v = f["vars"]; f["id"] = None; f["pdf"] = None; f["vat_typed"] = False; f["pdf_vat_review"] = False; f["pdf_suggested_type"] = ""
+        f["supplier_hint"] = ""  # 2.9.120: the supplier read on the PDF (the posting rule is learned for it)
         for key in ("description", "with_vat", "without_vat", "vat", "reference"): v[key].set("")
         v["date"].set(self.fiscal_today()); f["non_deductible"].set(False); f["tax_non_deductible"].set(False); f["department"].set("(none)"); f["project"].set("(none)")
         f["pdf_label"].config(text="No PDF", fg=MUTED); f["total"].config(text="Total: 0.00"); f["number_label"].config(text="New expense")
@@ -88,35 +90,66 @@ class ExpensesMixin:
     def choose_expense_pdf(self):
         path = filedialog.askopenfilename(filetypes=[("PDF", "*.pdf"), ("Images", "*.png *.jpg *.jpeg")])
         if not path: return
-        f = self.expense_form; v = f["vars"]; f["pdf"] = path; f["pdf_suggested_type"] = ""
+        f = self.expense_form; f["pdf"] = path; f["pdf_suggested_type"] = ""
         if path.lower().endswith(".pdf") and not f["id"]:
             prepare_pdf_reading(self); data = read_invoice_pdf(path)  # 2.9.85: the buyer is never the supplier
-            f["pdf_suggested_type"] = data.get("suggested_type") or ""
-            f["pdf_vat_review"] = True
-            f["vat_typed"] = True
-            v["vat"].set(f'{data["vat"]:.2f}' if data.get("vat") is not None else "")
-            if data.get("invoice_number") and not v["reference"].get(): v["reference"].set(data["invoice_number"])
-            if data.get("invoice_date"): v["date"].set(data["invoice_date"])
-            elif v["date"].get() == self.fiscal_today(): v["date"].set("")
-            if data.get("currency"): v["currency"].set(data["currency"])
-            supplier = data.get("supplier_hint") or data.get("party_name") or ""  # 2.9.97: the issuer (Pegasus), not the buyer named on it
-            if not v["description"].get():
-                v["description"].set(" - ".join(part for part in (data.get("expense_category"), supplier) if part) or data.get("party_name") or "")
-            amounts = ExpensesMixin.expense_amounts_from_pdf(data)
-            for key in ("with_vat", "without_vat"):
-                if amounts[key] is not None and not v[key].get(): v[key].set(f"{amounts[key]:.2f}")
-            if amounts["vat"] is not None: v["vat"].set(f"{amounts['vat']:.2f}")
-            account = ExpensesMixin.expense_account_from_pdf(self, data)  # 2.9.97: travel -> 626420000, electricity -> 626340000 (opened if missing)
-            if account:
-                from desktop_common import account_label
-                if not v["account"].get().strip(): v["account"].set(account_label(self, account))
-                if amounts["without_vat"] and not v["no_vat_account"].get().strip(): v["no_vat_account"].set(account_label(self, account))
-            self.expense_amounts_changed("none")
-            suggestion=f["pdf_suggested_type"]
-            f["pdf_label"].config(text=f"{Path(path).name}: {data.get('notes', '')}" +
-                                  (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
-                                   "; Type unclear; confirm this is a paid Expense before Save"), fg=NAVY)
+            ExpensesMixin.fill_expense_from_reading(self, path, data)
         else: f["pdf_label"].config(text=Path(path).name, fg=NAVY)
+
+    def fill_expense_from_reading(self, path, data):
+        """The reading of the PDF (local, or 2.9.120 Azure) in the new expense."""
+        f = self.expense_form; v = f["vars"]; f["pdf"] = path
+        f["pdf_suggested_type"] = data.get("suggested_type") or ""
+        f["pdf_vat_review"] = True
+        f["vat_typed"] = True
+        v["vat"].set(f'{data["vat"]:.2f}' if data.get("vat") is not None else "")
+        if data.get("invoice_number") and not v["reference"].get(): v["reference"].set(data["invoice_number"])
+        if data.get("invoice_date"): v["date"].set(data["invoice_date"])
+        elif v["date"].get() == self.fiscal_today(): v["date"].set("")
+        if data.get("currency"): v["currency"].set(data["currency"])
+        supplier = data.get("supplier_hint") or data.get("party_name") or ""  # 2.9.97: the issuer (Pegasus), not the buyer named on it
+        if not v["description"].get():
+            v["description"].set(" - ".join(part for part in (data.get("expense_category"), supplier) if part) or data.get("party_name") or "")
+        amounts = ExpensesMixin.expense_amounts_from_pdf(data)
+        for key in ("with_vat", "without_vat"):
+            if amounts[key] is not None and not v[key].get(): v[key].set(f"{amounts[key]:.2f}")
+        if amounts["vat"] is not None: v["vat"].set(f"{amounts['vat']:.2f}")
+        account = ExpensesMixin.expense_account_from_pdf(self, data)  # 2.9.97: travel -> 626420000, electricity -> 626340000 (opened if missing)
+        if account:
+            from desktop_common import account_label
+            if not v["account"].get().strip(): v["account"].set(account_label(self, account))
+            if amounts["without_vat"] and not v["no_vat_account"].get().strip(): v["no_vat_account"].set(account_label(self, account))
+        f["supplier_hint"] = supplier
+        rule_note = ExpensesMixin.apply_expense_rule(self, supplier, data.get("text") or "", [v["description"].get()]) if supplier else ""
+        self.expense_amounts_changed("none")
+        suggestion=f["pdf_suggested_type"]
+        f["pdf_label"].config(text=f"{Path(path).name}: {data.get('notes', '')}" +
+                              (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
+                               "; Type unclear; confirm this is a paid Expense before Save") + (f"; {rule_note}" if rule_note else ""), fg=NAVY)
+
+    def apply_expense_rule(self, supplier, text="", lines=()):
+        """2.9.120: an expense of a supplier already posted before is filled with the same accounts. Returns what was done."""
+        from desktop_common import account_label
+        f = self.expense_form; v = f["vars"]
+        try: found = self.client.posting_suggestion("expense", supplier, None, text, lines)
+        except (RuntimeError, OSError, ValueError, AttributeError): return ""
+        if not isinstance(found, dict): return ""  # an old data service
+        rule = (found or {}).get("rule")
+        if not rule: return ""
+        data = rule["data"]
+        for key, field in (("expense_account", "account"), ("expense_without_vat_account", "no_vat_account"), ("vat_account", "vat_account"),
+                           ("payment_account", "payment_account")):
+            if data.get(key): v[field].set(account_label(self, data[key]))
+        if data.get("category"): v["category"].set(data["category"])
+        use = next((label for label, key in PURCHASE_USES.items() if key == data.get("vat_use")), None)
+        if use: f["use"].set(use)
+        f["non_deductible"].set(not data.get("vat_recoverable", True)); f["tax_non_deductible"].set(not data.get("tax_deductible", True))
+        for key, variable, choices in (("department", f["department"], self.department_choices), ("project", f["project"], self.project_choices)):
+            code = data.get(key) or ""
+            match = next((c for c in choices() if self.dimension_code(c) == code), None) if code else None
+            if match: variable.set(match)
+        return (f"Posted like {rule.get('last_reference') or 'the last expense'} of {rule['label']} "
+                f"(learned from {rule['times']} expense(s)) - check before Save")
 
     @staticmethod
     def expense_amounts_from_pdf(data):
@@ -159,7 +192,8 @@ class ExpensesMixin:
                 "expense_account": v["account"].get().split(" - ", 1)[0].strip(), "expense_without_vat_account": v["no_vat_account"].get().split(" - ", 1)[0].strip(),
                 "vat_account": v["vat_account"].get().split(" - ", 1)[0].strip(), "payment_account": v["payment_account"].get().split(" - ", 1)[0].strip(),
                 "vat_recoverable": not f["non_deductible"].get(), "department": self.dimension_code(f["department"].get()), "project": self.dimension_code(f["project"].get()),
-                "vat_use": PURCHASE_USES.get(f["use"].get(), "mixed"), "tax_deductible": not f["tax_non_deductible"].get()}
+                "vat_use": PURCHASE_USES.get(f["use"].get(), "mixed"), "tax_deductible": not f["tax_non_deductible"].get(),
+                "supplier": f.get("supplier_hint") or ""}  # 2.9.120: only to learn the posting rule of this supplier
 
     def non_deductible_report(self):
         """2.9.110: the expenses of the year marked not deductible for income tax - the amount to add back to the taxable profit."""
@@ -266,7 +300,7 @@ class ExpensesMixin:
     def edit_expense(self):
         f = self.expense_form; selected = f["tree"].selection()
         if not selected: return
-        r = f["rows"][selected[0]]; v = f["vars"]; f["id"] = r["id"]; f["pdf"] = None; f["vat_typed"] = True
+        r = f["rows"][selected[0]]; v = f["vars"]; f["id"] = r["id"]; f["pdf"] = None; f["supplier_hint"] = ""; f["vat_typed"] = True
         for key, value in (("date", _dd(r["expense_date"])), ("description", r["description"]), ("category", r.get("category") or ""), ("currency", r["currency"]),
                            ("with_vat", f'{r.get("with_vat_subtotal") or 0:.2f}'), ("without_vat", f'{r.get("without_vat_subtotal") or 0:.2f}'), ("vat", f'{r["vat"]:.2f}'),
                            ("reference", r.get("reference") or ""), ("account", r["expense_account"]), ("no_vat_account", r.get("expense_without_vat_account") or "601100001"),
