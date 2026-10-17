@@ -149,7 +149,9 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
             log.warning("Picture help could not be opened",exc_info=True); messagebox.showerror("Help",f"The help could not be opened: {exc}")
 
     def open_user_guide(self):
-        """The user guide (English and Arabic) that ships with the program."""
+        """Open illustrated help first; retain the text guide as an offline fallback."""
+        if Path(resource_path("assets/help/help.html")).is_file():
+            return self.open_page_help()
         path=resource_path("assets/user_guide.html")
         try:
             import webbrowser
@@ -1095,6 +1097,9 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         self.action_button(actions,"Export Excel",lambda:self.export_report("dashboard","xlsx")).pack(side="left",padx=4)
         self.action_button(actions,"Export PDF",lambda:self.export_report("dashboard","pdf")).pack(side="left",padx=4)
         self.action_button(actions,"Print",lambda:self.export_report("dashboard","print")).pack(side="left",padx=4)
+        self.action_button(actions,"Period summary",self.open_dashboard_brief).pack(side="left",padx=4)
+        self.action_button(actions,"Executive dashboard",self.open_executive_dashboard).pack(side="left",padx=4)
+        self.action_button(actions,"Quotes / Orders / Consignment",self.open_commercial_documents).pack(side="left",padx=4)
         flow_toolbars(actions)
         import desktop_layout; desktop_layout.build_today_panel(self,self.dashboard_tab)  # 2.9.60: quick actions + needs attention
         self.dashboard_cards=tk.Frame(self.dashboard_tab,bg=LIGHT); self.dashboard_cards.pack(fill="x",padx=12)

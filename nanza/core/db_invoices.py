@@ -10,6 +10,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     datetime, Decimal, DEFAULT_LEBANESE_ACCOUNTS, EXPENSE_NO_VAT_ACCOUNT_9, hashlib, iso_date, json, utcnow
 )
 from database_common import _soft_iso  # noqa: F401
+from settlements import posted_payment_sql
 
 
 class InvoicesStore:
@@ -68,8 +69,14 @@ class InvoicesStore:
         with self.connect() as db:
             entry_type=self._entry_type(item); kind="sale" if entry_type=="sales" else "purchase"
             party_kind = "customer" if kind == "sale" else "supplier"
-            db.execute("INSERT OR IGNORE INTO parties(kind,name,currency) VALUES(?,?,?)", (party_kind, item.get("party_name") or "Unspecified", item.get("currency", "USD")))
-            party = db.execute("SELECT * FROM parties WHERE kind=? AND name=?", (party_kind, item.get("party_name") or "Unspecified")).fetchone()
+            source_party = item.get("commercial_party_id")
+            if source_party is not None:
+                party = db.execute("SELECT * FROM parties WHERE id=?", (int(source_party),)).fetchone()
+                if not party or party["kind"] not in (party_kind, "both") or party["name"] != item.get("party_name"):
+                    raise ValueError("Commercial document party does not match the invoice direction")
+            else:
+                db.execute("INSERT OR IGNORE INTO parties(kind,name,currency) VALUES(?,?,?)", (party_kind, item.get("party_name") or "Unspecified", item.get("currency", "USD")))
+                party = db.execute("SELECT * FROM parties WHERE kind=? AND name=?", (party_kind, item.get("party_name") or "Unspecified")).fetchone()
             raw_subtotal=Decimal(str(item.get("subtotal") or 0))
             deductible=Decimal(str(item.get("deductible_subtotal") if item.get("deductible_subtotal") not in (None,"") else raw_subtotal))
             non_deductible=Decimal(str(item.get("non_deductible_subtotal") or 0)); subtotal=deductible+non_deductible
@@ -244,6 +251,12 @@ class InvoicesStore:
 
     @atomic  # 2.9.121
     def create_manual_invoice(self, item, line_items, user_id):
+        exemption = item.get("income_exemption")
+        if exemption is not None:
+            from tax_adjustments import reason_text
+            if not isinstance(exemption, dict): raise ValueError("Invalid income-tax exemption")
+            if self._entry_type(item) != "sales": raise ValueError("Income-tax exemptions apply to sales only")
+            reason_text(exemption.get("reason"), exemption.get("article", ""))
         self.require_eur_rate(item.get("currency"), item.get("invoice_date"))
         if not isinstance(line_items, list) or not line_items:
             raise ValueError("Add at least one invoice item")
@@ -341,6 +354,8 @@ class InvoicesStore:
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                 (user_id, "manual_entry", "invoice", invoice_id, json.dumps({"items": len(normalized)}), utcnow()))
         self._store_invoice_format(invoice_id, item, line_items)
+        if exemption is not None:
+            self.set_income_exemption(invoice_id, exemption.get("reason"), exemption.get("article", ""), user_id)
         subtype=str(item.get("doc_subtype") or "invoice").lower(); is_return=bool(item.get("is_return")) and subtype=="credit_note"
         with self.connect() as db: db.execute("UPDATE invoices SET is_return=? WHERE id=?",(1 if is_return else 0,invoice_id))
         # Stock moves for invoices and returns only. A credit note or a debit note is a discount / price
@@ -380,6 +395,8 @@ class InvoicesStore:
 
     @atomic  # 2.9.121
     def delete_invoice(self,invoice_id,user_id):
+        import commercial_documents
+        commercial_documents.guard_invoice_edit(self, invoice_id)
         with self.connect() as db:
             invoice=db.execute("SELECT * FROM invoices WHERE id=?",(int(invoice_id),)).fetchone()
             if not invoice: raise KeyError(invoice_id)
@@ -477,6 +494,8 @@ class InvoicesStore:
         return result
 
     def _update_invoice_base(self, invoice_id, item, user_id):
+        import commercial_documents
+        commercial_documents.guard_invoice_edit(self, invoice_id, item)
         required = ("invoice_number", "invoice_date", "party_name", "kind", "currency")
         missing = [field for field in required if not str(item.get(field) or "").strip()]
         if missing:
@@ -592,6 +611,8 @@ class InvoicesStore:
 
     @atomic  # 2.9.121
     def add_invoice_item(self, invoice_id, line, user_id):
+        import commercial_documents
+        commercial_documents.guard_invoice_edit(self, invoice_id)
         with self.connect() as db:
             old=db.execute("SELECT invoice_date FROM invoices WHERE id=?",(int(invoice_id),)).fetchone()
         if old: self._assert_vat_open(old["invoice_date"])
@@ -904,21 +925,30 @@ class InvoicesStore:
         purchases list, opening an entry and other screens could not find older ones)."""
         limit = int(limit) if limit else -1  # SQLite: LIMIT -1 = no limit
         with self.connect() as db:
-            return [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,i.kind,i.entry_type,i.currency,i.exchange_rate,i.subtotal,i.deductible_subtotal,i.non_deductible_subtotal,i.vat,i.total,
+            return [dict(r) for r in db.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,
+                i.kind,i.entry_type,i.currency,i.exchange_rate,i.subtotal,i.deductible_subtotal,i.non_deductible_subtotal,i.vat,i.total,
                 CASE WHEN i.status='deleted' THEN 0 ELSE COALESCE(CAST(i.debit_override AS REAL),CASE WHEN i.kind='sale' THEN CAST(i.total AS REAL) ELSE 0 END) END debit,
                 CASE WHEN i.status='deleted' THEN 0 ELSE COALESCE(CAST(i.credit_override AS REAL),CASE WHEN i.kind='purchase' THEN CAST(i.total AS REAL) ELSE 0 END) END credit,
                 i.status,i.currency_issue,i.supplier_account,i.vat_account,i.expense_account,i.expense_no_vat_account,
                 i.supplier_side,i.vat_side,i.expense_side,i.expense_no_vat_side,i.source_row,
-                i.due_date,i.payment_status,CAST(i.amount_paid AS REAL) amount_paid,i.payment_method,i.description,i.branch_id,COALESCE(b.name,'Head Office') branch_name,
-                CAST(i.total AS REAL)-CAST(i.amount_paid AS REAL) outstanding,i.cancelled_at,i.cancellation_reason,
+                i.due_date,
+                CASE WHEN CAST(i.total AS REAL)>0 AND CAST(i.amount_paid AS REAL)+COALESCE(s.allocated,0)>=CAST(i.total AS REAL)-0.005 THEN 'paid'
+                     WHEN CAST(i.amount_paid AS REAL)+COALESCE(s.allocated,0)>0 THEN 'partial' ELSE 'unpaid' END payment_status,
+                CAST(i.amount_paid AS REAL) amount_paid,COALESCE(s.allocated,0) allocated_amount,
+                CAST(i.amount_paid AS REAL)+COALESCE(s.allocated,0) settled_amount,i.payment_method,i.description,i.branch_id,COALESCE(b.name,'Head Office') branch_name,
+                (CASE WHEN i.doc_subtype='credit_note' THEN -1 ELSE 1 END)*(CAST(i.total AS REAL)-CAST(i.amount_paid AS REAL)-COALESCE(s.allocated,0)) outstanding,i.cancelled_at,i.cancellation_reason,
                 (SELECT COUNT(*) FROM invoice_attachments x WHERE x.invoice_id=i.id) attachment_count,i.vat_recoverable,i.department_id,i.project_id,i.vat_treatment,i.vat_use,
                 i.doc_subtype,i.invoice_discount_percent,i.invoice_discount_amount,i.notes,i.linked_invoice_id,COALESCE(i.is_return,0) is_return,i.payment_account
-                FROM invoices i LEFT JOIN parties p ON p.id=i.party_id LEFT JOIN branches b ON b.id=i.branch_id ORDER BY i.id DESC LIMIT ?""", (limit,))]
+                FROM invoices i LEFT JOIN parties p ON p.id=i.party_id LEFT JOIN branches b ON b.id=i.branch_id
+                LEFT JOIN (SELECT a.invoice_id,DSUM(a.amount) allocated FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
+                           WHERE {posted_payment_sql()} GROUP BY a.invoice_id) s ON s.invoice_id=i.id ORDER BY i.id DESC LIMIT ?""", (limit,))]
 
     # ---------------------------------------------------------------- invoices: edit keeping attachments, landed cost
     @atomic  # 2.9.121
     def replace_manual_invoice(self, invoice_id, item, line_items, user_id):
         """Replace an invoice and its linked records in one transaction."""
+        import commercial_documents
+        commercial_documents.guard_invoice_edit(self, invoice_id)
         with self.connect() as db:
             old = db.execute("SELECT * FROM invoices WHERE id=?", (int(invoice_id),)).fetchone()
             if not old: raise KeyError("Invoice not found")
@@ -933,6 +963,9 @@ class InvoicesStore:
             import inventory
             inventory.remove_invoice_documents(db, invoice_id)
             new_id = self.create_manual_invoice(item, line_items, user_id)
+            if "income_exemption" not in item:
+                db.execute("""INSERT OR REPLACE INTO income_exemptions(source_type,source_id,reason)
+                    SELECT source_type,?,reason FROM income_exemptions WHERE source_type='invoice' AND source_id=?""", (new_id, int(invoice_id)))
             for f in files:
                 db.execute("INSERT INTO invoice_attachments(invoice_id,file_name,mime_type,content,uploaded_by,uploaded_at) VALUES(?,?,?,?,?,?)",
                     (new_id, f["file_name"], f["mime_type"], f["content"], user_id, utcnow()))
@@ -954,6 +987,8 @@ class InvoicesStore:
         with self.connect() as db:
             purchase = db.execute("SELECT i.*,p.name party_name FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.id=?", (int(purchase_id),)).fetchone()
         if not purchase or purchase["kind"] != "purchase": raise ValueError("Choose a purchase invoice first")
+        from landed_costs import normalize
+        item, source_amounts = normalize(item, purchase["currency"])
         components = (("freight", "Freight"), ("insurance", "Insurance"), ("customs_group_1", "Customs per item"), ("customs_duties", "Customs fees"),
                       ("customs_group_2", "Customs - group 2"), ("broker_fees", "Customs broker fees"), ("other_costs", "Other landed costs"))
         lines = []
@@ -990,11 +1025,28 @@ class InvoicesStore:
                    "expense_account": purchase["expense_account"], "status": "posted", "source_file": "Customs Case",
                    "description": f"Landed cost of {purchase['invoice_number']} ({purchase['party_name'] or ''})" + (f" - declaration {declaration}" if declaration else ""),
                    "department_id": purchase["department_id"], "project_id": purchase["project_id"]}
+        method = str(item.get("payment_method") or "On Account (Not Cash)")
+        if method not in ("On Account (Not Cash)", "Cash", "Bank Transfer", "Cheque", "Card"):
+            raise ValueError("Choose a valid cost payment method")
+        invoice["payment_method"] = method
+        if method != "On Account (Not Cash)":
+            cash = str(item.get("cash_account") or "").split(" - ", 1)[0].strip()
+            with self.connect() as db:
+                account = db.execute("SELECT type FROM accounts WHERE code=? AND active=1", (cash,)).fetchone()
+            if not cash.startswith("5") or not account or account["type"] != "asset":
+                raise ValueError("Choose an active cash or bank account for the cost payment")
+            invoice["cash_account"] = cash
+            invoice["amount_paid"] = str(sum((Decimal(line["unit_price"]) for line in lines), Decimal("0")) + import_vat)
         if supplier_account: invoice["supplier_account"]=supplier_account
         invoice_id = self.create_manual_invoice(invoice, lines, user_id)
         # each cost goes to its own 9-digit 6018 account (freight, insurance, duties, broker, other)
         with self.connect() as db:
             db.execute("UPDATE invoices SET linked_invoice_id=? WHERE id=?", (int(purchase_id), invoice_id))
+            db.executemany("""INSERT INTO landed_cost_sources(cost_invoice_id,component,currency,amount,conversion_rate,converted_amount)
+                VALUES(?,?,?,?,?,?)""", [(invoice_id, *source) for source in source_amounts])
+            db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                (user_id, "landed_cost", "invoice", invoice_id, json.dumps({"purchase_id": int(purchase_id),
+                 "currency": item["currency"], "source_amounts": source_amounts, "usd_lbp_rate": item.get("usd_lbp_rate")}), utcnow()))
             for key, _label in components:  # 2.9.106: the parts, so customs of a group go to the items of that group only
                 amount = Decimal(str(item.get(key) or 0).replace(",", ""))
                 if amount: db.execute("INSERT INTO landed_cost_parts(cost_invoice_id,component,amount) VALUES(?,?,?)", (invoice_id, key, str(amount)))
@@ -1013,9 +1065,16 @@ class InvoicesStore:
 
     def landed_costs(self, purchase_id):
         with self.connect() as db:
-            return [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,i.currency,CAST(i.subtotal AS REAL) subtotal,
-                CAST(i.vat AS REAL) vat,CAST(i.total AS REAL) total FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.linked_invoice_id=? AND i.status NOT IN ('cancelled','deleted') ORDER BY i.id""",
+            rows = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,i.currency,CAST(i.subtotal AS REAL) subtotal,
+                CAST(i.vat AS REAL) vat,CAST(i.total AS REAL) total FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.linked_invoice_id=? AND i.source_file='Customs Case'
+                AND i.status NOT IN ('cancelled','deleted') ORDER BY i.id""",
                         (int(purchase_id),))]
+            sources = {}
+            for row in db.execute("""SELECT s.* FROM landed_cost_sources s JOIN invoices i ON i.id=s.cost_invoice_id
+                WHERE i.linked_invoice_id=? ORDER BY s.id""", (int(purchase_id),)):
+                sources.setdefault(row["cost_invoice_id"], []).append(dict(row))
+            for row in rows: row["source_amounts"] = sources.get(row["id"], [])
+            return rows
 
     # ---------------------------------------------------------------- invoice format, notes, allocations
     def _store_invoice_format(self, invoice_id, item, line_items):

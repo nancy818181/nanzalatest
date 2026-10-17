@@ -142,27 +142,57 @@ class PurchasesMixin:
         cost = tk.LabelFrame(cost_parent or page, text="Cost on Purchase (customs / freight / insurance) for the selected purchase", bg=LIGHT, padx=8, pady=4); cost.pack(fill="x", padx=8, pady=3)
         f["lc"] = {k: tk.StringVar() for k in ("freight", "insurance", "customs_duties", "customs_group_1", "customs_group_2", "broker_fees", "other_costs",
                                                "import_vat", "customs_declaration_no", "party_name")}
-        f["lc"]["party_name"].set("Lebanese Customs")
+        f["lc"]["party_name"].set("")
+        f["lc_payment_method"] = tk.StringVar(value="On Account (Not Cash)")
+        f["lc_cash_account"] = tk.StringVar()
         import chart_extra
         f["lc_accounts"] = {key: tk.StringVar(value=code) for key, code in chart_extra.LANDED_COST_ACCOUNTS.items()}
-        c1 = tk.Frame(cost, bg=LIGHT); c1.pack(fill="x")
-        for label, key, width in (("Freight", "freight", 9), ("Insurance", "insurance", 9), ("Broker Fees", "broker_fees", 9),
-                                  ("Other", "other_costs", 8), ("Import VAT", "import_vat", 9)):
-            tk.Label(c1, text=label, bg=LIGHT).pack(side="left"); tk.Entry(c1, textvariable=f["lc"][key], width=width).pack(side="left", padx=(3, 7))
-        # 2.9.106: "Customs per item" goes to the items subject to customs only; "Customs fees" to every item of the purchase
-        c1b = tk.Frame(cost, bg=LIGHT); c1b.pack(fill="x", pady=(4, 0))
-        for label, key in (("Customs per item", "customs_group_1"), ("Customs fees", "customs_duties")):
-            tk.Label(c1b, text=label, bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left"); tk.Entry(c1b, textvariable=f["lc"][key], width=11).pack(side="left", padx=(3, 10))
-        tk.Label(c1b, text="Customs per item: only the items marked 'Subject to customs' (Inventory > Items). Customs fees: all the items.",
-                 bg=LIGHT, fg=MUTED).pack(side="left")
+        from landed_costs import COMPONENTS
+        f["lc_currency"] = tk.StringVar(value="USD")
+        f["lc_rate"] = tk.StringVar()
+        f["lc_usd"] = {key: tk.StringVar() for key, _ in COMPONENTS}
+        f["lc_lbp"] = {key: tk.StringVar() for key, _ in COMPONENTS}
+        settings = tk.Frame(cost, bg=LIGHT); settings.pack(fill="x", pady=4)
+        tk.Label(settings, text="Posting currency", bg=LIGHT).pack(side="left")
+        ttk.Combobox(settings, textvariable=f["lc_currency"], values=["USD", "LBP"], state="readonly", width=7).pack(side="left", padx=6)
+        tk.Label(settings, text="LBP per USD", bg=LIGHT).pack(side="left")
+        tk.Entry(settings, textvariable=f["lc_rate"], width=14).pack(side="left", padx=6)
+        tk.Label(settings, text="Enter the reviewed exchange rate for these costs.", bg=LIGHT, fg=MUTED).pack(side="left")
+        grid = tk.Frame(cost, bg=LIGHT); grid.pack(fill="x", pady=4)
+        for col, title in enumerate(("Cost component", "USD amount", "LBP amount", "Allocation")):
+            tk.Label(grid, text=title, bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")).grid(row=0, column=col, sticky="w", padx=6, pady=4)
+        for index, (key, label) in enumerate(COMPONENTS, 1):
+            tk.Label(grid, text=label, bg=LIGHT).grid(row=index, column=0, sticky="w", padx=6, pady=2)
+            tk.Entry(grid, textvariable=f["lc_usd"][key], width=17, justify="right").grid(row=index, column=1, padx=6, pady=2)
+            tk.Entry(grid, textvariable=f["lc_lbp"][key], width=17, justify="right").grid(row=index, column=2, padx=6, pady=2)
+            allocation = "VAT return, excluded from item cost" if key == "import_vat" else "Items subject to customs" if key.startswith("customs_group") else "All items by purchase value"
+            tk.Label(grid, text=allocation, bg=LIGHT, fg=MUTED).grid(row=index, column=3, sticky="w", padx=6)
+        f["lc_preview"] = tk.Label(cost, text="", bg=LIGHT, fg=NAVY, anchor="w", justify="left")
+        f["lc_preview"].pack(fill="x", pady=4)
+        for var in [*f["lc_usd"].values(), *f["lc_lbp"].values(), f["lc_currency"], f["lc_rate"]]:
+            var.trace_add("write", lambda *_: self.preview_landed_cost())
         c2 = tk.Frame(cost, bg=LIGHT); c2.pack(fill="x", pady=(4, 0))
         tk.Label(c2, text="Declaration No.", bg=LIGHT).pack(side="left"); tk.Entry(c2, textvariable=f["lc"]["customs_declaration_no"], width=14).pack(side="left", padx=(3, 8))
         tk.Label(c2, text="Paid to", bg=LIGHT).pack(side="left"); f["lc_party_box"] = ttk.Combobox(c2, textvariable=f["lc"]["party_name"], width=28); f["lc_party_box"].pack(side="left", padx=(3, 8))
-        tk.Button(c2, text="Add Cost on Purchase", command=self.save_landed_cost, bg=GOLD, fg=NAVY, border=0, padx=12, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
-        self.action_button(c2, "Edit Cost Accounts", self.edit_landed_cost_accounts).pack(side="left", padx=3)
-        self.action_button(c2, "Import Customs Excel", self.import_customs_excel).pack(side="left", padx=3)
-        self.action_button(c2, "Attach Customs PDF", self.attach_customs_pdf).pack(side="left", padx=3)
-        f["lc_label"] = tk.Label(c2, text="", bg=LIGHT, fg=NAVY); f["lc_label"].pack(side="left", padx=8)
+        payment = tk.Frame(cost, bg=LIGHT); payment.pack(fill="x", pady=3)
+        tk.Label(payment, text="Payment Mode", bg=LIGHT).pack(side="left")
+        ttk.Combobox(payment, textvariable=f["lc_payment_method"], values=PAID_BY, state="readonly", width=22).pack(side="left", padx=6)
+        tk.Label(payment, text="Paid from", bg=LIGHT).pack(side="left")
+        self.account_search_box(payment, f["lc_cash_account"], 20).pack(side="left", padx=6)
+        actions = tk.Frame(cost, bg=LIGHT); actions.pack(fill="x", pady=3)
+        attachments = tk.Frame(cost, bg=LIGHT); attachments.pack(fill="x", pady=3)
+        tk.Button(actions, text="Add Cost on Purchase", command=self.save_landed_cost, bg=GOLD, fg=NAVY, border=0, padx=12, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
+        self.action_button(actions, "Edit Cost Accounts", self.edit_landed_cost_accounts).pack(side="left", padx=3)
+        self.action_button(attachments, "Import Customs Excel", self.import_customs_excel).pack(side="left", padx=3)
+        self.action_button(attachments, "Attach Customs PDF", self.attach_customs_pdf).pack(side="left", padx=3)
+        f["lc_label"] = tk.Label(cost, text="", bg=LIGHT, fg=NAVY, anchor="w"); f["lc_label"].pack(fill="x", padx=8)
+        report_bar = tk.Frame(cost, bg=LIGHT); report_bar.pack(fill="x", pady=4)
+        self.action_button(report_bar, "Cost breakdown PDF", lambda: self.landed_cost_report("pdf")).pack(side="left", padx=3)
+        self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
+        from desktop_common import flow_toolbars
+        f["pdf_label"].configure(wraplength=600,justify="left")
+        flow_toolbars(r1,accounts_row,r3,r4,r5,find,wh,r2,summary,
+                      settings,c2,payment,actions,attachments,report_bar)
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
         f["tree"].bind("<<TreeviewSelect>>", lambda _e: self.purchase_selected())
 
@@ -353,7 +383,7 @@ class PurchasesMixin:
                                                                      "parent_code": account["parent"] if account["parent"] in known else ""})
                 except (RuntimeError, OSError, ValueError): code = account["parent"]
             v["account"].set(account_label(self, code))
-            return f"Account {code} suggested ({account['source']}, {float(account['confidence']):.0%} sure) - check before Save"
+            return f"Account {code} suggested ({account['source']}) - check before Save"
         return ""
 
     def purchase_amounts_changed(self, key):
@@ -406,11 +436,18 @@ class PurchasesMixin:
             return
         if path.lower().endswith((".pdf", ".png", ".jpg", ".jpeg")):  # 2.9.85: read off the screen; 2.9.118: photos are read too
             prepare_pdf_reading(self)
-            return run_with_progress(self, "Purchase PDF", lambda _progress, _cancel: read_invoice_pdf(path), lambda data: PurchasesMixin._apply_purchase_pdf(self, path, data))
+            return run_with_progress(self, "Purchase PDF", lambda _progress, _cancel: read_invoice_pdf(path, cancel=_cancel),
+                                     lambda data: PurchasesMixin._apply_purchase_pdf(self, path, data))
         PurchasesMixin._apply_purchase_pdf(self, path, None)
 
     def _apply_purchase_pdf(self, path, data):
+        from desktop_stage3_common import review_handwriting
+        if data is not None:
+            data = review_handwriting(self, path, data)
+            if data is None: return
         f = self.purchase_form; v = f["vars"]
+        if data and data.get("intake_reviewed") and "doc" in f:
+            f["doc"].set({"credit_note":"Credit Note","debit_note":"Debit Note"}.get(data.get("document_type"),"Invoice"))
         f["pdf"] = path; f["pdf_suggested_type"] = ""
         f["pdf_review_warnings"] = list((data or {}).get("review_warnings") or [])
         if data is not None:
@@ -429,10 +466,8 @@ class PurchasesMixin:
                     if str(typed or "").strip(): v["number"].set(typed.strip())
                 if data.get("invoice_date"): v["date"].set(data["invoice_date"])
                 elif v["date"].get() == self.fiscal_today(): v["date"].set("")
-                if data.get("currency"): v["currency"].set(data["currency"])
+                v["currency"].set(data.get("currency") or "")
                 subtotal=data.get("subtotal")
-                if subtotal is None and data.get("total") is not None and data.get("vat") is not None:
-                    subtotal=round(data["total"]-data["vat"],2)
                 if data.get("taxable_subtotal") is not None and "exempt" in v and not v["taxable"].get():  # 2.9.85: rows with and without VAT
                     v["taxable"].set(f'{data["taxable_subtotal"]:.2f}'); v["exempt"].set(f'{data["exempt_subtotal"]:.2f}')
                 elif subtotal is not None and not v["taxable"].get(): v["taxable"].set(f'{subtotal:.2f}')
@@ -508,7 +543,12 @@ class PurchasesMixin:
             return messagebox.showerror("Purchase PDF", f"Could not select this file: {exc}")
         from ai_service import read_invoice_pdf as read_ai_pdf
         def show(data):
+            from desktop_stage3_common import review_handwriting
+            data=review_handwriting(self,path,data)
+            if data is None: return
             f=self.purchase_form; v=f["vars"]; f["pdf"]=path
+            if data.get("intake_reviewed") and "doc" in f:
+                f["doc"].set({"credit_note":"Credit Note","debit_note":"Debit Note"}.get(data.get("document_type"),"Invoice"))
             f["pdf_review_warnings"] = list(data.get("review_warnings") or [])
             f["pdf_vat_review"] = True; f["vat_typed"] = True
             v["vat"].set(f'{data["vat"]:.2f}' if data.get("vat") is not None else "")
@@ -579,6 +619,7 @@ class PurchasesMixin:
             raise ValueError("Purchases require a class 6 purchase cost account; choose Assets for a fixed-asset account")
         self.purchase_items_changed()
         if not v["supplier"].get().strip(): raise ValueError("Choose or type the supplier")
+        if not v["currency"].get().strip(): raise ValueError("Choose the invoice currency; the reader did not identify it")
         taxable = _num(v["taxable"].get()); exempt = _num(v["exempt"].get()); vat = _num(v["vat"].get()); rate = _num(v["rate"].get())
         if None in (taxable, exempt, vat, rate) or min(taxable, exempt, vat) < 0: raise ValueError("Amounts must be positive numbers")
         if not taxable and not exempt: raise ValueError("Enter the taxable or exempt amount")
@@ -775,7 +816,7 @@ class PurchasesMixin:
         f["rows"] = {str(r["id"]): r for r in rows if not (r.get("description") or "").startswith("Landed cost of")}
         for r in customs:
             key = (r.get("description") or "").split("Landed cost of ", 1)[-1].split(" (", 1)[0]
-            landed[key] = landed.get(key, 0) + float(r.get("total") or 0)
+            totals = landed.setdefault(key, {}); totals[r["currency"]] = totals.get(r["currency"], 0) + float(r.get("total") or 0)
         f["find_map"] = {f'{r["invoice_number"]} | {_dd(r["invoice_date"])} | {r.get("party_name") or ""} | {float(r.get("total") or 0):,.2f} {r["currency"]}': r["id"] for r in f["rows"].values()}
         f["find_box"]["values"] = list(f["find_map"])
         try: f["warehouse_box"]["values"] = [f'{w["code"]} - {w["name"]}' for w in self.client.warehouses() if w["active"]]
@@ -785,7 +826,7 @@ class PurchasesMixin:
         for r in f["rows"].values():
             f["tree"].insert("", "end", iid=str(r["id"]), values=(r["invoice_number"], _dd(r["invoice_date"]), r.get("party_name") or "", (r.get("entry_type") or "").title(), r["currency"],
                 f'{float(r.get("deductible_subtotal") or 0):,.2f}', f'{float(r.get("non_deductible_subtotal") or 0):,.2f}', f'{float(r.get("vat") or 0):,.2f}', f'{float(r.get("total") or 0):,.2f}',
-                f'{landed.get(r["invoice_number"], 0):,.2f}' if landed.get(r["invoice_number"]) else "", r.get("attachment_count") or "",
+                " / ".join(f"{value:,.2f} {code}" for code, value in sorted(landed.get(r["invoice_number"], {}).items())), r.get("attachment_count") or "",
                 " / ".join(x for x in (departments.get(r.get("department_id")), projects.get(r.get("project_id"))) if x)))
 
     def selected_purchase(self):
@@ -797,8 +838,10 @@ class PurchasesMixin:
         if not row: f["lc_label"].config(text=""); return
         try: costs = self.client.landed_costs(row["id"])
         except Exception: costs = []
-        total = sum(c["total"] for c in costs)
-        f["lc_label"].config(text=f"{row['invoice_number']}: {len(costs)} cost line(s), {total:,.2f} {row['currency']}" if costs else f"{row['invoice_number']}: no cost on purchase yet")
+        totals = {}
+        for cost in costs: totals[cost["currency"]] = totals.get(cost["currency"], 0) + cost["total"]
+        amounts = " / ".join(f"{total:,.2f} {currency}" for currency, total in sorted(totals.items()))
+        f["lc_label"].config(text=f"{row['invoice_number']}: {len(costs)} cost line(s), {amounts}" if costs else f"{row['invoice_number']}: no cost on purchase yet")
 
     def edit_purchase(self):
         row = self.selected_purchase(); f = self.purchase_form; v = f["vars"]
@@ -893,13 +936,55 @@ class PurchasesMixin:
         attachments_window(self, number, items, lambda record: self.client.download_attachment(record["id"])["content"])
 
     def landed_cost_payload(self):
-        f = self.purchase_form; item = {k: v.get().strip() for k, v in f["lc"].items()}
-        for key in ("freight", "insurance", "customs_duties", "customs_group_1", "customs_group_2", "broker_fees", "other_costs", "import_vat"):
-            if _num(item[key]) is None: raise ValueError(f"{key.replace('_', ' ').title()} must be a number")
+        f = self.purchase_form
+        item = {k: v.get().strip() for k, v in f["lc"].items() if k in ("party_name", "customs_declaration_no")}
+        item["currency"] = f["lc_currency"].get()
+        item["usd_lbp_rate"] = f["lc_rate"].get().strip()
+        item["payment_method"] = f["lc_payment_method"].get()
+        item["cash_account"] = f["lc_cash_account"].get().split(" - ", 1)[0].strip()
+        item["currency_amounts"] = {key: {"USD": f["lc_usd"][key].get().strip(), "LBP": f["lc_lbp"][key].get().strip()} for key in f["lc_usd"]}
+        from landed_costs import normalize
+        normalize(item, item["currency"])
         party = f.get("lc_party_map", {}).get(f["lc"]["party_name"].get().strip())
         if party: item["party_id"] = party["id"]; item["party_name"] = party["name"]
         item["cost_accounts"] = {key: var.get().split(" - ", 1)[0].strip() for key, var in f["lc_accounts"].items()}
         return item
+
+    def preview_landed_cost(self):
+        from decimal import Decimal
+        from landed_costs import normalize, COMPONENTS
+        f = self.purchase_form
+        if "lc_preview" not in f: return
+        try:
+            normalized, _sources = normalize(self.landed_cost_payload(), f["lc_currency"].get())
+            cost = sum((Decimal(normalized[key]) for key, _ in COMPONENTS if key != "import_vat"), Decimal("0"))
+            vat = Decimal(normalized["import_vat"])
+            text = f"Item cost: {cost:,.2f}   |   Import VAT: {vat:,.2f}   |   Total payable: {cost + vat:,.2f} {normalized['currency']}"
+        except ValueError as exc:
+            text = str(exc)
+        f["lc_preview"].config(text=text)
+
+    def landed_cost_report(self, format_name):
+        from landed_costs import COMPONENTS
+        row = self.selected_purchase()
+        if not row: return messagebox.showwarning("Cost on Purchase", "Select the purchase invoice first")
+        try: costs = self.client.landed_costs(row["id"])
+        except Exception as exc: return messagebox.showerror("Cost on Purchase", str(exc))
+        labels = dict(COMPONENTS)
+        from decimal import Decimal
+        summary = [[c["invoice_number"], _dd(c["invoice_date"]), c["currency"], c["subtotal"], c["vat"], c["total"]] for c in costs]
+        def factor(value):
+            rate = Decimal(value)
+            return "1 / " + format(1 / rate, ".8g") if rate < 1 else format(rate, ".8g")
+        detail = [[c["invoice_number"], labels.get(s["component"], s["component"]), s["currency"], Decimal(s["amount"]),
+                   factor(s["conversion_rate"]), c["currency"], Decimal(s["converted_amount"])]
+                  for c in costs for s in c.get("source_amounts", [])]
+        sections = [{"heading": "Posted purchase costs", "headers": ["Document", "Date", "Currency", "Item cost", "Import VAT", "Payable"], "rows": summary},
+                    {"heading": "Original amounts and conversion (before component rounding)", "headers": ["Document", "Component", "Source currency", "Original amount",
+                        "Conversion factor (display rounded)", "Posting currency", "Converted amount"], "rows": detail}]
+        meta = [f"Purchase: {row['invoice_number']}", "Import VAT is excluded from item cost. Amounts in different currencies are not added together."]
+        if any(not c.get("source_amounts") for c in costs): meta.append("Original currency breakdown was not recorded for older costs.")
+        self.output_sections("Cost on Purchase", meta, sections, "Purchase_Cost_Breakdown", format_name)
 
     def edit_landed_cost_accounts(self):
         import chart_extra
@@ -916,10 +1001,14 @@ class PurchasesMixin:
     def save_landed_cost(self):
         row = self.selected_purchase()
         if not row: return messagebox.showwarning("Cost on Purchase", "Select the purchase invoice in the list first")
-        try: item = self.landed_cost_payload(); self.client.add_landed_cost(row["id"], item)
+        try:
+            item = self.landed_cost_payload()
+            if not item["party_name"]: raise ValueError("Enter the customs broker / payee name")
+            self.client.add_landed_cost(row["id"], item)
         except Exception as exc: return messagebox.showerror("Cost on Purchase", str(exc))
-        for var in self.purchase_form["lc"].values(): var.set("")
-        self.purchase_form["lc"]["party_name"].set("Lebanese Customs")
+        for var in [*self.purchase_form["lc"].values(), *self.purchase_form["lc_usd"].values(), *self.purchase_form["lc_lbp"].values()]: var.set("")
+        self.purchase_form["lc"]["party_name"].set("")
+        self.purchase_form["lc_payment_method"].set("On Account (Not Cash)"); self.purchase_form["lc_cash_account"].set("")
         messagebox.showinfo("Cost on Purchase", f"Cost on purchase added to {row['invoice_number']}. Import VAT goes to the VAT return as customs VAT.")
         self.load_purchases(); self.purchase_form["tree"].selection_set(str(row["id"])); self.load_invoices(); self.load_journal(); self.load_trial()
 
@@ -929,7 +1018,10 @@ class PurchasesMixin:
         try: costs = read_customs_costs(path)
         except Exception as exc: return messagebox.showerror("Cost on Purchase", f"The Excel file could not be read: {exc}")
         for key, value in costs.items():
-            if key in self.purchase_form["lc"] and value not in (None, "", 0): self.purchase_form["lc"][key].set(f"{value:.2f}" if isinstance(value, float) else str(value))
+            if value in (None, "", 0): continue
+            target = self.purchase_form["lc_usd"] if self.purchase_form["lc_currency"].get() == "USD" else self.purchase_form["lc_lbp"]
+            if key in target: target[key].set(str(value))
+            elif key in self.purchase_form["lc"]: self.purchase_form["lc"][key].set(str(value))
         messagebox.showinfo("Cost on Purchase", "Amounts filled from the Excel file. Check them, select the purchase, then press 'Add Cost on Purchase'.")
 
     def attach_customs_pdf(self):

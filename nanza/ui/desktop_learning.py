@@ -39,6 +39,33 @@ class LearningMixin:
                        command=toggle_neural,bg=LIGHT).pack(side="left",padx=6)
         tk.Button(advanced_controls, text="Install / Repair Advanced Reader", command=self.install_neural_reader,
                   bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
+        handwriting = tk.LabelFrame(page, text="Handwritten invoices (experimental, offline)", bg=LIGHT, padx=8, pady=6)
+        handwriting.pack(fill="x", padx=8, pady=6)
+        tk.Label(handwriting, text="Two independent readers (4B + 2B): optional download of about 4.5 GB; allow 5 GB of disk space "
+                 "and about 6 GB of free RAM. They run one after another and can take a few minutes. "
+                 "Photos stay on this computer: no account, API key or per-invoice fee. "
+                 "Disputed fields stay empty. Both readers can still agree on a wrong value: check the image before Save.", bg=LIGHT, fg=MUTED,
+                 wraplength=760, justify="left").pack(anchor="w")
+        import vision_reader
+        self.vision_reader_enabled = tk.BooleanVar(value=vision_reader.ready())
+        controls = tk.Frame(handwriting, bg=LIGHT); controls.pack(fill="x", pady=(6, 0))
+        def toggle_vision():
+            try: vision_reader.set_enabled(self.vision_reader_enabled.get())
+            except vision_reader.VisionReaderError as exc:
+                self.vision_reader_enabled.set(False)
+                messagebox.showwarning("Handwritten invoices", str(exc))
+        tk.Checkbutton(controls, text="Use for photos and single-page scans (slower)", variable=self.vision_reader_enabled,
+                       command=toggle_vision, bg=LIGHT).pack(side="left", padx=6)
+        tk.Button(controls, text="Install / Repair Free Handwriting Reader", command=self.install_vision_reader,
+                  bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=8)
+
+    def install_vision_reader(self):
+        import vision_reader
+        from desktop_stage3_common import run_with_progress
+        def installed(note):
+            if hasattr(self, "vision_reader_enabled"): self.vision_reader_enabled.set(True)
+            messagebox.showinfo("Handwritten invoices", note)
+        return run_with_progress(self, "Free handwriting reader setup", vision_reader.install, installed, unit="bytes")
 
     def install_neural_reader(self):
         import neural_reader

@@ -25,8 +25,11 @@ LANDED_COST_ACCOUNTS = {"freight": "601800001", "insurance": "601800002", "custo
 BANK_COMMISSION_ACCOUNT = "673900000"; EXCHANGE_LOSS_ACCOUNT = "675100000"; EXCHANGE_GAIN_ACCOUNT = "775100000"
 PAYROLL_MAP = {"salary": "6311", "overtime": "6311", "retro_salary": "6311", "bonus": "6312", "thirteenth_month": "6312", "commission": "6313",
                "schooling": "6315", "transport": "6319", "tax": "4411", "nssf": "4431", "payable": "421100001",
-               "director_remuneration": "6316", "family_allowance": "",  # family allocation: empty = offset on the NSSF account
+               "director_remuneration": "6316", "family_allowance": "438",  # family allocation recoverable from social security
                "employer_social": "6351"}  # 2.9.80: employer NSSF share = Social Security Fund Contributions (was 621100002, sub-contractors)
+# Each extra benefit may post to its own reviewed expense account.
+import payroll_lines
+PAYROLL_MAP.update({f"allowance_{key}": "6311" for key in payroll_lines.ALLOWANCES})
 MANAGER_PAYROLL_MAP = {**PAYROLL_MAP, "salary": "6316", "overtime": "6316", "retro_salary": "6316"}
 OLD_PAYROLL_MAP = {"salary": "621100001", "transport": "621100003", "overtime": "621100004", "commission": "621100005", "retro_salary": "621100006",
                    "schooling": "621100007", "bonus": "621100008", "thirteenth_month": "621100009", "tax": "443100001", "nssf": "447100001", "payable": "421100001"}

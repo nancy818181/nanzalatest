@@ -14,6 +14,42 @@ log = logging.getLogger("saber")
 
 
 class ReportsExtrasMixin:
+    def open_executive_dashboard(self):
+        from desktop_executive import open_executive
+        try: return open_executive(self)
+        except (RuntimeError, ValueError, KeyError, TypeError) as exc: messagebox.showerror("Executive dashboard",str(exc))
+
+    def open_commercial_documents(self):
+        from desktop_commercial import open_commercial_documents
+        try: return open_commercial_documents(self)
+        except (RuntimeError, ValueError, KeyError, TypeError) as exc: messagebox.showerror("Commercial documents",str(exc))
+
+    def open_dashboard_brief(self):
+        window=tk.Toplevel(self);window.title("Period dashboard summary");window.transient(self)
+        self.fit_dialog(window,1000,650)
+        from desktop_common import main_currency
+        year=int(self.current_fiscal_year)
+        start=tk.StringVar(value=f"01-01-{year}");end=tk.StringVar(value=self.fiscal_today());currency=tk.StringVar(value=main_currency(self,1))
+        bar=tk.Frame(window);bar.pack(fill="x",padx=10,pady=8)
+        for label,var in (("From",start),("To",end)):
+            tk.Label(bar,text=label).pack(side="left");tk.Entry(bar,textvariable=var,width=12).pack(side="left",padx=5)
+        ttk.Combobox(bar,textvariable=currency,values=self.currency_codes,state="readonly",width=7).pack(side="left",padx=5)
+        viewer=self.report_viewer(window,[600,200]);snapshot=[]
+        def build():
+            from desktop_stage3_common import run_with_progress
+            requested=(start.get(),end.get(),currency.get(),self.language.get())
+            generation=self.__dict__.get("_page_generation")
+            def done(result):
+                if not window.winfo_exists() or generation!=self.__dict__.get("_page_generation"): return
+                snapshot[:]=[result];self.show_sections(viewer,result["sections"])
+            run_with_progress(self,"Period summary",lambda _p,_c:self.client.dashboard_brief(*requested),done)
+        def export(fmt):
+            if not snapshot:return messagebox.showwarning("Period summary","Build the report first",parent=window)
+            report=snapshot[0];self.save_sections(report["title"],report["meta"],report["sections"],"Period_summary",fmt)
+        tk.Button(bar,text="Build",command=build).pack(side="left",padx=5)
+        for label,fmt in (("PDF","pdf"),("Excel","xlsx")):
+            tk.Button(bar,text=label,command=lambda f=fmt:export(f)).pack(side="left",padx=4)
+
     # ------------------------------------------------------------ Management Pack
     def build_management_pack_page(self, nested):
         page = tk.Frame(nested, bg=LIGHT); nested.add(page, text="Management Pack"); self.management_pack_page = page
@@ -74,9 +110,15 @@ class ReportsExtrasMixin:
         from desktop_common import account_label
         window = tk.Toplevel(self); window.title(f"Entries of {account_label(self, code)}"); window.configure(bg=LIGHT); window.transient(self)
         self.fit_dialog(window, 1100, 520)
-        debit = sum(float(r["debit"] or 0) for r in rows); credit = sum(float(r["credit"] or 0) for r in rows)
-        tk.Label(window, text=f"{account_label(self, code)}   {date_from or ''} - {date_to or ''}   {len(rows)} line(s)   Debit {debit:,.2f}   Credit {credit:,.2f}   Balance {debit - credit:,.2f} "
-                 "(amounts in the currency of each entry)", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", padx=12, pady=(10, 4))
+        from decimal import Decimal
+        amounts={}
+        for row in rows:
+            debit,credit=amounts.setdefault(row["currency"],[Decimal(0),Decimal(0)])
+            amounts[row["currency"]]=[debit+Decimal(str(row["debit"] or 0)),credit+Decimal(str(row["credit"] or 0))]
+        summary="   |   ".join(f"{currency}: Debit {debit:,.2f}  Credit {credit:,.2f}  Balance {debit-credit:,.2f}"
+                               for currency,(debit,credit) in sorted(amounts.items()))
+        tk.Label(window, text=f"{account_label(self, code)}   {date_from or ''} - {date_to or ''}   {len(rows)} line(s)   {summary}",
+                 bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", padx=12, pady=(10, 4))
         frame = tk.Frame(window, bg=LIGHT); frame.pack(fill="both", expand=True, padx=12, pady=4)
         tree = ttk.Treeview(frame, columns=("date", "entry", "description", "party", "currency", "debit", "credit"), show="headings")
         for key, label, width, anchor in (("date", "Date", 90, "center"), ("entry", "Entry", 130, "w"), ("description", "Description", 360, "w"), ("party", "Customer / Supplier", 180, "w"),

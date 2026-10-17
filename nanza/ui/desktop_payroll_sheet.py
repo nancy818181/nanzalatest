@@ -53,6 +53,8 @@ def sheet_rows(employees, records, start, end):
             for code in PL.ALLOWANCE_CODES: row[code] = _fmt(allowances.get(code))
             for key, _ in RESULT_COLUMNS: row[key] = _fmt(record.get(key)) if key != "status" else record.get("status") or "draft"
             row["payroll_id"] = record.get("id"); row["payroll_number"] = record.get("payroll_number")
+            try: row["allowance_accounts"] = json.loads(record.get("allowance_accounts") or "{}")
+            except (TypeError, ValueError): row["allowance_accounts"] = {}
         else:
             row["salary"] = _fmt(e.get("base_salary"))
             for key in ("overtime", "commission", "bonus", "thirteenth_month", "transport", "transport_days"): row[key] = ""
@@ -71,6 +73,7 @@ def _fmt(value):
 
 def payload_for(row, period_end):
     payload = {"employee_id": row["employee_id"], "period_date": period_end, "allowances": {}}
+    payload["allowance_accounts"] = dict(row.get("allowance_accounts") or {})
     if row.get("payroll_id"): payload["id"] = row["payroll_id"]  # 2.9.126: update that record (its number is kept)
     for key, _ in BASE_COLUMNS:
         value = str(row.get(key) or "").replace(",", "").strip()

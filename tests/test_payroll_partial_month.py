@@ -34,6 +34,24 @@ class PartialMonthPayrollTest(unittest.TestCase):
             self.assertEqual(actual["salary"],70000000)
             self.assertEqual(actual["worked_days"],16)
 
+    def test_actual_days_across_28_29_30_and_31_day_months(self):
+        import calendar
+        with TemporaryDirectory() as folder:
+            db=Database(Path(folder)/"company.db"); db.initialize("secret12345")
+            self.addCleanup(db.release)
+            for year,month in ((2026,2),(2024,2),(2026,4),(2026,5)):
+                count=calendar.monthrange(year,month)[1]
+                employee=db.save_employee({"full_name":f"Partial {year}-{month}","base_salary":str(count*1000000),
+                    "currency":"LBP","hire_date":f"10-{month:02d}-{year}","leave_date":f"{count-4:02d}-{month:02d}-{year}"},1)
+                result=db.calculate_payroll({"employee_id":employee["id"],"period_date":f"{count:02d}-{month:02d}-{year}"})
+                self.assertEqual(result["worked_days"],count-13)
+                self.assertEqual(result["salary"],(count-13)*1000000)
+                self.assertLessEqual(result["transport_days"],result["worked_days"])
+                with self.assertRaisesRegex(ValueError,"employment period"):
+                    db.calculate_payroll({"employee_id":employee["id"],"period_date":f"{count:02d}-{month:02d}-{year}","transport_days":count})
+                with self.assertRaisesRegex(ValueError,"whole number"):
+                    db.calculate_payroll({"employee_id":employee["id"],"period_date":f"{count:02d}-{month:02d}-{year}","transport_days":"1.5"})
+
     def test_leave_date_and_month_without_employment(self):
         with TemporaryDirectory() as folder:
             db=Database(Path(folder)/"company.db")

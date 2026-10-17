@@ -227,6 +227,16 @@ def suggest(db, scope="purchase", name=None, number=None, text="", lines=()):
     account = None
     if rule:
         code = rule["data"].get("expense_account") or ""
+        if scope == "expense" and code:
+            import pdf_import
+            current = pdf_import.expense_classification(" ".join([text or "", *lines]))
+            category = current["category"]
+            digits = lambda value: re.sub(r"\D", "", str(value))
+            differs = category and not digits(code).startswith(digits(category[1]))
+            if current["status"] == "ambiguous" or differs:
+                return {"rule": None, "account": None, "lines": classified, "review_required": True,
+                        "conflicting_rule": rule,
+                        "review_warnings": ["The current expense description conflicts with the supplier's saved posting rule; choose the accounts manually"]}
         account = {"code": code, "confidence": 0.95, "source": f"rule of {rule['label']} ({rule['times']} time(s), last {rule['last_reference'] or '-'})"}
     else:
         votes = {}
@@ -237,10 +247,11 @@ def suggest(db, scope="purchase", name=None, number=None, text="", lines=()):
             account = {"code": code, "confidence": round(min(0.9, score / max(1, len(classified))), 2), "source": "lines saved before"}
         else:
             import pdf_import
-            category = pdf_import.expense_category(" ".join([text or "", *lines, name or ""]))
+            classification = pdf_import.expense_classification(" ".join([text or "", *lines, name or ""]))
+            category = classification["category"]
             if category:
                 account = {"code": category[2], "confidence": 0.7, "source": f"keywords: {category[0]}", "parent": category[1], "name": category[3]}
-            else:
+            elif classification["status"] != "ambiguous":
                 import ai_mapper
                 found = ai_mapper.suggest_account(" ".join(lines) or text)
                 if found: account = {"code": found["code"], "confidence": found["confidence"], "source": "chart of accounts names", "name": found["name"]}

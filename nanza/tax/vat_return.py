@@ -726,6 +726,14 @@ def post_settlement(db, year, quarter, user_id, previous_year_db=None, payable_a
     return {**plan, "voucher": voucher["voucher"]["entry_number"], "closing_voucher": closing_number}
 
 
+def preparation_controls(result):
+    """Readiness is separate from arithmetic agreement with VAT ledger accounts."""
+    blockers = list(result.get("dependency_errors") or []) + list(result.get("blocking_documents") or [])
+    preview = bool(result.get("include_review") or result.get("currency_filter", "All") != "All")
+    return {"blocked": bool(blockers), "preview_only": preview or bool(result.get("provisional")),
+            "blockers": blockers, "status": "BLOCKED" if blockers else "PREVIEW ONLY" if preview or result.get("provisional") else "REVIEW REQUIRED"}
+
+
 def export_sections(result):
     """Export an internal VAT calculation schedule plus supporting documents."""
     title = f"Quarterly VAT Calculation Schedule - Q{result['quarter']} {result['year']} | {ARABIC_TITLE}"
@@ -742,7 +750,13 @@ def export_sections(result):
     for warning in result.get("warnings", []): meta.append("Check: " + warning)
     keys = [key for _, key, _ in LINES]; totals_index = [keys.index(k) for k in ("total_output", "total_input", "net")]
     no_base = ("adj_output", "adj_input", "net", "prorata", "annual_adjustment", "total_output")
-    sections = []
+    controls = preparation_controls(result)
+    sections = [{"heading": "VAT preparation controls", "headers": ["Control", "Result"],
+                 "rows": [["Preparation status", controls["status"]],
+                          ["Earlier-quarter errors", len(result.get("dependency_errors") or [])],
+                          ["Documents blocking filing", len(result.get("blocking_documents") or [])],
+                          ["Excluded draft documents", result.get("review_excluded", 0)],
+                          ["Scope", "Review the VAT ledger reconciliation and supporting documents before filing."]], "total_rows": []}]
     for code, values in sorted(result["per_currency"].items()):
         rows = [[number, label_of(label), ARABIC.get(key, ""), values[key]["base"] if key not in no_base else "", values[key]["vat"] if key not in ("sales_zero", "sales_exempt", "sales_out") else "",
                  values[key]["vat_lbp"] if key not in ("sales_zero", "sales_exempt", "sales_out") else ""] for number, key, label in LINES if key in values]

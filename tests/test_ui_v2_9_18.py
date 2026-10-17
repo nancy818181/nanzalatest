@@ -20,8 +20,6 @@ from client import ApiClient
 from server import run_server
 
 
-@unittest.skipUnless(HAVE_DISPLAY, "needs a display for the program window")
-
 def _placed_editor(app, sheet, kind):
     """The cell editor placed on a sheet. Keyboard focus is not reliable on a build machine without an active window,
     so the editor is found where the sheet puts it; focus is only the fallback."""
@@ -29,6 +27,7 @@ def _placed_editor(app, sheet, kind):
     placed = [w for w in sheet.tree.place_slaves() if isinstance(w, kind) and not (kind is __import__("tkinter").Entry and isinstance(w, _ttk.Combobox))]
     return placed[-1] if placed else app.focus_get()
 
+@unittest.skipUnless(HAVE_DISPLAY, "needs a display for the program window")
 class ProgramWindowFixesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -344,7 +343,7 @@ class ProgramWindowFixesTest(unittest.TestCase):
         self.assertEqual(supplier_box._account_var.get().split(" - ")[0],"4111")
         self.assertEqual(app.grab_current(),window)
         vat_box=next(box for box in account_boxes if box._account_var.get().split(" - ")[0]=="44210")
-        vat_box.focus_set(); app.update()
+        vat_box.focus_force(); app.update()
         vat_box._account_var.set("VAT on Expenses - Deductible")
         vat_box.event_generate("<Tab>"); app.update()
         self.assertEqual(vat_box._account_var.get().split(" - ")[0],"44216")

@@ -240,6 +240,15 @@ class ApiHandler(BaseHTTPRequestHandler):
             return self._json(200,{"items":[c for c in items if not allowed or str(c["id"]) in allowed]})
         if not self._select_database(): return
         if self._module_denied(user, path): return
+        if path.startswith("/api/commercial"):
+            import commercial_documents as commercial
+            try:
+                if path == "/api/commercial": return self._json(200,{"items":commercial.listing(self.db)})
+                document_id=int(path.split("/")[3]); document=commercial.get(self.db,document_id)
+                if path.endswith("/matching"): return self._json(200,commercial.matching(self.db,document_id,self._query(parsed,"language","en")))
+                if path.endswith("/print"): return self._json(200,commercial.sections(document,self._query(parsed,"language","en")))
+                return self._json(200,document)
+            except (ValueError,KeyError,TypeError,IndexError,sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path in ("/api/backups/download","/api/backups/folder","/api/backups") and user["role"]=="viewer":
             return self._json(403,{"error":"Backup access is not available for viewer accounts"})
         if path == "/api/me":
@@ -258,6 +267,15 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return self._json(200,ledger_reports.json_ready(result))
                 return self._json(200,{"sections":ledger_reports.json_ready(payroll_extras.payslip_sections(self.db,self._query(parsed,"month_end")))})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path in ("/api/dashboard/brief","/api/dashboard/executive"):
+            try:
+                start=self._query(parsed,"date_from");end=self._query(parsed,"date_to")
+                from executive_dashboard import build as executive_build
+                builder=executive_build if path.endswith("/executive") else management_pack.brief
+                result=builder(self.db,start,end,self._query(parsed,"currency","USD"),
+                    self._previous_year_db(int(iso_date(start)[:4])),self._query(parsed,"language","en"))
+                return self._json(200,result)
+            except (ValueError, KeyError, RuntimeError, OSError, sqlite3.Error, ArithmeticError) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/management-pack":  # 2.9.82
             try:
                 month_end=self._query(parsed,"month_end"); year=int(iso_date(month_end)[:4])
@@ -325,6 +343,10 @@ class ApiHandler(BaseHTTPRequestHandler):
             try: return self._json(200,{"items":fixed_assets.schedule(self.db,int(path.split("/")[-2]))})
             except KeyError: return self._json(404,{"error":"Asset not found"})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/payroll/salary-payments":
+            import payroll_payments
+            try: return self._json(200,{"items":payroll_payments.history(self.db,self._query(parsed,"payroll_id"))})
+            except (ValueError, TypeError) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/payroll/reports":
             try:
                 result=build_payroll_report(self.db,self._query(parsed,"report","R10"),self._query(parsed,"period_type","quarterly"),
@@ -773,8 +795,17 @@ class ApiHandler(BaseHTTPRequestHandler):
         if not self._approval_required(kind) or self.master_db.user_can(user, "approve"): return None
         import approvals
         entry = approvals.entry_of(self.db, kind, result)
-        if entry and approvals.hold(self.db, entry, user["id"]): return "saved as a draft: it waits for approval by another user"
-        return None
+        if not entry or not approvals.hold(self.db, entry, user["id"]):
+            raise ValueError("The document could not be placed under approval. Nothing was saved.")
+        return "saved as a draft: it waits for approval by another user"
+
+    def _save_with_approval(self, user, kind, save):
+        """Commit the source, journal and approval state together, including failed holds."""
+        with self.db.connect() as connection:
+            if not connection.in_transaction: connection.execute("BEGIN IMMEDIATE")
+            result=save()
+            note=self._hold_for_approval(user,kind,result)
+        return result,note
 
     def _approval_gate(self, user, invoice, invoice_id=None):
         if not self._approval_required() or not isinstance(invoice, dict): return None
@@ -835,6 +866,18 @@ class ApiHandler(BaseHTTPRequestHandler):
             return self._json(423,{"error":"This fiscal year is closed and read-only"})
         if user["role"] == "viewer":
             return self._json(403,{"error":"Viewer access is read-only"})
+        if path.startswith("/api/commercial"):
+            import commercial_documents as commercial
+            try:
+                if path == "/api/commercial": result=commercial.save(self.db,body.get("header",{}),body.get("rows"),user["id"],body.get("id"))
+                else:
+                    document_id=int(path.split("/")[3]); action=path.rsplit("/",1)[-1]
+                    if action == "status": result=commercial.set_status(self.db,document_id,body.get("status"),body.get("revision"),user["id"])
+                    elif action == "receive": result=commercial.receive(self.db,document_id,body,user["id"])
+                    elif action == "invoice": result=commercial.invoice(self.db,document_id,body,user["id"])
+                    else: raise ValueError("Unknown commercial document action")
+                return self._json(201,result)
+            except (ValueError,KeyError,TypeError,IndexError,sqlite3.Error,ArithmeticError) as exc: return self._json(400,{"error":str(exc)})
         if self._module_denied(user, path): return
         if path == "/api/reports/financial-config":
             try:
@@ -886,6 +929,9 @@ class ApiHandler(BaseHTTPRequestHandler):
             except KeyError: return self._json(404,{"error":"Invoice not found"})
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/invoices/") and path.endswith("/landed-cost"):
+            paid = str(body.get("payment_method") or "On Account (Not Cash)") != "On Account (Not Cash)"
+            if (self._approval_required("invoices") or (paid and self._approval_required("payments"))) and not self.master_db.user_can(user,"approve"):
+                return self._json(403,{"error":"An approver must record purchase costs under this company's approval settings"})
             try: return self._json(201,{"invoice_id":self.db.add_landed_cost(int(path.split("/")[-2]),body,user["id"])})
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/production/"):  # 2.9.65
@@ -1085,15 +1131,13 @@ class ApiHandler(BaseHTTPRequestHandler):
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
         if path == "/api/payments":
-            try: payment_id=self.db.add_payment(body,user["id"])
+            try: payment_id,note=self._save_with_approval(user,"payments",lambda:self.db.add_payment(body,user["id"]))
             except Exception as exc: return self._json(400,{"error":str(exc)})
-            note=self._hold_for_approval(user,"payments",payment_id)
             return self._json(201,{"payment_id":payment_id,**({"approval":note} if note else {})})
         if path == "/api/expenses":
-            try: expense_id=self.db.add_expense(body,user["id"])
+            try: expense_id,note=self._save_with_approval(user,"expenses",lambda:self.db.add_expense(body,user["id"]))
             except Exception as exc: return self._json(400,{"error":str(exc)})
-            _learn("learn_expense", self.db, expense_id, body.get("supplier"))
-            note=self._hold_for_approval(user,"expenses",expense_id)
+            if not note: _learn("learn_expense", self.db, expense_id, body.get("supplier"))
             return self._json(201,{"expense_id":expense_id,**({"approval":note} if note else {})})
         if path == "/api/approvals/approve":  # 2.9.100: post the selected drafts (vouchers, payments, expenses, invoices)
             if not self.master_db.user_can(user, "approve"): return self._json(403,{"error":"You do not have permission to approve documents. Ask the administrator."})
@@ -1125,6 +1169,26 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/payroll/nssf-filed":
             try: return self._json(201,{"item":self.db.save_nssf_filed_wages(body,user["id"])})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/payroll/salary-payments":
+            import payroll_payments
+            try:
+                with self.db.connect() as connection:
+                    if not connection.in_transaction: connection.execute("BEGIN IMMEDIATE")
+                    result=payroll_payments.record(self.db,body,user["id"])
+                    result["approval"]=None
+                    if (self._approval_required("journal_vouchers") or self._approval_required("payments")) and not self.master_db.user_can(user,"approve"):
+                        import approvals
+                        if approvals.hold(self.db,result["entry_id"],user["id"]):
+                            result["approval"]="Saved as a draft: it waits for approval by another user"
+                return self._json(201,result)
+            except (ValueError, KeyError, TypeError, sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/payroll/salary-payments/reverse":
+            import payroll_payments
+            try:
+                if (self._approval_required("journal_vouchers") or self._approval_required("payments")) and not self.master_db.user_can(user,"approve"):
+                    return self._json(403,{"error":"An approver must reverse salary payments"})
+                return self._json(200,payroll_payments.reverse(self.db,body.get("payment_id"),body.get("date"),user["id"]))
+            except (ValueError, KeyError, TypeError, sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/payroll/nssf-payment":
             try: return self._json(201,self.db.record_nssf_payment(body,user["id"]))
             except Exception as exc: return self._json(400,{"error":str(exc)})
@@ -1146,7 +1210,7 @@ class ApiHandler(BaseHTTPRequestHandler):
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
         if path == "/api/income-exemptions":  # 2.9.113
-            try: return self._json(200,self.db.set_income_exemption(body.get("source_id"),body.get("reason"),body.get("article","")))
+            try: return self._json(200,self.db.set_income_exemption(body.get("source_id"),body.get("reason"),body.get("article",""),user["id"]))
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/tax-flags":  # 2.9.113
             try: result=self.db.set_tax_flag(body.get("source_type"),body.get("source_id"),bool(body.get("not_deductible")))
@@ -1154,9 +1218,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             _learn("learn_tax_flag", self.db, body.get("source_type"), body.get("source_id"), bool(body.get("not_deductible")))
             return self._json(200,result)
         if path == "/api/journal-vouchers":
-            try: result=self.db.save_journal_voucher(body.get("voucher",{}),body.get("lines",[]),user["id"])
+            try: result,note=self._save_with_approval(user,"journal_vouchers",lambda:self.db.save_journal_voucher(body.get("voucher",{}),body.get("lines",[]),user["id"]))
             except Exception as exc: return self._json(400,{"error":str(exc)})
-            note=self._hold_for_approval(user,"journal_vouchers",result)
             return self._json(201,{**result,**({"approval":note} if note else {})})
         if path.startswith("/api/invoices/") and path.endswith("/items"):
             try:

@@ -13,6 +13,8 @@ from database_common import _soft_iso  # noqa: F401
 class JournalStore:
     def delete_journal_voucher(self,entry_id,user_id):
         with self.connect() as db:
+            if db.execute("SELECT 1 FROM salary_payments WHERE entry_id=? OR reversal_entry_id=? LIMIT 1", (int(entry_id), int(entry_id))).fetchone():
+                raise ValueError("Use salary payment reversal; a linked salary voucher cannot be deleted here")
             entry=db.execute("SELECT * FROM journal_entries WHERE id=?",(int(entry_id),)).fetchone()
             if not entry: raise KeyError(entry_id)
             if db.execute("SELECT 1 FROM fixed_asset_postings WHERE entry_id=? LIMIT 1",(int(entry_id),)).fetchone():
@@ -77,6 +79,8 @@ class JournalStore:
         with self.connect() as db:
             branch_id=self._branch_id(db,item)
             if entry_id:
+                if db.execute("SELECT 1 FROM salary_payments WHERE entry_id=? OR reversal_entry_id=? LIMIT 1", (int(entry_id), int(entry_id))).fetchone():
+                    raise ValueError("Use salary payment reversal; a linked salary voucher cannot be edited here")
                 if db.execute("SELECT 1 FROM fixed_asset_postings WHERE entry_id=? LIMIT 1",(int(entry_id),)).fetchone():
                     raise ValueError("This voucher is linked to fixed-asset depreciation and cannot be edited here")
                 existing=db.execute("SELECT * FROM journal_entries WHERE id=? AND source_type='journal_voucher'",(int(entry_id),)).fetchone()

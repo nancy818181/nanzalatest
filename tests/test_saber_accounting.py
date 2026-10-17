@@ -2,6 +2,7 @@ import tests_setup  # noqa: F401  2.9.74: the sample company of the tests (a new
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from openpyxl import Workbook
 from database import Database
 from importer import read_invoices
@@ -205,7 +206,11 @@ class SaberAccountingTest(unittest.TestCase):
             db.save_settings({"base_currency":"EUR","backup_interval_hours":"12"},admin["id"])
             self.assertEqual(db.settings()["base_currency"],"EUR")
             db.save_exchange_rate({"rate_date":"22-09-2026","from_currency":"USD","to_currency":"LBP","rate":"89500"},admin["id"])
-            rates=db.list_exchange_rates(); fixed=next(row for row in rates if row["from_currency"]=="USD" and row["to_currency"]=="LBP")
+            # Manual-rate/backup acceptance must not depend on the live FX provider.
+            # Download behavior has separate mocked regressions in test_rate_vat_accuracy.
+            with patch.object(db, "_may_download_rates", return_value=False):
+                rates=db.list_exchange_rates()
+            fixed=next(row for row in rates if row["from_currency"]=="USD" and row["to_currency"]=="LBP")
             self.assertEqual(fixed["rate"],89500.0)
             result=db.save_exchange_rate({"date_from":"01-01-2025","date_to":"03-01-2025","from_currency":"EUR","to_currency":"USD","rate":"1.04"},admin["id"])
             self.assertEqual(result["days"],3)

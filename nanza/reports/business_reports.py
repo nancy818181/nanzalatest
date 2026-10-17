@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from database import display_date, iso_date
+from settlements import posted_payment_sql, settlement_amount, invoice_kind
 
 ZERO = Decimal("0")
 BUCKETS = (30, 60, 90, 180)
@@ -77,16 +78,17 @@ def ageing(db, options):
     labels = ["Not due"] + [f"{a + 1}-{b} days" for a, b in zip((0,) + limits[:-1], limits)] + [f"Over {limits[-1]} days"]
     convert = _Converter(db, options.get("basis") or "USD"); basis = convert.basis; as_of_date = datetime.strptime(as_of, "%Y-%m-%d")
     with db.connect() as connection:
-        invoices = [dict(r) for r in connection.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.due_date,i.currency,i.doc_subtype,i.party_id,p.name party_name,p.account_number,p.due_days,
+        invoices = [dict(r) for r in connection.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,i.due_date,i.currency,i.doc_subtype,i.party_id,p.name party_name,p.account_number,p.due_days,
             CAST(i.total AS REAL) total,CAST(COALESCE(i.amount_paid,'0') AS REAL) paid,
             (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN payments x ON x.id=a.payment_id WHERE a.invoice_id=i.id AND
-             (CASE WHEN x.payment_date GLOB '??-??-????' THEN substr(x.payment_date,7,4)||'-'||substr(x.payment_date,4,2)||'-'||substr(x.payment_date,1,2) ELSE x.payment_date END)<=?) allocated
-            FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.kind=? AND i.status IN ('posted','review')""", (as_of, kind))]
+             (CASE WHEN x.payment_date GLOB '??-??-????' THEN substr(x.payment_date,7,4)||'-'||substr(x.payment_date,4,2)||'-'||substr(x.payment_date,1,2) ELSE x.payment_date END)<=?
+             AND {posted_payment_sql()}) allocated
+            FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.kind=? AND i.status='posted'""", (as_of, kind))]
         payment_kind = "customer_receipt" if kind == "sale" else "supplier_payment"
-        payments = [dict(r) for r in connection.execute("""SELECT x.party_id,x.kind,x.currency,x.payment_date,CAST(x.amount AS REAL) amount,
+        payments = [dict(r) for r in connection.execute(f"""SELECT x.party_id,x.kind,x.currency,x.payment_date,x.amount,x.exchange_difference,x.party_account,
             p.name party_name,p.kind party_kind,p.account_number,
             (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a WHERE a.payment_id=x.id) allocated
-            FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE x.kind IN ('customer_receipt','supplier_payment')""")]
+            FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE x.kind IN ('customer_receipt','supplier_payment') AND {posted_payment_sql()}""")]
     parties = {}
     for inv in invoices:
         try: day = iso_date(inv["invoice_date"])
@@ -108,9 +110,9 @@ def ageing(db, options):
     for pay in payments:
         try: day = iso_date(pay["payment_date"])
         except ValueError: continue
-        free = _d(pay["amount"]) - _d(pay["allocated"])
-        if day > as_of or free <= 0: continue
-        if (kind == "sale" and pay["party_kind"] == "supplier") or (kind == "purchase" and pay["party_kind"] == "customer"): continue
+        free = settlement_amount(pay) - _d(pay["allocated"])
+        if day > as_of or abs(free) < Decimal("0.005"): continue
+        if invoice_kind(pay) != kind: continue
         party = parties.setdefault(pay["party_id"], {"name": pay["party_name"] or "-", "account": pay.get("account_number") or "",
                                                      "buckets": [ZERO] * len(labels), "unallocated": ZERO, "invoices": [], "due_by": ZERO})
         party["unallocated"] += convert(free, pay["currency"], day) * (1 if pay["kind"] == payment_kind else -1)

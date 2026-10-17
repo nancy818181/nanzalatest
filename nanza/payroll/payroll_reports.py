@@ -218,8 +218,11 @@ def build_payroll_report(db, report="R10", period_type="quarterly", year=None, i
                      sum(v["income_tax"] for v in summary.values()), sum(v["retro_tax"] for v in summary.values()),
                      sum(v["employee_nssf"] for v in summary.values()), sum(v["employer_nssf"] for v in summary.values())]]
         rows = [[GROUPS[k], v["employees"], v["gross"], v["income_tax"], v["retro_tax"], v["employee_nssf"], v["employer_nssf"]] for k, v in summary.items()] + combined
-        sections.append({"heading": "Grand total", "headers": ["Group", "Employees", "Gross", "Income Tax", "Retro Tax", employee_label, "Employer NSSF"],
+        sections.append({"heading": "Grand total", "keep_together": True, "headers": ["Group", "Employees", "Gross", "Income Tax", "Retro Tax", employee_label, "Employer NSSF"],
                          "rows": [[r[0], r[1]] + [_lbp(x) for x in r[2:]] for r in rows], "total_rows": [len(rows) - 1]})
+    from payroll_controls import review
+    controls, control_sections = review([r for r in records if (r.get("employee_group") or "employee") in _group_keys(group)])
+    sections.extend(control_sections)
     sections.append(settings_section)
     for section in sections: section.setdefault("compact", True)  # payroll worksheets: hide all-zero columns
     meta = [f"Company: {company.get('company_name') or '-'}   MOF No.: {company.get('company_mof') or '-'}",
@@ -228,7 +231,7 @@ def build_payroll_report(db, report="R10", period_type="quarterly", year=None, i
             "Preparation worksheet only—not the Ministry of Finance's current R5/R6/R10 form or electronic filing. R10 is quarterly; monthly/yearly views are internal review periods.",
             "Confirm current form fields, worker eligibility, wage classification, spouse-working deductions, applicable rates, and due dates before filing."]
     return {"report": report, "title": REPORTS[report], "period_label": label, "date_from": start, "date_to": end,
-            "meta": meta, "sections": sections, "summary": summary, "record_count": len(records)}
+            "meta": meta, "sections": sections, "summary": summary, "record_count": len(records), "controls": controls}
 
 
 def json_ready(result):
@@ -377,10 +380,13 @@ def build_nssf_statement(db, period_type="monthly", year=None, index=1, include_
             f"Period: {label} ({_display(start)} to {_display(end)})   Amounts in LBP   Source: " + ("posted and draft payroll" if include_drafts else "posted payroll"),
             "Review worksheet only—not an official CNSS declaration or payment form. Confirm rates, wage classification, employee eligibility, and filing period with CNSS before filing or paying.",
             "The 10-employee monthly/quarterly choice is an unverified application suggestion; CNSS Law Article 72's under-10 rule concerns fixed contributions, not a confirmed filing frequency."]
+    from payroll_controls import review
+    controls, control_sections = review(records)
+    sections.extend(control_sections)
     return {"report": "NSSF", "title": NSSF_TITLE, "period_label": label, "date_from": start, "date_to": end, "meta": meta, "sections": sections,
             "declaration_period": period_type, "declaration_employee_count": employee_count_at_selection,
             "record_count": len(records), "employee_count": len(period_employees), "active_employee_count": current_employee_count,
-            "payroll_employee_count": len(payroll_employee_ids), "net_payable_lbp": totals["net"], "monthly_detail": detail, "summary": {k: v for k, v in totals.items()}}
+            "payroll_employee_count": len(payroll_employee_ids), "controls": controls, "net_payable_lbp": totals["net"], "monthly_detail": detail, "summary": {k: v for k, v in totals.items()}}
 
 
 def build_nssf_settlement(db,year):

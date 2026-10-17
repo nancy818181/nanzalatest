@@ -158,7 +158,7 @@ class PostingRulesTest(unittest.TestCase):
              patch("desktop_expenses.read_invoice_pdf",return_value={"party_name":"Supplier"}) as read, \
              patch.object(ExpensesMixin,"fill_expense_from_reading") as fill:
             ExpensesMixin.choose_expense_pdf(app)
-        read.assert_called_once_with("expense.jpg")
+        read.assert_called_once_with("expense.jpg", cancel=None)
         fill.assert_called_once_with(app,"expense.jpg",{"party_name":"Supplier"})
 
     def test_expense_rule_only_with_a_supplier(self):

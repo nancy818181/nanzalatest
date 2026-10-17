@@ -17,6 +17,12 @@ KINDS = (("customer_receipt", "Customer receipts (RV)"), ("supplier_payment", "S
 
 
 class RenumberMixin:
+    def open_numbering_settings(self):
+        if (self.current_user or {}).get("role") != "admin": return
+        self.select_main_tab(self.settings_tab)
+        if hasattr(self, "settings_notebook") and hasattr(self, "numbering_settings_page"):
+            self.settings_notebook.select(self.numbering_settings_page)
+
     def build_renumber_page(self, page):
         self.build_numbering_series(page)  # 2.9.116: naming series above the renumbering
         year = str(getattr(self, "current_fiscal_year", "") or "")

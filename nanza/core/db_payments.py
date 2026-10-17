@@ -9,6 +9,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     timedelta, utcnow
 )
 from database_common import _soft_iso  # noqa: F401
+from settlements import posted_payment_sql, settlement_amount
 
 
 class PaymentsStore:
@@ -248,13 +249,20 @@ class PaymentsStore:
         with self.connect() as db:
             return [row[0] for row in db.execute("SELECT source_id FROM tax_flags WHERE source_type=?", (source_type,))]
 
-    def set_income_exemption(self, source_id, reason, article=""):
+    @atomic
+    def set_income_exemption(self, source_id, reason, article="", user_id=None):
         """2.9.113: a sales invoice whose income is not subject to income tax (already taxed / exempt by law) - the reason is required."""
         from tax_adjustments import reason_text
         text = reason_text(reason, article)
         with self.connect() as db:
+            source = db.execute("SELECT kind,status,invoice_date FROM invoices WHERE id=?", (int(source_id),)).fetchone()
+            if not source or source["kind"] != "sale": raise ValueError("Choose an existing sales invoice")
+            if source["status"] in ("cancelled", "deleted"): raise ValueError("Cancelled or deleted invoices cannot be changed")
+            self._assert_period_open(source["invoice_date"])
             if text: db.execute("INSERT OR REPLACE INTO income_exemptions(source_type,source_id,reason) VALUES('invoice',?,?)", (int(source_id), text))
             else: db.execute("DELETE FROM income_exemptions WHERE source_type='invoice' AND source_id=?", (int(source_id),))
+            db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                (user_id, "income_exemption", "invoice", int(source_id), json.dumps({"reason": text}), utcnow()))
         return {"source_id": int(source_id), "reason": text}
 
     def income_exemptions(self):
@@ -385,8 +393,10 @@ class PaymentsStore:
     def open_documents(self, party_id):
         """Invoices of a customer / supplier with what is still unpaid (after amounts paid and allocations)."""
         with self.connect() as db:
-            rows = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.kind,i.doc_subtype,i.currency,CAST(i.total AS REAL) total,
-                CAST(COALESCE(i.amount_paid,'0') AS REAL) paid,(SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a WHERE a.invoice_id=i.id) allocated
+            rows = [dict(r) for r in db.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,i.kind,i.doc_subtype,i.currency,CAST(i.total AS REAL) total,
+                CAST(COALESCE(i.amount_paid,'0') AS REAL) paid,
+                (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
+                 WHERE a.invoice_id=i.id AND {posted_payment_sql()}) allocated
                 FROM invoices i WHERE i.party_id=? AND i.status NOT IN ('cancelled','deleted') ORDER BY i.id""", (int(party_id),))]
         for row in rows:
             sign = -1 if row.get("doc_subtype") == "credit_note" else 1
@@ -410,9 +420,11 @@ class PaymentsStore:
             total = Decimal("0")
             for entry in allocations or []:
                 amount = Decimal(str(entry.get("amount") or 0).replace(",", ""))
+                if not amount.is_finite(): raise ValueError("Invalid allocation amount")
                 if amount <= 0: continue
                 invoice = db.execute("SELECT * FROM invoices WHERE id=?", (int(entry["invoice_id"]),)).fetchone()
                 if not invoice or invoice["party_id"] != payment["party_id"]: raise ValueError("Allocate only to documents of the same customer / supplier")
+                if invoice["status"] != "posted": raise ValueError("Allocate only to posted documents")
                 if invoice["currency"] != payment["currency"]: raise ValueError(f"{invoice['invoice_number']} is in {invoice['currency']}; the payment is in {payment['currency']}")
                 expected = settlement_kind.get((invoice["kind"], invoice["doc_subtype"] == "credit_note"))
                 if expected != payment["kind"]:
@@ -427,7 +439,8 @@ class PaymentsStore:
                     left = max(Decimal("0"), open_amount - (allocated - amount))
                     raise ValueError(f"{invoice['invoice_number']}: only {left:,.2f} {invoice['currency']} is still open - allocate at most that; "
                                      "the rest of the payment stays unapplied (an advance) on the account")
-            if total > Decimal(str(payment["amount"])) + Decimal("0.005"): raise ValueError(f"Allocated {total:,.2f} is more than the payment {Decimal(str(payment['amount'])):,.2f}")
+            if total > settlement_amount(payment) + Decimal("0.005"):
+                raise ValueError(f"Allocated {total:,.2f} is more than the payment party settlement {settlement_amount(payment):,.2f}")
         return self.payment_allocations(payment_id)
 
     def payment_allocations(self, payment_id):

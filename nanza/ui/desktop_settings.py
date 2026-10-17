@@ -115,7 +115,7 @@ class SettingsMixin:
                 row["name_en"],row.get("name_fr") or "",row.get("name_ar") or "",row["type"]))
 
     def build_settings(self):
-        nested=ttk.Notebook(self.settings_tab); nested.pack(fill="both",expand=True,padx=10,pady=10)
+        nested=ttk.Notebook(self.settings_tab); self.settings_notebook=nested; nested.pack(fill="both",expand=True,padx=10,pady=10)
         users=tk.Frame(nested,bg=LIGHT); backups=tk.Frame(nested,bg=LIGHT); rates=tk.Frame(nested,bg=LIGHT); branches=tk.Frame(nested,bg=LIGHT); general=tk.Frame(nested,bg=LIGHT)
         is_admin=(self.current_user or {}).get("role")=="admin"
         if is_admin: nested.add(users,text="Users & Permissions")
@@ -125,7 +125,7 @@ class SettingsMixin:
         setup_page=tk.Frame(nested,bg=LIGHT); nested.add(setup_page,text="Accounting Settings"); self.build_accounting_setup_page(setup_page)  # 2.9.81
         if is_admin:  # 2.9.84: who added, changed, posted or deleted what, and when
             audit_page=tk.Frame(nested,bg=LIGHT); nested.add(audit_page,text="Audit Trail"); self.build_audit_trail_page(audit_page)
-            renumber_page=tk.Frame(nested,bg=LIGHT); nested.add(renumber_page,text="Numbering"); self.build_renumber_page(renumber_page)  # 2.9.115
+            renumber_page=tk.Frame(nested,bg=LIGHT); self.numbering_settings_page=renumber_page; nested.insert(0,renumber_page,text="Numbering"); self.build_renumber_page(renumber_page)  # 2.9.115
         if is_admin: self.build_users_page(users)
         if not is_viewer:
             backup_controls=tk.Frame(backups,bg=LIGHT); backup_controls.pack(fill="x",padx=10,pady=10)

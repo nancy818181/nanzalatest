@@ -150,10 +150,13 @@ class V22Mixin:
         if not path: return
         from desktop_stage3_common import prepare_pdf_reading; prepare_pdf_reading(self)  # 2.9.87: our name is the seller, the party is the customer
         from desktop_stage3_common import run_with_progress
-        return run_with_progress(self, "Sales PDF", lambda _progress, _cancel: read_invoice_pdf(path),
+        return run_with_progress(self, "Sales PDF", lambda _progress, _cancel: read_invoice_pdf(path, cancel=_cancel),
                                  lambda data: V22Mixin._apply_sales_pdf(self, path, data))
 
     def _apply_sales_pdf(self, path, data):
+        from desktop_stage3_common import review_handwriting
+        data = review_handwriting(self, path, data)
+        if data is None: return
         self.new_sales_invoice(confirm=False); self.sales_pdf_path = path  # attached when saved
         if data.get("invoice_date"): self.sales_date.set(data["invoice_date"])
         if data.get("invoice_number"): self.sales_no.set(str(data["invoice_number"]).strip())

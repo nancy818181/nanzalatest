@@ -95,6 +95,9 @@ def migrate(db):
     if "customs_group" not in {row["name"] for row in db.execute("PRAGMA table_info(inventory_items)")}:  # 2.9.106: '' none, '1', '2'
         db.execute("ALTER TABLE inventory_items ADD COLUMN customs_group TEXT")
     db.execute("CREATE TABLE IF NOT EXISTS landed_cost_parts (id INTEGER PRIMARY KEY, cost_invoice_id INTEGER NOT NULL, component TEXT NOT NULL, amount TEXT NOT NULL)")
+    db.execute("""CREATE TABLE IF NOT EXISTS landed_cost_sources (
+        id INTEGER PRIMARY KEY, cost_invoice_id INTEGER NOT NULL, component TEXT NOT NULL,
+        currency TEXT NOT NULL, amount TEXT NOT NULL, conversion_rate TEXT NOT NULL, converted_amount TEXT NOT NULL)""")
     db.execute("CREATE TABLE IF NOT EXISTS item_categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL, parent_id INTEGER, UNIQUE(name,parent_id))")
     db.execute("CREATE TABLE IF NOT EXISTS item_units (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE)")
     db.execute("""CREATE TABLE IF NOT EXISTS physical_counts (id INTEGER PRIMARY KEY, number TEXT NOT NULL UNIQUE, count_date TEXT NOT NULL, warehouse_id INTEGER NOT NULL,
@@ -503,6 +506,9 @@ def _optional_id(db, table, value):
 
 
 def save_document(database, header, lines, user_id, document_id=None):
+    if document_id:
+        import commercial_documents
+        commercial_documents.guard_stock_document(database, document_id)
     doc_type = str(header.get("doc_type") or "").lower()
     if doc_type not in DOC_TYPES: raise ValueError("Choose the document type")
     if doc_type == "production": raise ValueError("Production orders are saved from Inventory > Production")
@@ -602,6 +608,8 @@ def list_documents(database):
 
 
 def delete_document(database, document_id, user_id):
+    import commercial_documents
+    commercial_documents.guard_stock_document(database, document_id)
     doc = get_document(database, document_id); database._assert_period_open(doc["doc_date"])
     if DOC_TYPES[doc["doc_type"]][2] > 0 or doc["doc_type"] == "production":  # removing stock that was already issued afterwards would make it negative
         _check_after_removal(database, document_id)

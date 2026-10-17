@@ -669,8 +669,9 @@ class LebanesePayrollRulesTest(unittest.TestCase):
         self.assertEqual(json_notes := __import__("json").loads(saved["compliance_notes"]), json_notes)
         self.db.post_payroll(saved["id"], self.user)
         self.assertAlmostEqual(sum(r["debit"] - r["credit"] for r in self.db.journal()), 0, places=2)
-        nssf = [r for r in self.db.journal() if r["account_code"] == "4431"]
-        self.assertAlmostEqual(sum(r["debit"] for r in nssf), 62.18, places=2)
+        family = [r for r in self.db.journal() if r["account_code"] == "438"]
+        self.assertAlmostEqual(sum(r["debit"] for r in family), 62.18, places=2)
+        self.assertEqual(sum(r["debit"] for r in self.db.journal() if r["account_code"] == "4431"), 0)
 
     def test_family_tax_deduction_halved_when_spouse_works(self):
         # The spouse deduction applies only to a dependent spouse; two working parents split only the child deduction.

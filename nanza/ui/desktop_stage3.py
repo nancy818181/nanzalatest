@@ -82,7 +82,23 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         self.import_check_label = tk.Label(page, text="Select a row to read its full Check note here.", bg="#fff8e6", fg=NAVY, anchor="w", justify="left", wraplength=1200)
         self.import_check_label.pack(fill="x", padx=12, pady=(0, 4), before=bottom)
         self.import_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_import_check(), add="+")
+        tk.Button(bar,text="Review original document",command=self.review_import_document,bg=NAVY,fg="white").pack(side="left",padx=3)
         flow_toolbars(bar, bottom)  # 2.9.59: Save button stays visible on 1366-px screens
+
+    def review_import_document(self):
+        selected=self.import_tree.selection()
+        if not selected: return messagebox.showwarning("Invoice review","Select an imported PDF/photo row")
+        row=self.import_sheet.rows.get(selected[0])
+        if not row or not row.get("_path"): return messagebox.showwarning("Invoice review","This row has no original document")
+        from desktop_stage3_common import review_handwriting
+        data=dict(row.get("_reading") or {})
+        data.update({key:row.get(key) for key in ("invoice_number","invoice_date","party_name","currency","subtotal","vat","total")})
+        data["items"]=row.get("_items") or []
+        result=review_handwriting(self,row["_path"],data)
+        if result is None: return
+        for key in ("invoice_number","invoice_date","party_name","currency","subtotal","vat","total"): row[key]=result.get(key)
+        row["_items"]=result.get("items") or [];row["_reading"]=result;row["_human_reviewed"]=True
+        self.import_sheet.refresh(selected[0])
 
     def select_all_import_rows(self):
         rows = list(self.import_tree.get_children())
@@ -204,16 +220,18 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         rows = []
         for path, documents in read:
             for data in documents:
+                from invoice_intake import enrich
+                data=enrich(data)
                 suggested = "Sales" if self.import_type.get()=="Sales" else data.get("suggested_type") or ""
                 asset_details=asset_pdf_details(data)
                 type_note = (f"Suggested Type: {suggested}; review before import" if suggested else
                              "Type not clear from PDF; choose Purchases, Expenses or Assets")
                 rows.append({"invoice_number": data.get("invoice_number") or "", "invoice_date": data.get("invoice_date") or "",
-                         "party_name": data.get("party_name") or "", "currency": data.get("currency") or self.currency.get(),
+                         "party_name": data.get("party_name") or "", "currency": data.get("currency") or "",
                           "subtotal": data.get("subtotal"), "vat": data.get("vat"), "total": data.get("total"),
                           **({"deductible": data["taxable_subtotal"], "non_deductible": data["exempt_subtotal"]} if data.get("taxable_subtotal") is not None else {}),  # 2.9.85
                           "entry_type": suggested, "source": f'{data["file"]} - {data["page_range"]}',
-                           "notes": (data.get("notes", "") + "; " + type_note).strip("; "), "_path": path, "_items": data.get("items") or [],
+                           "notes": (data.get("notes", "") + "; " + type_note + "; Human review required").strip("; "), "_path": path, "_items": data.get("items") or [], "_reading":data,
                            "_review_warnings": list(data.get("review_warnings") or []),
                            "_asset_name":asset_details["name"],"_asset_date":asset_details["acquired_on"],
                            "_asset_currency":asset_details["currency"],"_asset_cost":asset_details["cost"]})
@@ -246,6 +264,9 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         """2.9.50: called right after reading the file - rows that are complete are saved and posted at once
         (no confirmation questions); rows that need a correction stay in the preview with the reason."""
         rows = self.import_sheet.ordered()
+        if self.import_mode=="pdf":
+            self.import_status.config(text="PDF/photo readings require human review; use Review original document, then Review & Save Import")
+            return
         if not rows or self.import_replace.get(): return  # replacing all previous invoices always needs the explicit button
         default = self.import_type.get() if self.import_type.get() in TYPES else "Purchases"
         for r in rows:

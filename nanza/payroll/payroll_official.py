@@ -244,7 +244,7 @@ def _register(db, year, leavers=False):
             "record_count": len(employees)}
 
 
-def build_official(db, report, period_type="yearly", year=None, index=1, include_drafts=False, employee_id=None):
+def _build_official(db, report, period_type="yearly", year=None, index=1, include_drafts=False, employee_id=None):
     from datetime import date
     report = str(report).upper(); year = int(year or date.today().year)
     if report in ("R5_BOXES", "R10_BOXES"):
@@ -255,3 +255,16 @@ def build_official(db, report, period_type="yearly", year=None, index=1, include
     if report == "MOVEMENT": return _movement(db, year, index, include_drafts, period_type)
     if report in ("REGISTER", "LEAVERS"): return _register(db, year, report == "LEAVERS")
     raise ValueError("Unknown payroll statement")
+
+
+def build_official(db, report, period_type="yearly", year=None, index=1, include_drafts=False, employee_id=None):
+    report = str(report).upper()
+    result = _build_official(db, report, period_type, year, index, include_drafts, employee_id)
+    if report in ("REGISTER", "LEAVERS"): return result  # employee registers are not payroll amount reports
+    from payroll_controls import review
+    records = _load_records(db, result["date_from"], result["date_to"], include_drafts)
+    if employee_id is not None and report == "R6_LINES":
+        records = [row for row in records if row["employee_id"] == int(employee_id)]
+    result["controls"], sections = review(records)
+    result["sections"].extend(sections)
+    return result

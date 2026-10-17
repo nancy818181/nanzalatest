@@ -185,6 +185,7 @@ class PayrollStore:
                 defaults=self.default_payroll_account_map(key)  # 2.9.80: managers default to 6316 (they took the staff 6311 map)
                 try: result[key]={**defaults,**json.loads(result.get(key) or "{}")}
                 except (TypeError,ValueError): result[key]=dict(defaults)
+                if not result[key].get("family_allowance"): result[key]["family_allowance"] = "438"
         return result
 
     @staticmethod
@@ -310,9 +311,20 @@ class PayrollStore:
             raw=item.get(name) if item.get(name) not in (None,"") else (employee["base_salary"] if name=="salary" else 0)
             try: money[name]=D(str(raw).replace(",",""))
             except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{name.replace('_',' ').title()} must be a number") from exc
-            if money[name]<0: raise ValueError(f"{name.replace('_',' ').title()} cannot be negative")
+            if not money[name].is_finite() or money[name]<0: raise ValueError(f"{name.replace('_',' ').title()} cannot be negative")
         import payroll_lines
         allowances=payroll_lines.clean_allowances(item.get("allowances"))
+        allowance_accounts = item.get("allowance_accounts") or {}
+        if isinstance(allowance_accounts, str):
+            try: allowance_accounts = json.loads(allowance_accounts)
+            except ValueError as exc: raise ValueError("Invalid allowance accounts") from exc
+        if not isinstance(allowance_accounts, dict): raise ValueError("Invalid allowance accounts")
+        allowance_accounts = {key: str(code).split(" - ", 1)[0].strip() for key, code in allowance_accounts.items() if code}
+        with self.connect() as db:
+            for key, code in allowance_accounts.items():
+                account = db.execute("SELECT type,active FROM accounts WHERE code=?", (code,)).fetchone()
+                if key not in payroll_lines.ALLOWANCES or not account or not account["active"] or account["type"] != "expense":
+                    raise ValueError(f"Choose an active expense account for allowance {key}")
         not_nssf=self.allowances_not_nssf()
         allowance_parts=payroll_lines.split(allowances,not_nssf)
         # The selected date identifies a payroll month. Prorate a monthly base salary
@@ -336,7 +348,14 @@ class PayrollStore:
         from_lbp=lambda value,day=period: self._converted_amount(value,"LBP",currency,day)
         try: days=int(D(str(item.get("transport_days") if item.get("transport_days") not in (None,"") else setting("default_transport_days","26"))))
         except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Transport days must be a whole number") from exc
+        raw_days = D(str(item.get("transport_days") if item.get("transport_days") not in (None, "") else setting("default_transport_days", "26")))
+        if raw_days != days: raise ValueError("Transport days must be a whole number")
         if days<0 or days>31: raise ValueError("Transport days must be between 0 and 31")
+        if worked_days < month_days:
+            if item.get("transport_days") in (None, ""):
+                days = min(days, worked_days)
+            elif days > worked_days:
+                raise ValueError(f"Transport days cannot exceed {worked_days} days in the employee's employment period")
         import lebanese_payroll
         food_from,food_daily=lebanese_payroll.FOOD_DAILY_EXEMPT  # 2.9.92: Budget Law 2026 Art. 26
         if rules_date>=food_from and allowances.get("food_exempt"):
@@ -505,7 +524,7 @@ class PayrollStore:
         if override:
             try: family_allowance=D(override).quantize(D("0.01"))
             except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Family Allocation must be a number") from exc
-            if family_allowance<0: raise ValueError("Family Allocation cannot be negative")
+            if not family_allowance.is_finite() or family_allowance<0: raise ValueError("Family Allocation cannot be negative")
             notes.append("Family allocation entered manually for this payroll")
         if money["director_remuneration"]: notes.append("Director remuneration is not subject to salary tax or NSSF (as configured); confirm with your accountant")
         minimum=setting("minimum_wage")
@@ -523,7 +542,7 @@ class PayrollStore:
             "worked_days":worked_days,"calendar_days":month_days,"transport_days":days,
                     "exempt_transport":float(from_lbp(exempt_transport_lbp).quantize(D("0.01"))),
                     "exempt_schooling":float(from_lbp(exempt_schooling_lbp).quantize(D("0.01"))),
-            "family_allowance":float(family_allowance),"family_deduction_lbp":float(allowance),
+            "allowance_accounts": allowance_accounts, "family_allowance":float(family_allowance),"family_deduction_lbp":float(allowance),
             "annualized_recurring_lbp":float(annual_regular),"annualized_taxable_lbp":float(max(D("0"),annual_regular-allowance)),
             "compliance_notes":notes,"period_date":period,"allowances":{k:float(v) for k,v in allowances.items()},
             "allowances_total":float(allowance_parts["total"]),"allowances_taxable":float(allowance_parts["taxable_recurring"]+allowance_parts["taxable_one_off"]),
@@ -593,8 +612,8 @@ class PayrollStore:
             fields=("salary","transport","overtime","commission","retro_salary","schooling","bonus","thirteenth_month","director_remuneration","gross_salary",
                     "taxable_salary","income_tax","income_tax_lbp",
                 "nssf_base","employee_nssf","employer_medical","employer_end_service","employer_family","net_salary","retro_tax",
-                "transport_days","exempt_transport","exempt_schooling","family_allowance","regular_tax","one_off_tax","compliance_notes","allowances")
-            values=[json.dumps(calc[field]) if field in ("compliance_notes","allowances") else str(calc[field]) for field in fields]
+                "transport_days","exempt_transport","exempt_schooling","family_allowance","regular_tax","one_off_tax","compliance_notes","allowances","allowance_accounts")
+            values=[json.dumps(calc[field]) if field in ("compliance_notes","allowances","allowance_accounts") else str(calc[field]) for field in fields]
             if existing:
                 db.execute(f"UPDATE payroll_records SET payroll_number=?,currency=?,{','.join(field+'=?' for field in fields)},retro_from=?,retro_to=?,reference=?,notes=? WHERE id=?",
                     (number,calc["currency"],*values,retro_from,retro_to,item.get("reference"),item.get("notes"),existing["id"])); saved_id=existing["id"]
@@ -643,17 +662,19 @@ class PayrollStore:
             employer_nssf=sum((Decimal(record[name]) for name in ("employer_medical","employer_end_service","employer_family")),Decimal("0"))
             number=f'PAYJV-{record["payroll_number"]}'
             entry_id=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,branch_id,created_by,created_at)
-                VALUES(?,?,?,?,?,?,?,?,?)""",(number,display_date(record["period_date"]),f'Payroll - {record["full_name"]}',"payroll",record["id"],
+                VALUES(?,?,?,?,?,?,?,?,?)""",(number,display_date(record["period_date"]),f'Payroll {record["period_date"][5:7]}/{record["period_date"][:4]} - {record["full_name"]}',"payroll",record["id"],
                         record["currency"],record["branch_id"],user_id,utcnow())).lastrowid
             lines=[(mapping[key],Decimal(str(record[key] or 0)),Decimal("0")) for key in component_names]
-            allowances_total=sum(self._record_allowances(record).values(),Decimal("0"))
-            if allowances_total:
-                allowance_account=str(mapping.get("allowances") or "").strip() or salary_account
-                db.execute("INSERT OR IGNORE INTO accounts(code,name_en,type) VALUES(?,?,?)",(allowance_account,"Allowances and Benefits","expense"))
-                lines.append((allowance_account,allowances_total,Decimal("0")))
+            saved_allowance_accounts = json.loads(record["allowance_accounts"] or "{}")
+            for allowance_code, allowance_amount in self._record_allowances(record).items():
+                allowance_account = str(saved_allowance_accounts.get(allowance_code) or mapping.get(f"allowance_{allowance_code}") or mapping.get("allowances") or salary_account).strip()
+                account = db.execute("SELECT type,active FROM accounts WHERE code=?", (allowance_account,)).fetchone()
+                if not account or account["type"] != "expense" or not account["active"]:
+                    raise ValueError(f"Choose an active expense account for allowance {allowance_code}")
+                lines.append((allowance_account, allowance_amount, Decimal("0")))
             family_allowance=Decimal(str(record["family_allowance"] or 0)) if "family_allowance" in record.keys() else Decimal("0")
-            # Family allocation: its own posting account when one is set; otherwise offset on the NSSF account (as before).
-            family_account=str(mapping.get("family_allowance") or "").strip() or nssf_account
+            # Family allocation: recoverable from social security on 438, or the configured account.
+            family_account=str(mapping.get("family_allowance") or "438").strip()
             if family_account!=nssf_account: db.execute("INSERT OR IGNORE INTO accounts(code,name_en,type) VALUES(?,?,?)",(family_account,"Family Allocation","asset"))
             lines+=((employer_expense,employer_nssf,Decimal("0")),(payable_account,Decimal("0"),net),(tax_account,Decimal("0"),tax),(nssf_account,Decimal("0"),
                     employee_nssf+employer_nssf),(family_account,family_allowance,Decimal("0")))
@@ -684,7 +705,7 @@ class PayrollStore:
                     continue
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,description,debit,credit) VALUES(?,?,?,?,?)",
                     (entry_id,self._account_id(db,code),f'Payroll {record["payroll_number"]}',str(debit),str(credit)))
-            db.execute("UPDATE payroll_records SET status='posted',journal_entry_id=? WHERE id=?",(entry_id,record["id"]))
+            db.execute("UPDATE payroll_records SET status='posted',journal_entry_id=?,posted_payable_account=? WHERE id=?",(entry_id,payable_account,record["id"]))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                 (user_id,"post","payroll",record["id"],json.dumps({"payroll_number":record["payroll_number"],"journal_entry":number}),utcnow()))
         return next(row for row in self.list_payroll() if row["id"]==int(payroll_id))

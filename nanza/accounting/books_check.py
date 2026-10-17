@@ -57,6 +57,14 @@ def run(db, year=None, quick=False):
 
     with db.connect() as connection:
         connection.row_factory = sqlite3.Row
+        if not quick:
+            try: integrity=[str(row[0]) for row in connection.execute("PRAGMA integrity_check")]
+            except sqlite3.Error as exc: integrity=[str(exc)]
+            if integrity != ["ok"]:
+                add(ERROR,"Database physical integrity","; ".join(integrity),
+                    "Stop writing to this file. Preserve the original and restore a verified backup; do not repair it automatically.")
+                return {"results":results,"errors":1,"warnings":0,"summary":"Database integrity failed; accounting checks stopped"}
+            add(OK,"Database physical integrity","SQLite integrity_check passed (including indexes)")
         _entries(db, connection, add)
         _documents_have_entries(connection, add)
         _orphan_entries(connection, add)

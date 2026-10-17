@@ -256,7 +256,10 @@ class FinalFeaturesMixin:
             f"{result['payroll_employee_count']} with payroll  |  Net payable: {result['net_payable_lbp']:,.0f} LBP")
         if result.get("report") == "SETTLEMENT" and not result.get("complete"):
             note += "  |  Add the filed wage bases and payments for every month to complete the settlement."
-        self.pr_info.config(text=note, fg=RED if not result["record_count"] else NAVY)
+        controls = result.get("controls") or {}
+        if controls:
+            note += f"  |  Control issues: {controls['issue_count']}  |  Drafts: {controls['draft_count']}"
+        self.pr_info.config(text=note, fg=RED if not result["record_count"] or controls.get("issue_count") or controls.get("draft_count") else NAVY)
 
     def edit_nssf_filed_wages(self):
         try:
@@ -460,7 +463,8 @@ class FinalFeaturesMixin:
         self.action_button(law, "Save %", self.save_vat_ratio).pack(side="left", padx=(0, 12))
         tk.Label(law, text=f"Refund requested ({vat_currency(self)}, Art. 30)", bg=LIGHT).pack(side="left"); tk.Entry(law, textvariable=self.vat_refund, width=13).pack(side="left", padx=4)
         actions = tk.Frame(page, bg=LIGHT); actions.pack(fill="x", padx=10)
-        self.action_button(actions, "Save Return (lock quarter)", self.save_vat_return).pack(side="left", padx=3)
+        self.vat_save_button=self.action_button(actions, "Save Return (lock quarter)", self.save_vat_return)
+        self.vat_save_button.pack(side="left", padx=3)
         if (self.current_user or {}).get("role") == "admin":
             tk.Button(actions, text="Reopen Saved Return", command=self.reopen_vat_return, bg=RED, fg="white", border=0, padx=14, pady=7).pack(side="left", padx=3)
         self.action_button(actions, "Export Excel", lambda: self.export_vat_return("xlsx")).pack(side="left", padx=3)
@@ -538,6 +542,9 @@ class FinalFeaturesMixin:
             history = self.client.vat_returns()
         except Exception as exc: return messagebox.showerror("Quarterly VAT", str(exc))
         self.vat_return_result = result
+        controls = vat_rules.preparation_controls(result)
+        if hasattr(self,"vat_save_button"):
+            self.vat_save_button.config(state="disabled" if controls["blocked"] or controls["preview_only"] else "normal")
         title, meta, sections = vat_rules.export_sections(result)
         self.show_sections(self.vat_summary_tree, [s for s in sections if s["heading"] not in ("Supporting documents", "Manual adjustments")])
         if result["currency_filter"] == "All" and not result["include_review"]:
@@ -556,8 +563,9 @@ class FinalFeaturesMixin:
         second = (result.get("second") or {}).get("payable" if payable else "credit_carried_forward"); vc2 = result.get("vat_second_currency")
         if (payable or credit_cf) and second is not None and vc2 and vc2 != vc: outcome += f" ({second:,.2f} {vc2})"
         if result.get("provisional_ratio") is not None and not self.vat_ratio.get().strip(): self.vat_ratio.set(f'{float(result["provisional_ratio"]) * 100:g}')
-        self.vat_headline.config(text=f"Q{quarter} {year}  |  {outcome}  |  Deduction {float(result.get('deduction_ratio', 1)) * 100:.2f}%  |  Due {_display(result.get('due_date'))}  |  {result['status'].title()}",
-                                 fg=RED if result["changed_since_saved"] else NAVY)
+        self.vat_headline.config(text=f"{controls['status']}  |  Q{quarter} {year}  |  {outcome}  |  "
+                                      f"Deduction {float(result.get('deduction_ratio', 1)) * 100:.2f}%  |  Due {_display(result.get('due_date'))}  |  {result['status'].title()}",
+                                 fg=RED if result["changed_since_saved"] or controls["blocked"] or controls["preview_only"] else NAVY)
         notes = [f"Credit brought forward: {result['credit_brought_forward_lbp']:,.{digits}f} {vc} ({result['credit_source']})",
                 f"Deduction ratio: {result.get('ratio_source', '')}"] + [f"Check: {w}" for w in result.get("warnings", [])]
         if result["review_excluded"]: notes.append(f"{result['review_excluded']} document(s) in Review status are not included")

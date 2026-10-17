@@ -125,7 +125,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 yield connection
                 self._refuse_unbalanced_entries(connection)
                 connection.commit()
-            except Exception:
+            except BaseException:
                 connection.rollback()
                 raise
             finally:
@@ -237,6 +237,11 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             self.initialize(admin_password)
 
     def initialize(self, admin_password):
+        # Never run upgrades/repairs over damaged SQLite indexes or pages.
+        with self.connect() as connection:
+            integrity=[str(row[0]) for row in connection.execute("PRAGMA integrity_check")]
+            if integrity != ["ok"]:
+                raise ValueError("Database integrity failed. Preserve this file and restore a verified backup before upgrading: " + "; ".join(integrity[:8]))
         # Upgrades and repairs may rebuild old entries: the period lock is paused only while they run, then restored.
         lock = None
         try:
@@ -386,6 +391,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if "voucher_type" not in entry_columns: db.execute("ALTER TABLE journal_entries ADD COLUMN voucher_type TEXT NOT NULL DEFAULT '01'")
             import inventory
             inventory.migrate(db)
+            import commercial_documents
+            commercial_documents.migrate(db)
             import fixed_assets
             fixed_assets.migrate(db)
             import bank_rec
@@ -400,8 +407,10 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             for column in ("nationality","father_name","mother_name","birth_date","birth_place","sex")+self.EMPLOYEE_REGISTER_FIELDS:
                 if column not in employee_cols: db.execute(f"ALTER TABLE employees ADD COLUMN {column} TEXT")
             payroll_cols={row["name"] for row in db.execute("PRAGMA table_info(payroll_records)")}
-            for column in ("allowances",):
+            for column in ("allowances", "posted_payable_account", "allowance_accounts"):
                 if column not in payroll_cols: db.execute(f"ALTER TABLE payroll_records ADD COLUMN {column} TEXT")
+            import payroll_payments
+            payroll_payments.migrate(db)
             import chart_extra
             chart_extra.ensure_accounts(db)
             item_cols={row["name"] for row in db.execute("PRAGMA table_info(invoice_items)")}
@@ -1150,15 +1159,16 @@ def _schema_fingerprint():
     """'4-' + a short hash of the schema and of every text in the upgrade code (CREATE / ALTER TABLE ...), including
     the inventory, fixed assets and bank upgrades and the extra accounts. Any new column, table or account changes it,
     so every company / year file is upgraded once when the new version opens it."""
-    import approvals, audit_chain, bank_rec, chart_extra, fixed_assets, inventory, payroll_extras
-    texts = [SCHEMA, repr(getattr(chart_extra, "EXTRA_ACCOUNTS", ""))]
+    import approvals, audit_chain, bank_rec, chart_extra, commercial_documents, fixed_assets, inventory, payroll_extras, payroll_payments
+    texts = [SCHEMA, repr(getattr(chart_extra, "EXTRA_ACCOUNTS", "")), repr(__import__("chart_templates").SPINE)]
     def collect(code):
         for constant in code.co_consts:
             if isinstance(constant, str): texts.append(constant)
             elif hasattr(constant, "co_consts"): collect(constant)
     functions = [getattr(Database, name, None) for name in ("_initialize", "_auto_lebanese_payroll_rules", "_upgrade_default_family_allowance_periods")]
     functions += [inventory.migrate, fixed_assets.migrate, bank_rec.migrate, payroll_extras.migrate, chart_extra.ensure_accounts,
-                  audit_chain.migrate, approvals.migrate, __import__('owner_access').migrate] + list(getattr(inventory, "MIGRATIONS", ()))
+                  audit_chain.migrate, approvals.migrate, payroll_payments.migrate, commercial_documents.migrate,
+                  __import__('owner_access').migrate] + list(getattr(inventory, "MIGRATIONS", ()))
     # 2.9.101 / 2.9.103: the approval table and the end of the hidden account are part of the upgrade of older files
     for function in functions:
         if function is not None: collect(function.__code__)

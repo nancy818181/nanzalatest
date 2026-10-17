@@ -413,6 +413,15 @@ class ApiClient:
     def delete_leave(self,leave_id): return self.request("DELETE",f"/api/payroll/leave/{leave_id}")
     def leave_balances(self,date): return self.request("GET",f"/api/payroll/leave-balances?{urlencode({'date':date})}")
     def payslips(self,month_end): return self.request("GET",f"/api/payroll/payslips?{urlencode({'month_end':month_end})}")["sections"]
+    def dashboard_brief(self,start,end,currency="USD",language="en"):
+        from decimal import Decimal
+        result=self.request("GET",f"/api/dashboard/brief?{urlencode({'date_from':start,'date_to':end,'currency':currency,'language':language})}")
+        for key,value in result.get("metrics",{}).items():
+            if value is not None: result["metrics"][key]=Decimal(str(value))
+        for section in result.get("sections",[]):
+            for row in section.get("rows",[]):
+                if len(row)>1 and row[1] not in (None,""): row[1]=Decimal(str(row[1]))
+        return result
     def management_pack(self,month_end,currency="USD"): return self.request("GET",f"/api/management-pack?{urlencode({'month_end':month_end,'currency':currency})}")
     def budget_alerts(self,year,month,currency="USD",threshold=10): return self.request("GET",
             f"/api/budget-alerts?{urlencode({'year':year,'month':month,'currency':currency,'threshold':threshold})}")["items"]
@@ -493,6 +502,9 @@ class ApiClient:
     def inventory_report(self,report,options): return self.request("GET","/api/inventory/report?"+urlencode({"report":report,"options":json.dumps(options)}))
     def post_stock_variation(self,year): return self.request("POST","/api/inventory/stock-variation",{"year":year})
     def post_monthly_stock_variation(self,month_end): return self.request("POST","/api/inventory/monthly-variation",{"month_end":month_end})
+    def salary_payments(self,payroll_id): return self.request("GET",f"/api/payroll/salary-payments?payroll_id={int(payroll_id)}")["items"]
+    def record_salary_payment(self,item): return self.request("POST","/api/payroll/salary-payments",item)
+    def reverse_salary_payment(self,payment_id,date): return self.request("POST","/api/payroll/salary-payments/reverse",{"payment_id":payment_id,"date":date})
     def record_nssf_payment(self,item): return self.request("POST","/api/payroll/nssf-payment",item)
     def open_documents(self,party_id): return self.request("GET",f"/api/parties/{party_id}/open-documents")["items"]
     def payment_allocations(self,payment_id): return self.request("GET",f"/api/payments/{payment_id}/allocations")["items"]

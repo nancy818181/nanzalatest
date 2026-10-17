@@ -90,15 +90,20 @@ class ExpensesMixin:
     def choose_expense_pdf(self):
         path = filedialog.askopenfilename(filetypes=[("PDF", "*.pdf"), ("Images", "*.png *.jpg *.jpeg")])
         if not path: return
-        f = self.expense_form; f["pdf"] = path; f["pdf_suggested_type"] = ""
+        f = self.expense_form
         if path.lower().endswith((".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp")) and not f["id"]:
             prepare_pdf_reading(self)
-            return run_with_progress(self, "Expense invoice", lambda _progress, _cancel: read_invoice_pdf(path),
+            return run_with_progress(self, "Expense invoice", lambda _progress, _cancel: read_invoice_pdf(path, cancel=_cancel),
                                      lambda data: ExpensesMixin.fill_expense_from_reading(self, path, data))
-        else: f["pdf_label"].config(text=Path(path).name, fg=NAVY)
+        else:
+            f["pdf"] = path; f["pdf_suggested_type"] = ""
+            f["pdf_label"].config(text=Path(path).name, fg=NAVY)
 
     def fill_expense_from_reading(self, path, data):
         """The reading of the PDF (local, or 2.9.120 Azure) in the new expense."""
+        from desktop_stage3_common import review_handwriting
+        data = review_handwriting(self, path, data)
+        if data is None: return
         f = self.expense_form; v = f["vars"]; f["pdf"] = path
         f["pdf_suggested_type"] = data.get("suggested_type") or ""
         f["pdf_vat_review"] = True
@@ -135,6 +140,8 @@ class ExpensesMixin:
         try: found = self.client.posting_suggestion("expense", supplier, None, text, lines)
         except (RuntimeError, OSError, ValueError, AttributeError): return ""
         if not isinstance(found, dict): return ""  # an old data service
+        if found.get("review_required"):
+            return "; ".join(found.get("review_warnings") or ["Review the expense accounts before Save"])
         rule = (found or {}).get("rule")
         if not rule:
             account=found.get("account") or {}
@@ -142,7 +149,7 @@ class ExpensesMixin:
                 v["account"].set(account_label(self,account["code"]))
                 if _num(v["without_vat"].get()) and not v["no_vat_account"].get().strip():
                     v["no_vat_account"].set(account_label(self,account["code"]))
-                return f"Account {account['code']} suggested ({account.get('source') or 'classification'}, {float(account['confidence']):.0%} sure) - check before Save"
+                return f"Account {account['code']} suggested ({account.get('source') or 'classification'}) - check before Save"
             return ""
         data = rule["data"]
         for key, field in (("expense_account", "account"), ("expense_without_vat_account", "no_vat_account"), ("vat_account", "vat_account"),

@@ -131,7 +131,7 @@ class InvoicesMixin(SalesInvoiceMixin):
             self.invoice_tree.insert("","end",iid=str(r["id"]),values=(r["invoice_number"],
                     "DELETED" if r.get("status")=="deleted" else str(r.get("status") or "").title(),r["invoice_date"],r["party_name"],
                     r.get("branch_name") or "Head Office",entry_label,r["currency"],money(r.get("deductible_subtotal",r["subtotal"])),
-                    money(r.get("non_deductible_subtotal",0)),money(r["total"]),r.get("payment_method") or "",money(r.get("amount_paid")),
+                    money(r.get("non_deductible_subtotal",0)),money(r["total"]),r.get("payment_method") or "",money(r.get("settled_amount",r.get("amount_paid"))),
                     "" if lbp is None else f"{lbp:,.2f}","" if usd is None else f"{usd:,.2f}",money(r["debit"]),money(r["credit"]),
                     ("Yes" if r.get("vat_recoverable",1) else "NO") if r.get("kind")=="purchase" and float(r.get("vat") or 0) else ""),
                     tags=("deleted",) if r.get("status")=="deleted" else ())

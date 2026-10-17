@@ -150,9 +150,9 @@ def _ocr_pdf_pages(path, page_numbers=None, progress=None, cancel=None):
         available = set(pytesseract.get_languages(config=config))
     except Exception as exc:
         raise RuntimeError(f"Tesseract language data is unavailable ({exc})") from exc
-    languages = [lang for lang in ("eng", "ara") if lang in available]
+    languages = [lang for lang in ("eng", "fra", "ara") if lang in available]
     if not languages:
-        raise RuntimeError("Install English or Arabic Tesseract language data to read scanned invoices")
+        raise RuntimeError("Install English, French or Arabic Tesseract language data to read scanned invoices")
     language = "+".join(languages)
 
     def read_image(image):
@@ -938,18 +938,31 @@ EXPENSE_CATEGORIES = (
 )
 
 
-def expense_category(text):
-    """(label, parent code, 9-digit account, account name) of the strongest category, or None."""
-    best, best_score = None, 0
+def expense_classification(text):
+    """Explain keyword evidence. Scores rank suggestions; they are not accuracy probabilities."""
+    candidates = []
     for category in EXPENSE_CATEGORIES:
-        score = sum(len(re.findall(pattern, text or "", re.I)) for pattern in category[4])
-        if score > best_score: best, best_score = category, score
-    if not best or (best[0] == "Travel" and best_score < 2): return None  # 'HOTEL' alone on a card statement is not travel
-    return best[:4]
+        evidence = [match.group(0) for pattern in category[4]
+                    if (match := re.search(pattern, text or "", re.I))]
+        if evidence and not (category[0] == "Travel" and len(evidence) < 2):
+            candidates.append({"category": category[:4], "score": len(evidence),
+                               "evidence": list(dict.fromkeys(evidence))})
+    candidates.sort(key=lambda item: item["score"], reverse=True)
+    ambiguous = len(candidates) > 1 and candidates[0]["score"] == candidates[1]["score"]
+    return {"status": "ambiguous" if ambiguous else "suggested" if candidates else "unknown",
+            "category": candidates[0]["category"] if candidates and not ambiguous else None,
+            "candidates": candidates, "review_required": True}
+
+
+def expense_category(text):
+    """Return a single supported category; ties require a choice by the user."""
+    return expense_classification(text)["category"]
 
 
 def suggest_expense_account(text):
-    found = expense_category(text)
+    classification = expense_classification(text)
+    if classification["status"] == "ambiguous": return ""
+    found = classification["category"]
     if found: return found[1]
     for pattern, code in EXPENSE_ACCOUNT_HINTS:
         if re.search(pattern, text or "", re.I): return code
@@ -1045,9 +1058,29 @@ def _image_as_pdf(path):
     return target
 
 
-def read_invoice_pdf(path):
+def read_invoice_pdf(path, cancel=None):
     """Read locally and use the installed neural reader for photos and single-page scans."""
+    import vision_reader
+    vision_reader._cancelled(cancel)
+    use_vision = False
+    if vision_reader.ready():
+        use_vision = Path(path).suffix.lower() in IMAGE_SUFFIXES
+        if Path(path).suffix.lower() == ".pdf":
+            from pypdf import PdfReader
+            document = PdfReader(str(path))
+            use_vision = len(document.pages) == 1 and _page_needs_ocr(path, _page_text(document.pages[0]))
+    failure = ""
+    if use_vision:
+        try: return vision_reader.read_invoice(path, cancel)
+        except vision_reader.VisionReadCancelled: raise
+        except (vision_reader.VisionReaderError, OSError, ValueError) as exc:
+            logging.getLogger("saber.ocr").warning("Handwriting reader unavailable: %s", exc)
+            failure = str(exc)
+    vision_reader._cancelled(cancel)
     result = _read_invoice_pdf_local(path)
+    if failure:
+        result.setdefault("review_warnings", []).append("Handwriting reader unavailable: " + failure)
+        return _require_ocr_review(result)
     import neural_reader
     if neural_reader.ready() and (Path(path).suffix.lower() in IMAGE_SUFFIXES
                                  or ((result.get("ocr_used") or not (result.get("text") or "").strip())
@@ -1232,7 +1265,8 @@ def _parse_invoice_text(path, text):
               "subtotal": None, "vat": None, "total": None, "items": [], "notes": ""}
     result["suggested_type"] = suggest_invoice_type(text)
     result["suggested_account"] = suggest_expense_account(text)
-    category = expense_category(text)  # 2.9.97: e.g. ("Travel", "6264.2", "626420000", "Travel & Accommodation Expenses")
+    result["expense_classification"] = expense_classification(text)
+    category = result["expense_classification"]["category"]
     result["expense_category"] = category[0] if category else ""
     result["suggested_account_9"], result["suggested_account_name"] = (category[2], category[3]) if category else ("", "")
     result["supplier_hint"] = supplier_from_email(text)
@@ -1457,6 +1491,10 @@ def _invoice_notes(result, text, prefix=""):
     missing = [label for key, label in (("invoice_number", "number"), ("invoice_date", "date"),
                                         ("total", "total")) if not result.get(key)]
     notes = []
+    classification = result.get("expense_classification") or {}
+    if classification.get("status") == "ambiguous":
+        labels = [item["category"][0] for item in classification.get("candidates", [])]
+        notes.append("Expense classification unclear: " + ", ".join(labels) + "; choose the account manually")
     if prefix:
         notes.append(prefix)
     notes.append("Read from PDF - please check" +
@@ -1505,14 +1543,14 @@ def read_invoice_pdf_pages(path, progress=None, cancel=None):
     from pypdf import PdfReader
     path = Path(path)
     if path.suffix.lower() in IMAGE_SUFFIXES:  # 2.9.118: a photo is one invoice
-        result = read_invoice_pdf(path); result.update(pages=[1], support_pages=[], page_range="Page 1")
+        result = read_invoice_pdf(path, cancel=cancel); result.update(pages=[1], support_pages=[], page_range="Page 1")
         return [result]
     reader = PdfReader(str(path))
     page_texts = [_better_text(path, _page_text(page), _page_text(page, True)) for page in reader.pages]  # 2.9.85: plain or layout
-    import neural_reader
-    if (len(page_texts)==1 and _page_needs_ocr(path,page_texts[0]) and neural_reader.ready()
+    import neural_reader, vision_reader
+    if (len(page_texts)==1 and _page_needs_ocr(path,page_texts[0]) and (neural_reader.ready() or vision_reader.ready())
             and not (cancel is not None and cancel.is_set())):
-        result=read_invoice_pdf(path)
+        result=read_invoice_pdf(path, cancel=cancel)
         result.update(pages=[1],support_pages=[],page_range="Page 1")
         if progress:progress(1,1,"Advanced Local OCR")
         return [result]

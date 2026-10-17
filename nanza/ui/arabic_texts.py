@@ -2,6 +2,38 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'Handwritten invoices (experimental, offline)': 'فواتير خط اليد (تجريبي، دون إنترنت)',
+    'Handwritten invoices': 'فواتير خط اليد',
+    'Handwriting review': 'مراجعة قراءة خط اليد',
+    'Check the invoice reading': 'مراجعة قراءة الفاتورة',
+    'Invoice number': 'رقم الفاتورة',
+    'Supplier / customer': 'المورّد / الزبون',
+    'Grand Total': 'المجموع العام',
+    'Subtotal': 'المجموع الفرعي',
+    'Blank means unreadable, not zero.\nNo accounting entry is saved here.':
+        'الخانة الفارغة تعني أنها غير مقروءة، وليس صفراً.\nلا يُحفظ أي قيد محاسبي هنا.',
+    'I checked these fields against the image': 'راجعت هذه الخانات مقارنةً بالصورة',
+    'Use checked fields': 'استخدام الخانات المراجَعة',
+    'Check the image and tick the confirmation first': 'راجع الصورة ثم حدّد خانة التأكيد أولاً',
+    'Zoom +': 'تكبير +',
+    'Zoom -': 'تصغير -',
+    'Use for photos and single-page scans (slower)': 'استخدامه للصور والمسح من صفحة واحدة (أبطأ)',
+    'Install / Repair Free Handwriting Reader': 'تثبيت / إصلاح قارئ خط اليد المجاني',
+    'Free handwriting reader setup': 'إعداد قارئ خط اليد المجاني',
+    'Preparing the download...': 'جارٍ تحضير التنزيل...',
+    'Stop download': 'إيقاف التنزيل',
+    'One-time download. You can stop it and use Install / Repair later to resume.':
+        'تنزيل لمرة واحدة. يمكنك إيقافه ثم استخدام التثبيت / الإصلاح لاحقاً لاستكماله.',
+    'The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm.':
+        'قد يخطئ القارئ في المبالغ والتواريخ. قارن بالصورة وصحّح الخانات ثم أكّد المراجعة.',
+    ('Two independent readers (4B + 2B): optional download of about 4.5 GB; allow 5 GB of disk space '
+     'and about 6 GB of free RAM. They run one after another and can take a few minutes. '
+     'Photos stay on this computer: no account, API key or per-invoice fee. '
+     'Disputed fields stay empty. Both readers can still agree on a wrong value: check the image before Save.'):
+        ('قارئان مستقلان (4B + 2B): تنزيل اختياري بحجم نحو 4.5 غيغابايت، مع 5 غيغابايت من مساحة القرص '
+         'ونحو 6 غيغابايت من الذاكرة المتاحة. يعملان بالتتابع وقد تستغرق القراءة بضع دقائق. '
+         'تبقى الصور على هذا الكمبيوتر دون حساب أو مفتاح API أو رسم لكل فاتورة. '
+         'تبقى الخانات المختلف عليها فارغة. قد يتفق القارئان على قيمة خاطئة؛ راجع الصورة قبل الحفظ.'),
     '% (year to date, the company budget in the main currency)':
         '% (من بداية السنة، موازنة الشركة بالعملة الرئيسية)',
     '% from past years':
@@ -3667,3 +3699,56 @@ PATTERNS = PATTERNS + (
 AR.setdefault("A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made.",
               "التاريخ الماضي يعرض ما كان مفتوحاً في ذلك التاريخ (لا تُحتسب المقبوضات / المدفوعات بعده)؛ التاريخ المستقبلي يعرض التأخير المتوقع إذا لم يُدفع شيء آخر.")
 AR.setdefault("With the auditor's report", "مع تقرير مدقق الحسابات")
+
+# Purchase-cost and preparation-review controls.
+AR.update({
+    "Posting currency": "عملة القيد", "LBP per USD": "ليرة لبنانية لكل دولار",
+    "Enter the reviewed exchange rate for these costs.": "أدخل سعر الصرف المراجع لهذه الكلف.",
+    "Cost component": "نوع الكلفة", "USD amount": "المبلغ بالدولار", "LBP amount": "المبلغ بالليرة",
+    "Allocation": "التوزيع", "VAT return, excluded from item cost": "للتصريح الضريبي، خارج كلفة الأصناف",
+    "Items subject to customs": "الأصناف الخاضعة للجمارك", "All items by purchase value": "كل الأصناف حسب قيمة الشراء",
+    "Cost breakdown PDF": "تفصيل الكلفة PDF", "Cost breakdown Excel": "تفصيل الكلفة Excel",
+    "Income exempt from income tax (legal reason required)": "إيراد معفى من ضريبة الدخل (يلزم سبب قانوني)",
+    "Choose the legal reason for the income-tax exemption": "اختر السبب القانوني للإعفاء من ضريبة الدخل",
+    "Rotate image": "تدوير الصورة", "Fit image": "ملاءمة الصورة",
+    "Payroll control totals (original currency)": "مجاميع ضبط الرواتب (بالعملة الأصلية)",
+    "Payroll preparation controls": "ضوابط إعداد الرواتب", "Payroll exceptions to resolve": "فروقات الرواتب المطلوب تصحيحها",
+    "VAT preparation controls": "ضوابط إعداد تصريح القيمة المضافة",
+    "Preparation status": "حالة الإعداد", "REVIEW REQUIRED": "تلزم المراجعة", "PREVIEW ONLY": "للمعاينة فقط", "BLOCKED": "غير قابل للحفظ",
+    "Earlier-quarter errors": "أخطاء الأرباع السابقة", "Documents blocking filing": "مستندات تمنع إتمام التصريح",
+    "Excluded draft documents": "مستندات مسودة مستبعدة", "Difference (expected zero)": "الفرق (المتوقع صفر)",
+    "Original amount": "المبلغ الأصلي", "Source currency": "العملة الأصلية", "Conversion factor": "معامل التحويل",
+    "Converted amount": "المبلغ المحوّل", "Posted purchase costs": "كلف الشراء المقيّدة",
+})
+
+AR.update({
+    "Additional payments": "دفعات إضافية", "Apply additional payments": "اعتماد الدفعات الإضافية",
+    "Record salary payment": "تسجيل دفعة راتب", "Salary month": "شهر استحقاق الراتب",
+    "Family Allocation (438)": "التعويضات العائلية (438)", "Payment date": "تاريخ الدفع",
+    "Reverse salary payment": "عكس دفعة الراتب", "Reverse": "عكس الدفعة",
+    "Reversal date (DD-MM-YYYY)": "تاريخ عكس الدفعة (يوم-شهر-سنة)",
+    "Post the payroll before recording its payment": "رحّل الراتب قبل تسجيل دفعته",
+    "Select a posted payroll record first": "اختر راتباً مرحّلاً أولاً",
+    "Enter the customs broker / payee name": "أدخل اسم المخلّص الجمركي / المستفيد",
+    "Additional cash benefits are taxable by default. Use the existing statutory categories for exemptions; changing an account does not change tax or NSSF.":
+        "الدفعات النقدية الإضافية خاضعة افتراضياً. استخدم الفئات القانونية للإعفاءات؛ تغيير الحساب لا يغيّر الضريبة أو الضمان.",
+})
+
+AR.update({"Reading checks / item rows": "فحص القراءة / أسطر الأصناف", "Unverified invoice reading": "قراءة فاتورة غير مؤكدة"})
+
+AR.update({
+    "Executive dashboard": "لوحة الإدارة المالية", "Quotes / Orders / Consignment": "العروض والطلبات والأمانة",
+    "Quotations / Purchase Orders / Consignment": "عروض الأسعار / أوامر الشراء / الأمانة",
+    "Quotation": "عرض سعر", "Purchase Order": "أمر شراء", "Consignment Note": "سند بضاعة بالأمانة",
+    "New document — number assigned on Save": "مستند جديد — يمنح الرقم عند الحفظ",
+    "Commercial documents": "المستندات التجارية", "Save draft": "حفظ مسودة", "Confirm": "تأكيد",
+    "Receive partial": "استلام جزئي", "Create invoice draft": "إنشاء مسودة فاتورة",
+    "Matching report": "تقرير المطابقة", "Open selected": "فتح المحدد", "Cancel document": "إلغاء المستند",
+    "Document lines": "أسطر المستند", "Document line": "سطر المستند", "Use line": "اعتماد السطر",
+    "Customer / supplier": "العميل / المورد", "Valid until (optional)": "صالح حتى (اختياري)",
+    "Payment / delivery terms": "شروط الدفع / التسليم", "Received": "مستلم", "Invoiced": "مفوتر",
+    "Item code (optional)": "رمز الصنف (اختياري)", "Receive goods": "استلام بضاعة", "Save receipt": "حفظ الاستلام",
+    "Receipt reference": "مرجع الاستلام", "Create draft — do not post": "إنشاء مسودة دون ترحيل",
+    "Supplier invoice no. (purchases)": "رقم فاتورة المورد (المشتريات)", "Supplier tax ID": "رقم المورد الضريبي",
+    "Invoice draft": "مسودة فاتورة", "Not saved": "لم يتم الحفظ",
+})

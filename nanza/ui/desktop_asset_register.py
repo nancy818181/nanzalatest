@@ -93,10 +93,13 @@ class AssetRegisterMixin:
             from desktop_stage3_common import prepare_pdf_reading; prepare_pdf_reading(self)  # 2.9.85
         except Exception as exc:
             return messagebox.showerror("Asset PDF",f"Could not read the PDF: {exc}")
-        return run_with_progress(self, "Asset PDF", lambda _progress, _cancel: read_invoice_pdf(path),
+        return run_with_progress(self, "Asset PDF", lambda _progress, _cancel: read_invoice_pdf(path, cancel=_cancel),
                                  lambda data: AssetRegisterMixin._apply_asset_pdf(self, path, data))
 
     def _apply_asset_pdf(self, path, data):
+        from desktop_stage3_common import review_handwriting
+        data = review_handwriting(self, path, data)
+        if data is None: return
         details=asset_pdf_details(data)
         self.new_asset()
         for key in ("name","acquired_on","start_on","currency","cost"):

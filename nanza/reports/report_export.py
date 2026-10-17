@@ -109,6 +109,7 @@ def _ar(text):
 
 def _arabic_sections(title, meta, sections):
     """Title, meta lines and sections with their fixed texts in Arabic (amounts and names stay as they are)."""
+    if any(section.get("report_language") in ("ar","en","fr") for section in sections): return title,meta,sections
     if not arabic_reports() or is_financial_pack(title): return title, meta, sections
     translated = []
     for section in sections:
@@ -120,9 +121,14 @@ def _arabic_sections(title, meta, sections):
     return _ar(title), [_ar(line) for line in meta or []], translated
 
 
-def _right_to_left(workbook):
-    if arabic_reports():
-        for sheet in workbook.worksheets: sheet.sheet_view.rightToLeft = True
+def _report_rtl(sections):
+    language=next((section.get("report_language") for section in sections if section.get("report_language") in ("ar","en","fr")),None)
+    return language=="ar" if language else arabic_reports()
+
+
+def _right_to_left(workbook, rtl=None):
+    selected=arabic_reports() if rtl is None else bool(rtl)
+    for sheet in workbook.worksheets: sheet.sheet_view.rightToLeft = selected
 
 
 def export_excel(path, title, headers, rows):
@@ -644,7 +650,7 @@ def export_sections_excel(path, title, meta, sections):
             row = _excel_chart(ws, row, section["chart"])
     for column, value in widths.items(): ws.column_dimensions[get_column_letter(column)].width = value
     ws.sheet_view.showGridLines = True
-    _right_to_left(wb); wb.save(path)
+    _right_to_left(wb,_report_rtl(sections)); wb.save(path)
 
 
 def _excel_chart(ws, row, spec):
@@ -792,7 +798,7 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
     regular,bold_font=arabic_fonts() if financial else (None,None)
     regular=regular or "Helvetica";bold_font=bold_font or "Helvetica-Bold"
     import financial_statements_i18n as i18n
-    report_rtl=(i18n.language_of(title)=="ar") if financial else arabic_reports()
+    report_rtl=(i18n.language_of(title)=="ar") if financial else _report_rtl(sections)
     if financial:
         for style in styles.byName.values(): style.fontName = regular
         for key in ("Title", "Heading1", "Heading2", "Heading3"): styles[key].fontName = bold_font
@@ -931,7 +937,18 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
                     else:style += [("BACKGROUND", (0, index + 1), (-1, index + 1), colors.HexColor("#E8EDF2"))]
             for index in section.get('warning_rows',[]):
                 if 0<=index<len(body):style.append(("BACKGROUND",(0,index+1),(-1,index+1),colors.HexColor("#FFF0EB")))
-            table.setStyle(TableStyle(style)); story += [table, Spacer(1, 5*mm)]
+            table.setStyle(TableStyle(style))
+            if section.get("keep_together") and len(bands) == 1 and not section.get("chart"):
+                # Keep short summary tables with their heading when they fit a page.
+                # Large tables retain normal pagination instead of becoming unrenderable.
+                _width, table_height = table.wrap(available, doc.height)
+                heading = story[-1]
+                _width, heading_height = heading.wrap(available, doc.height)
+                if table_height + heading_height + 24 < doc.height:
+                    from reportlab.platypus import KeepTogether
+                    story.pop(); story += [KeepTogether([heading, table]), Spacer(1, 5*mm)]
+                    continue
+            story += [table, Spacer(1, 5*mm)]
 
     def footer(canvas, document):
         canvas.saveState(); canvas.setFont(regular, 7); canvas.setFillColor(colors.HexColor("#5F6B76"))

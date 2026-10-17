@@ -7,6 +7,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     datetime, Decimal, json, utcnow
 )
 from database_common import _soft_iso  # noqa: F401
+from settlements import posted_payment_sql, invoice_kind as payment_invoice_kind, settlement_sign
 
 
 class ReportsStore:
@@ -473,10 +474,10 @@ class ReportsStore:
         if kind in ("sale","purchase"): conditions.append("i.kind=?"); parameters.append(kind)
         if currency: conditions.append("i.currency=?"); parameters.append(currency)
         with self.connect() as db:
-            rows=[dict(row) for row in db.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,i.due_date,i.kind,i.currency,p.name party_name,p.account_number,
+            rows=[dict(row) for row in db.execute(f"""SELECT i.id,i.party_id,i.invoice_number,i.invoice_date,i.due_date,i.kind,i.currency,p.name party_name,p.account_number,
                 (CASE WHEN i.doc_subtype='credit_note' THEN -1 ELSE 1 END)*(CAST(i.total AS REAL)-CAST(COALESCE(i.amount_paid,'0') AS REAL)-
                 (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
-                 WHERE a.invoice_id=i.id AND {payment_day}<=?)) outstanding FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
+                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql()})) outstanding FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
                 WHERE {' AND '.join(conditions)} ORDER BY p.name,i.due_date,i.invoice_date""",parameters)]
         rows=self._apply_unallocated(rows,as_of.isoformat(),kind,currency)  # 2.9.80
         rows=[row for row in rows if abs(row["outstanding"])>=0.01]
@@ -495,17 +496,17 @@ class ReportsStore:
         so the ageing of each party agrees with its account balance (invoices and receipts / payments)."""
         payment_day="CASE WHEN x.payment_date GLOB '??-??-????' THEN substr(x.payment_date,7,4)||'-'||substr(x.payment_date,4,2)||'-'||substr(x.payment_date,1,2) ELSE x.payment_date END"
         with self.connect() as db:
-            payments=[dict(r) for r in db.execute(f"""SELECT x.party_id,x.kind,x.currency,p.name party_name,p.account_number,
+            payments=[dict(r) for r in db.execute(f"""SELECT x.party_id,x.kind,x.currency,x.party_account,p.kind party_kind,p.name party_name,p.account_number,
                 CAST(x.amount AS REAL)+CAST(COALESCE(x.exchange_difference,'0') AS REAL)-COALESCE((SELECT DSUM(CAST(a.amount AS REAL)) FROM payment_allocations a WHERE a.payment_id=x.id),0) free
-                FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=?""",(as_of,))]
-            party_of={r["id"]:r["party_id"] for r in db.execute("SELECT id,party_id FROM invoices")}
+                FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=? AND {posted_payment_sql()}""",(as_of,))]
+            party_of={r["id"]:r["party_id"] for r in rows}
         credits={}  # (party_id, kind, currency) -> amount that settles invoices
         for pay in payments:
-            invoice_kind="sale" if pay["kind"]=="customer_receipt" else "purchase"
-            if (kind and invoice_kind!=kind) or (currency and pay["currency"]!=currency) or abs(pay["free"] or 0)<0.005: continue
-            key=(pay["party_id"],invoice_kind,pay["currency"])
+            target_kind=payment_invoice_kind(pay)
+            if (kind and target_kind!=kind) or (currency and pay["currency"]!=currency) or abs(pay["free"] or 0)<0.005: continue
+            key=(pay["party_id"],target_kind,pay["currency"])
             entry=credits.setdefault(key,{"amount":0.0,"party_name":pay["party_name"],"account_number":pay["account_number"]})
-            entry["amount"]+=float(pay["free"])
+            entry["amount"]+=float(pay["free"])*settlement_sign(pay,target_kind)
         def day(row):
             for value in (row.get("due_date"),row.get("invoice_date")):
                 try: return _soft_iso(value) or ""
@@ -632,15 +633,21 @@ class ReportsStore:
         normalized="""CASE WHEN invoice_date GLOB '??-??-????'
             THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2)
             ELSE invoice_date END"""
-        conditions=["status NOT IN ('cancelled','deleted')","COALESCE(source_file,'')<>'Opening balances'"]; parameters=[]
+        conditions=["status='posted'","COALESCE(source_file,'')<>'Opening balances'"]; parameters=[]
         if from_date: conditions.append(f"{normalized}>=?"); parameters.append(from_date)
         if to_date: conditions.append(f"{normalized}<=?"); parameters.append(to_date)
         if currency: conditions.append("currency=?"); parameters.append(currency)
         with self.connect() as db:
             invoice_rows=[dict(row) for row in db.execute(f"""SELECT currency,kind,COUNT(*) invoices,
-                DSUM(CAST(subtotal AS REAL)) subtotal,DSUM(CAST(vat AS REAL)) vat,DSUM(CAST(total AS REAL)) total
+                DSUM((CASE WHEN doc_subtype='credit_note' THEN -1 ELSE 1 END)*CAST(subtotal AS REAL)) subtotal,
+                DSUM((CASE WHEN doc_subtype='credit_note' THEN -1 ELSE 1 END)*CAST(vat AS REAL)) vat,
+                DSUM((CASE WHEN doc_subtype='credit_note' THEN -1 ELSE 1 END)*CAST(total AS REAL)) total,
+                DSUM(CASE WHEN COALESCE(vat_recoverable,1)=1 AND COALESCE(vat_use,'mixed')<>'exempt'
+                     THEN (CASE WHEN doc_subtype='credit_note' THEN -1 ELSE 1 END)*CAST(vat AS REAL) ELSE 0 END) eligible_vat
                 FROM invoices WHERE {' AND '.join(conditions)} GROUP BY currency,kind ORDER BY currency,kind""",parameters)]
-            expense_conditions=[]; expense_parameters=[]
+            expense_conditions=[("EXISTS (SELECT 1 FROM journal_entries ee WHERE ee.source_type='expense' AND ee.source_id=expenses.id "
+                                 "AND COALESCE(ee.approval_status,'')<>'review' "
+                                 "AND EXISTS (SELECT 1 FROM journal_lines el WHERE el.entry_id=ee.id))")]; expense_parameters=[]
             expense_date="""CASE WHEN expense_date GLOB '??-??-????'
                 THEN substr(expense_date,7,4)||'-'||substr(expense_date,4,2)||'-'||substr(expense_date,1,2)
                 ELSE expense_date END"""
@@ -649,15 +656,18 @@ class ReportsStore:
             if currency: expense_conditions.append("currency=?"); expense_parameters.append(currency)
             where=" WHERE "+" AND ".join(expense_conditions) if expense_conditions else ""
             expenses=[dict(row) for row in db.execute(f"""SELECT currency,COUNT(*) invoices,DSUM(CAST(subtotal AS REAL)) subtotal,
-                DSUM(CAST(vat AS REAL)) vat,DSUM(CAST(total AS REAL)) total FROM expenses{where} GROUP BY currency""",expense_parameters)]
+                DSUM(CAST(vat AS REAL)) vat,DSUM(CAST(total AS REAL)) total,
+                DSUM(CASE WHEN COALESCE(vat_recoverable,1)=1 AND COALESCE(vat_use,'mixed')<>'exempt'
+                     THEN CAST(vat AS REAL) ELSE 0 END) eligible_vat FROM expenses{where} GROUP BY currency""",expense_parameters)]
         for row in expenses: invoice_rows.append({**row,"kind":"expense"})
         totals={}
         for row in invoice_rows:
             totals.setdefault(row["currency"],{"sales_vat":0.0,"purchase_vat":0.0,"expense_vat":0.0})
             key="sales_vat" if row["kind"]=="sale" else "purchase_vat" if row["kind"]=="purchase" else "expense_vat"
-            totals[row["currency"]][key]+=float(row["vat"] or 0)
+            totals[row["currency"]][key]+=float((row["vat"] if key=="sales_vat" else row["eligible_vat"]) or 0)
         summary=[]
         for code,value in totals.items():
             recoverable=value["purchase_vat"]+value["expense_vat"]
             summary.append({"currency":code,**value,"recoverable_vat":recoverable,"vat_payable":value["sales_vat"]-recoverable})
-        return {"items":invoice_rows,"summary":summary}
+        return {"items":invoice_rows,"summary":summary,"provisional":True,
+                "warning":"Document VAT summary only: partial deduction, carry-forward, rounding and settlement adjustments require the quarterly VAT return."}

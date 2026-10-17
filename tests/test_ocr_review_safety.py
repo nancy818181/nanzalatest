@@ -2,6 +2,8 @@
 import tests_setup  # noqa: F401
 import tempfile
 import unittest
+import threading
+from contextlib import ExitStack
 import numpy  # Load before OCR tests patch sys.modules; native modules must not be re-imported.
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,6 +11,59 @@ from unittest.mock import Mock, patch
 
 
 class ReadingSafetyTest(unittest.TestCase):
+    def test_a_photo_cannot_be_implicitly_confirmed_without_a_review_window(self):
+        from desktop_stage3_common import review_handwriting
+        data = {"reader": "paddle-local", "ocr_used": True, "total": 60}
+        self.assertIsNone(review_handwriting(SimpleNamespace(), "invoice.jpg", data))
+        self.assertEqual(data["total"], 60)
+        digital = {"total": 60}
+        self.assertIs(review_handwriting(SimpleNamespace(), "invoice.pdf", digital), digital)
+
+    def test_cancelled_expense_review_keeps_the_previous_attachment(self):
+        from desktop_expenses import ExpensesMixin
+        form = {"id": None, "pdf": "previous.pdf", "pdf_suggested_type": "Expenses"}
+        app = SimpleNamespace(expense_form=form)
+        with patch("desktop_expenses.filedialog.askopenfilename", return_value="new.jpg"), \
+             patch("desktop_expenses.prepare_pdf_reading"), \
+             patch("desktop_expenses.run_with_progress") as background:
+            ExpensesMixin.choose_expense_pdf(app)
+        self.assertEqual(form["pdf"], "previous.pdf")
+        with patch("desktop_stage3_common.review_handwriting", return_value=None):
+            background.call_args.args[3]({"reader": "vision-local"})
+        self.assertEqual(form["pdf"], "previous.pdf")
+        self.assertEqual(form["pdf_suggested_type"], "Expenses")
+
+    def test_window_dispatch_starts_work_and_delivers_result_on_ui_thread(self):
+        import desktop_stage3_common as common
+        real_thread = threading.Thread
+        main_thread = threading.get_ident()
+        for unit in ("page", "bytes"):
+            with self.subTest(unit=unit), ExitStack() as stack:
+                callbacks, threads, worker_ids, delivery_ids = [], [], [], []
+                class Window:
+                    def after(self, delay, callback): callbacks.append(callback)
+                app = Window()
+                stack.enter_context(patch.object(common.tk, "Misc", Window))
+                for owner, name in ((common.tk, "Toplevel"), (common.tk, "Label"),
+                                    (common.tk, "Button"), (common.ttk, "Progressbar")):
+                    stack.enter_context(patch.object(owner, name))
+                def start_thread(**kwargs):
+                    thread = real_thread(**kwargs); threads.append(thread); return thread
+                stack.enter_context(patch.object(common.threading, "Thread", side_effect=start_thread))
+                def work(progress, cancel):
+                    worker_ids.append(threading.get_ident()); progress(1, 2, "Reading")
+                    return {"total": 60}
+                def done(result):
+                    self.assertEqual(result, {"total": 60}); delivery_ids.append(threading.get_ident())
+                common.run_with_progress(app, "Read", work, done, unit=unit)
+                self.assertEqual(len(threads), 1)
+                threads[0].join(timeout=2)
+                self.assertFalse(threads[0].is_alive())
+                self.assertNotEqual(worker_ids, [main_thread])
+                self.assertEqual(delivery_ids, [])
+                callbacks.pop(0)()
+                self.assertEqual(delivery_ids, [main_thread])
+
     def test_expense_reading_is_dispatched_before_ocr_starts(self):
         from desktop_expenses import ExpensesMixin
         app = SimpleNamespace(expense_form={"id": None})
@@ -19,7 +74,7 @@ class ReadingSafetyTest(unittest.TestCase):
             ExpensesMixin.choose_expense_pdf(app)
             read.assert_not_called()
             self.assertEqual(background.call_args.args[2](None, None), {"total": 40})
-            read.assert_called_once_with("invoice.jpg")
+            read.assert_called_once_with("invoice.jpg", cancel=None)
 
     def test_asset_reading_is_dispatched_before_ocr_starts(self):
         from desktop_asset_register import AssetRegisterMixin
@@ -32,7 +87,7 @@ class ReadingSafetyTest(unittest.TestCase):
                 AssetRegisterMixin.choose_asset_pdf(SimpleNamespace())
                 read.assert_not_called()
                 background.call_args.args[2](None, None)
-                read.assert_called_once_with(str(path))
+            read.assert_called_once_with(str(path), cancel=None)
 
     def test_sales_reading_is_dispatched_before_ocr_starts(self):
         from desktop_v22 import V22Mixin
@@ -43,7 +98,7 @@ class ReadingSafetyTest(unittest.TestCase):
             V22Mixin.import_sales_pdf(SimpleNamespace())
             read.assert_not_called()
             background.call_args.args[2](None, None)
-            read.assert_called_once_with("invoice.pdf")
+            read.assert_called_once_with("invoice.pdf", cancel=None)
 
     def test_utility_total_is_not_fabricated_from_base_plus_vat(self):
         from pdf_import import _utility_bill

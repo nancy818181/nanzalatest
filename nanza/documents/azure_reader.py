@@ -248,17 +248,19 @@ def to_result(path, analysis):
     if currency in ("USD", "LBP", "EUR", "SAR", "AED", "GBP"): result["currency"] = currency
     if result.get("subtotal") is None and None not in (result.get("total"), result.get("vat")):
         result["subtotal"] = round(result["total"] - result["vat"], 2)
+        result.setdefault("inferred", []).append("subtotal")
+        result.setdefault("field_provenance", {})["subtotal"]={"origin":"inferred","evidence":"InvoiceTotal minus TotalTax; not read from SubTotal"}
     items = []
     for entry in ((fields.get("Items") or {}).get("valueArray") or []):
         values = entry.get("valueObject") or {}
         description = _text(values.get("Description")) or _text(values.get("ProductCode"))
         total, _ = _amount(values.get("Amount"))
         if not description or total is None: continue
-        quantity = (values.get("Quantity") or {}).get("valueNumber") or 1
+        quantity = (values.get("Quantity") or {}).get("valueNumber")
         price, _ = _amount(values.get("UnitPrice"))
-        try: quantity = float(quantity)
-        except (TypeError, ValueError): quantity = 1.0
-        if price is None or abs(quantity * price - total) > 0.02: quantity, price = 1.0, total
+        try: quantity = float(quantity) if quantity is not None else None
+        except (TypeError, ValueError): quantity = None
+        # Missing or inconsistent figures stay visible; do not turn every row into 1 × total.
         items.append({"description": description, "quantity": quantity, "unit_price": price, "total": total})
     if items: result["items"] = items
     confidence = documents[0].get("confidence") if documents else None
@@ -285,6 +287,7 @@ def to_result(path, analysis):
     result["field_confidence"] = field_confidence
     result["review_warnings"] = checks
     result["notes"] = f"Read by Azure (your key{sure}) - please check every amount before Save"
+    if result.get("inferred"): checks.append("Subtotal is calculated, not read: confirm it against the original")
     if checks: result["notes"] += " | " + " | ".join(checks)
     return result
 

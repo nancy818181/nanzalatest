@@ -192,6 +192,19 @@ def page_html(topics):
     e = html.escape
     nav = "".join(f'<a href="#{t[0]}"><span class="en">{e(t[1])}</span><span class="ar">{e(t[2])}</span></a>' for t in topics)
     cards = []
+    nav += '<a href="#invoice-review">Invoice review / مراجعة الفاتورة</a><a href="#commercial-documents">Quotes and orders / العروض والطلبات</a><a href="#local-video">Local training video / فيديو تدريب محلي</a>'
+    cards.append('''<section class="topic" id="invoice-review"><h2><span class="en">Review an invoice reading</span><span class="ar">مراجعة قراءة الفاتورة</span></h2>
+<p class="en">Purchases → Upload PDF/photo → compare the original with editable fields. Unknown confidence is not a verified reading. Check each item, totals, supplier tax ID and currency. Confirm the fields, then review the accounting entry before posting.</p>
+<p class="ar">المشتريات ← رفع PDF أو صورة ← قارن الأصل مع الحقول القابلة للتعديل. الثقة غير المعروفة لا تعني قراءة مؤكدة. راجع الأسطر والمجاميع ورقم المورد الضريبي والعملة. أكّد الحقول ثم راجع القيد قبل الترحيل.</p>
+<img src="img/invoice_review.png" alt="Demonstration invoice review / مثال مراجعة فاتورة" loading="lazy"></section>''')
+    cards.append('''<section class="topic" id="commercial-documents"><h2><span class="en">Quotations, consignment and purchase orders</span><span class="ar">عروض الأسعار والأمانة وأوامر الشراء</span></h2>
+<p class="en">Dashboard → Quotes / Orders / Consignment. Save a draft, verify it, then Confirm. For a purchase order, record actual partial receipts and create an invoice draft only for received quantities. A receipt updates stock; its invoice does not enter the goods twice. Review the invoice in Uploaded Data, then record its payment in Payments. Matching report shows quantities and price differences. A consignment note is not an invoice: record physical warehouse transfers separately in Stock Documents.</p>
+<p class="ar">لوحة القيادة ← العروض والطلبات والأمانة. احفظ المسودة وراجعها ثم أكّدها. سجّل الاستلام الجزئي الفعلي لأمر الشراء، وأنشئ مسودة فاتورة بالكميات المستلمة فقط. الاستلام يزيد المخزون؛ الفاتورة لا تدخل البضاعة مرتين. راجع الفاتورة في البيانات المرفوعة ثم سجّل الدفع في الدفعات. تقرير المطابقة يظهر الكميات وفروق الأسعار. سند الأمانة ليس فاتورة؛ سجّل النقل الفعلي بين المستودعات بشكل منفصل في مستندات المخزون.</p>
+<img src="img/commercial_documents.png" alt="Demonstration commercial document / مثال مستند تجاري" loading="lazy"></section>''')
+    cards.append('''<section class="topic" id="local-video"><h2><span class="en">Open a local training video</span><span class="ar">فتح فيديو تدريب محلي</span></h2>
+<p class="en">Choose your own MP4/WebM training video. It plays on this computer only; it is not uploaded. No video course is bundled with this version.</p>
+<p class="ar">اختر فيديو التدريب الخاص بك بصيغة MP4 أو WebM. يعمل على هذا الجهاز فقط ولا يتم رفعه. هذه النسخة لا تتضمن دورة فيديو مسجلة.</p>
+<input type="file" id="training-file" accept="video/*"><video id="training-video" controls preload="metadata" style="display:block;width:100%;max-height:500px"></video></section>''')
     for key, title_en, title_ar, intro_en, intro_ar, steps, image, image_ar in topics:
         items = "".join(f'<li><b>{n}</b><span class="en">{e(en)}</span><span class="ar">{e(ar)}</span></li>' for n, (_t, en, ar) in enumerate(steps, 1))
         cards.append(f'''<section class="topic" id="{key}"><h2><span class="en">{e(title_en)}</span><span class="ar">{e(title_ar)}</span></h2>
@@ -206,6 +219,7 @@ header img{{height:38px}} header h1{{font-size:20px;margin:0;flex:1}} header but
 header button.on{{background:var(--gold);color:var(--navy);border-color:var(--gold)}} header a{{color:var(--gold);font-size:13px}}
 .wrap{{display:grid;grid-template-columns:250px 1fr;gap:24px;max-width:1400px;margin:0 auto;padding:20px}}
 nav{{position:sticky;top:84px;align-self:start;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px}}
+input[type="search"]{{width:100%;padding:10px;margin:8px 0;border:1px solid var(--line);border-radius:6px;font:inherit}} [hidden]{{display:none!important}}
 nav a{{display:block;padding:7px 10px;border-radius:6px;color:var(--navy);text-decoration:none;font-size:14px}} nav a:hover{{background:#E8EEF5}}
 .topic{{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:22px;scroll-margin-top:90px}}
 .topic:target{{box-shadow:0 0 0 3px var(--gold)}} h2{{margin:0 0 4px;font-size:21px}} .intro{{color:var(--muted);margin:0 0 14px}}
@@ -219,14 +233,48 @@ body.arabic nav a .ar{{display:block}} nav a .en{{display:block}} body.arabic na
 <header><img src="../nanza_icon.png" alt="Nanza" onerror="this.style.display='none'"><h1><span class="en">Help with pictures</span><span class="ar">المساعدة بالصور</span></h1>
 <button id="en" class="on" onclick="lang(false)">English</button><button id="ar" onclick="lang(true)">عربي</button>
 <a href="../user_guide.html"><span class="en">Full user guide</span><span class="ar">الدليل الكامل</span></a></header>
-<div class="wrap"><nav>{nav}</nav><main>{"".join(cards)}</main></div>
+<div class="wrap"><nav><label for="help-search"><span class="en">Search help</span><span class="ar">ابحث في المساعدة</span></label><input id="help-search" type="search" autocomplete="off" aria-label="Search help / ابحث في المساعدة"><div id="topic-links">{nav}</div></nav><main><p id="no-results" hidden><span class="en">No matching topic. Try another word.</span><span class="ar">لا يوجد موضوع مطابق. جرّب كلمة أخرى.</span></p>{"".join(cards)}</main></div>
 <script>
-function lang(ar){{document.body.classList.toggle("arabic",ar);document.getElementById("ar").classList.toggle("on",ar);document.getElementById("en").classList.toggle("on",!ar);
+const search=document.getElementById("help-search");
+let trainingUrl=null;
+document.getElementById("training-file").addEventListener("change",event=>{{
+ const file=event.target.files[0];if(!file||!file.type.startsWith("video/"))return;
+ if(trainingUrl)URL.revokeObjectURL(trainingUrl);
+ trainingUrl=URL.createObjectURL(file);document.getElementById("training-video").src=trainingUrl;
+}});
+function filterTopics(){{
+ const query=search.value.normalize("NFKC").toLocaleLowerCase().trim(); let count=0;
+ document.querySelectorAll("section.topic").forEach(section=>{{
+  const visible=!query||section.textContent.normalize("NFKC").toLocaleLowerCase().includes(query);
+  section.hidden=!visible; if(visible)count++;
+  const link=document.querySelector('#topic-links a[href="#'+section.id+'"]'); if(link)link.hidden=!visible;
+ }});
+ document.getElementById("no-results").hidden=count>0;
+}}
+search.addEventListener("input",filterTopics);
+// A direct screen link must remain reachable after filtering.
+window.addEventListener("hashchange",()=>{{search.value="";filterTopics();}});
+function lang(ar){{document.documentElement.lang=ar?"ar":"en";document.documentElement.dir=ar?"rtl":"ltr";document.body.classList.toggle("arabic",ar);document.getElementById("ar").classList.toggle("on",ar);document.getElementById("en").classList.toggle("on",!ar);
 try{{localStorage.setItem("nanza-help-lang",ar?"ar":"en")}}catch(e){{}}}}
 try{{if(localStorage.getItem("nanza-help-lang")==="ar")lang(true)}}catch(e){{}}
 if(location.search.indexOf("lang=ar")>=0)lang(true);
 </script></body></html>'''
 
 
+def rebuild_existing_page():
+    """Refresh navigation and instructions without recapturing installed screenshots."""
+    done = []
+    for key, en, ar, intro_en, intro_ar, steps in [*TOPICS, *EXTRA_TOPICS, WIZARD]:
+        if not (OUT / "img" / f"{key}.png").is_file():
+            raise FileNotFoundError(f"Missing help screenshot: {key}")
+        image_ar = f"img/{key}_ar.png" if (OUT / "img" / f"{key}_ar.png").is_file() else None
+        done.append((key, en, ar, intro_en, intro_ar, steps, f"img/{key}.png", image_ar))
+    done.insert(1, done.pop())
+    (OUT / "help.html").write_text(page_html(done), encoding="utf-8")
+
+
 if __name__ == "__main__":
-    build()
+    if "--html-only" in sys.argv:
+        rebuild_existing_page()
+    else:
+        build()

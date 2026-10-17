@@ -10,6 +10,51 @@ from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 from desktop_common import main_currency  # 2.9.71
 
 
+def _responsive_invoice_details(form, fields, dimensions):
+    """Use the available width for adjacent label/field pairs without rebuilding their controls."""
+    state = {"columns": None, "width": None, "pending": False}
+    viewport = form.master
+    while viewport is not None and not viewport.__dict__.get("_saber_scroll_page"):
+        viewport = viewport.master
+
+    def arrange():
+        state["pending"] = False
+        if not form.winfo_exists(): return
+        width = form.winfo_width()
+        if viewport is not None:
+            inset = max(0, form.winfo_rootx() - viewport.winfo_rootx())
+            width = min(width, max(1, viewport.winfo_width() - inset - 16))
+        if width <= 1: return
+        label_width = max(label.winfo_reqwidth() for label, _widget in fields)
+        field_width = max(widget.winfo_reqwidth() for _label, widget in fields)
+        gap = max(16, round(form.winfo_fpixels("0.16i")))
+        columns = max(1, min(3, width // max(1, label_width + field_width + gap)))
+        if columns == state["columns"] and width == state["width"]: return
+        state.update(columns=columns, width=width)
+        for column in range(6):
+            form.grid_columnconfigure(column, weight=0, minsize=0, uniform="")
+        for column in range(columns):
+            labels = fields[column::columns]
+            caption_width = max(label.winfo_reqwidth() for label, _widget in labels)
+            field_size = max(1, width // columns - caption_width - (gap if column else 0) - 10)
+            form.grid_columnconfigure(2 * column + 1, minsize=field_size)
+        for index, (label, widget) in enumerate(fields):
+            row, column = divmod(index, columns)
+            label.grid_configure(row=row, column=2 * column, padx=(0 if column == 0 else gap, 8), pady=3)
+            widget.grid_configure(row=row, column=2 * column + 1, sticky="ew", padx=(0, 2), pady=3)
+        dimensions.grid_configure(row=(len(fields) + columns - 1) // columns,
+                                  column=0, columnspan=2 * columns, sticky="ew", pady=(3, 1))
+
+    def resized(_event=None):
+        if not state["pending"]:
+            state["pending"] = True
+            form.after_idle(arrange)
+
+    form.bind("<Configure>", resized, add="+")
+    if viewport is not None: viewport.bind("<Configure>", resized, add="+")
+    resized()
+
+
 class SalesInvoiceMixin:
     def build_sales_invoice(self):
         self.sales_items=[]; self.sales_edit_id=None
@@ -35,16 +80,19 @@ class SalesInvoiceMixin:
         self.sales_previous.pack(side="left",padx=2)
         self.sales_next=tk.Button(nav,text="Next ▶",command=lambda:self.navigate_sales_invoice(1),bg=NAVY,fg="white",border=0,padx=7,pady=3)
         self.sales_next.pack(side="left",padx=2)
+        if (self.current_user or {}).get("role") == "admin":
+            self.action_button(nav,"Numbering",self.open_numbering_settings).pack(side="left",padx=4)
         details=ttk.Notebook(tabs_row); details.pack(side="left",fill="x",expand=True)
         invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT)
         details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
-        # 2.9.118: the details in a tidy grid - two columns of label | field that line up, as in Zoho / Odoo. The same fields, made in
-        # the same order (the Tab key goes through them as before), with the same keys and actions.
+        # Keep the existing controls and their bindings; distribute them across the available width.
         form=tk.Frame(invoice_details,bg=LIGHT); form.pack(anchor="w",fill="x",pady=(2,0))
+        detail_fields=[]
         def put(row,column,label,widget,bold=False):
             if label:
-                tk.Label(form,text=label,bg=LIGHT,font=("Segoe UI",9,"bold") if bold else None).grid(row=row,column=2*column,sticky="w",
-                                                                                                  padx=(0 if column==0 else 28,8),pady=1)
+                caption=tk.Label(form,text=label,bg=LIGHT,font=("Segoe UI",9,"bold") if bold else None)
+                caption.grid(row=row,column=2*column,sticky="w",padx=(0 if column==0 else 28,8),pady=1)
+                detail_fields.append((caption,widget))
             widget.grid(row=row,column=2*column+1,sticky="w",pady=1)
             return widget
         doc_box=ttk.Combobox(form,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
@@ -75,6 +123,7 @@ class SalesInvoiceMixin:
         put(4,0,"Due Date",self.date_entry(form,self.sales_due_date,12))
         dims=tk.Frame(form,bg=LIGHT); dims.grid(row=7,column=0,columnspan=4,sticky="w",pady=1)
         self.sales_department=tk.StringVar(); self.sales_project=tk.StringVar(); self.dimension_selectors(dims,self.sales_department,self.sales_project)
+        flow_toolbar(dims)
         vat_row=form
         put(5,0,"Branch",self.branch_selector(form,self.sales_branch,14,False))
         # 2.9.116: the branch can be in the number (Settings > Numbering): a new invoice takes the number of its branch
@@ -86,13 +135,19 @@ class SalesInvoiceMixin:
         self.sales_treatment=tk.StringVar(value=TAXABLE_LABEL)
         treatment_box=put(6,1,"VAT Treatment",ttk.Combobox(form,textvariable=self.sales_treatment,values=list(SALE_TREATMENTS),state="readonly",width=19),True)
         treatment_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_treatment_changed())
+        _responsive_invoice_details(form,detail_fields,dims)
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
         self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
         self.sales_mode_label.pack(side="right",padx=(12,4))
         # 2.9.113: income not subject to income tax (already taxed / exempt by law) - the legal reason is required; Settings switches it on
         from tax_adjustments import EXEMPT_REASONS
         self.sales_exempt_reason=tk.StringVar(); self.sales_exempt_article=tk.StringVar()
-        self.sales_exempt_row=tk.Frame(vat_row.master,bg=LIGHT); self._sales_exempt_after=vat_row
+        self.sales_income_exempt=tk.BooleanVar(value=False)
+        exempt_toggle=tk.Frame(vat_row.master,bg=LIGHT); exempt_toggle.pack(fill="x",after=vat_row,pady=2)
+        self._sales_exempt_after=exempt_toggle
+        tk.Checkbutton(exempt_toggle,text="Income exempt from income tax (legal reason required)",
+            variable=self.sales_income_exempt,command=self.toggle_sales_income_exempt,bg=LIGHT,fg=NAVY).pack(side="left")
+        self.sales_exempt_row=tk.Frame(vat_row.master,bg=LIGHT)
         tk.Label(self.sales_exempt_row,text="Income not subject to income tax | إيراد غير خاضع لضريبة الدخل - legal reason",bg=LIGHT,fg=NAVY).pack(side="left")
         ttk.Combobox(self.sales_exempt_row,textvariable=self.sales_exempt_reason,values=("",)+EXEMPT_REASONS,state="readonly",width=46).pack(side="left",padx=4)
         tk.Label(self.sales_exempt_row,text="Article / law",bg=LIGHT).pack(side="left",padx=(8,2))
@@ -322,14 +377,23 @@ class SalesInvoiceMixin:
         """2.9.113: shown when Settings switches the option on, and always for an invoice already marked (nothing is hidden)."""
         row=getattr(self,"sales_exempt_row",None)
         if row is None: return
-        show=bool(getattr(self,"exempt_income_enabled",False) or self.sales_exempt_reason.get())
+        show=bool((getattr(self,"sales_income_exempt",None) and self.sales_income_exempt.get()) or self.sales_exempt_reason.get())
         if show and not row.winfo_manager(): row.pack(fill="x",after=self._sales_exempt_after,pady=(2,0))
         elif not show: row.pack_forget()
+
+    def toggle_sales_income_exempt(self):
+        # This is an income-tax adjustment, never a VAT exemption or a new series.
+        if not self.sales_income_exempt.get():
+            self.sales_exempt_reason.set(""); self.sales_exempt_article.set("")
+        self.sales_exempt_visibility()
 
     def new_sales_invoice(self,confirm=True):
         if confirm and self.sales_items and not messagebox.askyesno("Sales Invoice","Start a new invoice? Lines that are not saved will be cleared."): return
         self.sales_edit_id=None; self.sales_items=[]; self.sales_pdf_path=None; self.sales_sheet.delete(*self.sales_sheet.get_children())
-        if hasattr(self,"sales_exempt_reason"): self.sales_exempt_reason.set(""); self.sales_exempt_article.set(""); self.sales_exempt_visibility()
+        if hasattr(self,"sales_exempt_reason"):
+            self.sales_exempt_reason.set(""); self.sales_exempt_article.set("")
+            if hasattr(self,"sales_income_exempt"): self.sales_income_exempt.set(False)
+            self.sales_exempt_visibility()
         self._sales_loaded_state=None
         self.sales_party.set(""); self.sales_supplier_account.set(""); self.sales_amount_paid.set("0"); getattr(self,"sales_cash_account",
                 tk.StringVar()).set(""); self.sales_due_date.set(""); self.sales_open_choice.set("")
@@ -581,7 +645,9 @@ class SalesInvoiceMixin:
             try: reason=self.client.income_exemptions().get(row["id"],"")
             except (RuntimeError, OSError, ValueError): reason=""
             article=reason[len(NEEDS_ARTICLE):].strip() if reason.startswith(NEEDS_ARTICLE) else ""
-            self.sales_exempt_reason.set(NEEDS_ARTICLE if article else reason); self.sales_exempt_article.set(article); self.sales_exempt_visibility()
+            self.sales_exempt_reason.set(NEEDS_ARTICLE if article else reason); self.sales_exempt_article.set(article)
+            if hasattr(self,"sales_income_exempt"): self.sales_income_exempt.set(bool(reason))
+            self.sales_exempt_visibility()
         self.sales_no.set(detail["invoice_number"]); self.sales_date.set(safe_display_date(detail["invoice_date"])); self.sales_party.set(detail["party_name"] or "")
         self.sales_supplier_account.set(detail.get("supplier_account") or ""); self.sales_party.set(detail["party_name"] or "")
         self.sales_currency.set(detail["currency"]); self.sales_vat_account.set(detail.get("vat_account") or "4427")
@@ -628,7 +694,8 @@ class SalesInvoiceMixin:
                 self.sales_doc_type,self.sales_category,self.sales_discount_percent,self.sales_discount_amount)
         lines=tuple((item.get("item_code"),item.get("description"),item.get("quantity"),item.get("unit"),
                      item.get("unit_price"),item.get("discount_percent"),item.get("vat_rate")) for item in self.sales_items)
-        return tuple(field.get() for field in fields),lines
+        exempt = tuple(getattr(self, key).get() for key in ("sales_income_exempt", "sales_exempt_reason", "sales_exempt_article") if hasattr(self, key))
+        return tuple(field.get() for field in fields) + exempt,lines
 
     def save_sales_invoice(self,post=False):
         self.update_sales_totals()
@@ -660,11 +727,13 @@ class SalesInvoiceMixin:
             if invoice["due_date"]: invoice["due_date"]=formatted_user_date(invoice["due_date"])
         except ValueError as exc: return messagebox.showerror("Sales Invoice",str(exc))
         exempt=(self.sales_exempt_reason.get(),self.sales_exempt_article.get()) if hasattr(self,"sales_exempt_reason") else ("","")
+        if getattr(self,"sales_income_exempt",None) and self.sales_income_exempt.get() and not exempt[0]:
+            return messagebox.showwarning("Sales Invoice","Choose the legal reason for the income-tax exemption")
+        invoice["income_exemption"] = {"reason": exempt[0], "article": exempt[1]}
         if exempt[0]:
             from tax_adjustments import reason_text
             try: reason_text(*exempt)  # 2.9.113: checked before the invoice is saved
             except ValueError as exc: return messagebox.showwarning("Sales Invoice",str(exc))
-        had_exemption=bool(self.sales_edit_id and exempt[0])
         if self.sales_edit_id:
             if not messagebox.askyesno("Sales Invoice",f"Save the changes to invoice {invoice['invoice_number']}? Its journal entry will be replaced with the new figures."): return
         saved_id=None
@@ -678,9 +747,6 @@ class SalesInvoiceMixin:
                     except Exception as exc: messagebox.showwarning("Sales Invoice",f"The invoice is saved, but its PDF was not attached: {exc}. Use Attach on the invoice.")
                 self.sales_pdf_path=None
         except Exception as exc: return messagebox.showerror("Sales Invoice",str(exc))
-        if saved_id and (exempt[0] or had_exemption or self.sales_edit_id):
-            try: self.client.set_income_exemption(saved_id,*exempt)
-            except Exception as exc: messagebox.showwarning("Sales Invoice",f"The invoice is saved, but its income-tax reason was not: {exc}")
         number=invoice["invoice_number"]
         waiting=bool(locals().get("created") and isinstance(locals().get("created"),dict) and locals()["created"].get("approval"))  # 2.9.93
         messagebox.showinfo("Sales Invoice",f'Invoice {number} saved as a draft: it waits for approval by another user.' if waiting else f'Invoice {number} saved as {"Posted" if post else "Draft"}.')

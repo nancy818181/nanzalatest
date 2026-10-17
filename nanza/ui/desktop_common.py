@@ -355,6 +355,11 @@ def flow_toolbar(frame, gap=4):
     order = [e for e in entries if e[1] != "right"] + list(reversed([e for e in entries if e[1] == "right"]))
     first_time = not getattr(frame, "_saber_flow", False)
     frame._flow_order = [e for e in getattr(frame, "_flow_order", []) if e[0].winfo_exists()] + order
+    pending=getattr(frame,"_flow_after",None)
+    if pending:
+        try: frame.after_cancel(pending)
+        except tk.TclError: logging.getLogger("saber.ui").debug("Flow callback already removed",exc_info=True)
+    frame._flow_after=None
     frame._saber_flow = True; frame._flow_pending = False
     try:
         import arabic_ui
@@ -380,6 +385,7 @@ def flow_toolbar(frame, gap=4):
         return padx, pady, 2 * border + title + 2 * pady, 2 * padx
 
     def layout():
+        frame._flow_after=None
         frame._flow_pending = False
         if not frame.winfo_exists(): return
         left0, top0, extra_height, extra_width = inner_offsets()
@@ -399,7 +405,7 @@ def flow_toolbar(frame, gap=4):
     def schedule(_event=None):
         if not getattr(frame, "_flow_pending", False) and frame.winfo_exists():
             frame._flow_pending = True
-            frame.after_idle(layout)
+            frame._flow_after=frame.after_idle(layout)
 
     frame._flow_schedule = schedule
     if first_time:
@@ -409,6 +415,14 @@ def flow_toolbar(frame, gap=4):
             if frame.winfo_manager() == "pack": frame.pack_configure(fill="x")
         except tk.TclError: pass
         frame.bind("<Configure>", schedule, add="+")
+        def cancel_flow(event):
+            if event.widget is not frame: return
+            pending=getattr(frame,"_flow_after",None)
+            if pending:
+                try: frame.after_cancel(pending)
+                except tk.TclError: logging.getLogger("saber.ui").debug("Flow callback already removed",exc_info=True)
+            frame._flow_after=None
+        frame.bind("<Destroy>",cancel_flow,add="+")
     widest = max((w.winfo_reqwidth() + l + r for w, _s, (l, r), _p in frame._flow_order if w.winfo_exists()), default=100)
     frame.configure(width=widest)
     for widget, *_rest in order: widget.bind("<Configure>", lambda _e, f=frame: f._flow_schedule(), add="+")

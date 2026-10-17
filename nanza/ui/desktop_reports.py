@@ -581,7 +581,10 @@ class ReportsMixin:
                     self.ctb_note.config(text=ctb.get("warning") or (f'Prior period: {ctb.get("prior_from","")} to {ctb.get("prior_to","")} '
                                          f'({ctb.get("prior_source","")}). Balances: debit positive, credit negative.'))
             self.vat_summary.config(text="VAT figures need the VAT right (ask the administrator)." if vat.get("_hidden") else
-                                    "   ".join(f'{r["currency"]} VAT payable: {r["vat_payable"]:,.2f}' for r in vat["summary"]) or "No VAT activity")
+                                    "   ".join(f'{r["currency"]} Document VAT difference: {r["vat_payable"]:,.2f}' for r in vat["summary"]) or "No VAT activity")
+            if vat.get("warning") and not vat.get("_hidden"):
+                caption="   ".join(f'{r["currency"]} Document VAT difference: {r["vat_payable"]:,.2f}' for r in vat["summary"])
+                self.vat_summary.config(text=caption+" — "+vat["warning"])
 
         def failed(message):
             if not current_request(): return

@@ -10,7 +10,7 @@ on:
       - main
 
 permissions:
-  # write: only used by the last step, which publishes a Release when the workflow is run by hand on main.
+  # write: only the final step publishes a Release on a new-version merge or manual run on main.
   contents: write
 
 env:
@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Download source
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
 
       # 2.9.51: stop at once when the upload landed in a sub-folder (the root would still hold the old version)
       # or when the program and the installer carry different versions. The version is shown in the run summary.
@@ -48,6 +50,11 @@ jobs:
           $program = (Select-String -Path nanza/core/app_runtime.py -Pattern '^APP_VERSION = "([^"]+)"').Matches[0].Groups[1].Value
           if ($installer -ne $program) { throw "installer.iss says $installer but app_runtime.py says $program." }
           "version=$installer" >> $env:GITHUB_OUTPUT
+          # A version change merged to main is a release request; PRs only build/test.
+          $previous = git show 'HEAD^:installer.iss' 2>$null
+          $previousVersion = (($previous | Select-String '#define MyAppVersion "([^"]+)"').Matches | Select-Object -First 1).Groups[1].Value
+          $newVersion = if ($previousVersion -and $previousVersion -ne $installer) { 'true' } else { 'false' }
+          "new_version=$newVersion" >> $env:GITHUB_OUTPUT
           "## Building Nanza Accounting $installer" >> $env:GITHUB_STEP_SUMMARY
           Write-Host "Building Nanza Accounting $installer"
 
@@ -60,7 +67,7 @@ jobs:
       - name: Install build requirements
         run: python -m pip install -r requirements.txt
 
-      - name: Prepare bundled offline OCR (English and Arabic)
+      - name: Prepare bundled offline OCR (English, Arabic and French)
         shell: pwsh
         run: |
           choco install tesseract --yes --no-progress --version=5.5.0.20241111
@@ -77,6 +84,10 @@ jobs:
           Invoke-WebRequest `
             -Uri "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/ara.traineddata" `
             -OutFile (Join-Path $tessdata "ara.traineddata")
+          Invoke-WebRequest `
+            -Uri "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/fra.traineddata" `
+            -OutFile (Join-Path $tessdata "fra.traineddata")
+          if (-not (Test-Path (Join-Path $tessdata "fra.traineddata"))) { throw "French OCR language data was not downloaded." }
           if (-not (Test-Path (Join-Path $tessdata "ara.traineddata"))) {
             throw "Arabic Tesseract language data was not downloaded."
           }
@@ -129,6 +140,8 @@ jobs:
             Write-Host "Program modules included: $(($modules | Where-Object { $_ -ne '--hidden-import' }) -join ', ')"
             pyinstaller --noconfirm --clean --onedir --windowed --noupx --icon Assets/nanza.ico @folders @modules `
             --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/help;assets/help" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
+            --hidden-import commercial_documents --hidden-import executive_dashboard `
+            --hidden-import desktop_commercial --hidden-import desktop_executive `
             --hidden-import arabic_reshaper --hidden-import bidi --hidden-import bidi.algorithm --collect-data arabic_reshaper `
             --hidden-import payroll_reports --hidden-import vat_return --hidden-import desktop_final --hidden-import desktop_brains --hidden-import ledger_reports --hidden-import desktop_dimensions --hidden-import desktop_stage3 --hidden-import ai_mapper --hidden-import ai_service --hidden-import pdf_import --hidden-import pypdf --hidden-import pypdfium2 --hidden-import pytesseract --collect-all pypdfium2 --collect-all pypdfium2_raw --hidden-import year_end --hidden-import cnss_forms --hidden-import cnss_forms_ui --hidden-import party_similarity --hidden-import pdf_form_editor --hidden-import desktop_assets --hidden-import report_export --hidden-import payroll_excel_forms --hidden-import lebanese_payroll --hidden-import inventory --hidden-import fixed_assets --hidden-import desktop_inventory --hidden-import desktop_v22 --hidden-import chart_extra --hidden-import invoice_calc --hidden-import tafqeet --hidden-import business_reports --hidden-import financial_projection --hidden-import financial_statements --hidden-import app_runtime --hidden-import desktop_common --hidden-import desktop_invoices --hidden-import desktop_parties --hidden-import desktop_payroll --hidden-import desktop_reports --hidden-import desktop_settings --hidden-import desktop_stage3_common --hidden-import desktop_purchases --hidden-import desktop_asset_register --hidden-import desktop_expenses --hidden-import desktop_brains_common --hidden-import desktop_balance_reports --hidden-import desktop_payroll_sheet --hidden-import payroll_lines --hidden-import payroll_official --hidden-import office_tls --hidden-import vat_ledgers --hidden-import audit_chain --hidden-import audit_report --hidden-import desktop_attachments --hidden-import tax_review --hidden-import approvals --hidden-import release_check --hidden-import owner_access --hidden-import licence --hidden-import desktop_licence `
             --version-file version_main.txt --name NanzaAccounting run_desktop.py
@@ -145,6 +158,7 @@ jobs:
             "ocr\engine\tesseract.exe",
             "ocr\tessdata\eng.traineddata",
             "ocr\tessdata\ara.traineddata",
+            "ocr\tessdata\fra.traineddata",
             "pypdfium2_raw\pdfium.dll",
             "pypdfium2_raw\version.json"
           )) {
@@ -256,9 +270,9 @@ jobs:
           retention-days: 3
 
       # 2.9.42: "Run workflow" on main also publishes a GitHub Release (vX.Y.Z) with the installer and its
-      # SHA-256. The program's update check reads the newest Release. Pushes and pull requests never publish.
+      # SHA-256. A new version merged to main also publishes after all checks/builds pass. PRs never publish.
       - name: Publish release for the update check
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && steps.version.outputs.new_version == 'true'))
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -272,5 +286,5 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --clobber
           } else {
-            gh release create $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
+            gh release create $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --target "$env:GITHUB_SHA" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
           }

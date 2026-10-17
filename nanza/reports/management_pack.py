@@ -156,3 +156,143 @@ def budget_variances(db, year, upto_month, currency="USD", threshold_percent=10.
             alerts.append({"account": code, "name": real_name or name, "type": kind, "budget": round(planned, 2), "actual": round(real, 2),
                            "gap": round(gap, 2), "percent": round(gap / planned * 100, 1)})
     return sorted(alerts, key=lambda a: -a["gap"])
+
+
+def brief(db, start, end, currency='USD', prior_db=None, language='en'):
+    """Concise posted-books snapshot; missing comparison data is never presented as zero."""
+    from business_reports import ageing
+    start, end = iso_date(start), iso_date(end)
+    if start > end:
+        raise ValueError("Date From cannot be after Date To")
+    if start[:4] != end[:4]:
+        raise ValueError("Choose a period within one fiscal year")
+    if currency not in db.currency_codes():
+        raise ValueError("Choose one company display currency")
+    rows = db._converted_lines(currency, None, end)
+    cash = sum(
+        (
+            Decimal(str(r["signed"].get(currency) or 0))
+            for r in rows
+            if "".join(c for c in r["code"] if c.isdigit()).startswith(("51", "53"))
+        ),
+        ZERO,
+    )
+
+    def performance(lines, first, last):
+        income = ZERO
+        expense = ZERO
+        for row in lines:
+            if not first <= row["iso_date"] <= last:
+                continue
+            value = Decimal(str(row["signed"].get(currency) or 0))
+            if row["account_type"] == "income":
+                income -= value
+            elif row["account_type"] == "expense":
+                expense += value
+        return income, expense, income - expense
+
+    income, expense, profit = performance(rows, start, end)
+
+    def previous(day):
+        parsed = date.fromisoformat(day)
+        try:
+            return parsed.replace(year=parsed.year - 1).isoformat()
+        except ValueError:
+            return parsed.replace(year=parsed.year - 1, day=28).isoformat()
+
+    prior_start, prior_end = previous(start), previous(end)
+    prior_lines = (
+        prior_db._converted_lines(currency, None, prior_end) if prior_db is not None and prior_db is not db else rows
+    )
+    available = prior_db is not None or any(prior_start <= r["iso_date"] <= prior_end for r in prior_lines)
+    prior_profit = performance(prior_lines, prior_start, prior_end)[2] if available else None
+
+    def overdue(side):
+        report = ageing(db, {"date_to": end, "side": side, "basis": currency})
+        detail = report["sections"][1]
+        headers = detail["headers"]
+        current = headers.index("Not due")
+        gross = headers.index("Total Open")
+        unallocated = headers.index("Unallocated")
+        return sum(
+            (
+                max(ZERO, Decimal(str(row[gross])) - Decimal(str(row[current])) - Decimal(str(row[unallocated])))
+                for row in detail["rows"][:-1]
+            ),
+            ZERO,
+        )
+
+    receivable, payable = overdue("receivables"), overdue("payables")
+    labels = {
+        "title": "Period dashboard summary",
+        "metric": "Metric",
+        "amount": f"Amount ({currency})",
+        "cash": "Cash / bank book balance",
+        "ar": "Overdue receivables, net by customer",
+        "ap": "Overdue payables, net by supplier",
+        "income": "Income in period",
+        "expense": "Expenses in period",
+        "profit": "Net profit / (loss)",
+        "prior": "Same period last year: profit / (loss)",
+        "variance": "Profit variance vs last year",
+        "missing": "Prior-year comparison unavailable: blank is not zero",
+        "note": "Posted books only. Cash is the book balance, not a bank availability confirmation. Unallocated credits offset overdue balances within each party.",
+    }
+    if language == "ar":
+        labels.update(
+            title="ملخص الفترة للإدارة",
+            metric="المؤشر",
+            amount=f"المبلغ ({currency})",
+            cash="الرصيد الدفتري للنقد والمصارف",
+            ar="ذمم العملاء المتأخرة، صافي لكل عميل",
+            ap="ذمم الموردين المتأخرة، صافي لكل مورد",
+            income="إيرادات الفترة",
+            expense="مصاريف الفترة",
+            profit="صافي الربح / الخسارة",
+            prior="ربح / خسارة نفس الفترة السابقة",
+            variance="فرق الربح عن السنة السابقة",
+            missing="بيانات المقارنة السابقة غير متاحة: الفراغ لا يعني صفراً",
+            note="قيود مرحّلة فقط. النقد رصيد دفتري ولا يؤكد المتاح لدى المصرف. الدفعات غير المخصصة تعالج ضمن الطرف نفسه.",
+        )
+    metrics = {
+        "cash": cash,
+        "overdue_receivables": receivable,
+        "overdue_payables": payable,
+        "income": income,
+        "expenses": expense,
+        "profit": profit,
+        "prior_profit": prior_profit,
+        "profit_variance": profit - prior_profit if available else None,
+    }
+    values = [
+        (labels[k], v)
+        for k, v in (
+            ("cash", cash),
+            ("ar", receivable),
+            ("ap", payable),
+            ("income", income),
+            ("expense", expense),
+            ("profit", profit),
+            ("prior", prior_profit),
+            ("variance", metrics["profit_variance"]),
+        )
+    ]
+    company = db.settings().get("company_name") or ""
+    return {
+        "title": labels["title"],
+        "meta": [company, f"{display_date(start)} — {display_date(end)}", f'{currency} | {labels["note"]}']
+        + ([] if available else [labels["missing"]]),
+        "metrics": metrics,
+        "prior_available": available,
+        "language": language,
+        "rtl": language == "ar",
+        "sections": [
+            {
+                "heading": labels["title"],
+                "headers": [labels["metric"], labels["amount"]],
+                "rows": [[label, round(value, 2) if value is not None else ""] for label, value in values],
+                "total_rows": [5],
+                "major_total_rows": [5],
+            }
+        ],
+    }

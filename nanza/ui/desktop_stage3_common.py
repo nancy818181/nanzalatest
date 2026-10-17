@@ -235,7 +235,7 @@ def prepare_pdf_reading(app):
     except Exception: logging.getLogger("saber").debug("ignored error", exc_info=True)  # 2.9.105
 
 
-def run_with_progress(app, title, work, done):
+def run_with_progress(app, title, work, done, unit="page"):
     """Run work(progress, cancel) away from the screen (a long scanned PDF is read page by page with OCR), with a
     window showing the page being read and a Stop button; done(result) runs on the screen afterwards.
     Without a real window (tests) the work runs at once."""
@@ -243,12 +243,16 @@ def run_with_progress(app, title, work, done):
         return done(work(None, None))
     cancel = threading.Event(); window = tk.Toplevel(app); window.title(title); window.configure(bg=LIGHT); window.transient(app)
     window.resizable(False, False); window.protocol("WM_DELETE_WINDOW", cancel.set)
-    label = tk.Label(window, text="Reading the PDF...", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold"), width=60, anchor="w")
+    label = tk.Label(window, text="Preparing the download..." if unit == "bytes" else "Reading the PDF...",
+                     bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold"), width=60, anchor="w")
     label.pack(padx=16, pady=(14, 6), fill="x")
     bar = ttk.Progressbar(window, mode="determinate", length=420, maximum=100); bar.pack(padx=16, pady=4)
-    tk.Label(window, text="Scanned pages are read with OCR (a few seconds each). You can keep this window open and wait.",
+    explanation = ("One-time download. You can stop it and use Install / Repair later to resume."
+                   if unit == "bytes" else "Scanned pages are read with OCR (a few seconds each). You can keep this window open and wait.")
+    tk.Label(window, text=explanation,
              bg=LIGHT, fg=MUTED, wraplength=440, justify="left").pack(padx=16, pady=4, anchor="w")
-    tk.Button(window, text="Stop (keep what is read)", command=cancel.set, bg=RED, fg="white", border=0, padx=12, pady=5).pack(pady=(4, 12))
+    tk.Button(window, text="Stop download" if unit == "bytes" else "Stop (keep what is read)", command=cancel.set,
+              bg=RED, fg="white", border=0, padx=12, pady=5).pack(pady=(4, 12))
 
     import queue
     events = queue.Queue()  # 2.9.87: the reading thread never touches the window; the screen polls this queue
@@ -267,7 +271,10 @@ def run_with_progress(app, title, work, done):
                 if kind == "progress":
                     done_pages, total, stage = value
                     if window.winfo_exists():
-                        label.config(text=f"{stage}: page {done_pages + 1} of {total}" + ("  -  stopping..." if cancel.is_set() else ""))
+                        if unit == "bytes":
+                            detail = f"{stage}: {done_pages // 1048576} / {total // 1048576} MB" if total else stage
+                        else: detail = f"{stage}: page {done_pages + 1} of {total}"
+                        label.config(text=detail + ("  -  stopping..." if cancel.is_set() else ""))
                         bar.config(value=100 * done_pages / max(total, 1))
                     continue
                 try: window.destroy()
@@ -279,4 +286,226 @@ def run_with_progress(app, title, work, done):
             pass
         app.after(100, poll)
     app.after(100, poll)
+
     threading.Thread(target=run, daemon=True, name="SaberPdfRead").start()
+
+
+def checked_handwriting_fields(data, values):
+    """Explicitly checked values, without deriving VAT, totals or dates from other fields."""
+    import vision_reader
+    from database_common import display_date, iso_date
+    result = dict(data)
+    result["invoice_number"] = values.get("invoice_number", "").strip()
+    date = values.get("invoice_date", "").strip()
+    result["invoice_date"] = display_date(iso_date(date)) if date else ""
+    currency = values.get("currency", "").strip().upper()
+    if currency and (len(currency) != 3 or not currency.isascii() or not currency.isalpha()):
+        raise ValueError("Enter a three-letter currency code, for example USD or LBP")
+    result["currency"] = currency
+    result["party_name"] = values.get("party_name", "").strip()
+    result["party_tax_number"] = values.get("party_tax_number", result.get("party_tax_number") or "").strip()
+    result["supplier_hint"] = result["party_name"]
+    for field in ("subtotal", "vat", "total"):
+        raw = values.get(field, "").strip()
+        amount = vision_reader._written_money(raw) if raw else None
+        if raw and amount is None: raise ValueError(f"Enter a valid {field} amount or leave it blank")
+        result[field] = amount
+    result["acquisition_cost"] = result.get("subtotal")
+    for key,evidence in (result.get("fields") or {}).items():
+        old=evidence.get("value");current=result.get(key)
+        if old != current:
+            evidence["previous_origin"]=evidence.get("origin")
+            evidence["origin"]="user_corrected"
+        evidence["value"]=current;evidence["reviewed"]=True
+    result["handwriting_confirmed"] = True
+    result["review_required"] = True  # checking a transcription never approves the accounting entry
+    result["notes"] = str(result.get("notes") or "") + "; Handwriting fields checked against the image"
+    return result
+
+
+def handwriting_review_image(path, page=0):
+    """Keep photograph detail for human review; model-sized previews lose small digits."""
+    from PIL import Image, ImageOps
+    from pdf_import import IMAGE_SUFFIXES
+    import vision_reader
+    if Path(path).suffix.lower() in IMAGE_SUFFIXES:
+        with Image.open(path) as source:
+            if source.width * source.height > 25_000_000:
+                raise ValueError("Image is too large for invoice review (maximum 25 megapixels)")
+            return ImageOps.exif_transpose(source).convert("RGB")
+    if Path(path).suffix.lower()==".pdf":
+        import pypdfium2
+        with pypdfium2.PdfDocument(str(path)) as document:
+            if not 0<=page<len(document): raise ValueError("Choose an existing PDF page")
+            rendered=document[page]
+            try:
+                w,h=rendered.get_size();scale=min(2.5,(8_000_000/max(1,w*h))**.5)
+                bitmap=rendered.render(scale=scale)
+                try:return bitmap.to_pil().convert("RGB").copy()
+                finally:bitmap.close()
+            finally:rendered.close()
+    with tempfile.TemporaryDirectory(prefix="nanza_review_") as folder:
+        preview = Path(folder) / "preview.png"
+        vision_reader._prepare_image(path, preview)
+        with Image.open(preview) as source: return source.copy()
+
+
+def review_handwriting(app, path, data):
+    """Review a local vision suggestion beside the image before it can fill an entry form."""
+    if not data: return data
+    from pdf_import import IMAGE_SUFFIXES
+    photo_review = Path(path).suffix.lower() in IMAGE_SUFFIXES and (data.get("review_required") or data.get("ocr_used"))
+    if not isinstance(app, tk.Misc):
+        if data.get("reader") != "vision-local" and not photo_review: return data
+        return None  # no UI means no implicit confirmation
+    from PIL import Image, ImageTk
+    import vision_reader
+    from desktop_invoice_intake import annotate, review_items, validate_reviewed_items
+    data=annotate(app,data)
+    try:
+        picture = handwriting_review_image(path,max(0,int((data.get("pages") or [1])[0])-1))
+    except (OSError, ValueError, vision_reader.VisionReaderError) as exc:
+        messagebox.showerror("Handwriting review", f"Could not show the original for review: {exc}")
+        return None
+    window = tk.Toplevel(app); window.title("Check the invoice reading"); window.configure(bg=LIGHT); window.transient(app)
+    width = min(1160, max(700, app.winfo_screenwidth() - 80))
+    height = min(820, max(520, app.winfo_screenheight() - 100))
+    window.geometry(f"{width}x{height}")
+    tk.Label(window, text="The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm.",
+             bg=LIGHT, fg=RED, wraplength=width - 40, justify="left").pack(fill="x", padx=12, pady=8)
+    body = tk.Frame(window, bg=LIGHT); body.pack(fill="both", expand=True, padx=12)
+    image_frame = tk.Frame(body, bg=LIGHT); image_frame.pack(side="left", fill="both", expand=True)
+    canvas = tk.Canvas(image_frame, bg="#d9dee3", highlightthickness=0)
+    vertical = ttk.Scrollbar(image_frame, orient="vertical", command=canvas.yview)
+    horizontal = ttk.Scrollbar(image_frame, orient="horizontal", command=canvas.xview)
+    canvas.configure(yscrollcommand=vertical.set, xscrollcommand=horizontal.set)
+    vertical.pack(side="right", fill="y"); horizontal.pack(side="bottom", fill="x"); canvas.pack(fill="both", expand=True)
+    form_panel=tk.Frame(body,bg=LIGHT,width=330);form_panel.pack(side="right",fill="y",padx=(12,0));form_panel.pack_propagate(False)
+    form_actions=tk.Frame(form_panel,bg=LIGHT);form_actions.pack(side="bottom",fill="x")
+    form_canvas=tk.Canvas(form_panel,bg=LIGHT,highlightthickness=0,width=305)
+    form_scroll=ttk.Scrollbar(form_panel,orient="vertical",command=form_canvas.yview)
+    form_scroll.pack(side="right",fill="y");form_canvas.pack(fill="both",expand=True)
+    form_canvas.configure(yscrollcommand=form_scroll.set);form_canvas._saber_scroll_page=True
+    form=tk.Frame(form_canvas,bg=LIGHT);form_window=form_canvas.create_window((0,0),window=form,anchor="nw")
+    form.bind("<Configure>",lambda _e:form_canvas.configure(scrollregion=form_canvas.bbox("all")))
+    form_canvas.bind("<Configure>",lambda e:form_canvas.itemconfigure(form_window,width=e.width))
+    tk.Label(form,text="Document type (verify)",bg=LIGHT,anchor="w").pack(fill="x")
+    document_type=tk.StringVar(value=data.get("document_type") or "unknown")
+    ttk.Combobox(form,textvariable=document_type,values=["invoice","receipt","credit_note","debit_note","quotation","delivery_note","unknown"],state="readonly",width=24).pack(fill="x")
+    fields = (("invoice_number", "Invoice number"), ("invoice_date", "Date (DD-MM-YYYY)"), ("currency", "Currency"),
+              ("party_name", "Supplier / customer"), ("party_tax_number", "Supplier tax ID"),
+              ("subtotal", "Subtotal"), ("vat", "VAT"), ("total", "Grand Total"))
+    variables = {}
+    for key, label in fields:
+        tk.Label(form, text=label, bg=LIGHT, anchor="w").pack(fill="x", pady=(5, 1))
+        value = data.get(key)
+        text = f"{value:.2f}" if key in ("subtotal", "vat", "total") and value is not None else str(value or "")
+        variables[key] = tk.StringVar(master=window, value=text)
+        tk.Entry(form, textvariable=variables[key], width=30).pack(fill="x")
+        evidence=(data.get("fields") or {}).get(key) or {}
+        score=evidence.get("confidence")
+        detail=f"{evidence.get('origin','unverified')} | confidence: {score:.0%}" if score is not None else f"{evidence.get('origin','unverified')} | confidence: unknown"
+        tk.Label(form,text=detail,bg=LIGHT,fg=RED if evidence.get("origin") in ("inferred","missing") else MUTED,anchor="w").pack(fill="x")
+        candidates = data.get("reader_candidates") or {}
+        if candidates and key not in data.get("consensus_fields", []):
+            first = (candidates.get("qwen4b") or {}).get(key)
+            second = (candidates.get("qwen2b") or {}).get(key)
+            if first not in (None, "") or second not in (None, ""):
+                note = f"4B: {first if first not in (None, '') else '—'} | 2B: {second if second not in (None, '') else '—'}"
+                tk.Label(form, text=note, bg=LIGHT, fg=RED, wraplength=280, justify="left").pack(fill="x")
+    tk.Label(form, text="Blank means unreadable, not zero.\nNo accounting entry is saved here.", bg=LIGHT, fg=MUTED,
+             justify="left").pack(fill="x", pady=10)
+    classification=data.get("classification") or {}
+    suggestion=data.get("account_suggestion") or {}
+    classification_score=classification.get("confidence")
+    classification_detail=(f"{classification_score:.0%} heuristic match" if classification_score is not None else "confidence unknown")
+    tk.Label(form,text=(f"Type: {data.get('document_type','unknown')} / {classification.get('category','other')}\n"
+                        f"{classification_detail}: {classification.get('reason') or ''}\n"
+                        f"Account suggestion: {suggestion.get('account_code') or 'Choose manually'}\n{suggestion.get('reason') or ''}"),
+             bg=LIGHT,fg=NAVY,wraplength=280,justify="left").pack(fill="x",pady=4)
+    tk.Button(form,text="Review invoice lines",command=lambda:review_items(window,data)).pack(fill="x",pady=3)
+    confirmed = tk.BooleanVar(master=window, value=False)
+    tk.Checkbutton(form, text="I checked these fields against the image", variable=confirmed, bg=LIGHT,
+                   wraplength=260, justify="left").pack(anchor="w", pady=8)
+    answer = []
+    def accept():
+        if not confirmed.get():
+            messagebox.showwarning("Handwriting review", "Check the image and tick the confirmation first", parent=window)
+            return
+        try:
+            if document_type.get() in ("unknown","quotation","delivery_note"):
+                raise ValueError("This is not a confirmed accounting invoice/receipt/note. Confirm the document type or cancel.")
+            validate_reviewed_items(data)
+            result = checked_handwriting_fields(data, {key: var.get() for key, var in variables.items()})
+            result["document_type"]=document_type.get()
+            result["intake_reviewed"]=True
+            result.pop("_review_accounts",None)
+        except ValueError as exc:
+            messagebox.showwarning("Handwriting review", str(exc), parent=window)
+            return
+        answer.append(result); window.destroy()
+    tk.Button(form_actions, text="Use checked fields", command=accept, bg=GOLD, fg=NAVY, border=0, padx=12, pady=7).pack(fill="x", pady=4)
+    tk.Button(form_actions, text="Cancel", command=window.destroy, bg=NAVY, fg="white", border=0, padx=12, pady=7).pack(fill="x", pady=4)
+    zoom = [min((width - 370) / picture.width, (height - 130) / picture.height, 1.0)]
+    def draw(factor):
+        zoom[0] = max(.05, min(3, (8_000_000 / (picture.width * picture.height)) ** .5, zoom[0] * factor))
+        resized = picture.resize((max(1, int(picture.width * zoom[0])), max(1, int(picture.height * zoom[0]))), Image.Resampling.LANCZOS)
+        try: canvas._handwriting_photo = ImageTk.PhotoImage(resized, master=window)
+        finally: resized.close()
+        canvas.delete("all"); canvas.create_image(0, 0, image=canvas._handwriting_photo, anchor="nw")
+        canvas.configure(scrollregion=canvas.bbox("all"))
+    controls = tk.Frame(window, bg=LIGHT); controls.pack(fill="x", padx=12, pady=6)
+    tk.Button(controls, text="Zoom +", command=lambda: draw(1.3)).pack(side="left", padx=3)
+    tk.Button(controls, text="Zoom -", command=lambda: draw(1 / 1.3)).pack(side="left", padx=3)
+    def rotate():
+        nonlocal picture
+        turned = picture.transpose(Image.Transpose.ROTATE_270)
+        picture.close(); picture = turned
+        fit()
+    def fit():
+        zoom[0] = min((width - 370) / picture.width, (height - 130) / picture.height, 1.0)
+        draw(1)
+    tk.Button(controls, text="Rotate image", command=rotate).pack(side="left", padx=3)
+    tk.Button(controls, text="Fit image", command=fit).pack(side="left", padx=3)
+    if Path(path).suffix.lower()==".pdf":
+        import pypdfium2
+        with pypdfium2.PdfDocument(str(path)) as document: page_count=len(document)
+        page_var=tk.StringVar(value=str((data.get("pages") or [1])[0]))
+        tk.Label(controls,text="Page",bg=LIGHT).pack(side="left")
+        page_box=ttk.Combobox(controls,textvariable=page_var,values=[str(n) for n in range(1,page_count+1)],width=4,state="readonly")
+        page_box.pack(side="left",padx=3)
+        def change_page(_event=None):
+            nonlocal picture
+            replacement=handwriting_review_image(path,int(page_var.get())-1)
+            picture.close();picture=replacement;fit()
+        page_box.bind("<<ComboboxSelected>>",change_page)
+    def reading_checks():
+        details = tk.Toplevel(window); details.title("Unverified invoice reading"); details.configure(bg=LIGHT)
+        details.transient(window)
+        details.geometry(f"{min(850, app.winfo_screenwidth() - 60)}x{min(560, app.winfo_screenheight() - 80)}")
+        panel = tk.Frame(details, bg=LIGHT); panel.pack(fill="both", expand=True, padx=10, pady=10)
+        scroll = ttk.Scrollbar(panel); scroll.pack(side="right", fill="y")
+        text = tk.Text(panel, wrap="word", yscrollcommand=scroll.set, font=("Segoe UI", 10))
+        text.pack(fill="both", expand=True); scroll.config(command=text.yview)
+        messages = ["UNVERIFIED transcription: these item rows are not entered in the invoice automatically.",
+                    "قراءة غير مؤكدة: هذه الأسطر لا تُضاف تلقائياً إلى الفاتورة. راجعها مع الصورة الأصلية.", ""]
+        messages.extend(str(warning) for warning in data.get("review_warnings") or [])
+        evidence = data.get("reader_evidence") or {"reader": data.get("transcription_evidence") or {}}
+        for reader, candidate in evidence.items():
+            messages.extend(["", str(reader)])
+            for row in candidate.get("line_evidence") or []:
+                literal = row["literal"]
+                values = [literal.get(key) if literal.get(key) is not None else "[unreadable]" for key in
+                          ("description_as_written", "quantity_as_written", "unit_price_as_written", "total_as_written")]
+                messages.append(f"Row {row['row']}: {values[0]} | Qty: {values[1]} | Unit price: {values[2]} | Line total: {values[3]}")
+                if row.get("uncertain_fields"): messages.append("Uncertain: " + ", ".join(row["uncertain_fields"]))
+                if row.get("arithmetic_difference") is not None: messages.append("Arithmetic difference: " + row["arithmetic_difference"])
+        text.insert("1.0", "\n".join(messages)); text.configure(state="disabled")
+    tk.Button(controls, text="Reading checks / item rows", command=reading_checks).pack(side="left", padx=3)
+
+    draw(1)
+    window.bind("<Escape>", lambda _event: window.destroy())
+    window.grab_set()
+    try: app.wait_window(window)
+    finally: picture.close()
+    return answer[0] if answer else None
