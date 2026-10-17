@@ -294,6 +294,34 @@ class ReportPrecisionTest(unittest.TestCase):
 
 @needs_tk
 class BackgroundReportsTest(unittest.TestCase):
+    def test_old_screen_results_and_errors_do_not_touch_the_new_screen(self):
+        from desktop_reports import ReportsMixin
+        field = lambda value: SimpleNamespace(get=lambda: value)
+        class Inline:
+            def __init__(self, target, **kwargs): self.target = target
+            def start(self): self.target()
+        for broken in (False, True):
+            with self.subTest(broken=broken):
+                def ledger(*args):
+                    if broken: raise RuntimeError("old company unavailable")
+                    return {"items": []}
+                client = SimpleNamespace(general_ledger=ledger, balance_sheet=lambda *a: [],
+                    vat_report=lambda *a: {"items": [], "summary": []}, cash_flow=lambda *a: [],
+                    comparative_reports=lambda *a: {"items": []})
+                scheduled = []
+                app = SimpleNamespace(client=client, financial_report_range=lambda: ["2026-01-01", "2026-12-31"],
+                    view_currency=field("USD"), can_use=lambda key: True, ledger_tree=Mock(), _page_generation=1,
+                    after=lambda ms, fn: scheduled.append(fn), winfo_exists=Mock(return_value=True))
+                with patch("threading.Thread", Inline), patch("desktop_reports.messagebox") as box:
+                    ReportsMixin.load_financial_reports(app)
+                    app._page_generation = 2  # main_screen rebuilt; the new report page is still unbuilt
+                    del app.ledger_tree
+                    for poll in list(scheduled): poll()
+                app.winfo_exists.assert_not_called()
+                self.assertFalse(hasattr(app, "balance_rows"))
+                self.assertEqual(len(scheduled), 1)
+                box.showerror.assert_not_called()
+
     def test_an_older_result_never_overwrites_a_newer_one(self):
         from desktop_reports import ReportsMixin
         field = lambda value: SimpleNamespace(get=lambda: value)

@@ -527,6 +527,10 @@ class ReportsMixin:
         # 2.9.63: a user without the VAT right still gets the ledger, balance sheet and cash flow (the whole page failed)
         vat_hidden=None if self.can_use("vat") else {"items":[],"summary":[],"_hidden":True}
         self._financial_generation=getattr(self,"_financial_generation",0)+1; generation=self._financial_generation
+        page_generation=self.__dict__.get("_page_generation")
+        def current_request():
+            return (generation==self.__dict__.get("_financial_generation") and
+                    page_generation==self.__dict__.get("_page_generation"))
         self._financial_loading=True
         # 2.9.126: what these figures are for - exports print THIS, never the filters typed after the request
         requested={"dates":list(dates),"currency":self.view_currency.get()}
@@ -546,7 +550,7 @@ class ReportsMixin:
             return ledger,balance,vat,cash,comparative,ctb
 
         def apply(result):
-            if generation!=getattr(self,"_financial_generation",generation): return  # a newer request is on its way
+            if not current_request(): return  # filters or the company/year screen changed
             ledger,balance,vat,cash,comparative,ctb=result
             account_from=self.report_account_from.get().split(" - ",1)[0].strip(); account_to=self.report_account_to.get().split(" - ",1)[0].strip()
             low=int(''.join(c for c in account_from if c.isdigit()) or 0); high=int(''.join(c for c in account_to if c.isdigit()) or 999999999999)
@@ -580,7 +584,7 @@ class ReportsMixin:
                                     "   ".join(f'{r["currency"]} VAT payable: {r["vat_payable"]:,.2f}' for r in vat["summary"]) or "No VAT activity")
 
         def failed(message):
-            if generation!=getattr(self,"_financial_generation",generation): return
+            if not current_request(): return
             self._financial_loading=False
             messagebox.showerror("Financial Reports",message)
 
@@ -596,6 +600,7 @@ class ReportsMixin:
                 logging.getLogger("saber").warning("Financial reports failed", exc_info=True)
                 events.put(("error",str(exc)))
         def poll():
+            if not current_request(): return
             try:
                 if not self.winfo_exists(): return
             except tk.TclError: return  # the window was closed
