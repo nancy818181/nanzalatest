@@ -176,10 +176,15 @@ class ReaderInstallationTest(unittest.TestCase):
             download.assert_not_called()
 
     def test_setup_marks_ready_only_after_verified_files_and_runtime_check(self):
+        for target_platform in ("linux", "win32"):
+            with self.subTest(platform=target_platform):
+                self._check_platform_setup(target_platform)
+
+    def _check_platform_setup(self, target_platform):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             zipped = io.BytesIO()
-            with zipfile.ZipFile(zipped, "w") as package: package.writestr("llama-mtmd-cli", "synthetic-runtime")
+            with zipfile.ZipFile(zipped, "w") as package: package.writestr("llama-mtmd-cli.exe" if target_platform == "win32" else "llama-mtmd-cli", "synthetic-runtime")
             runtime = self.asset(zipped.getvalue(), "runtime.zip")
             models = (self.asset(b"one", "one.gguf"), self.asset(b"two", "two.gguf"))
             data = {runtime.url: zipped.getvalue()}
@@ -189,7 +194,7 @@ class ReaderInstallationTest(unittest.TestCase):
             data.update({a.url: b"one" if a.name == "one.gguf" else b"two" for a in models})
             def response(request, **kwargs): return self.response(data[request.full_url])
             with patch.object(vr, "folder", return_value=root), patch.object(vr, "MODELS", models), patch.object(vr, "SECONDARY_MODELS", ()), \
-                    patch.object(vr, "RUNTIMES", {sys.platform: runtime}), patch.object(vr.platform, "machine", return_value="AMD64"), \
+                    patch.object(vr, "RUNTIMES", {target_platform: runtime}), patch.object(vr.sys, "platform", target_platform), patch.object(vr.platform, "machine", return_value="AMD64"), \
                     patch.object(vr.urllib.request, "urlopen", side_effect=response), patch.object(vr, "_run", return_value="version"):
                 vr.install()
                 self.assertTrue(vr.ready())
@@ -199,6 +204,26 @@ class ReaderInstallationTest(unittest.TestCase):
                 (root / models[0].name).unlink()
                 with self.assertRaises(vr.VisionReaderError): vr.set_enabled(True)
                 self.assertFalse(vr.ready())
+
+    def test_missing_platform_executable_never_marks_setup_ready(self):
+        for target_platform in ("linux", "win32"):
+            with self.subTest(platform=target_platform), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                archive = io.BytesIO()
+                with zipfile.ZipFile(archive, "w") as package:
+                    package.writestr("README.txt", "No executable in this archive")
+                data = archive.getvalue()
+                asset = self.asset(data, "runtime.zip")
+                (root / asset.name).write_bytes(data)
+                with patch.object(vr, "folder", return_value=root), patch.object(vr, "MODELS", ()), \
+                        patch.object(vr, "SECONDARY_MODELS", ()), patch.object(vr, "RUNTIMES", {target_platform: asset}), \
+                        patch.object(vr.sys, "platform", target_platform), patch.object(vr.platform, "machine", return_value="AMD64"), \
+                        patch.object(vr, "_download"), patch.object(vr, "_run") as run:
+                    with self.assertRaisesRegex(vr.VisionReaderError, "executable"):
+                        vr.install()
+                    run.assert_not_called()
+                    self.assertFalse((root / "ready.json").exists())
+                    self.assertFalse(vr.ready())
 
 
 class InvoiceDispatchTest(unittest.TestCase):

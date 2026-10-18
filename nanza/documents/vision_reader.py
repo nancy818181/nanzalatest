@@ -237,7 +237,10 @@ def install(progress=None, cancel=None):
         _cancelled(cancel)
         if progress: progress(0, 0, "Checking the handwriting reader")
         _unpack(base / assets[0].name, base / f"runtime-{RUNTIME_REVISION}")
-        _run([str(binary()), "--version"], 20, cancel)
+        executable = binary()
+        if not executable.is_file():
+            raise VisionReaderError("Reader archive is missing the executable for this operating system; retry Install / Repair")
+        _run([str(executable), "--version"], 20, cancel)
         _write_state({"enabled": True, "model_revision": MODEL_REVISION, "secondary_revision": SECONDARY_REVISION,
                       "runtime_revision": RUNTIME_REVISION})
         return "Free handwriting reader installed. Invoices stay on this computer. Check all amounts and dates before Save."

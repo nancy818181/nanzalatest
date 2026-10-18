@@ -1,6 +1,8 @@
 # Nanza Accounting (formerly Saber Accounting)
 
 ## Version 2.9.127 (reviewed intake, commercial documents and executive dashboard)
+- Windows build repair: the setup fixture now supplies the correct executable name and explicitly exercises Windows and Linux. Installation refuses a runtime archive missing its platform executable before writing the ready marker. No checksum, model or runtime verification was removed.
+- This repairs the still-unreleased 2.9.127 without another version bump. A successful main build can now publish its missing release after a same-version retry; automatic pushes preserve existing release assets. Manual publication behavior is retained.
 - Purchase-order matching report supports explicit Arabic/English export, preserving quantities and price variances independently of the desktop language.
 - The manual exchange-rate/backup regression now disables automatic live downloads only within that test; dedicated mocked download tests remain unchanged. This removes a restricted-network hang without changing production rates or behavior.
 - Added an executive financial dashboard inspired by the supplied FP&A layout: posted income/profit, margin, book cash, overdue balances, monthly charts, prior-period comparison and explicit budget availability. Forecast, gross margin and operating/free cash flow stay unavailable without reviewed inputs. Partial-month budgets are explicitly prorated by calendar days.
