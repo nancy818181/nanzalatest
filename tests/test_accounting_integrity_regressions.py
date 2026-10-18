@@ -50,7 +50,7 @@ class AccountingIntegrityTest(unittest.TestCase):
             1,
         )
 
-    def payment(self, amount=40, outgoing=False, fx=0):
+    def payment(self, amount=40, outgoing=False, fx=0, defer_posting=False):
         return self.db.add_payment(
             {
                 "kind": "supplier_payment" if outgoing else "customer_receipt",
@@ -63,6 +63,7 @@ class AccountingIntegrityTest(unittest.TestCase):
                 "party_account": self.party["account_number"],
             },
             1,
+            defer_posting=defer_posting,
         )
 
     def balances(self):
@@ -77,9 +78,10 @@ class AccountingIntegrityTest(unittest.TestCase):
         )
         handler._hold_for_approval = lambda *a: ApiHandler._hold_for_approval(handler, *a)
         saves = {
-            "payments": lambda: self.payment(),
+            "payments": lambda: self.payment(defer_posting=True),
             "expenses": lambda: self.db.add_expense(
-                {"expense_date": "10-01-2026", "description": "Office", "currency": "USD", "subtotal": 10, "vat": 0}, 1
+                {"expense_date": "10-01-2026", "description": "Office", "currency": "USD", "subtotal": 10, "vat": 0}, 1,
+                defer_posting=True
             ),
             "journal_vouchers": lambda: self.db.save_journal_voucher(
                 {"entry_date": "10-01-2026", "currency": "USD", "description": "Test"},
@@ -102,7 +104,7 @@ class AccountingIntegrityTest(unittest.TestCase):
 
     def test_held_receipt_and_its_allocation_do_not_reduce_posted_balances(self):
         inv = self.invoice()
-        pay = self.payment()
+        pay = self.payment(defer_posting=True)
         self.db.save_allocations(pay, [{"invoice_id": inv, "amount": 40}], 1)
         approvals.hold(self.db, approvals.entry_of(self.db, "payments", pay), 1)
         self.assertEqual(self.balances(), (100, 100))
@@ -179,8 +181,8 @@ class AccountingIntegrityTest(unittest.TestCase):
 
     def test_held_expense_is_not_in_document_vat_summary(self):
         exp = self.db.add_expense(
-            {"expense_date": "10-01-2026", "description": "Office", "currency": "USD", "subtotal": 100, "vat": 11}, 1
-        )
+            {"expense_date": "10-01-2026", "description": "Office", "currency": "USD", "subtotal": 100, "vat": 11}, 1,
+            defer_posting=True)
         approvals.hold(self.db, approvals.entry_of(self.db, "expenses", exp), 1)
         self.assertEqual(self.db.vat_report("01-01-2026", "31-01-2026", "USD")["items"], [])
 

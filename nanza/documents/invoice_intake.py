@@ -136,7 +136,9 @@ def chart_suggestion(text, accounts, category):
         code = str(account.get("code") or "")
         account_type = str(account.get("type") or "").casefold()
         eligible = account_type == expected_type if account_type else code.startswith(prefixes)
-        if not eligible or not code or not account.get("active", True) or account.get("id") in parent_ids:
+        if (not eligible or not code or not account.get("is_active", account.get("active", True))
+                or account.get("is_posting") is False or account.get("is_posting") == 0
+                or account.get("id") in parent_ids):
             continue
         names = [normalized(account.get(k)) for k in ("name_en", "name_fr", "name_ar") if account.get(k)]
         score = max(
@@ -167,6 +169,11 @@ def chart_suggestion(text, accounts, category):
 def enrich(reading, accounts=(), suppliers=(), existing_documents=()):
     result = copy.deepcopy(reading)
     text = result.get("text") or ""
+    from purchase_intake import purchase_evidence, check_90_percent_rule
+    if purchase_evidence(text):
+        result["direction"] = "purchase"
+        result["suggested_type"] = "Purchases"
+        result["direction_reason"] = "Supplier/purchase evidence; verify the original before saving"
     warnings = list(result.get("review_warnings") or [])
     accounts = list(accounts)
     suppliers = list(suppliers)
@@ -260,6 +267,7 @@ def enrich(reading, accounts=(), suppliers=(), existing_documents=()):
         category = category_for(item.get("description"))
         item["classification"] = category
         item["account_suggestion"] = chart_suggestion(item.get("description"), accounts, category["category"])
+        item["suggested_account"] = item["account_suggestion"].get("account_code") or ""
         item["vat_suggestion"] = {
             "treatment": None,
             "confidence": None,
@@ -279,6 +287,8 @@ def enrich(reading, accounts=(), suppliers=(), existing_documents=()):
             warnings.append(f"Item {index}: quantity × price differs from total")
         items.append(item)
     result["items"] = items
+    if result.get("direction") == "purchase":
+        result["notification_90"] = check_90_percent_rule(items, not evidence.get("items_truncated"))
     sub, tax, total = (number(result.get(k)) for k in ("subtotal", "vat", "total"))
     line_totals = [number(item.get("total")) for item in items]
     if line_totals and sub is not None and all(value is not None for value in line_totals):

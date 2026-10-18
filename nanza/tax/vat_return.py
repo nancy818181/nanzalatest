@@ -9,6 +9,7 @@ import sqlite3
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from database import display_date, iso_date, utcnow
+from database_common import atomic
 
 ZERO = Decimal("0")
 CENT = Decimal("0.01")
@@ -345,7 +346,12 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
     if vat_currency != "LBP":
         warnings.append(f"VAT return in {vat_currency} at {(std_rate * 100).normalize():f}%: the Lebanese MoF forms (Q11-2, recoverable-rate sheet) apply to LBP returns only - use the summary in {vat_currency}.")
     elif any(doc["currency"] != "LBP" for doc in documents):
-        warnings.append("Foreign-currency VAT uses the saved document-date accounting rate as an estimate. Decree 11230/2023 distinguishes imports (customs rate), professional customers (then-Sayrafa rate), telecom invoices and airport/port fees; it also addresses VAT actually collected at a higher value. Verify the applicable current rate, tax-point date and deductible VAT on each document before filing.")
+        warnings.append((
+            "Foreign-currency VAT uses the saved document-date accounting rate as an estimate. Decree 11230/2023 distinguishes "
+            "imports (customs rate), professional customers (then-Sayrafa rate), telecom invoices and airport/port fees; it also "
+            "addresses VAT actually collected at a higher value. Verify the applicable current rate, tax-point date and deductible "
+            "VAT on each document before filing."
+        ))
     adjustments = list_adjustments(db, year, quarter)
     for adjustment in adjustments:
         if currency and adjustment["currency"] != currency: continue
@@ -421,7 +427,10 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
     if refund < 0: raise ValueError("The refund requested cannot be negative")
     if refund > credit: raise ValueError(f"The refund requested cannot exceed the credit of {credit:,.2f} {vat_currency}")
     if refund:
-        warnings.append("Refund eligibility is not validated. MoF guidance permits semiannual requests after Q2 or annual requests after year-end; quarterly requests require qualifying exporter status and are limited by the export proportion (Art. 30).")
+        warnings.append((
+            "Refund eligibility is not validated. MoF guidance permits semiannual requests after Q2 or annual requests after "
+            "year-end; quarterly requests require qualifying exporter status and are limited by the export proportion (Art. 30)."
+        ))
     credit_cf = credit - refund
     saved = saved_return(db, year, quarter)
     changed = bool(saved) and (rnd(saved["net_lbp"]) != rnd(totals_lbp["net"]) or rnd(saved["credit_brought_forward_lbp"]) != credit_bf)
@@ -704,25 +713,51 @@ def settlement_lines(db, result, payable_account=None, credit_account=None, non_
             "closing_lines": closing, "closing_description": f"{description} - VAT closing by ledger"}  # 2.9.97
 
 
+@atomic
 def post_settlement(db, year, quarter, user_id, previous_year_db=None, payable_account=None, credit_account=None, non_deductible_account=None):
-    """Post (or replace) the settlement voucher of a SAVED quarterly return."""
+    """Post the settlement voucher of a SAVED quarterly return, reversing any prior posting."""
     result = build_vat_return(db, year, quarter, None, False, previous_year_db)
     if result.get("dependency_errors"):
         raise ValueError("Cannot settle VAT: an earlier quarter could not be calculated. Correct first: " + "; ".join(result["dependency_errors"]))
     if not result["saved"] or result["changed_since_saved"]: raise ValueError(f"Save the Q{int(quarter)} {int(year)} VAT return first (documents changed after saving count as not saved)")
     plan = settlement_lines(db, result, payable_account, credit_account, non_deductible_account)
     if len(plan["lines"]) < 2: raise ValueError("Nothing to settle: no VAT movement in the quarter")
-    with db.connect() as connection:  # 2.9.121: the old vouchers are replaced in ONE transaction (never deleted without the new ones)
-        for row in connection.execute("SELECT id FROM journal_entries WHERE source_type='journal_voucher' AND (description=? OR description=?)",
-                                      (plan["description"], plan["closing_description"])).fetchall():
-            connection.execute("DELETE FROM journal_entries WHERE id=?", (row["id"],))
-        closing_number = None
-        if plan.get("closing_lines"):  # 2.9.97: customer / supplier VAT accounts -> closing accounts (44210 / 44270 / 44265 / 44263)
-            closing = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["closing_description"], "currency": plan["currency"],
-                                               "voucher_type": "06"}, [{k: v for k, v in line.items() if k != "account_name"} for line in plan["closing_lines"]], user_id)
-            closing_number = closing["voucher"]["entry_number"]
-        voucher = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["description"], "currency": plan["currency"], "voucher_type": "06"},
-                                          [{k: v for k, v in line.items() if k != "account_name"} for line in plan["lines"]], user_id)
+    with db.connect() as connection:
+        old_entries = [dict(row) for row in connection.execute("""SELECT e.id,e.entry_number,e.entry_date,e.description,e.posting_status FROM journal_entries e
+            WHERE e.source_type='journal_voucher' AND (e.description=? OR e.description=?)
+            AND NOT EXISTS(SELECT 1 FROM journal_entries r WHERE r.reversal_of=e.id)""",
+            (plan["description"], plan["closing_description"]))]
+    expected = {plan["description"]: plan["lines"]}
+    if plan.get("closing_lines"):
+        expected[plan["closing_description"]] = plan["closing_lines"]
+    if old_entries and len(old_entries)==len(expected):
+        unchanged=True
+        for old in old_entries:
+            if old["posting_status"]!="posted" or old["description"] not in expected:
+                unchanged=False
+                break
+            actual=db.journal_voucher_detail(old["id"])["lines"]
+            actual_lines=sorted((line["account_code"],"D" if Decimal(str(line["debit"] or 0))>0 else "C",
+                                 Decimal(str(line["debit"] or line["credit"] or 0))) for line in actual)
+            expected_lines=sorted((line["account_code"],line["side"],Decimal(str(line["amount"]))) for line in expected[old["description"]])
+            if actual_lines!=expected_lines:
+                unchanged=False
+                break
+        if unchanged:
+            by_description={row["description"]:row["entry_number"] for row in old_entries}
+            return {**plan,"voucher":by_description[plan["description"]],
+                    "closing_voucher":by_description.get(plan["closing_description"])}
+    for old in old_entries:
+        if old["posting_status"]!="posted":
+            raise ValueError("An existing VAT settlement is not posted and must be resolved before replacing it")
+        db.reverse_journal_voucher(old["id"], old["entry_date"], user_id)
+    closing_number = None
+    if plan.get("closing_lines"):  # 2.9.97: customer / supplier VAT accounts -> closing accounts (44210 / 44270 / 44265 / 44263)
+        closing = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["closing_description"], "currency": plan["currency"],
+                                           "voucher_type": "06"}, [{k: v for k, v in line.items() if k != "account_name"} for line in plan["closing_lines"]], user_id)
+        closing_number = closing["voucher"]["entry_number"]
+    voucher = db.save_journal_voucher({"entry_date": display_date(plan["date"]), "description": plan["description"], "currency": plan["currency"], "voucher_type": "06"},
+                                      [{k: v for k, v in line.items() if k != "account_name"} for line in plan["lines"]], user_id)
     return {**plan, "voucher": voucher["voucher"]["entry_number"], "closing_voucher": closing_number}
 
 
@@ -744,7 +779,10 @@ def export_sections(result):
     meta = [f"Period: {display_date(result['date_from'])} to {display_date(result['date_to'])}   Due date: {display_date(result['due_date'])}   Currency filter: {result['currency_filter']}",
             f"Partial deduction ratio (Art. 31): {ratio * 100:.2f}% ({result.get('ratio_source', '')})   Status: {result['status']}",
             "Internal schedule references only: A-F labels are not certified Ministry of Finance form box numbers.",
-            "Conversion uses saved accounting rates at each document date; the legally applicable tax-point/rate can differ (Decree 11230/2023). The payable is rounded up to the next LBP 10,000 from 25-11-2024 (MoF decision 1195)."
+            (
+                "Conversion uses saved accounting rates at each document date; the legally applicable tax-point/rate can differ (Decree "
+                "11230/2023). The payable is rounded up to the next LBP 10,000 from 25-11-2024 (MoF decision 1195)."
+            )
             if vc == "LBP" else f"VAT return in {vc} at {rate_text}, converted at the saved accounting rate of each document date; second currency {vc2} at the rate of the last day of the period."]
     if result["review_excluded"]: meta.append(f"Note: {result['review_excluded']} document(s) in Review status are excluded from this return")
     for warning in result.get("warnings", []): meta.append("Check: " + warning)

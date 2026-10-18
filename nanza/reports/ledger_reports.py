@@ -42,6 +42,13 @@ def _truthy(value):
 
 def _load_lines(db, options):
     conditions = []; parameters = []
+    normalized_date = """CASE WHEN e.entry_date GLOB '??-??-????'
+        THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
+        ELSE e.entry_date END"""
+    if options.get("date_from"):
+        conditions.append(f"{normalized_date}>=?"); parameters.append(iso_date(options["date_from"]))
+    if options.get("date_to"):
+        conditions.append(f"{normalized_date}<=?"); parameters.append(iso_date(options["date_to"]))
     status = options.get("posting_status", "posted")
     # Cancelled invoices keep their original entry; the reversal entry cancels it out.
     if status == "posted": conditions.append("(e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL)")
@@ -184,7 +191,10 @@ def build_account_report(db, options):
     chapters = _truthy(options.get("chapters", False)); sub_chapters = _truthy(options.get("sub_chapters", False))
     try: summary_digits = max(1, min(9, int(options.get("summary_digits") or 4)))
     except (TypeError, ValueError): summary_digits = 4
-    lines = _load_lines(db, options)
+    # The statement's opening balance needs every eligible entry before date_from.
+    # _load_lines otherwise applies date_from in SQL and leaves the opening at zero.
+    line_options = {**options, "date_from": None}
+    lines = _load_lines(db, line_options)
     # When the 1st column is the account currency each currency is reported separately.
     def group_currency(row):
         currency = row["account_currency"] if first == "account" else first
@@ -374,7 +384,9 @@ def build_account_report(db, options):
             f"Period: {display_date(date_from) if date_from != '0000-01-01' else 'beginning'} to {display_date(date_to) if date_to != '9999-12-31' else 'today'}"
             + ("   (with carried-forward opening balances)" if carry else ""),
             ("Without opening entries   " if _truthy(options.get("without_opening", False)) else "") + ("Without closing entries   " if _truthy(options.get("without_closing", False)) else "") +
-            (f"Filters: {options['filter_text']}   " if options.get("filter_text") else "Department / project filter applied   " if options.get("department_id") or options.get("project_id") or options.get("department_ids") or options.get("project_ids") else "") + f"Printed: {display_date(options.get('print_date')) if options.get('print_date') else datetime.now().strftime('%d-%m-%Y')}"]
+            (f"Filters: {options['filter_text']}   " if options.get("filter_text") else "Department / project filter applied   " if options.get("department_id") or \
+                options.get("project_id") or options.get("department_ids") or options.get("project_ids") else "") + \
+                    f"Printed: {display_date(options.get('print_date')) if options.get('print_date') else datetime.now().strftime('%d-%m-%Y')}"]
     return {"title": title, "meta": meta, "sections": sections, "account_count": len(items)}
 
 

@@ -197,7 +197,7 @@ class ComparativeTrialBalanceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
             db, user = _database(folder)
             db.save_journal_voucher({"entry_date": "10-06-2026", "description": "Date check", "currency": "USD"},
-                [{"account_code": "531", "debit": "10"}, {"account_code": "101", "credit": "10"}], user)
+                [{"account_code": "531", "debit": "10"}, {"account_code": "101", "credit": "10"}], user, defer_posting=True)
             for bad in ("31-02-2026", "2026-02-31", "not a date", "2026-13-01"):
                 with db.connect() as c: c.execute("UPDATE journal_entries SET entry_date=?", (bad,))
                 with self.assertRaisesRegex(ValueError, "Invalid date for entry"):
@@ -237,11 +237,12 @@ class ComparativeTrialBalanceTest(unittest.TestCase):
                 other = c.execute("SELECT id FROM accounts WHERE code='101'").fetchone()[0]
                 columns = {r[1] for r in c.execute("PRAGMA table_info(journal_entries)")}
                 values = {"entry_number": "JV-EUR", "entry_date": "10-06-2026", "description": "EUR", "currency": "EUR",
-                          "source_type": "journal_voucher", "created_at": "2026-06-10", "created_by": user}
+                          "source_type": "journal_voucher", "created_at": "2026-06-10", "created_by": user,"posting_status":"draft"}
                 values = {k: v for k, v in values.items() if k in columns}
                 entry = c.execute(f"INSERT INTO journal_entries({','.join(values)}) VALUES({','.join('?' for _ in values)})", list(values.values())).lastrowid
                 c.execute("INSERT INTO journal_lines(entry_id,account_id,debit,credit) VALUES(?,?,?,?)", (entry, account, "10", "0"))
                 c.execute("INSERT INTO journal_lines(entry_id,account_id,debit,credit) VALUES(?,?,?,?)", (entry, other, "0", "10"))
+                c.execute("UPDATE journal_entries SET posting_status='posted',posted_at='2026-06-10',posted_by=? WHERE id=?", (user,entry))
             usd = db.comparative_trial_balance("01-06-2026", "30-06-2026", "USD")
             self.assertEqual(usd["items"], [])
             eur = db.comparative_trial_balance("01-06-2026", "30-06-2026", "EUR")

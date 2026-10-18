@@ -74,6 +74,10 @@ AR = {
         'بادئة من 4 أرقام أو حساب من 9 أرقام',
     '5-Year Projection':
         'توقعات 5 سنوات',
+    '13-Week Cash Forecast':
+        'توقع التدفق النقدي لـ 13 أسبوعاً',
+    'Build 13-Week Forecast':
+        'إنشاء توقع 13 أسبوعاً',
     '5-Year Projection to date (DD-MM-YYYY)':
         'توقعات 5 سنوات حتى تاريخ (DD-MM-YYYY)',
     '6739 - Bank Commissions & Other Charges':
@@ -1706,6 +1710,8 @@ AR = {
         'الوضع العائلي',
     'Match Selected':
         'مطابقة المختار',
+    'Partial Match':
+        'مطابقة جزئية',
     'Matched':
         'مطابق',
     'Material':

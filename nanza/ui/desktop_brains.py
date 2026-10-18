@@ -203,7 +203,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
         bar = tk.Frame(page, bg=NAVY); bar.pack(fill="x", padx=10, pady=(8, 0))
         tk.Label(bar, text="General Voucher", bg=NAVY, fg="white", font=("Segoe UI", 11, "bold")).pack(side="left", padx=10, pady=5)
         for text, step in (("|<", "first"), ("<", "previous"), (">", "next"), (">|", "last")):
-            tk.Button(bar, text=text, command=lambda s=step: self.navigate_voucher(s), bg="#1E4268", fg="white", activebackground="#2E5277",
+            tk.Button(bar, text=text, command=lambda s=step: self.navigate_voucher(s), bg="#0a1931", fg="white", activebackground="#142b50",
                     activeforeground="white", border=0, width=3, font=("Segoe UI", 9, "bold")).pack(side="left", padx=2, pady=4)
         tk.Button(bar, text="New", command=self.new_manual_voucher, bg="white", fg=NAVY, border=0, padx=12).pack(side="left", padx=(12, 2), pady=4)
         tk.Button(bar, text="Edit...", command=self.choose_voucher_to_edit, bg="white", fg=NAVY, border=0, padx=12, font=("Segoe UI", 9, "bold")).pack(side="left", padx=2, pady=4)
@@ -669,7 +669,8 @@ class BrainsScreensMixin(BalanceReportsMixin):
             if chosen_values(only.get()) and not wanted: only.set("All")
             if wanted: items=[r for r in items if r["currency"] in wanted]
             if chosen_basis not in ("LBP","USD"):  # LBP shown as "1 EUR = x LBP" like the USD books
-                items=[{**r,"suggested_rate":str((Decimal("1")/Decimal(r["suggested_rate"])).quantize(Decimal("0.01"))) if r["currency"]=="LBP" and Decimal(r["suggested_rate"] or 0) else r["suggested_rate"]} for r in items]
+                items=[{**r,"suggested_rate":str((Decimal("1")/Decimal(r["suggested_rate"])).quantize(Decimal("0.01"))) if r["currency"]=="LBP" and \
+                    Decimal(r["suggested_rate"] or 0) else r["suggested_rate"]} for r in items]
             state.update(candidates=items,preview={},date=day,basis=chosen_basis,rates={},rate_vars={})
             for child in rates_bar.winfo_children(): child.destroy()
             tk.Label(rates_bar,text="DOE date rates:",bg=LIGHT,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,8))

@@ -44,7 +44,7 @@ def _beirut_offset(moment):
 
 def _entry_day(value):
     try: return iso_date(value)
-    except Exception: return None
+    except ValueError: return None
 
 
 def build(db, date_from, date_to, late_days=30):

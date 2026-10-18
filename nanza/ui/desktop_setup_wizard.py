@@ -77,7 +77,8 @@ class SetupWizardMixin:
                                      "(Accounts & Statements > Chart of Accounts). The chart cannot be changed once the company is created."),
                          bg=LIGHT, fg="#6B7A89", justify="left", wraplength=560).grid(row=9, column=0, columnspan=3, sticky="w", pady=(12, 0))
             elif step == 2:
-                tk.Label(grid, text="Currencies and VAT (filled from the country - change them if needed)", bg=LIGHT, fg=NAVY, font=("Segoe UI", 12, "bold")).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 8))
+                tk.Label(grid, text="Currencies and VAT (filled from the country - change them if needed)", bg=LIGHT, fg=NAVY, font=("Segoe UI", 12, "bold")).grid(row=0, \
+                    column=0, columnspan=3, sticky="w", pady=(0, 8))
                 row(grid, 1, "Main Currency 1 (base)", ttk.Combobox(grid, textvariable=v["main1"], values=CURRENCIES, width=10))
                 row(grid, 2, "Main Currency 2", ttk.Combobox(grid, textvariable=v["main2"], values=CURRENCIES, width=10))
                 row(grid, 3, "VAT Rate %", tk.Entry(grid, textvariable=v["vat_rate"], width=8), "0 when the company does not charge VAT")

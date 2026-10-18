@@ -212,7 +212,7 @@ class SingleInstance:
             if not user32.IsWindow(hwnd): return False
             user32.ShowWindow(hwnd, 9)  # SW_RESTORE
             return bool(user32.SetForegroundWindow(hwnd))
-        except Exception:
+        except (OSError, UnicodeError, ValueError, TypeError, ImportError, AttributeError):
             return False
 
 
@@ -220,7 +220,7 @@ INSTANCE: SingleInstance | None = None
 
 
 # ------------------------------------------------------------------ update check (2.9.42)
-APP_VERSION = "2.9.127"
+APP_VERSION = "2.9.128"
 # Newest GitHub Release of the program. Another address can be put in <data folder>/update_url.txt
 # (one line), for example when the repository is private and the installers are shared elsewhere.
 DEFAULT_UPDATE_URL = "https://api.github.com/repos/nancy818181/nanzalatest/releases/latest"

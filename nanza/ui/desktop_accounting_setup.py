@@ -4,12 +4,12 @@ from __future__ import annotations
 import logging
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, simpledialog, ttk
 
 import accounting_setup as rules
 from desktop_common import account_code, account_label, accounting_setup
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
 RED, MUTED, GREEN, AMBER = "#8B1E1E", "#5f6b76", "#2E7D5B", "#8a5a00"
 
 
@@ -201,8 +201,33 @@ class AccountingSetupMixin:
                 try: getattr(self, refresh)()
                 except Exception: logging.getLogger("saber").debug("ignored error", exc_info=True)  # 2.9.105
             messagebox.showinfo("Approvals", f"Approved: {len(result.get('approved', []))}" + ("\n" + "\n".join(result["skipped"]) if result.get("skipped") else ""))
+        def reject():
+            chosen = [rows[i] for i in tree.selection()]
+            if not chosen:
+                return messagebox.showwarning("Approvals", "Select the documents to reject", parent=window)
+            reason = simpledialog.askstring(
+                "Reject documents", "Enter a reason for rejection:", parent=window)
+            if reason is None:
+                return
+            try:
+                result = self.client.reject_documents(
+                    [r["id"] for r in chosen if r["kind"] != "invoices"],
+                    [r["id"] for r in chosen if r["kind"] == "invoices"], reason)
+            except Exception as exc:
+                return messagebox.showerror("Approvals", str(exc), parent=window)
+            window.destroy()
+            for refresh in ("load_invoices", "load_journal", "load_trial", "load_dashboard"):
+                try:
+                    getattr(self, refresh)()
+                except Exception:
+                    logging.getLogger("saber").debug("ignored error", exc_info=True)
+            messagebox.showinfo("Approvals",
+                                f"Rejected: {len(result.get('rejected', []))}" +
+                                ("\n" + "\n".join(result["skipped"]) if result.get("skipped") else ""))
         bar = tk.Frame(window, bg=LIGHT); bar.pack(pady=(0, 10))
         tk.Button(bar, text="Approve Selected", command=approve, bg=GOLD, fg=NAVY, border=0, padx=18, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
+        tk.Button(bar, text="Reject Selected", command=reject, bg=RED, fg="white",
+                  border=0, padx=18, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
         tk.Label(window, text="" if info.get("items") else "Nothing waits for approval.", bg=LIGHT, fg=NAVY).pack()
 
     def save_alert_percent(self):

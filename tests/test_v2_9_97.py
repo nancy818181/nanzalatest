@@ -119,10 +119,11 @@ class AuditTrailTest(unittest.TestCase):
     def test_audit_report(self):
         import audit_report, sqlite3
         self.db.save_journal_voucher({"entry_date": "05-01-2026", "description": "Cash withdrawal", "currency": "USD", "voucher_type": "01"},
-                                     [{"account_code": "6262", "debit": "500"}, {"account_code": "531", "credit": "500"}], 1)
+                                     [{"account_code": "6262", "debit": "500"}, {"account_code": "531", "credit": "500"}], 1,
+                                     defer_posting=True)
         with self.db.connect() as c:  # an entry dated January but entered in March (back-dated), on a Sunday night
             entry = c.execute("SELECT id FROM journal_entries ORDER BY id DESC LIMIT 1").fetchone()["id"]
-            c.execute("UPDATE journal_entries SET created_at='2026-03-01T21:30:00+00:00' WHERE id=?", (entry,))
+            c.execute("UPDATE journal_entries SET created_at='2026-03-01T21:30:00+00:00',posting_status='posted',posted_at='2026-03-01',posted_by=1 WHERE id=?", (entry,))
         report = audit_report.build(self.db, "01-01-2026", "31-03-2026")
         s = report["summary"]
         self.assertTrue(s["integrity_ok"]); self.assertEqual((s["late"], s["admin"], s["outside_hours"], s["manual_cash"]), (1, 1, 1, 1))

@@ -300,7 +300,8 @@ class InvoicesMixin(SalesInvoiceMixin):
                 if values.get("due_date"): values["due_date"]=formatted_user_date(values["due_date"])
             except ValueError: return messagebox.showwarning("Invoices","Enter 8 date digits: DDMMYYYY",parent=window)
             try:
-                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; vat=float(values["vat"]); total=float(values["total"])
+                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; \
+                    vat=float(values["vat"]); total=float(values["total"])
                 amount_paid=float(values["amount_paid"] or 0)
             except ValueError:
                 return messagebox.showwarning("Invoices","Deductible, Non-Deductible, VAT, and Total must be valid numbers",parent=window)
@@ -650,7 +651,8 @@ class InvoicesMixin(SalesInvoiceMixin):
             try:
                 values["invoice_date"]=formatted_user_date(values["invoice_date"])
                 if values.get("due_date"): values["due_date"]=formatted_user_date(values["due_date"])
-                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; vat=float(values["vat"]); total=float(values["total"])
+                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; \
+                    vat=float(values["vat"]); total=float(values["total"])
             except ValueError:
                 return messagebox.showwarning("Invoices","Check the date and amounts",parent=window)
             if not values["party_name"] or abs(subtotal+vat-total)>0.005:

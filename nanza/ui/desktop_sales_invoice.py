@@ -66,8 +66,10 @@ class SalesInvoiceMixin:
         self.sales_vat_account=tk.StringVar(value="4427")
         self.sales_expense_account=tk.StringVar(value="713000001")
         self.sales_expense_no_vat_account=tk.StringVar(value="601100001")
-        self.sales_supplier_side=tk.StringVar(value="D - Debit"); self.sales_vat_side=tk.StringVar(value="C - Credit"); self.sales_expense_side=tk.StringVar(value="C - Credit"); self.sales_expense_no_vat_side=tk.StringVar(value="C - Credit")
-        self.sales_due_date=tk.StringVar(); self.sales_payment_method=tk.StringVar(value="On Account (Not Cash)"); self.sales_amount_paid=tk.StringVar(value="0"); self.sales_branch=tk.StringVar(value="Head Office")
+        self.sales_supplier_side=tk.StringVar(value="D - Debit"); self.sales_vat_side=tk.StringVar(value="C - Credit"); \
+            self.sales_expense_side=tk.StringVar(value="C - Credit"); self.sales_expense_no_vat_side=tk.StringVar(value="C - Credit")
+        self.sales_due_date=tk.StringVar(); self.sales_payment_method=tk.StringVar(value="On Account (Not Cash)"); self.sales_amount_paid=tk.StringVar(value="0"); \
+            self.sales_branch=tk.StringVar(value="Head Office")
         self.sales_open_choice=tk.StringVar(); self.sales_doc_type=tk.StringVar(value="Invoice"); self.sales_category=tk.StringVar(value="Services")
         # 2.9.95: "Find invoice" is a slim row above the form (beside it, it made the screen wider than a laptop)
         nav=tk.Frame(header,bg=LIGHT); nav.pack(fill="x",pady=(0,4))

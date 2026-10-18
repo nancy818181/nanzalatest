@@ -11,14 +11,15 @@ class FinancialStatementsTest(unittest.TestCase):
         self.folder=tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(self.folder.cleanup)
         self.db=Database(Path(self.folder.name)/'2025.db'); self.db.initialize('secret12345')
     def voucher(self, amount, debit='531', credit='7011', date='01-03-2025', **extra):
-        return self.db.save_journal_voucher(dict(entry_date=date,currency='USD',description='FS test',**extra),
+        description=extra.pop('description','FS test')
+        return self.db.save_journal_voucher(dict(entry_date=date,currency='USD',description=description,**extra),
             [dict(account_code=debit,debit=str(amount),credit=0),dict(account_code=credit,debit=0,credit=str(amount))],1)
     def test_profit_opening_closing_and_balance_equation(self):
         self.voucher(500,credit='101',date='01-01-2025',voucher_type='04')
         self.voucher(1000); self.voucher(200,debit='6311',credit='531')
         # Simulated year-close transfer must not zero profit or double equity.
-        closing=self.voucher(1000,debit='7011',credit='138',date='31-12-2025',voucher_type='05',entry_number='CLOSE-FS')
-        with self.db.connect() as conn: conn.execute("UPDATE journal_entries SET description='CLOSING 6&7 - 2025' WHERE id=?",(closing["voucher"]["id"],))
+        self.voucher(1000,debit='7011',credit='138',date='31-12-2025',voucher_type='05',
+                     entry_number='CLOSE-FS',description='CLOSING 6&7 - 2025')
         d=fs.year_data(self.db,2025,'USD')
         self.assertEqual(d['profit'],Decimal('800'))
         self.assertEqual(d['equity_start'],Decimal('500'))

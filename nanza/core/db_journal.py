@@ -17,6 +17,8 @@ class JournalStore:
                 raise ValueError("Use salary payment reversal; a linked salary voucher cannot be deleted here")
             entry=db.execute("SELECT * FROM journal_entries WHERE id=?",(int(entry_id),)).fetchone()
             if not entry: raise KeyError(entry_id)
+            if entry["approval_status"] == "review":
+                raise ValueError("A journal voucher awaiting approval cannot be deleted")
             if db.execute("SELECT 1 FROM fixed_asset_postings WHERE entry_id=? LIMIT 1",(int(entry_id),)).fetchone():
                 raise ValueError("This voucher is linked to fixed-asset depreciation and cannot be deleted here")
             self._assert_period_open(entry["entry_date"])
@@ -25,6 +27,8 @@ class JournalStore:
                 invoice=db.execute("SELECT id,source_file FROM invoices WHERE id=?",(entry["source_id"],)).fetchone()
             if entry["source_type"]!="journal_voucher" and (not invoice or invoice["source_file"]!="Journal Voucher"):
                 raise ValueError("Only Journal Voucher entries can be deleted here")
+            if entry["source_type"] == "journal_voucher" and entry["posting_status"] == "posted":
+                raise ValueError("Posted journal vouchers are immutable; create a reversal instead")
             details={"entry_number":entry["entry_number"],"description":entry["description"]}
             if invoice: db.execute("DELETE FROM invoices WHERE id=?",(invoice["id"],))
             db.execute("DELETE FROM journal_entries WHERE id=?",(int(entry_id),))
@@ -44,7 +48,7 @@ class JournalStore:
         return {"deleted":int(entry_id)}
 
     @atomic  # 2.9.121
-    def save_journal_voucher(self,item,lines,user_id,entry_id=None):
+    def save_journal_voucher(self,item,lines,user_id,entry_id=None,reversal_of=None,defer_posting=False):
         date=str(item.get("entry_date") or "").strip(); self._assert_period_open(date)
         description=str(item.get("description") or "").strip() or f"Journal Voucher {str(item.get('entry_number') or '').strip() or 'Entry'}"
         currency=str(item.get("currency") or "USD").upper()
@@ -85,6 +89,10 @@ class JournalStore:
                     raise ValueError("This voucher is linked to fixed-asset depreciation and cannot be edited here")
                 existing=db.execute("SELECT * FROM journal_entries WHERE id=? AND source_type='journal_voucher'",(int(entry_id),)).fetchone()
                 if not existing: raise KeyError(entry_id)
+                if existing["posting_status"] == "posted":
+                    raise ValueError("Posted journal vouchers are immutable; create a reversal instead")
+                if existing["approval_status"] == "review":
+                    raise ValueError("A journal voucher awaiting approval cannot be edited")
                 self._assert_period_open(existing["entry_date"]); voucher_number=str(item.get("entry_number") or existing["entry_number"]).strip()
                 duplicate=db.execute("SELECT 1 FROM journal_entries WHERE entry_number=? AND id<>?",(voucher_number,int(entry_id))).fetchone()
                 if duplicate: raise ValueError("Voucher number already exists")
@@ -100,8 +108,9 @@ class JournalStore:
                             (prefix+"%",)).fetchone()
                     sequence=int(row["entry_number"].rsplit("-",1)[-1])+1 if row else 1; voucher_number=f"{prefix}{sequence:06d}"
                 if db.execute("SELECT 1 FROM journal_entries WHERE entry_number=?",(voucher_number,)).fetchone(): raise ValueError("Voucher number already exists")
-                saved_id=db.execute("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,currency,branch_id,created_by,created_at,voucher_type) VALUES(?,?,?,?,?,?,?,?,?)",
-                        (voucher_number,date,description,"journal_voucher",currency,branch_id,user_id,utcnow(),voucher_type)).lastrowid; action="create"
+                saved_id=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,currency,branch_id,
+                    created_by,created_at,voucher_type,posting_status,reversal_of) VALUES(?,?,?,?,?,?,?,?,?,'draft',?)""",
+                        (voucher_number,date,description,"journal_voucher",currency,branch_id,user_id,utcnow(),voucher_type,reversal_of)).lastrowid; action="create"
             for code,line_description,debit,credit,extra,raw_line in normalized:
                 department_id,project_id=self._dimension_ids(db,{"department":raw_line.get("department") or item.get("department"),"project":raw_line.get("project") or item.get("project"),
                     "department_id":raw_line.get("department_id") or item.get("department_id"),"project_id":raw_line.get("project_id") or item.get("project_id")})
@@ -115,6 +124,9 @@ class JournalStore:
                         extra.get("revalue_currency"),extra.get("revalue_amount")) if extra else (None,)*10 )))
                 if department_id or project_id:
                     db.execute("UPDATE journal_lines SET department_id=?,project_id=? WHERE id=last_insert_rowid()",(department_id,project_id))
+            if not entry_id and not defer_posting:
+                db.execute("""UPDATE journal_entries SET posting_status='posted',posted_at=?,posted_by=?
+                    WHERE id=?""", (utcnow(),user_id,saved_id))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",(user_id,action,"journal_voucher",
                     saved_id,json.dumps({"entry_number":voucher_number,"debit":str(total_debit),"credit":str(total_credit)}),utcnow()))
         return self.journal_voucher_detail(saved_id)
@@ -297,9 +309,11 @@ class JournalStore:
                 "amount_lbp":amount_lbp,"amount_usd":amount_usd,"rate_lbp":rate_lbp,"rate_usd":rate_usd,"due_date":display_date(due) if due else None,
                 "reference":str(line.get("reference") or "").strip() or None}
 
-    def journal_voucher_detail(self,entry_id):
+    def journal_voucher_detail(self,entry_id,include_opening=False):
         with self.connect() as db:
-            entry=db.execute("SELECT * FROM journal_entries WHERE id=? AND source_type='journal_voucher'",(int(entry_id),)).fetchone()
+            source_types=("journal_voucher","opening") if include_opening else ("journal_voucher",)
+            entry=db.execute("SELECT * FROM journal_entries WHERE id=? AND source_type IN (" +
+                ",".join("?" for _ in source_types) + ")",(int(entry_id),*source_types)).fetchone()
             if not entry: raise KeyError(entry_id)
             lines=[dict(row) for row in db.execute("""SELECT a.code account_code,a.name_en account_name,COALESCE(j.description,'') description,
                 CAST(j.debit AS REAL) debit,CAST(j.credit AS REAL) credit,j.line_currency,CAST(j.amount AS REAL) amount,CAST(j.amount_lbp AS REAL) amount_lbp,
@@ -308,3 +322,32 @@ class JournalStore:
                 FROM journal_lines j JOIN accounts a ON a.id=j.account_id LEFT JOIN departments d ON d.id=j.department_id LEFT JOIN projects pr ON pr.id=j.project_id
                 WHERE j.entry_id=? ORDER BY j.id""",(int(entry_id),))]
         return {"voucher":dict(entry),"lines":lines}
+
+    @atomic
+    def reverse_journal_voucher(self, entry_id, reversal_date, user_id, defer_posting=False):
+        """Post a balanced opposite entry; never modify the original posted voucher or opening."""
+        original = self.journal_voucher_detail(int(entry_id),include_opening=True)
+        entry = original["voucher"]
+        if entry["source_type"] not in ("journal_voucher","opening"):
+            raise ValueError("Only a posted journal voucher or opening entry can be reversed")
+        if entry["posting_status"] != "posted":
+            raise ValueError("Only a posted journal voucher or opening entry can be reversed")
+        with self.connect() as db:
+            if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=? LIMIT 1", (int(entry_id),)).fetchone():
+                raise ValueError("This journal voucher has already been reversed")
+        date = display_date(iso_date(reversal_date, "Reversal date"))
+        self._assert_period_open(date)
+        lines = [{"account_code": row["account_code"], "description": row["description"],
+                  "debit": row["credit"], "credit": row["debit"],
+                  "department": row.get("department"), "project": row.get("project"),
+                  "reference": row.get("reference")} for row in original["lines"]]
+        reversed_voucher = self.save_journal_voucher(
+            {"entry_date": date, "description": f"Reversal of {entry['entry_number']}",
+             "currency": entry["currency"], "voucher_type": entry.get("voucher_type") or "01"},
+            lines, user_id, reversal_of=int(entry_id), defer_posting=defer_posting)
+        with self.connect() as db:
+            db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                       (user_id, "reverse", "journal_voucher", int(entry_id),
+                        json.dumps({"original": entry["entry_number"],
+                                    "reversal": reversed_voucher["voucher"]["entry_number"]}), utcnow()))
+        return reversed_voucher

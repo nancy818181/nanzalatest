@@ -174,6 +174,9 @@ class ApiClient:
     def accounts(self): return self.request("GET", "/api/accounts")["items"]
     def next_account_number(self,prefix): return self.request("GET",f"/api/accounts/next-number?{urlencode({'prefix':prefix})}")["account_number"]
     def save_account(self,item): return self.request("POST","/api/accounts",item)["account"]
+    def purchase_intake(self, reading):
+        from ledger_reports import json_ready
+        return self.request("POST", "/api/purchase/intake", {"reading": json_ready(reading)})
     def onboarding_check(self,data,date): return self.request("POST","/api/onboarding/check",{"data":data,"date":date})  # 2.9.119
     def onboarding_import(self,data,date): return self.request("POST","/api/onboarding/import",{"data":data,"date":date})
     def import_accounts(self,items): return self.request("POST","/api/accounts/import",{"items":items})  # 2.9.116
@@ -288,16 +291,20 @@ class ApiClient:
         return self.request("PUT",f"/api/party-documents/{document_id}",{**item,"content":base64.b64encode(content or b"").decode("ascii")})
     def download_party_document(self,document_id):
         result=self.request("GET",f"/api/party-documents/{document_id}"); result["content"]=base64.b64decode(result["content"]); return result
-    def profit_loss(self, from_date=None, to_date=None, currency=None, convert=False):
+    def profit_loss(self, from_date=None, to_date=None, currency=None, convert=False,
+                    department_id=None, project_id=None):
         # 2.9.80: convert=True gives every transaction converted into the currency (planning tools); False = entered in it
-        query=urlencode({k:v for k,v in {"from_date":from_date,"to_date":to_date,"currency":currency,"convert":"1" if convert else None}.items() if v})
+        query=urlencode({k:v for k,v in {"from_date":from_date,"to_date":to_date,"currency":currency,
+            "convert":"1" if convert else None,"department_id":department_id,"project_id":project_id}.items() if v is not None and v != ""})
         return self.request("GET","/api/profit-loss"+(f"?{query}" if query else ""))["items"]
     def fiscal_years(self): return self.request("GET","/api/fiscal-years")["items"]
     def close_fiscal_year(self, year): return self.request("POST","/api/fiscal-years/close",{"year":year})
     def reopen_fiscal_year(self, year): return self.request("POST","/api/fiscal-years/reopen",{"year":year})
     def refresh_opening(self, source_year): return self.request("POST","/api/fiscal-years/refresh-opening",{"source_year":source_year})
-    def fiscal_year_profit_loss(self,year,from_date=None,to_date=None,currency=None,convert=False):
-        query=urlencode({k:v for k,v in {"year":year,"from_date":from_date,"to_date":to_date,"currency":currency,"convert":"1" if convert else None}.items() if v})
+    def fiscal_year_profit_loss(self,year,from_date=None,to_date=None,currency=None,convert=False,
+                                department_id=None,project_id=None):
+        query=urlencode({k:v for k,v in {"year":year,"from_date":from_date,"to_date":to_date,"currency":currency,
+            "convert":"1" if convert else None,"department_id":department_id,"project_id":project_id}.items() if v is not None and v != ""})
         return self.request("GET",f"/api/fiscal-year/profit-loss?{query}")["items"]
     def fiscal_year_cash_flow(self,year,from_date=None,to_date=None,currency=None,convert=False):
         query=urlencode({k:v for k,v in {"year":year,"from_date":from_date,"to_date":to_date,"currency":currency,"convert":"1" if convert else None}.items() if v})
@@ -345,6 +352,10 @@ class ApiClient:
     def cash_flow(self,from_date=None,to_date=None,currency=None,convert=False):
         query=urlencode({k:v for k,v in {"from_date":from_date,"to_date":to_date,"currency":currency,
                 "convert":"1" if convert else None}.items() if v}); return self.request("GET","/api/cash-flow"+(f"?{query}" if query else ""))["items"]
+    def cash_flow_monthly(self,from_date=None,to_date=None,currency=None,convert=False):
+        query=urlencode({k:v for k,v in {"from_date":from_date,"to_date":to_date,"currency":currency,
+                "convert":"1" if convert else None}.items() if v})
+        return self.request("GET","/api/cash-flow/monthly"+(f"?{query}" if query else ""))["items"]
     def aging(self,as_of_date=None,kind=None,currency=None):
         query=urlencode({k:v for k,v in {"as_of_date":as_of_date,"kind":kind,"currency":currency}.items() if v}); return self.request("GET","/api/aging"+(f"?{query}" if query else ""))["items"]
     def comparative_reports(self,from_date,to_date,currency=None):
@@ -423,6 +434,13 @@ class ApiClient:
                 if len(row)>1 and row[1] not in (None,""): row[1]=Decimal(str(row[1]))
         return result
     def management_pack(self,month_end,currency="USD"): return self.request("GET",f"/api/management-pack?{urlencode({'month_end':month_end,'currency':currency})}")
+    def analytic_study(self,from_date,to_date,currency="USD",language="en"):
+        query=urlencode({"date_from":from_date,"date_to":to_date,"currency":currency,"language":language})
+        return self.request("GET",f"/api/analytic-study?{query}")
+    def ai_chat(self,question): return self.request("POST","/api/ai_chat",{"question":question})["answer"]
+    def save_analytic_insights(self,from_date,to_date,insights,currency="USD",language="en"):
+        return self.request("POST","/api/analytic-study/save",{
+            "date_from":from_date,"date_to":to_date,"currency":currency,"language":language,"insights":insights})
     def budget_alerts(self,year,month,currency="USD",threshold=10): return self.request("GET",
             f"/api/budget-alerts?{urlencode({'year':year,'month':month,'currency':currency,'threshold':threshold})}")["items"]
     def accounting_setup(self): return self.request("GET","/api/accounting-setup")
@@ -500,6 +518,8 @@ class ApiClient:
     def delete_stock_document(self,document_id): return self.request("DELETE",f"/api/inventory/documents/{document_id}")
     def next_stock_number(self,doc_type,date): return self.request("GET","/api/inventory/next-number?"+urlencode({"type":doc_type,"date":date}))["number"]
     def inventory_report(self,report,options): return self.request("GET","/api/inventory/report?"+urlencode({"report":report,"options":json.dumps(options)}))
+    def inventory_reconciliation(self,date=None):
+        return self.request("GET","/api/inventory/reconciliation"+("?"+urlencode({"date":date}) if date else ""))
     def post_stock_variation(self,year): return self.request("POST","/api/inventory/stock-variation",{"year":year})
     def post_monthly_stock_variation(self,month_end): return self.request("POST","/api/inventory/monthly-variation",{"month_end":month_end})
     def salary_payments(self,payroll_id): return self.request("GET",f"/api/payroll/salary-payments?payroll_id={int(payroll_id)}")["items"]
@@ -527,8 +547,15 @@ class ApiClient:
     def save_production_order(self,header,lines,order_id=None): return self.request("POST","/api/production/orders",{"header":header,"lines":lines,"id":order_id})
     def production_report(self,date_from,date_to): return self.request("GET","/api/production/report?"+urlencode({"from":date_from,"to":date_to}))
     def audit_report(self,date_from,date_to,late_days=30): return self.request("GET","/api/audit-report?"+urlencode({"date_from":date_from,"date_to":date_to,"late_days":late_days}))  # 2.9.97
+    def diagnostics(self,as_of=None):
+        return self.request("GET","/api/diagnostics"+("?"+urlencode({"as_of":as_of}) if as_of else ""))
+    def cash_forecast_13_week(self,as_of=None):
+        return self.request("GET","/api/reports/cash-forecast/13-week"+("?"+urlencode({"as_of":as_of}) if as_of else ""))
     def approvals(self): return self.request("GET","/api/approvals")  # 2.9.100
     def approve_documents(self,entry_ids,invoice_ids=()): return self.request("POST","/api/approvals/approve",{"entry_ids":list(entry_ids),"invoice_ids":list(invoice_ids)})
+    def reject_documents(self,entry_ids,invoice_ids,reason):
+        return self.request("POST","/api/approvals/reject",{
+            "entry_ids":list(entry_ids),"invoice_ids":list(invoice_ids),"reason":reason})
     def tax_settings_report(self,date): return self.request("GET","/api/tax-settings-report?"+urlencode({"date":date}))  # 2.9.100
     def tax_adviser(self): return self.request("GET","/api/tax-adviser")
     def save_tax_adviser(self,item): return self.request("POST","/api/tax-adviser",item)
@@ -560,8 +587,11 @@ class ApiClient:
     def bank_lines(self,account,currency,date_from,date_to,balance=None):
         return self.request("GET","/api/bank/lines?"+urlencode({k:v for k,v in {"account":account,"currency":currency,"from":date_from,"to":date_to,"balance":balance}.items() if v not in (None,"")}))
     def bank_action(self,action,item): return self.request("POST",f"/api/bank/{action}",item)
+    def match_bank_partial(self,statement_id,allocations):
+        return self.bank_action("match-partial",{"statement_id":statement_id,"allocations":allocations})
+    def reverse_journal_voucher(self,entry_id,reversal_date):
+        return self.request("POST",f"/api/journal/{int(entry_id)}/reverse",{"date":reversal_date})
     def asset_categories(self): return self.request("GET","/api/asset-categories")["items"]
     def save_asset_category(self,item): return self.request("POST","/api/asset-categories",item)["items"]
     def asset_depreciation(self,month,account=None): return self.request("GET","/api/asset-depreciation?"+urlencode({k:v for k,v in {"month":month,"account":account}.items() if v}))
     def post_asset_depreciation(self,account_code,month): return self.request("POST","/api/asset-depreciation/post",{"account_code":account_code,"month":month})
-

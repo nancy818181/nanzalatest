@@ -30,6 +30,197 @@ def trailing_average(monthly, last, field, window=3):
     return sum(float(monthly.get(month, {}).get(field, 0)) for month in months) / len(months) if last else 0.0
 
 
+def _month_parts(row):
+    value = str(row.get("month") or row.get("date") or "")
+    if len(value) >= 7 and value[4] == "-":
+        return int(value[:4]), int(value[5:7])
+    return int(row["year"]), int(row["month"])
+
+
+def _period_month(value):
+    if not value:
+        return None
+    text = str(value)
+    try:
+        year, month = int(text[:4]), int(text[5:7])
+    except (ValueError, IndexError):
+        raise ValueError("Quarterly cashflow bounds must be YYYY-MM or YYYY-MM-DD")
+    if len(text) < 7 or text[4] != "-" or not 1 <= month <= 12:
+        raise ValueError("Quarterly cashflow bounds must be YYYY-MM or YYYY-MM-DD")
+    return year, month
+
+
+def get_quarterly_cashflow(monthly_rows, opening_cash=None, shortage_threshold=0,
+                           start_date=None, end_date=None):
+    """Aggregate monthly flow records into chronological quarterly cash positions.
+
+    Each record has a YYYY-MM `month`, `currency`, `inflow`, and `outflow`. Optional
+    `operating`, `investing`, and `financing` values are summed when supplied.
+    `opening_cash` may be a currency-to-balance mapping or a single starting balance.
+    """
+    opening_cash = opening_cash or {}
+    if not isinstance(opening_cash, dict):
+        opening_cash = {"USD": opening_cash}
+    grouped = {}
+    for item in monthly_rows or ():
+        year, month = _month_parts(item)
+        if not 1 <= month <= 12:
+            raise ValueError(f"Invalid cashflow month: {month}")
+        if start_date and (year, month) < _period_month(start_date):
+            continue
+        if end_date and (year, month) > _period_month(end_date):
+            continue
+        currency = str(item.get("currency") or "USD").upper()
+        key = (year, (month - 1) // 3 + 1, currency)
+        values = grouped.setdefault(key, {"inflow": 0.0, "outflow": 0.0, "operating": 0.0,
+                                          "investing": 0.0, "financing": 0.0, "months": set()})
+        values["months"].add(month)
+        for field in ("inflow", "outflow", "operating", "investing", "financing"):
+            values[field] += float(item.get(field) or 0)
+    if not grouped and not (start_date and end_date):
+        return []
+    start = _period_month(start_date) or min((year, quarter * 3 - 2) for year, quarter, _ in grouped)
+    end = _period_month(end_date) or max((year, quarter * 3) for year, quarter, _ in grouped)
+    if start > end:
+        raise ValueError("Quarterly cashflow start date must not be after its end date")
+    currencies = {currency for _year, _quarter, currency in grouped}
+    currencies.update(str(code).upper() for code in opening_cash)
+    for year in range(start[0], end[0] + 1):
+        first_quarter = (start[1] - 1) // 3 + 1 if year == start[0] else 1
+        last_quarter = (end[1] - 1) // 3 + 1 if year == end[0] else 4
+        for quarter in range(first_quarter, last_quarter + 1):
+            for currency in currencies:
+                grouped.setdefault((year, quarter, currency), {
+                    "inflow": 0.0, "outflow": 0.0, "operating": 0.0,
+                    "investing": 0.0, "financing": 0.0, "months": set(),
+                })
+    balances = {str(code).upper(): float(value or 0) for code, value in opening_cash.items()}
+    rows = []
+    for year, quarter, currency in sorted(grouped):
+        values = grouped[(year, quarter, currency)]
+        opening = balances.get(currency, 0.0)
+        net = values["inflow"] - values["outflow"]
+        closing = opening + net
+        balances[currency] = closing
+        rows.append({"year": year, "quarter_number": quarter, "quarter": f"Q{quarter} {year}",
+                     "currency": currency, "opening": round(opening, 2),
+                     "cash_in": round(values["inflow"], 2), "cash_out": round(values["outflow"], 2),
+                     "net": round(net, 2), "closing": round(closing, 2),
+                     "operating": round(values["operating"], 2), "investing": round(values["investing"], 2),
+                     "financing": round(values["financing"], 2),
+                     "status": "Shortage risk" if closing < float(shortage_threshold or 0) else "Actual"})
+    return rows
+
+
+def five_year_cashflow_forecast(monthly_history, start_year=2027, years=5, opening_cash=None,
+                                scenario_spread=0.05, shortage_threshold=0):
+    """Forecast monthly cash for each scenario, using up to 24 months of trend and seasonality.
+
+    Returns 60 monthly rows and 20 quarterly rows per scenario for the default five-year horizon.
+    Scenario names are Conservative, Realistic, and Optimistic. At the default 5% spread,
+    optimistic receipts are 10% higher and payments 5% lower; conservative scenarios reverse this.
+    """
+    years = int(years)
+    if years != 5:
+        raise ValueError("The cashflow forecast horizon is five years")
+    start_year = int(start_year)
+    history = []
+    for item in monthly_history or ():
+        year, month = _month_parts(item)
+        if not 1 <= month <= 12:
+            raise ValueError(f"Invalid cashflow month: {month}")
+        history.append({**item, "year": year, "month_number": month,
+                        "currency": str(item.get("currency") or "USD").upper()})
+    if not history:
+        raise ValueError("At least one month of cashflow history is required")
+    history.sort(key=lambda row: (row["year"], row["month_number"], row["currency"]))
+    currencies = sorted({row["currency"] for row in history})
+    latest = max((row["year"], row["month_number"]) for row in history)
+    if start_year <= latest[0]:
+        raise ValueError("The forecast start year must follow the latest actual year")
+    recent_keys = []
+    year, month = latest
+    for _ in range(24):
+        recent_keys.append((year, month))
+        year, month = (year - 1, 12) if month == 1 else (year, month - 1)
+    recent_keys.reverse()
+    by_currency_month = {}
+    for row in history:
+        key = (row["currency"], row["year"], row["month_number"])
+        totals = by_currency_month.setdefault(key, {"inflow": 0.0, "outflow": 0.0})
+        totals["inflow"] += float(row.get("inflow") or 0)
+        totals["outflow"] += float(row.get("outflow") or 0)
+    spread = abs(float(scenario_spread))
+    scenario_factors = {
+        "Conservative": {"inflow": max(0.0, 1 - 2 * spread), "outflow": 1 + spread},
+        "Realistic": {"inflow": 1.0, "outflow": 1.0},
+        "Optimistic": {"inflow": 1 + 2 * spread, "outflow": max(0.0, 1 - spread)},
+    }
+    opening_cash = opening_cash or {}
+    if not isinstance(opening_cash, dict):
+        opening_cash = {currency: opening_cash for currency in currencies}
+    forecasts = {}
+    for scenario, factors in scenario_factors.items():
+        monthly_rows = []; bridge_rows = []; forecast_openings = {}
+        for currency in currencies:
+            seasonal = {}
+            annual_totals = []
+            for block_start in (0, 12):
+                annual_totals.append({field: sum(float(by_currency_month.get((currency, y, m), {}).get(field) or 0)
+                                                 for y, m in recent_keys[block_start:block_start + 12])
+                                      for field in ("inflow", "outflow")})
+            growth = {}
+            for field in ("inflow", "outflow"):
+                prior = annual_totals[0][field]
+                current = annual_totals[1][field]
+                growth[field] = current / prior - 1 if prior > 0 else 0.0
+            for month_number in range(1, 13):
+                seasonal[month_number] = {}
+                for field in ("inflow", "outflow"):
+                    samples = [float(by_currency_month.get((currency, y, m), {}).get(field) or 0)
+                               for y, m in recent_keys if m == month_number]
+                    seasonal[month_number][field] = sum(samples) / len(samples) if samples else 0.0
+            opening = float(opening_cash.get(currency, 0) or 0)
+            bridge_year, bridge_month = latest
+            while (bridge_year, bridge_month) < (start_year, 1):
+                bridge_year, bridge_month = (bridge_year + 1, 1) if bridge_month == 12 else (bridge_year, bridge_month + 1)
+                if (bridge_year, bridge_month) >= (start_year, 1):
+                    break
+                elapsed = ((bridge_year - latest[0]) * 12 + bridge_month - latest[1]) / 12
+                bridge_values = {field: round(seasonal[bridge_month][field] *
+                                               (1 + max(-0.95, growth[field])) ** elapsed *
+                                               factors[field], 2)
+                                 for field in ("inflow", "outflow")}
+                net = bridge_values["inflow"] - bridge_values["outflow"]
+                closing = opening + net
+                bridge_rows.append({"month": f"{bridge_year}-{bridge_month:02d}", "currency": currency,
+                                    **bridge_values, "net": round(net, 2), "opening": round(opening, 2),
+                                    "closing": round(closing, 2)})
+                opening = closing
+            forecast_openings[currency] = opening
+            for year_offset in range(years):
+                forecast_year = start_year + year_offset
+                for month_number in range(1, 13):
+                    values = {}
+                    for field in ("inflow", "outflow"):
+                        rate = max(-0.95, growth[field])
+                        values[field] = round(seasonal[month_number][field] *
+                                               (1 + rate) ** (year_offset + 1) * factors[field], 2)
+                    net = values["inflow"] - values["outflow"]
+                    closing = opening + net
+                    monthly_rows.append({"month": f"{forecast_year}-{month_number:02d}", "year": forecast_year,
+                                         "month_number": month_number, "currency": currency, **values,
+                                         "net": round(net, 2), "opening": round(opening, 2),
+                                         "closing": round(closing, 2),
+                                         "status": "Shortage risk" if closing < float(shortage_threshold or 0) else "Forecast"})
+                    opening = closing
+        quarters = get_quarterly_cashflow(monthly_rows, forecast_openings, shortage_threshold)
+        for row in quarters:
+            row["status"] = "Shortage risk" if row["closing"] < float(shortage_threshold or 0) else "Forecast"
+        forecasts[scenario] = {"months": monthly_rows, "quarters": quarters, "bridge": bridge_rows}
+    return forecasts
+
+
 # ---------------------------------------------------------------- long-term (up to 5 years) projection
 def apply_growth(base_annual, years_ahead, growth_rate):
     """Compound base_annual by growth_rate (e.g. 0.10 for +10%) for the given whole number of years ahead."""

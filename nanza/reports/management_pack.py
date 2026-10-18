@@ -64,19 +64,21 @@ def build(db, month_end, currency="USD", prior_db=None):
     end = f"{year}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
     first = f"{year}-{month:02d}-01"; start = f"{year}-01-01"
     prior_end = f"{year - 1}-{month:02d}-{calendar.monthrange(year - 1, month)[1]:02d}"
-    previous = prior_db if prior_db is not None else db
+    previous = prior_db
     month_actual = _statement(_lines(db.profit_and_loss_converted(first, end, currency)))
     ytd_actual = _statement(_lines(db.profit_and_loss_converted(start, end, currency)))
-    month_prior = _statement(_lines(previous.profit_and_loss_converted(f"{year - 1}-{month:02d}-01", prior_end, currency)))
-    ytd_prior = _statement(_lines(previous.profit_and_loss_converted(f"{year - 1}-01-01", prior_end, currency)))
+    month_prior = _statement(_lines(previous.profit_and_loss_converted(f"{year - 1}-{month:02d}-01", prior_end, currency))) if previous else None
+    ytd_prior = _statement(_lines(previous.profit_and_loss_converted(f"{year - 1}-01-01", prior_end, currency))) if previous else None
     budget = _budget(db, year, currency)
     month_budget = _statement(_budget_lines(budget, [month])); ytd_budget = _statement(_budget_lines(budget, range(1, month + 1)))
     has_budget = bool(budget)
     pl_rows = []
     for key, label in ORDER:
-        a, b, p = month_actual[key], month_budget[key], month_prior[key]; ya, yb, yp = ytd_actual[key], ytd_budget[key], ytd_prior[key]
-        pl_rows.append([label, round(a, 2), round(b, 2) if has_budget else "", round(a - b, 2) if has_budget else "", round(p, 2),
-                        round(ya, 2), round(yb, 2) if has_budget else "", round(ya - yb, 2) if has_budget else "", round(yp, 2)])
+        a, b = month_actual[key], month_budget[key]; ya, yb = ytd_actual[key], ytd_budget[key]
+        p = round(month_prior[key], 2) if month_prior else ""
+        yp = round(ytd_prior[key], 2) if ytd_prior else ""
+        pl_rows.append([label, round(a, 2), round(b, 2) if has_budget else "", round(a - b, 2) if has_budget else "", p,
+                        round(ya, 2), round(yb, 2) if has_budget else "", round(ya - yb, 2) if has_budget else "", yp])
     # ---- balance sheet summary
     balances = db.balance_sheet_converted(end, currency)
     def total(prefixes, sign=1, only=None):
@@ -123,7 +125,8 @@ def build(db, month_end, currency="USD", prior_db=None):
                   ["Personnel charges / revenue", _pct(ytd_actual["payroll"], revenue)],
                   ["Current ratio (current assets / current liabilities)", f"{current_assets / current_liabilities:,.2f}" if current_liabilities else ""],
                   ["Customer days (DSO)", f"{customers / revenue * days:,.0f}" if revenue else ""], ["Supplier days (DPO)", f"{suppliers / purchases * days:,.0f}" if purchases else ""],
-                  ["Revenue vs same period last year", _pct(revenue - ytd_prior["revenue"], ytd_prior["revenue"]) if ytd_prior["revenue"] else ""],
+                  ["Revenue vs same period last year", _pct(revenue - ytd_prior["revenue"], ytd_prior["revenue"])
+                   if ytd_prior and ytd_prior["revenue"] else ""],
                   ["Cash months (cash / monthly costs)", f"{cash / (sum(ytd_actual[k] for k in COSTS) / month):,.1f}" if sum(ytd_actual[k] for k in COSTS) else ""]]
     pl_headers = ["", f"{calendar.month_abbr[month]} {year}", "Budget", "Variance", f"{calendar.month_abbr[month]} {year - 1}", "Year to date", "Budget YTD", "Variance YTD", f"YTD {year - 1}"]
     sections = [{"heading": f"Results - {calendar.month_name[month]} {year} and year to date ({currency})", "headers": pl_headers, "rows": pl_rows, "total_rows": [2, 9]},
@@ -135,6 +138,8 @@ def build(db, month_end, currency="USD", prior_db=None):
     meta = [f"Monthly management pack - {calendar.month_name[month]} {year}", f"All figures in {currency}, every currency converted at the saved rates of each entry.",
             "Budget: the company budget of the year (Financial Reports > Budget)." if has_budget else "No company budget saved for this year: the budget columns are empty.",
             "Cost of sales = purchases (601 / 611) and the stock variation: post the Monthly Stock Variation (Inventory) for the true margin of the month."]
+    if prior_db is None:
+        meta.append(f"Historical data for FY {year - 1} unavailable - prior-year comparison is not shown.")
     return {"title": f"Management Pack {calendar.month_name[month]} {year}", "meta": meta, "sections": sections, "month_end": end, "currency": currency}
 
 

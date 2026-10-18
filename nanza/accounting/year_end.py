@@ -100,15 +100,38 @@ def closing_preview(database, year):
 
 
 def remove_closing(database, year, connection=None):
-    """Delete every closing made by Saber for this year (old 'year_close' entries and closing vouchers)."""
+    """Reverse prior closings; keep posted Journal Vouchers and their audit history."""
     year = int(year)
     def run(db):
         ids = [r["id"] for r in db.execute("SELECT id FROM journal_entries WHERE source_type='year_close' AND (entry_number LIKE ? OR source_id=?)", (f"CLOSE-{year}-%", year))]
-        ids += [r["id"] for r in db.execute("""SELECT id FROM journal_entries WHERE source_type='journal_voucher' AND voucher_type='05' AND description LIKE ?""", (f"CLOSING 6&7 - {year}%",))]
+        vouchers = [dict(r) for r in db.execute("""SELECT e.id,e.entry_date FROM journal_entries e
+            WHERE e.source_type='journal_voucher' AND e.voucher_type='05' AND e.description LIKE ?
+            AND NOT EXISTS(SELECT 1 FROM journal_entries r WHERE r.reversal_of=e.id)""", (f"CLOSING 6&7 - {year}%",))]
+        for voucher in vouchers:
+            database.reverse_journal_voucher(voucher["id"], voucher["entry_date"], None)
         for entry_id in ids: db.execute("DELETE FROM journal_entries WHERE id=?", (entry_id,))
-        return len(ids)
+        return len(ids) + len(vouchers)
     if connection is not None: return run(connection)
     with database.connect() as db: return run(db)
+
+
+def reverse_or_remove_openings(database, year, user_id):
+    with database.connect() as connection:
+        entries=[dict(row) for row in connection.execute(
+            """SELECT e.id,e.entry_date,e.posting_status,
+                EXISTS(SELECT 1 FROM journal_entries r WHERE r.reversal_of=e.id) reversed
+                FROM journal_entries e WHERE e.source_type='opening' AND e.entry_number LIKE ?""",
+            (f"OPEN-{int(year)}-%",))]
+    affected=0
+    for entry in entries:
+        if entry["reversed"]:
+            continue
+        if entry["posting_status"]=="posted":
+            database.reverse_journal_voucher(entry["id"],entry["entry_date"],user_id)
+        else:
+            database.delete_opening_voucher(entry["id"],user_id)
+        affected+=1
+    return affected
 
 
 def close_year(database, year, user_id):
@@ -127,10 +150,13 @@ def close_year(database, year, user_id):
         for currency, data in preview.items():
             import numbering  # 2.9.116
             number = database._next_number(db, "journal_entries", "entry_number", numbering.series(db, "journal_voucher"), f"31-12-{year}")
-            entry = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at,voucher_type,branch_id)
-                VALUES(?,?,?,?,?,?,?,?,?,(SELECT id FROM branches ORDER BY id LIMIT 1))""", (number, f"31-12-{year}", f"CLOSING 6&7 - {year} ({currency})", "journal_voucher", None,
-                currency, user_id, utcnow(), "05")).lastrowid
+            entry = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
+                created_by,created_at,voucher_type,branch_id,posting_status)
+                VALUES(?,?,?,?,?,?,?,?,?,(SELECT id FROM branches ORDER BY id LIMIT 1),'draft')""",
+                (number, f"31-12-{year}", f"CLOSING 6&7 - {year} ({currency})", "journal_voucher", None,
+                 currency, user_id, utcnow(), "05")).lastrowid
             _insert_lines(db, database, entry, currency, [(c, a, l, u, f"Closing {year}") for c, a, l, u, _n in data["lines"]])
+            db.execute("UPDATE journal_entries SET posting_status='posted' WHERE id=?", (entry,))
             vouchers.append(number); results[currency] = float(data["net_result"])
         db.execute("""INSERT INTO fiscal_years(year,status,opened_at,closed_at,closed_by,details) VALUES(?,'closed',?,?,?,?)
             ON CONFLICT(year) DO UPDATE SET status='closed',closed_at=excluded.closed_at,closed_by=excluded.closed_by,details=excluded.details""",
@@ -144,12 +170,13 @@ def close_year(database, year, user_id):
 def reopen_year(database, year, user_id):
     year = int(year)
     with database.connect() as db:
-        removed = remove_closing(database, year, db)
         db.execute("""INSERT INTO fiscal_years(year,status,opened_at) VALUES(?,'open',?)
             ON CONFLICT(year) DO UPDATE SET status='open',closed_at=NULL,closed_by=NULL,details=NULL""", (year, f"{year}-01-01T00:00:00"))
+        removed = remove_closing(database, year, db)
         db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
             (user_id, "reopen", "fiscal_year", year, json.dumps({"removed_closing_entries": removed}), utcnow()))
-    return {"year": year, "status": "open", "removed_closing_entries": removed}
+    return {"year": year, "status": "open", "removed_closing_entries": removed,
+            "reversed_closing_entries": removed}
 
 
 def opening_lines(source, source_year):
@@ -201,15 +228,19 @@ def post_opening(source, target, year, user_id):
     """Replace the opening vouchers of `year` in the target database with the balances of year-1."""
     year = int(year); lines = opening_lines(source, year - 1); vouchers = []
     revaluations = lines.pop("_revaluations", [])
+    reverse_or_remove_openings(target,year,user_id)
     with target.connect() as db:
         _bring_accounts(source, db, sorted({code for items in lines.values() for code, *_rest in items} | {code for _c, code, _l, _i in revaluations}))
-        for row in db.execute("SELECT id FROM journal_entries WHERE source_type='opening' AND entry_number LIKE ?", (f"OPEN-{year}-%",)).fetchall():
-            db.execute("DELETE FROM journal_entries WHERE id=?", (row["id"],))
         for currency in sorted({c for c, *_rest in revaluations} - set(lines)): lines[currency] = []
         for currency, items in lines.items():
             doe = [(code, line_currency, item) for c, code, line_currency, item in revaluations if c == currency]
             if not items and not doe: continue
-            number = f"OPEN-{year}-{currency}"
+            base_number = f"OPEN-{year}-{currency}"
+            number = base_number
+            suffix = 0
+            while db.execute("SELECT 1 FROM journal_entries WHERE entry_number=?", (number,)).fetchone():
+                suffix += 1
+                number = f"{base_number}-R{suffix}"
             entry = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,currency,created_by,created_at,branch_id,voucher_type)
                 VALUES(?,?,?,?,?,?,?,(SELECT id FROM branches ORDER BY id LIMIT 1),'04')""", (number, f"01-01-{year}", f"Opening balances {year} ({currency})",
                         "opening", currency, user_id, utcnow())).lastrowid

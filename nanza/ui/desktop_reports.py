@@ -3,10 +3,11 @@ from __future__ import annotations
 import logging
 
 from desktop_common import (  # 2.9.102: the names this module uses (no more 'import *')
-    bulk_action, chosen_values, datetime, export_excel, export_pdf, filedialog, flow_toolbars, GOLD, json, LIGHT,
+    bulk_action, chosen_values, company_settings, datetime, export_excel, export_pdf, filedialog, flow_toolbars, GOLD, json, LIGHT,
     main_currency, messagebox, MultiSelect, natural_sort_value, NAVY, parse_user_date, print_rows, row_matches_search,
     safe_display_date, sortable_date, tk, ttk
 )
+from i18n import tr
 
 
 MUTED = "#5f6b76"
@@ -77,7 +78,7 @@ class ReportsMixin:
         """Since 2.9.43 no entry can be saved with Debit different from Credit. This lists entries saved
         before that (by older versions or imports) so they can be corrected with a journal voucher."""
         try: rows=self.client.unbalanced_entries()
-        except Exception as exc: return messagebox.showerror("Check Balance",str(exc))
+        except (RuntimeError,OSError,ValueError,KeyError,TypeError) as exc: return messagebox.showerror("Check Balance",str(exc))
         if not rows: return messagebox.showinfo("Check Balance","All journal entries are balanced (total Debit = total Credit).")
         lines="\n".join(f'{r["entry_number"]}  {safe_display_date(r["entry_date"])}  Debit {r["debit"]}  Credit {r["credit"]}  Difference {r["difference"]}' for r in rows[:30])
         more=f"\n... and {len(rows)-30} more" if len(rows)>30 else ""
@@ -103,7 +104,7 @@ class ReportsMixin:
         currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
         view_year=int(self.journal_view_year.get() or self.current_fiscal_year)
         try: rows=self.client.journal(dates[0],dates[1],currency) if view_year==int(self.current_fiscal_year) else self.client.fiscal_year_journal(view_year,dates[0],dates[1],currency)
-        except Exception as exc: return messagebox.showerror("General Journal",str(exc))
+        except (RuntimeError,OSError,ValueError,KeyError,TypeError) as exc: return messagebox.showerror("General Journal",str(exc))
         if self.journal_section.get()!="All Sections": rows=[row for row in rows if row.get("journal_category")==self.journal_section.get()]
         number=self.journal_find.get().strip() if hasattr(self,"journal_find") else ""
         if number:
@@ -153,7 +154,7 @@ class ReportsMixin:
         if not row: return messagebox.showwarning("General Journal","Selected entry was not found")
         if row.get("source_type")=="year_close":
             year=int(row.get("source_id") or str(row["entry_number"]).split("-")[1])
-            if not messagebox.askyesno("Reopen Fiscal Year",f"This is a closing voucher. Reopen fiscal year {year} and remove all its closing entries?"): return
+            if not messagebox.askyesno("Reopen Fiscal Year",f"This is a closing voucher. Reopen fiscal year {year} and reverse its closing entries?"): return
             try: self.client.reopen_fiscal_year(year)
             except Exception as exc: return messagebox.showerror("Reopen Fiscal Year",str(exc))
             self.load_journal(); return messagebox.showinfo("Fiscal Year",f"Fiscal year {year} reopened successfully")
@@ -324,7 +325,7 @@ class ReportsMixin:
         self.current_company=result.get("company",self.current_company); self.current_fiscal_year=year
         self.client.select_company_year(self.current_company["id"],year); self.main_screen()
         messagebox.showinfo("Fiscal Year",
-                f"Fiscal year {year} is open again.\nRemoved closing entries: {result.get('removed_closing_entries',0)}\nRemoved old opening entries: {result.get('removed_opening_entries',0)}")
+                f"Fiscal year {year} is open again.\nReversed closing entries: {result.get('reversed_closing_entries',0)}\nReversed old opening entries: {result.get('reversed_opening_entries',0)}")
 
     def refresh_next_year_opening(self):
         year=int(getattr(self,"current_fiscal_year",self.close_year.get()))
@@ -356,11 +357,17 @@ class ReportsMixin:
         self.build_financial_filter_row()
         nested=ttk.Notebook(self.reports_tab); nested.pack(fill="both",expand=True,padx=10,pady=(0,10)); self.financial_notebook=nested
         gl=tk.Frame(nested,bg=LIGHT); bs=tk.Frame(nested,bg=LIGHT); vat=tk.Frame(nested,bg=LIGHT); cash=tk.Frame(nested,bg=LIGHT); cash_outlook=tk.Frame(nested,
-                bg=LIGHT); aging=self.ageing_tab; comparative=tk.Frame(nested,bg=LIGHT)
+            bg=LIGHT); cash_quarterly=tk.Frame(nested,bg=LIGHT); cash_13_week=tk.Frame(nested,bg=LIGHT)
+        cash_forecast=tk.Frame(nested,bg=LIGHT); aging=self.ageing_tab; comparative=tk.Frame(nested,bg=LIGHT)
         nested.add(gl,text="General Ledger"); nested.add(bs,text="Balance Sheet"); nested.add(vat,text="Lebanese VAT Report"); nested.add(cash,
-                text="Cash Flow"); nested.add(cash_outlook,text="Cash Flow Outlook"); nested.add(comparative,
-                text="Comparative P&L"); ctb_page=tk.Frame(nested,bg=LIGHT); nested.add(ctb_page,text="Comparative Trial Balance"); self.ageing_page=aging; self.build_budget_page(nested); self.build_projection_page(nested); self.build_business_reports_page(nested)
+            text="Cash Flow"); nested.add(cash_outlook,text="Cash Flow Outlook"); nested.add(cash_quarterly,text="Quarterly Cash Flow"); \
+                nested.add(cash_13_week,text="13-Week Cash Forecast"); nested.add(cash_forecast,text="5-Year Cash Forecast"); nested.add(comparative,
+                text="Comparative P&L"); ctb_page=tk.Frame(nested,bg=LIGHT); nested.add(ctb_page,text="Comparative Trial Balance"); self.ageing_page=aging; \
+                    self.build_budget_page(nested); self.build_projection_page(nested); self.build_business_reports_page(nested)
         self.build_management_pack_page(nested)  # 2.9.82
+        self.build_quarterly_budget_page(nested)
+        self.build_analytic_study_page(nested)
+        self.build_ai_accountant_page(nested)
         self.ledger_tree=self.table(gl,[("date","Date",95),("entry","Entry",90),("account","Account",85),("currency","Currency",70),("name","Account Name",180),
                 ("description","Description",200),("debit","Debit",105),("credit","Credit",105),("balance","Balance",110)])
         self.report_buttons(gl,"ledger"); self.ledger_tree._totals_skip={"balance"}
@@ -372,6 +379,47 @@ class ReportsMixin:
         self.vat_summary=tk.Label(vat,text="",bg=LIGHT,font=("Segoe UI",10,"bold")); self.vat_summary.pack(pady=(0,8))
         self.cash_tree=self.table(cash,[("currency","Currency",90),("category","Cash Flow Category",280),("inflow","Inflow",140),("outflow","Outflow",140),
                 ("net","Net Cash Movement",160)]); self.report_buttons(cash,"cash")
+        quarter_bar=tk.Frame(cash_quarterly,bg=LIGHT); quarter_bar.pack(fill="x",padx=10,pady=8)
+        self.cash_quarter_start_year=tk.StringVar(value="2024"); self.cash_quarter_threshold=tk.StringVar(value="0")
+        tk.Label(quarter_bar,text="From year",bg=LIGHT,fg=NAVY).pack(side="left")
+        tk.Entry(quarter_bar,textvariable=self.cash_quarter_start_year,width=6).pack(side="left",padx=(4,10))
+        tk.Label(quarter_bar,text="Cash shortage threshold",bg=LIGHT,fg=NAVY).pack(side="left")
+        tk.Entry(quarter_bar,textvariable=self.cash_quarter_threshold,width=12).pack(side="left",padx=(4,10))
+        self.action_button(quarter_bar,"Load Quarterly Actuals",self.load_quarterly_cashflow).pack(side="left",padx=3)
+        self.cash_quarter_tree=self.table(cash_quarterly,[("quarter","Quarter",110),("currency","Currency",85),("opening","Opening",125),
+            ("cash_in","Cash In",125),("cash_out","Cash Out",125),("net","Net",125),("closing","Closing",125),("status","Status",130)])
+        self.cash_quarter_tree.tag_configure("shortage",foreground="#a32020")
+        tk.Label(cash_quarterly,text="Quarter totals aggregate monthly cash movements; opening cash is the class 51/53 balance before the selected range.",
+                 bg=LIGHT,fg=NAVY,anchor="w").pack(fill="x",padx=12,pady=4)
+        short_bar=tk.Frame(cash_13_week,bg=LIGHT); short_bar.pack(fill="x",padx=10,pady=8)
+        self.action_button(short_bar,"Build 13-Week Forecast",self.load_13_week_cashflow).pack(side="left",padx=3)
+        self.cash_13_week_info=tk.Label(cash_13_week,text="Uses unpaid invoices and bills, posted payroll due, and outstanding statutory liabilities.",
+            bg=LIGHT,fg=NAVY,anchor="w"); self.cash_13_week_info.pack(fill="x",padx=12)
+        self.cash_13_week_tree=self.table(cash_13_week,[("week","Week",60),("from","From",95),("to","To",95),("currency","Currency",80),
+            ("opening","Opening",115),("cash_in","Cash In",115),("cash_out","Cash Out",115),("net","Net",115),("closing","Closing",115)])
+        self.cash_13_week_tree.tag_configure("shortage",foreground="#a32020")
+        forecast_bar=tk.Frame(cash_forecast,bg=LIGHT); forecast_bar.pack(fill="x",padx=10,pady=8)
+        self.cash_forecast_start_year=tk.StringVar(value=str(int(self.current_fiscal_year)+1)); self.cash_forecast_growth=tk.StringVar(value="5")
+        self.cash_forecast_threshold=tk.StringVar(value="0"); self.cash_forecast_scenario=tk.StringVar(value="Realistic")
+        for label,var,width in (("Forecast start year",self.cash_forecast_start_year,6),("Scenario spread %",self.cash_forecast_growth,7),
+                                ("Shortage threshold",self.cash_forecast_threshold,12)):
+            tk.Label(forecast_bar,text=label,bg=LIGHT,fg=NAVY).pack(side="left")
+            tk.Entry(forecast_bar,textvariable=var,width=width).pack(side="left",padx=(4,10))
+        scenario_box=ttk.Combobox(forecast_bar,textvariable=self.cash_forecast_scenario,
+                values=["Conservative","Realistic","Optimistic"],state="readonly",width=15)
+        scenario_box.pack(side="left",padx=3); scenario_box.bind("<<ComboboxSelected>>",lambda _event:self.refresh_five_year_cashflow_tables())
+        self.action_button(forecast_bar,"Build 5-Year Forecast",self.load_five_year_cashflow).pack(side="left",padx=3)
+        self.cash_forecast_info=tk.Label(cash_forecast,text="Uses up to 24 complete monthly periods for trend and seasonality; keeps currency rows separate.",
+                bg=LIGHT,fg=NAVY,anchor="w"); self.cash_forecast_info.pack(fill="x",padx=12)
+        forecast_views=ttk.Notebook(cash_forecast); forecast_views.pack(fill="both",expand=True,padx=10,pady=6)
+        forecast_month_page=tk.Frame(forecast_views,bg=LIGHT); forecast_quarter_page=tk.Frame(forecast_views,bg=LIGHT)
+        forecast_views.add(forecast_month_page,text="Monthly"); forecast_views.add(forecast_quarter_page,text="Quarterly")
+        self.cash_forecast_month_tree=self.table(forecast_month_page,[("month","Month",100),("currency","Currency",80),("scenario","Scenario",120),
+            ("opening","Opening",125),("inflow","Cash In",125),("outflow","Cash Out",125),("net","Net",125),("closing","Closing",125),("status","Status",130)])
+        self.cash_forecast_quarter_tree=self.table(forecast_quarter_page,[("quarter","Quarter",110),("currency","Currency",80),("scenario","Scenario",120),
+            ("opening","Opening",125),("cash_in","Cash In",125),("cash_out","Cash Out",125),("net","Net",125),("closing","Closing",125),("status","Status",130)])
+        self.cash_forecast_month_tree.tag_configure("shortage",foreground="#a32020")
+        self.cash_forecast_quarter_tree.tag_configure("shortage",foreground="#a32020")
         outlook_bar=tk.Frame(cash_outlook,bg=LIGHT); outlook_bar.pack(fill="x",padx=10,pady=8)
         self.cash_outlook_year=tk.StringVar(value=str(self.current_fiscal_year))
         self.cash_outlook_horizon=tk.StringVar(value="Quarter (3 months)")
@@ -434,6 +482,8 @@ class ReportsMixin:
                 "Currency",75),("outstanding","Outstanding",120),("days","Days Overdue",110),("bucket","Aging Bucket",100)]); self.report_buttons(aging,"aging")
         self.comparative_tree=self.table(comparative,[("currency","Currency",75),("type","Type",85),("account","Account",95),("name","Account Name",260),
                 ("current","Current Period",130),("prior","Prior Year",130),("variance","Variance",130)]); self.report_buttons(comparative,"comparative")
+        self.comparative_note=tk.Label(comparative,text="",bg=LIGHT,fg="#8a2c2c",anchor="w",justify="left")
+        self.comparative_note.pack(fill="x",padx=12,pady=(6,0))
         self.enable_drill_down(self.comparative_tree,2,lambda:(self.financial_report_range() or (None,None)))  # 2.9.82
         # 2.9.126: comparative trial balance - this period against the same period one year earlier
         self.ctb_note=tk.Label(ctb_page,text="",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left"); self.ctb_note.pack(fill="x",padx=12,pady=(6,0))
@@ -540,7 +590,11 @@ class ReportsMixin:
             balance=client.balance_sheet(dates[1],currency)
             vat=vat_hidden or client.vat_report(dates[0],dates[1],currency)
             cash=client.cash_flow(dates[0],dates[1],currency)
-            comparative=client.comparative_reports(dates[0],dates[1],currency)
+            try:
+                comparative=client.comparative_reports(dates[0],dates[1],currency)
+            except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+                logging.getLogger("saber").warning("Comparative profit and loss unavailable", exc_info=True)
+                comparative={"items":[],"prior_available":False,"warning":str(exc)}
             ctb={"items":[],"warning":""}
             if hasattr(client,"comparative_trial_balance"):
                 try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
@@ -560,9 +614,13 @@ class ReportsMixin:
             self.refresh_financial_filter_choices(ledger["items"]); filters=self.financial_filter_sets()
             self._financial_loading=False
             self.financial_snapshot={**requested,"account_from":self.report_account_from.get(),"account_to":self.report_account_to.get(),"filters":filters}
-            self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row,filters)]; self.balance_rows=[row for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
+            self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row,filters)]; self.balance_rows=[row \
+                for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
             self.ctb_rows=[row for row in ctb.get("items",[]) if in_account_range(row["code"])]; self.ctb_info=ctb
-            self.ledger_tree.delete(*self.ledger_tree.get_children()); self.balance_tree.delete(*self.balance_tree.get_children()); self.vat_tree.delete(*self.vat_tree.get_children()); self.cash_tree.delete(*self.cash_tree.get_children()); self.comparative_tree.delete(*self.comparative_tree.get_children())
+            self.comparative_info=comparative
+            self.ledger_tree.delete(*self.ledger_tree.get_children()); self.balance_tree.delete(*self.balance_tree.get_children()); \
+                self.vat_tree.delete(*self.vat_tree.get_children()); self.cash_tree.delete(*self.cash_tree.get_children()); \
+                    self.comparative_tree.delete(*self.comparative_tree.get_children())
             from desktop_common import fill_tree  # 2.9.120: a long ledger shows its first lines at once, the rest follows
             fill_tree(self.ledger_tree,[(("","end"),{"values":(r["entry_date"],r["entry_number"],r["account_code"],r["currency"],r["account_name"],
                     r["description"],f'{r["debit"]:,.2f}',f'{r["credit"]:,.2f}',f'{r["balance"]:,.2f}')}) for r in self.ledger_rows])
@@ -570,7 +628,10 @@ class ReportsMixin:
             for r in self.vat_rows: self.vat_tree.insert("","end",values=(r["currency"],r["kind"],r["invoices"],f'{r["subtotal"] or 0:,.2f}',f'{r["vat"] or 0:,.2f}',f'{r["total"] or 0:,.2f}'))
             for r in self.cash_rows: self.cash_tree.insert("","end",values=(r["currency"],r["category"],f'{r["inflow"]:,.2f}',f'{r["outflow"]:,.2f}',f'{r["net"]:,.2f}'))
             for r in self.comparative_rows: self.comparative_tree.insert("","end",values=(r["currency"],r["type"],r["code"],r["name_en"],f'{r["current"]:,.2f}',
-                    f'{r["prior"]:,.2f}',f'{r["variance"]:,.2f}'))
+                    f'{r["prior"]:,.2f}' if r.get("prior") is not None else "",
+                    f'{r["variance"]:,.2f}' if r.get("variance") is not None else ""))
+            if hasattr(self,"comparative_note"):
+                self.comparative_note.config(text=comparative.get("warning") or "")
             if hasattr(self,"ctb_tree"):
                 self.ctb_tree.delete(*self.ctb_tree.get_children())
                 prior=ctb.get("prior_available",True)
@@ -619,7 +680,7 @@ class ReportsMixin:
         except ValueError: return messagebox.showwarning("Ageing Report","As of date must use DD-MM-YYYY")
         currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
         try: self.aging_rows=self.client.aging(as_of,None,currency)
-        except Exception as exc: return messagebox.showerror("Ageing Report",str(exc))
+        except (RuntimeError,OSError,ValueError,KeyError,TypeError) as exc: return messagebox.showerror("Ageing Report",str(exc))
         self.refresh_ageing_tree()
 
     def visible_ageing_rows(self):
@@ -690,6 +751,356 @@ class ReportsMixin:
         for row in self.cash_projection_rows:
             self.cash_projection_tree.insert("","end",values=(row["month"],row["status"],row["currency"],
                 f'{row["inflow"]:,.2f}',f'{row["outflow"]:,.2f}',f'{row["net"]:,.2f}'))
+
+    def load_quarterly_cashflow(self):
+        from financial_projection import get_quarterly_cashflow
+        try:
+            start_year=int(self.cash_quarter_start_year.get()); threshold=float(self.cash_quarter_threshold.get().replace(",", ""))
+            if start_year < 2000 or start_year > datetime.now().year: raise ValueError("Choose a year from 2000 through the current year")
+            currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
+            end=datetime.now().strftime("%Y-%m-%d"); start=f"{start_year}-01-01"
+            monthly=self.client.cash_flow_monthly(start,end,currency,convert=bool(currency))
+            try: opening_rows=self.client.fiscal_year_balance_sheet(start_year-1,f"{start_year-1}-12-31",currency,convert=bool(currency))
+            except Exception: opening_rows=self.client.balance_sheet(f"{start_year-1}-12-31",currency,convert=bool(currency))
+            opening={}
+            for row in opening_rows:
+                code=str(row.get("code") or "")
+                if code.startswith(("51","53")):
+                    key=row.get("currency") or currency or "USD"; opening[key]=opening.get(key,0.0)+float(row.get("balance") or 0)
+            rows=get_quarterly_cashflow(monthly,opening,threshold,start,end)
+        except Exception as exc: return messagebox.showerror("Quarterly Cash Flow",str(exc))
+        self.cash_quarterly_rows=rows; self.cash_quarter_tree.delete(*self.cash_quarter_tree.get_children())
+        for row in rows:
+            values=(row["quarter"],row["currency"],f'{row["opening"]:,.2f}',f'{row["cash_in"]:,.2f}',f'{row["cash_out"]:,.2f}',
+                    f'{row["net"]:,.2f}',f'{row["closing"]:,.2f}',row["status"])
+            self.cash_quarter_tree.insert("","end",values=values,tags=("shortage",) if row["status"]=="Shortage risk" else ())
+
+    def load_five_year_cashflow(self):
+        from financial_projection import five_year_cashflow_forecast, month_range
+        try:
+            start_year=int(self.cash_forecast_start_year.get()); spread=float(self.cash_forecast_growth.get().replace(",", ""))/100
+            threshold=float(self.cash_forecast_threshold.get().replace(",", ""))
+            now=datetime.now(); actual_year=now.year; actual_month=now.month-1
+            if actual_month < 1: actual_year-=1; actual_month=12
+            end=month_range(actual_year,actual_month)[1]
+            start_index=actual_year*12+actual_month-24
+            history_year,history_month=divmod(start_index,12); history_month+=1
+            start=month_range(history_year,history_month)[0]
+            currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
+            history=self.client.cash_flow_monthly(start,end,currency,convert=bool(currency))
+            try: opening_rows=self.client.fiscal_year_balance_sheet(actual_year,end,currency,convert=bool(currency))
+            except Exception: opening_rows=self.client.balance_sheet(end,currency,convert=bool(currency))
+            opening={}
+            for row in opening_rows:
+                code=str(row.get("code") or "")
+                if code.startswith(("51","53")):
+                    key=row.get("currency") or currency or "USD"; opening[key]=opening.get(key,0.0)+float(row.get("balance") or 0)
+            self.cash_forecast_results=five_year_cashflow_forecast(history,start_year,5,opening,spread,threshold)
+            self.cash_forecast_info.config(text=f"Forecast: Q1 {start_year} to Q4 {start_year+4}. Trend and seasonality use the latest 24 complete months; estimated bridge cash is included.")
+            self.refresh_five_year_cashflow_tables()
+        except Exception as exc: return messagebox.showerror("5-Year Cash Forecast",str(exc))
+
+    def load_13_week_cashflow(self):
+        try:
+            forecast=self.client.cash_forecast_13_week()
+        except Exception as exc:
+            return messagebox.showerror("13-Week Cash Forecast", str(exc))
+        self.cash_13_week_info.config(text="13 weeks, by currency. " + " ".join(forecast["assumptions"]))
+        self.cash_13_week_tree.delete(*self.cash_13_week_tree.get_children())
+        for row in forecast["rows"]:
+            values=(row["week"],row["from"],row["to"],row["currency"],f'{row["opening"]:,.2f}',
+                    f'{row["cash_in"]:,.2f}',f'{row["cash_out"]:,.2f}',f'{row["net"]:,.2f}',f'{row["closing"]:,.2f}')
+            self.cash_13_week_tree.insert("","end",values=values,
+                tags=("shortage",) if row["closing"] < 0 else ())
+
+    def refresh_five_year_cashflow_tables(self):
+        forecasts=getattr(self,"cash_forecast_results",None)
+        if not forecasts: return
+        scenario=self.cash_forecast_scenario.get(); result=forecasts.get(scenario)
+        if not result: return
+        for tree,rows,quarterly in ((self.cash_forecast_month_tree,result["months"],False),(self.cash_forecast_quarter_tree,result["quarters"],True)):
+            tree.delete(*tree.get_children())
+            for row in rows:
+                if quarterly:
+                    values=(row["quarter"],row["currency"],scenario,f'{row["opening"]:,.2f}',f'{row["cash_in"]:,.2f}',
+                            f'{row["cash_out"]:,.2f}',f'{row["net"]:,.2f}',f'{row["closing"]:,.2f}',row["status"])
+                else:
+                    values=(row["month"],row["currency"],scenario,f'{row["opening"]:,.2f}',f'{row["inflow"]:,.2f}',
+                            f'{row["outflow"]:,.2f}',f'{row["net"]:,.2f}',f'{row["closing"]:,.2f}',row["status"])
+                tree.insert("","end",values=values,tags=("shortage",) if row["status"]=="Shortage risk" else ())
+
+    def build_analytic_study_page(self, nested):
+        language=self.language.get()
+        page=tk.Frame(nested,bg=LIGHT); nested.add(page,text=tr(language,"analytic_study_title")); self.analytic_page=page
+        controls=tk.Frame(page,bg=LIGHT); controls.pack(fill="x",padx=10,pady=8)
+        year=int(self.current_fiscal_year); today=datetime.now()
+        self.analytic_from=tk.StringVar(value=f"01-01-{year}")
+        self.analytic_to=tk.StringVar(value=today.strftime("%d-%m-%Y"))
+        self.analytic_currency=tk.StringVar(value="USD")
+        for label,var in ((tr(language,"from_date"),self.analytic_from),(tr(language,"to_date"),self.analytic_to)):
+            tk.Label(controls,text=label,bg=LIGHT,fg=NAVY).pack(side="left")
+            self.date_entry(controls,var,12).pack(side="left",padx=(4,8))
+        ttk.Combobox(controls,textvariable=self.analytic_currency,values=self.currency_codes,state="readonly",width=7).pack(side="left",padx=4)
+        self.action_button(controls,tr(language,"build_study"),self.load_analytic_study).pack(side="left",padx=4)
+        self.action_button(controls,tr(language,"charts"),self.open_analytic_charts).pack(side="left",padx=4)
+        self.action_button(controls,tr(language,"export_pdf"),lambda:self.export_analytic_study("pdf")).pack(side="left",padx=4)
+        self.action_button(controls,tr(language,"export_excel"),lambda:self.export_analytic_study("xlsx")).pack(side="left",padx=4)
+        self.analytic_info=tk.Label(page,text=tr(language,"analytic_info"),
+                                    bg=LIGHT,fg=NAVY,anchor="w"); self.analytic_info.pack(fill="x",padx=12)
+        views=ttk.Notebook(page); views.pack(fill="both",expand=True,padx=8,pady=5)
+        self.analytic_viewers={}
+        for name,key in (("Overview","overview"),("Profitability","profitability"),("Expense","expense"),
+                         ("Cashflow","cashflow"),("Custom Analytic","custom_analytic")):
+            child=tk.Frame(views,bg=LIGHT); views.add(child,text=tr(language,key))
+            self.analytic_viewers[name]=self.report_viewer(child)
+        self.analytic_study_result=None; self.analytic_report_result=None
+
+    def build_quarterly_budget_page(self,nested):
+        page=tk.Frame(nested,bg=LIGHT); nested.add(page,text="Quarterly Budget vs Actual")
+        bar=tk.Frame(page,bg=LIGHT); bar.pack(fill="x",padx=10,pady=8)
+        year=int(self.current_fiscal_year); self.quarter_budget_year=tk.StringVar(value=str(year))
+        self.quarter_budget_currency=tk.StringVar(value="USD")
+        tk.Label(bar,text="Year",bg=LIGHT,fg=NAVY).pack(side="left")
+        tk.Entry(bar,textvariable=self.quarter_budget_year,width=7).pack(side="left",padx=(4,10))
+        ttk.Combobox(bar,textvariable=self.quarter_budget_currency,values=self.currency_codes,state="readonly",width=7).pack(side="left",padx=4)
+        self.quarter_budget_departments = self.client.departments()
+        self.quarter_budget_projects = self.client.projects()
+        self.quarter_budget_department = tk.StringVar(value="All departments")
+        self.quarter_budget_project = tk.StringVar(value="All projects")
+        self.quarter_budget_department_ids = {
+            f'{row["id"]} - {row.get("name") or row.get("name_en") or ""}': row["id"]
+            for row in self.quarter_budget_departments
+        }
+        self.quarter_budget_project_ids = {
+            f'{row["id"]} - {row.get("name") or row.get("name_en") or ""}': row["id"]
+            for row in self.quarter_budget_projects
+        }
+        ttk.Combobox(bar, textvariable=self.quarter_budget_department,
+            values=["All departments", *self.quarter_budget_department_ids], state="readonly", width=22).pack(side="left", padx=4)
+        ttk.Combobox(bar, textvariable=self.quarter_budget_project,
+            values=["All projects", *self.quarter_budget_project_ids], state="readonly", width=22).pack(side="left", padx=4)
+        self.action_button(bar,"Build Quarterly Comparison",self.load_quarterly_budget).pack(side="left",padx=4)
+        self.action_button(bar,"Export PDF",lambda:self.export_quarterly_budget("pdf")).pack(side="left",padx=3)
+        self.action_button(bar,"Export Excel",lambda:self.export_quarterly_budget("xlsx")).pack(side="left",padx=3)
+        self.quarter_budget_info=tk.Label(page,text="Quarter budgets sum saved monthly amounts; annual-only budgets are divided by four.",
+                                          bg=LIGHT,fg=NAVY,anchor="w"); self.quarter_budget_info.pack(fill="x",padx=12)
+        columns=("quarter","account","name","type","budget","actual","variance","variance_pct","status")
+        self.quarter_budget_tree=ttk.Treeview(page,columns=columns,show="headings",selectmode="browse")
+        labels=("Quarter","Account","Account Name","Type","Budget","Actual","Variance","Variance %","Status")
+        widths=(100,95,220,85,115,115,115,100,125)
+        for key,label,width in zip(columns,labels,widths):
+            self.quarter_budget_tree.heading(key,text=label); self.quarter_budget_tree.column(key,width=width,anchor="w" if key in ("quarter","name","type","status") else "e")
+        self.quarter_budget_tree.tag_configure("favorable",foreground="#287547")
+        self.quarter_budget_tree.tag_configure("caution",foreground="#9a7000")
+        self.quarter_budget_tree.tag_configure("adverse",foreground="#a32020")
+        self.quarter_budget_tree.pack(fill="both",expand=True,padx=10,pady=(6,10))
+        self.quarter_budget_tree.bind("<Double-1>",self.open_quarter_budget_drilldown)
+        self.quarter_budget_items={}; self.quarter_budget_result=None
+
+    def load_quarterly_budget(self):
+        import calendar
+        self.quarter_budget_tree.delete(*self.quarter_budget_tree.get_children())
+        self.quarter_budget_items.clear()
+        self.quarter_budget_result = None
+        try:
+            year=int(self.quarter_budget_year.get()); currency=self.quarter_budget_currency.get().upper()
+            if not 2000 <= year <= 2100: raise ValueError("Choose a year from 2000 through 2100")
+            department = self.quarter_budget_department_ids.get(self.quarter_budget_department.get())
+            project = self.quarter_budget_project_ids.get(self.quarter_budget_project.get())
+            saved=self.client.budgets(year,currency,department,project)
+            budget_by_code={}
+            for line in saved:
+                months=[float(value or 0) for value in (line.get("months") or [0]*12)]
+                if any(months): quarters=[sum(months[index:index+3]) for index in (0,3,6,9)]
+                else: quarters=[float(line.get("annual") or 0)/4]*4
+                budget_by_code[line["account_code"]]={"name":line.get("account_name") or "","type":line.get("account_type") or "",
+                                                       "quarters":quarters}
+            rows=[]; details={}; today=datetime.now().date()
+            for quarter in range(1,5):
+                first_month=(quarter-1)*3+1; last_month=first_month+2
+                start=f"{year}-{first_month:02d}-01"
+                end=f"{year}-{last_month:02d}-{calendar.monthrange(year,last_month)[1]:02d}"
+                actual_rows=self.client.fiscal_year_profit_loss(
+                    year, start, end, currency, convert=True,
+                    department_id=department, project_id=project)
+                actual_by_code={row["code"]:float(row.get("amount") or 0) for row in actual_rows
+                                if row.get("type") in ("income","expense")}
+                actual_meta={row["code"]:row for row in actual_rows if row.get("type") in ("income","expense")}
+                for code in sorted(set(budget_by_code)|set(actual_by_code)):
+                    actual_line=actual_meta.get(code,{})
+                    budget_line=budget_by_code.get(code,{"name":actual_line.get("name_en") or "",
+                        "type":actual_line.get("type") or ("income" if str(code).startswith("7") else "expense"),"quarters":[0.0]*4})
+                    planned=budget_line["quarters"][quarter-1]; actual=actual_by_code.get(code,0.0); variance=actual-planned
+                    account_type=budget_line["type"] or ("income" if str(code).startswith("7") else "expense")
+                    adverse=(variance<0 if account_type=="income" else variance>0)
+                    percent=variance/planned*100 if planned else (100.0 if actual else 0.0)
+                    status=("No budget" if not planned and actual else
+                            "Over budget" if adverse else ("Under budget" if abs(variance)>0.01 else "On budget"))
+                    tag="adverse" if adverse and (planned or account_type!="income") else (
+                        "caution" if planned and abs(percent)<=10 else "favorable")
+                    iid=self.quarter_budget_tree.insert("","end",values=(f"Q{quarter} {year}",code,budget_line["name"],account_type.title(),
+                        f"{planned:,.2f}",f"{actual:,.2f}",f"{variance:,.2f}",f"{percent:+.1f}%",status),tags=(tag,))
+                    details[iid]={"from_date":start,"to_date":end,"account_code":code,"quarter":quarter,"currency":currency}
+                    rows.append([f"Q{quarter} {year}",code,budget_line["name"],account_type.title(),round(planned,2),round(actual,2),
+                                 round(variance,2),round(percent,1),status])
+            self.quarter_budget_items=details
+            headers = ["Quarter", "Account", "Account Name", "Type", "Budget", "Actual",
+                       "Variance", "Variance %", "Status"]
+            department_name = self.quarter_budget_department.get()
+            project_name = self.quarter_budget_project.get()
+            scope = f"Department: {department_name} | Project: {project_name}"
+            self.quarter_budget_result={"title":f"Quarterly Budget vs Actual {year}","meta":[f"Currency: {currency}",f"Scope: {scope}",
+                "Variance = actual less budget; expense overrun and revenue shortfall are adverse."],
+                "sections":[{"heading":"Quarterly Budget vs Actual","headers":headers,"rows":rows,"total_rows":[]} ]}
+            self.quarter_budget_info.config(text=f"{year} | {currency} | {scope} | {len(saved)} saved account budget(s). Double-click a row for source invoice and journal-entry details.")
+        except Exception as exc: return messagebox.showerror("Quarterly Budget vs Actual",str(exc))
+
+    def open_quarter_budget_drilldown(self,_event=None):
+        selected=self.quarter_budget_tree.selection()
+        if not selected: return
+        detail=self.quarter_budget_items.get(selected[0])
+        if not detail: return
+        try:
+            source=[row for row in self.client.journal(detail["from_date"],detail["to_date"])
+                    if row.get("account_code")==detail["account_code"]]
+        except Exception as exc: return messagebox.showerror("Budget Detail",str(exc))
+        window=tk.Toplevel(self); window.title(f"Q{detail['quarter']} {detail['from_date'][:4]} - {detail['account_code']} source detail")
+        window.geometry("900x420"); window.configure(bg=LIGHT)
+        tree=ttk.Treeview(window,columns=("date","source","party","description","currency","debit","credit"),show="headings")
+        for key,label,width in (("date","Date",95),("source","Invoice / Entry",145),("party","Vendor / Party",170),
+                                ("description","Description",250),("currency","Currency",80),("debit","Debit",105),("credit","Credit",105)):
+            tree.heading(key,text=label); tree.column(key,width=width,anchor="w" if key in ("date","source","party","description","currency") else "e")
+        for row in source:
+            tree.insert("","end",values=(row.get("entry_date"),row.get("invoice_number") or row.get("entry_number"),row.get("party_name"),
+                row.get("line_description") or row.get("description"),row.get("currency"),f'{float(row.get("debit") or 0):,.2f}',f'{float(row.get("credit") or 0):,.2f}'))
+        tree.pack(fill="both",expand=True,padx=8,pady=8)
+
+    def export_quarterly_budget(self,format_name):
+        if not self.quarter_budget_result:
+            self.load_quarterly_budget()
+        result=self.quarter_budget_result
+        if result:
+            self.output_sections(result["title"],result["meta"],result["sections"],"Quarterly_Budget_vs_Actual",format_name)
+
+    def load_analytic_study(self, on_ready=None):
+        from nanza.reports.analytic_report import build_report
+        try:
+            preferences = company_settings(self)
+        except (AttributeError, KeyError, TypeError):
+            preferences = {}
+        requested_language = str(preferences.get("language") or self.language.get() or "en").casefold()
+        language = requested_language if requested_language in ("en", "fr", "ar") else self.language.get()
+        from_date = self.analytic_from.get()
+        to_date = self.analytic_to.get()
+        currency = self.analytic_currency.get()
+
+        def build():
+            study = self.client.analytic_study(from_date, to_date, currency, language)
+            return study, build_report(study, {"currency": currency, "language": language})
+
+        def render(result):
+            study, report = result
+            self.analytic_study_result = study
+            self.analytic_report_result = report
+            warning = report.get("warning")
+            for name, headings in {
+                "Overview": ["executive_summary", "budget_variances", "actionable_insights"],
+                "Profitability": ["project_profitability", "vendor_spend"],
+                "Expense": ["expense_categories", "vendor_spend"],
+                "Cashflow": ["quarterly_cashflow"],
+                "Custom Analytic": ["budget_variances", "actionable_insights", "expense_categories"],
+            }.items():
+                selected = [item for item in report["sections"] if item.get("key") in headings]
+                if warning:
+                    selected.insert(0, report["sections"][0])
+                self.show_sections(self.analytic_viewers[name], selected)
+            period = tr(report["filters"].get("language", "en"), "analytic_period").format(
+                from_date=study.get("from_date"), to_date=study.get("to_date"), currency=study.get("currency"))
+            status_messages = ([warning] if warning else []) + report.get("warnings", [])
+            status = " | ".join(status_messages) + " | " if status_messages else ""
+            self.analytic_info.config(text=status + period + f" | {len(study.get('insights') or [])} saved insight(s)")
+            if on_ready:
+                on_ready()
+        try:
+            self.analytic_info.config(text=tr(self.language.get(), "analytic_building"))
+            self.run_ai_task(lambda _key: build(), render)
+        except Exception as exc:
+            messagebox.showerror(tr(self.language.get(), "analytic_study_title"), str(exc))
+
+    def export_analytic_study(self, format_name="pdf"):
+        if not self.analytic_report_result:
+            self.load_analytic_study(lambda: self.export_analytic_study(format_name))
+            return
+        report=self.analytic_report_result
+        if report:
+            self.output_sections(report["title"],report["meta"],report["sections"],"Analytic_Study",format_name)
+
+    def open_analytic_charts(self):
+        if not self.analytic_report_result:
+            self.load_analytic_study(self.open_analytic_charts)
+            return
+        report=self.analytic_report_result
+        if not report: return
+        from desktop_projection import show_3d_charts
+        chart_names={"expense_trend":"Expense trend","expense_mix":"Expense categories","vendor_spend":"Vendor spend",
+                     "project_profit":"Project profitability","cashflow_quarters":"Quarterly cashflow",
+                     "budget_variance":"Budget variances"}
+        charts=[(label,report["charts3d"][key]) for key,label in chart_names.items()
+                if report["charts3d"].get(key,{}).get("categories")]
+        if charts: show_3d_charts(self,charts,"Analytic Study Charts")
+        else: messagebox.showinfo("Analytic Study","There are no chartable rows for this period.")
+
+    def build_ai_accountant_page(self, nested):
+        language=self.language.get()
+        page=tk.Frame(nested,bg=LIGHT); nested.add(page,text=tr(language,"ai_accountant_title")); self.ai_accountant_page=page
+        controls=tk.Frame(page,bg=LIGHT); controls.pack(fill="x",padx=10,pady=8)
+        self.ai_accountant_question=tk.StringVar()
+        tk.Entry(controls,textvariable=self.ai_accountant_question,width=64).pack(side="left",fill="x",expand=True,padx=(0,8))
+        self.action_button(controls,tr(language,"ai_run_analysis"),self.run_ai_accountant_query).pack(side="left")
+        self.ai_accountant_info=tk.Label(page,text=tr(language,"ai_accountant_prompt"),
+                                         bg=LIGHT,fg=NAVY,anchor="w"); self.ai_accountant_info.pack(fill="x",padx=12)
+        self.ai_accountant_viewer=self.report_viewer(page); self.ai_accountant_report=None
+        self.ai_accountant_viewer.bind("<Double-1>", self.open_ai_accountant_source, add="+")
+
+    def run_ai_accountant_query(self):
+        question=self.ai_accountant_question.get().strip()
+        if not question:
+            return messagebox.showwarning("AI Accountant", "Enter a question first")
+        def build():
+            return self.client.ai_chat(question)
+
+        def render(answer):
+            sources=answer.get("sources") or []
+            rows=[[item["entry_number"],item["date"],item["account_code"],item["account_name"],
+                   item["description"],item["vendor"],item["project"],item["currency"],item["amount"]]
+                  for item in sources]
+            self.ai_accountant_report={"answer":answer,"sources":sources}
+            sections=[{"heading":"Filtered ledger sources",
+                       "headers":["Journal Entry","Date","Account","Account Name","Description","Vendor","Project","Currency","Amount"],
+                       "rows":rows,"total_rows":[]}]
+            if answer.get("totals"):
+                sections.append({"heading":"Totals","headers":["Currency","Amount"],
+                                 "rows":[[currency,amount] for currency,amount in sorted(answer["totals"].items())],
+                                 "total_rows":[]})
+            self.show_sections(self.ai_accountant_viewer,sections)
+            self.ai_accountant_info.config(
+                text=answer.get("message","No answer")+
+                (f" | Confidence: {answer.get('confidence')}" if answer.get("confidence") else ""))
+
+        self.ai_accountant_info.config(text=tr(language, "analytic_building"))
+        self.run_ai_task(lambda _key: build(), render)
+
+    def open_ai_accountant_source(self, _event=None):
+        selected=self.ai_accountant_viewer.selection()
+        if not selected: return
+        values=self.ai_accountant_viewer.item(selected[0],"values")
+        if not values: return
+        sources=(getattr(self,"ai_accountant_report",None) or {}).get("sources",[])
+        entry_number=str(values[0])
+        if not any(str(row["entry_number"])==entry_number for row in sources): return
+        if hasattr(self,"journal_find"): self.journal_find.set(entry_number)
+        self.go_to_main_tab(self.journal_tab)
+        self.load_journal()
 
     def build_cash_budget(self):
         """2.9.79: monthly cash budget of the chosen year from the base year's cash flow and the % typed."""
@@ -807,7 +1218,8 @@ class ReportsMixin:
             rows=[[r["currency"],r["code"],r["name_en"],r["current_opening"],r["current_movement"],r["current_closing"],
                    r["prior_closing"] if prior else "",r["variance"] if prior else ""] for r in getattr(self,"ctb_rows",[])]
         else: title="Comparative Profit and Loss"; headers=["Currency","Type","Account","Name","Current Period","Prior Year","Variance"]; rows=[[r["currency"],
-                r["type"],r["code"],r["name_en"],r["current"],r["prior"],r["variance"]] for r in getattr(self,"comparative_rows",[])]
+                r["type"],r["code"],r["name_en"],r["current"],r.get("prior") if r.get("prior") is not None else "",
+                r.get("variance") if r.get("variance") is not None else ""] for r in getattr(self,"comparative_rows",[])]
         loaded=report in ("ledger","balance","vat","cash","comparative","ctb")
         snapshot=getattr(self,"financial_snapshot",None) if loaded else None
         if loaded and getattr(self,"_financial_loading",False):
@@ -815,6 +1227,8 @@ class ReportsMixin:
         if not rows: return messagebox.showwarning(title,"No data to export")
         try:
             meta=[self.client.settings().get("company_name") or ""]
+            if report=="comparative" and getattr(self,"comparative_info",{}).get("warning"):
+                meta.append(self.comparative_info["warning"])
             currency_label=self.view_currency.get()
             account_from=self.report_account_from.get() if loaded else ""; account_to=self.report_account_to.get() if loaded else ""
             if report=="aging":meta.append(f"As of: {self.ageing_as_of.get()}")

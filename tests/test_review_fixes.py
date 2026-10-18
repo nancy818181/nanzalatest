@@ -69,8 +69,8 @@ class ReviewFixesTest(unittest.TestCase):
     def test_vat_settlement_is_replaced_whole(self):
         import inspect
         source = inspect.getsource(vat_return.post_settlement)
-        body = source[source.index("with db.connect() as connection:"):]
-        self.assertIn("save_journal_voucher", body.split("return {")[0])  # the new vouchers are written inside the same transaction
+        self.assertIn("@atomic", source)
+        self.assertIn("save_journal_voucher", source)
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ from pdf_import import asset_pdf_details, read_invoice_pdf, read_invoice_pdf_pag
 from report_export import export_excel, export_pdf
 from desktop_common import bulk_action  # 2.9.72: several purchases / expenses / payments deleted at once (was "bulk_action is not defined")
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"  # 2.9.59: the same colours on every screen
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 PURCHASE_USES = {"Mixed (partial deduction)": "mixed", "Taxable sales only (100%)": "taxable", "Exempt sales only (0%)": "exempt",
                  "Utilities (no VAT recovery from 10-02-2026)": "utilities", "Passenger car (VAT recovered up to USD 30,000)": "passenger_car"}  # 2.9.92
 RED, MUTED = "#8B1E1E", "#5f6b76"
@@ -373,6 +373,11 @@ def review_handwriting(app, path, data):
     window.geometry(f"{width}x{height}")
     tk.Label(window, text="The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm.",
              bg=LIGHT, fg=RED, wraplength=width - 40, justify="left").pack(fill="x", padx=12, pady=8)
+    notification = data.get("notification_90") or {}
+    if notification.get("notify"):
+        tk.Label(window, text=notification["message"], bg=LIGHT,
+                 fg="#146b37" if notification.get("type") == "success" else RED,
+                 wraplength=width - 40, justify="right").pack(fill="x", padx=12, pady=4)
     body = tk.Frame(window, bg=LIGHT); body.pack(fill="both", expand=True, padx=12)
     image_frame = tk.Frame(body, bg=LIGHT); image_frame.pack(side="left", fill="both", expand=True)
     canvas = tk.Canvas(image_frame, bg="#d9dee3", highlightthickness=0)

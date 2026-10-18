@@ -11,7 +11,9 @@ from desktop_common import main_currency  # 2.9.71
 class PartiesMixin:
     def build_parties(self):
         form=tk.LabelFrame(self.parties_tab,text="Customer / Supplier File",bg=LIGHT,padx=10,pady=8); form.pack(fill="x",padx=10,pady=10)
-        self.edit_party_id=None; self.party_name=tk.StringVar(); self.party_kind=tk.StringVar(value="client"); self.party_account_number=tk.StringVar(); self.party_tax=tk.StringVar(); self.party_mof=tk.StringVar(); self.party_address=tk.StringVar(); self.party_contact=tk.StringVar(); self.party_currency=tk.StringVar(value="USD"); self.party_due_days=tk.StringVar(value="0")
+        self.edit_party_id=None; self.party_name=tk.StringVar(); self.party_kind=tk.StringVar(value="client"); self.party_account_number=tk.StringVar(); \
+            self.party_tax=tk.StringVar(); self.party_mof=tk.StringVar(); self.party_address=tk.StringVar(); self.party_contact=tk.StringVar(); \
+                self.party_currency=tk.StringVar(value="USD"); self.party_due_days=tk.StringVar(value="0")
         tk.Label(form,text="Account Number",bg=LIGHT,font=("Segoe UI",10,"bold")).grid(row=0,column=0,sticky="w",padx=4,pady=4)
         account_entry=tk.Entry(form,textvariable=self.party_account_number,width=16,font=("Segoe UI",11,"bold")); account_entry.grid(row=0,column=1,sticky="w",padx=4,pady=4)
         self.party_account_hint=tk.Label(form,text="Type the first 4 digits (4111 client, 4011 supplier) - the full number fills in automatically",bg=LIGHT,fg="#5f6b76")
@@ -58,7 +60,8 @@ class PartiesMixin:
             self.party_account_number.set(prefix); self.party_account_typed()
 
     def new_party_account(self):
-        self.edit_party_id=None; self.party_name.set(""); self.party_kind.set("client"); self.party_account_number.set(""); self.party_tax.set(""); self.party_mof.set(""); self.party_address.set(""); self.party_contact.set(""); self.party_currency.set(main_currency(self,
+        self.edit_party_id=None; self.party_name.set(""); self.party_kind.set("client"); self.party_account_number.set(""); self.party_tax.set(""); \
+            self.party_mof.set(""); self.party_address.set(""); self.party_contact.set(""); self.party_currency.set(main_currency(self,
                 1)); self.party_due_days.set("0")
         self.suggest_party_prefix()
 
@@ -93,7 +96,9 @@ class PartiesMixin:
         selected=self.parties_tree.selection()
         if not selected: return messagebox.showwarning("Customers / Suppliers","Select a customer or supplier first")
         values=self.parties_tree.item(selected[0],
-                "values"); self.edit_party_id=int(values[0]); self.party_account_number.set(values[1]); self.party_name.set(values[2]); self.party_kind.set(values[3]); self.party_tax.set(values[4]); self.party_mof.set(values[5]); self.party_address.set(values[6]); self.party_contact.set(values[7]); self.party_currency.set(values[8]); self.party_due_days.set(values[9])
+                "values"); self.edit_party_id=int(values[0]); self.party_account_number.set(values[1]); self.party_name.set(values[2]); self.party_kind.set(values[3]); \
+                    self.party_tax.set(values[4]); self.party_mof.set(values[5]); self.party_address.set(values[6]); self.party_contact.set(values[7]); \
+                        self.party_currency.set(values[8]); self.party_due_days.set(values[9])
 
     def load_parties_page(self):
         try: rows=self.client.parties()

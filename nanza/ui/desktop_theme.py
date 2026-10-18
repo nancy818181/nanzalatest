@@ -12,15 +12,15 @@ from tkinter import ttk
 from desktop_common import GOLD, LIGHT, NAVY
 
 FONT = "Segoe UI"
-HEADING = "#E9EEF4"        # table headings (2.9.115: light, as in modern ERPs; was navy #23405E)
-HEADING_ACTIVE = "#DCE4EE"
-HEADING_TEXT = "#102A43"
-FORM_TEXT = "#2B3F55"      # 2.9.116: labels and tick boxes
-SELECTED = "#D3E5F5"       # selected table row
-STRIPE = "#F3F6F9"         # every second table row
+HEADING = NAVY
+HEADING_ACTIVE = "#142b50"
+HEADING_TEXT = "#FFFFFF"
+FORM_TEXT = NAVY
+SELECTED = "#f7edcf"
+STRIPE = "#f8fafc"
 BORDER = "#C9D3DD"
-TAB_IDLE = "#E5ECF2"
-TAB_HOVER = "#D6E4ED"
+TAB_IDLE = "#e9eef5"
+TAB_HOVER = "#f7edcf"
 
 
 def apply_theme(root: tk.Misc) -> ttk.Style:
@@ -57,7 +57,7 @@ def apply_theme(root: tk.Misc) -> ttk.Style:
     for kind in ("Checkbutton", "Radiobutton"): root.option_add(f"*{kind}.highlightThickness", 0)
     # 2.9.116: form text in a soft navy instead of plain black (a label given its own colour keeps it)
     for kind in ("Label", "Checkbutton", "Radiobutton"): root.option_add(f"*{kind}.foreground", FORM_TEXT)
-    root.option_add("*Entry.foreground", "#102A43"); root.option_add("*Entry.insertWidth", 1)
+    root.option_add("*Entry.foreground", NAVY); root.option_add("*Entry.insertWidth", 1)
     root.option_add("*Listbox.selectBackground", SELECTED); root.option_add("*Listbox.selectForeground", NAVY)
     root.option_add("*Text.highlightColor", GOLD); root.option_add("*Text.highlightBackground", BORDER)
 
@@ -95,8 +95,8 @@ def restripe(tree: ttk.Treeview) -> None:
 CARD = "#FFFFFF"            # content cards on the light page background
 PAGE = LIGHT
 DANGER = ("#8b1e1e", "#6b1010", "#a32020", "#b00020", "red")
-GOLD_HOVER = "#C99D57"
-NAVY_HOVER = "#1E4268"
+GOLD_HOVER = "#e2b52a"
+NAVY_HOVER = "#142b50"
 DANGER_HOVER = "#A32A2A"
 _BUTTON_FONT = (FONT, 9, "bold")
 # 2.9.115: buttons by importance, as in Odoo / Zoho: ONE gold main action (Save ...), red for delete, and every other
@@ -113,7 +113,7 @@ def _lower(value):
 
 
 def _is_page_bg(widget):
-    try: return _lower(widget.cget("background")) in (_lower(PAGE), "#f4f7fa")
+    try: return _lower(widget.cget("background")) in (_lower(PAGE), "#f8fafc")
     except tk.TclError: return False
 
 

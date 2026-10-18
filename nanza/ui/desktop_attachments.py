@@ -14,7 +14,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
 log = logging.getLogger("saber.attachments")
 IMAGE_TYPES = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".webp")
 

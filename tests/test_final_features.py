@@ -422,6 +422,28 @@ class BrainsStyleVoucherAndReportsTest(unittest.TestCase):
         self.assertEqual(rows[0][2], "Opening balance (carried forward)"); self.assertEqual(float(rows[0][-2]), 200)  # credit opening
         self.assertEqual(float(rows[-1][-1]), -150); self.assertEqual(statement["title"], "Statement of Account")
 
+    def test_cross_year_statement_preserves_credit_opening_and_running_balance(self):
+        account = "411199998"
+        with self.db.connect() as connection:
+            connection.execute(
+                "INSERT INTO accounts(code,name_en,type,active) VALUES(?,?,?,1)",
+                (account, "Statement opening regression", "asset"))
+        self.db.save_journal_voucher({"entry_date": "31-12-2025", "description": "Opening credit", "currency": "USD"}, [
+            {"account_code": "531", "side": "D", "amount": "200"},
+            {"account_code": account, "side": "C", "amount": "200"}], self.user)
+        self.db.save_journal_voucher({"entry_date": "15-01-2026", "description": "January debit", "currency": "USD"}, [
+            {"account_code": account, "side": "D", "amount": "50"},
+            {"account_code": "713", "side": "C", "amount": "50"}], self.user)
+        report = ledger_reports.build_account_report(self.db, {
+            "detailed": True, "statement": True, "account_from": account, "account_to": account,
+            "date_from": "01-01-2026", "date_to": "31-01-2026",
+            "first_column": "USD", "second_column": "none",
+        })
+        rows = report["sections"][0]["rows"]
+        self.assertEqual((rows[0][-3], rows[0][-2]), (0, 200))
+        self.assertEqual((rows[1][-3], rows[1][-2], rows[1][-1]), (50, 0, -150))
+        self.assertEqual((rows[-1][-3], rows[-1][-2], rows[-1][-1]), (50, 200, -150))
+
 class DepartmentsProjectsBudgetTest(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.db, self.user = new_db(self.folder.name)
@@ -583,7 +605,10 @@ class YearEndClosingTest(unittest.TestCase):
         self.db._balance_check_paused = True
         try:
             with self.db.connect() as db:  # an old-style closing that must be removed
-                entry = db.execute("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_at) VALUES('CLOSE-2024-USD','2024-12-31','old','year_close',2024,'USD',?)",
+                entry = db.execute((
+                    "INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_at) "
+                    "VALUES('CLOSE-2024-USD','2024-12-31','old','year_close',2024,'USD',?)"
+                ),
                         (utcnow(),)).lastrowid
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,debit,credit) VALUES(?,(SELECT id FROM accounts WHERE code='121'),'5','0')", (entry,))
         finally: self.db._balance_check_paused = False
@@ -609,13 +634,16 @@ class YearEndClosingTest(unittest.TestCase):
     def test_delete_closing_reopen_and_provisional_opening(self):
         self.manager.close_and_open_year(self.company, 2024, 1)
         reopened = self.manager.reopen_year(self.company, 2024, 1)
-        self.assertEqual((reopened["removed_closing_entries"], reopened["removed_opening_entries"]), (2, 2))
-        self.assertFalse([e for e in self.db.journal() if e["source_type"] == "journal_voucher"])
+        self.assertEqual((reopened["reversed_closing_entries"], reopened["reversed_opening_entries"]), (2, 2))
+        closing = [e for e in self.db.journal() if (e["description"] or "").startswith(("CLOSING 6&7", "Reversal of JV-2024"))]
+        self.assertEqual(len({e["entry_id"] for e in closing}), 4)
+        self.assertAlmostEqual(sum(e["debit"] - e["credit"] for e in closing), 0)
         refreshed = self.manager.refresh_opening(self.company, 2024, 1)
         self.assertTrue(refreshed["provisional"])
         lines = {(e["currency"], e["account_code"]): e["debit"] - e["credit"] for e in self.manager.database(self.company, 2025).journal() if e["source_type"] == "opening"}
         self.assertEqual(lines[("USD", "138")], -700); self.assertEqual(lines[("LBP", "138")], -8950000)
         self.assertNotIn(("USD", "713"), lines)
+        self.assertEqual(refreshed["reversed_opening_entries"], 0)
 
 class LebanesePayrollRulesTest(unittest.TestCase):
     """Worked examples under Budget Law 324/2024, Decree 12966/2024, MoF decision 1195 and the NSSF memos."""
@@ -1075,7 +1103,9 @@ class DeleteYearTest(unittest.TestCase):
         self.assertEqual(years, [2024]); self.assertEqual(manager.year_status(company, 2024), "open")
         # 2.9.20: company files live in companies/<Company Name>/ (the deleted-years copies too)
         self.assertTrue(list((manager.company_folder(manager.list_companies()[0]) / "deleted_years").glob("2025_deleted_*.db")))
-        self.assertFalse([e for e in db.journal() if (e["description"] or "").startswith("CLOSING 6&7")])
+        closing = [e for e in db.journal() if (e["description"] or "").startswith(("CLOSING 6&7", "Reversal of JV-2024"))]
+        self.assertTrue(closing)
+        self.assertAlmostEqual(sum(e["debit"] - e["credit"] for e in closing), 0)
         manager.close_and_open_year(company, 2024, 1)
         fresh = manager.database(company, 2025)
         self.assertEqual(len(fresh.list_invoices()), 0)  # the deleted 2025 data is gone, the new opening is there

@@ -1,5 +1,12 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.128 (purchase intake coverage and preserved payroll)
+- Supplier/purchase evidence overrides an erroneous Sales reader hint without changing credit/debit-note types.
+- Purchase review shows the percentage and count of lines with suggested company accounts. Coverage is not OCR accuracy or permission to post; incomplete readings warn even at 90%.
+- Added local purchase upload/intake API responses with notification_90 and company-scoped OCR status. No cloud API is used.
+- Reuse actual active posting accounts. Audited nine-digit expense children can be allocated under a unique existing unused 6011/626 parent; missing parents are never invented. Oscar XLS discovery is automatic, but the supplied archive did not contain that workbook.
+- Payroll source files are preserved byte-for-byte from the uploaded ZIP. Restored missing runtime Assets and build definitions from the preceding complete archive; no prior accounting code was substituted.
+
 ## Version 2.9.127 (reviewed intake, commercial documents and executive dashboard)
 - Windows build repair: the setup fixture now supplies the correct executable name and explicitly exercises Windows and Linux. Installation refuses a runtime archive missing its platform executable before writing the ready marker. No checksum, model or runtime verification was removed.
 - This repairs the still-unreleased 2.9.127 without another version bump. A successful main build can now publish its missing release after a same-version retry; automatic pushes preserve existing release assets. Manual publication behavior is retained.

@@ -9,10 +9,10 @@ import tempfile
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"  # 2.9.59: the same colours on every screen
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 TREATMENTS = {"Taxable": "standard", "Taxable 11%": "standard", "Taxable (standard rate)": "standard", "Zero-rated": "zero_rated",
         "Zero-rated (export)": "zero_rated", "Exempt": "exempt", "Exempt (Art. 16-17)": "exempt", "Out of scope": "out_of_scope"}
 
@@ -393,14 +393,20 @@ class V22Mixin:
                 text=ScrolledText(tab,wrap="word",font=("Segoe UI",11)); text.pack(fill="both",expand=True,padx=6,pady=6)
                 text_fields[kind][name]=(text,default)
         page=ttk.Frame(notebook); notebook.add(page,text="OCI and Cash Flow")
-        ttk.Label(page,text="Cash flow: calculated automatically (indirect method). To replace it, enter the three reviewed totals. Positive = inflow, negative = outflow.\nOCI is disclosure only; related asset/equity entries must already be posted.",
+        ttk.Label(page,text=(
+            "Cash flow: calculated automatically (indirect method). To replace it, enter the three reviewed totals. Positive = "
+            "inflow, negative = outflow.\nOCI is disclosure only; related asset/equity entries must already be posted."
+        ),
                 wraplength=900).pack(anchor="w",padx=10,pady=10)
         for key,label in SUPPLEMENTS.items():
             row=ttk.Frame(page); row.pack(fill="x",padx=10,pady=8)
             ttk.Label(row,text=label,width=48).pack(side="left")
             variable=tk.StringVar(); entries[key]=variable; ttk.Entry(row,textvariable=variable,width=22).pack(side="left")
         page=ttk.Frame(notebook); notebook.add(page,text="Account mapping")
-        ttk.Label(page,text="Optional overrides: one account or prefix = category per line. Longest prefix wins.\nExample: 4031 = noncurrent_liabilities. Review classifications and maturity before issuing.").pack(anchor="w",
+        ttk.Label(page,text=(
+            "Optional overrides: one account or prefix = category per line. Longest prefix wins.\nExample: 4031 = "
+            "noncurrent_liabilities. Review classifications and maturity before issuing."
+        )).pack(anchor="w",
                 padx=10,pady=8)
         mapping=ScrolledText(page,height=10); mapping.pack(fill="both",expand=True,padx=10)
         ttk.Label(page,text="\n".join(f"{k}: {v}" for k,v in GROUPS.items()),wraplength=930).pack(anchor="w",padx=10,pady=8)
@@ -526,6 +532,7 @@ class V22Mixin:
         tk.Button(bar, text="Show", command=self.load_bank_rec, bg=GOLD, fg=NAVY, border=0, padx=14, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=6)
         bar2 = tk.Frame(page, bg=LIGHT); bar2.pack(fill="x", padx=8, pady=2)
         for text, command in (("Import Statement (Excel / CSV / PDF)", self.import_bank_statement), ("Auto Match", self.bank_auto_match), ("Match Selected", self.bank_match_selected),
+                              ("Partial Match", self.bank_match_partial),
                               ("Unmatch", self.bank_unmatch), ("Delete Statement Line", self.bank_delete_line)):
             tk.Button(bar2, text=text, command=command, bg=NAVY if text != "Delete Statement Line" else "#8B1E1E", fg="white", border=0, padx=10, pady=5).pack(side="left", padx=2)
         tk.Label(bar2, text="Book to", bg=LIGHT).pack(side="left", padx=(8, 2)); tk.Entry(bar2, textvariable=self.bk["post_account"], width=20).pack(side="left")
@@ -541,11 +548,13 @@ class V22Mixin:
                                                        ("books", "Books (account movements)", (("date", "Date", 82), ("voucher", "Voucher", 95), ("desc",
                                                                "Description", 130), ("amount", "Amount", 95), ("match", "Matched", 70))))):
             frame = tk.LabelFrame(panes, text=title, bg=LIGHT, padx=4, pady=2); frame.grid(row=0, column=index, sticky="nsew", padx=3)
-            tree = ttk.Treeview(frame, columns=[c[0] for c in columns], show="headings", selectmode="browse")
+            tree = ttk.Treeview(frame, columns=[c[0] for c in columns], show="headings",
+                                selectmode="extended" if key == "books" else "browse")
             for col, label, width in columns: tree.heading(col, text=label); tree.column(col, width=width, anchor="e" if col == "amount" else "w")
             scroll = ttk.Scrollbar(frame, orient="vertical", command=tree.yview); tree.configure(yscrollcommand=scroll.set)
             tree.pack(side="left", fill="both", expand=True); scroll.pack(side="right", fill="y"); add_search_bar(tree)  # 2.9.78
-            tree.tag_configure("matched", foreground="#2E7D5B"); tree.tag_configure("open", foreground="#8B1E1E"); self.bk_trees[key] = tree
+            tree.tag_configure("matched", foreground="#2E7D5B"); tree.tag_configure("partial", foreground="#A66A00")
+            tree.tag_configure("open", foreground="#8B1E1E"); self.bk_trees[key] = tree
         for col in range(2): panes.grid_columnconfigure(col, weight=1, uniform="bank_panes")
         panes.grid_rowconfigure(0, weight=1)
         try: self.bk_account_box["values"] = [f'{a["code"]} - {a["name_en"]}' for a in self.client.accounts() if str(a["code"]).startswith(("511", "512", "519", "53"))]
@@ -564,11 +573,16 @@ class V22Mixin:
         for s in data["statement"]:
             book = books.get(s["journal_line_id"]); tree.insert("", "end", iid=str(s["id"]), values=(_dd(s["line_date"]), s.get("reference") or "",
                     s.get("description") or "", f'{float(s["amount"]):,.2f}',
-                book["entry_number"] if book else ("matched" if s["journal_line_id"] else "")), tags=("matched" if s["journal_line_id"] else "open",))
+                book["entry_number"] if book else (f'{float(s["matched_amount"]):,.2f} allocated'
+                    if float(s.get("matched_amount") or 0) else "")),
+                tags=("matched" if s.get("is_matched") else "partial" if float(s.get("matched_amount") or 0) else "open",))
         tree = self.bk_trees["books"]; tree.delete(*tree.get_children())
         for b in data["books"]:
-            tree.insert("", "end", iid=str(b["id"]), values=(_dd(b["iso_date"]), b["entry_number"], b.get("description") or "", f'{float(b["amount"]):,.2f}', "Yes" if b.get("statement_id") else ""),
-                        tags=("matched" if b.get("statement_id") else "open",))
+            allocated = float(b.get("matched_amount") or 0)
+            status = "Yes" if b.get("statement_id") else (f"{allocated:,.2f} allocated" if allocated else "")
+            tag = "matched" if b.get("statement_id") else "partial" if allocated else "open"
+            tree.insert("", "end", iid=str(b["id"]), values=(_dd(b["iso_date"]), b["entry_number"], b.get("description") or "",
+                        f'{float(b["amount"]):,.2f}', status), tags=(tag,))
         r = data["report"]; diff = r.get("difference")
         self.bk_info.config(text=f'Book balance {r["book_balance"]:,.2f}   Expected bank balance {r["expected"]:,.2f}   Matched {r["matched"]} of {r["statement_count"]} statement line(s)' +
                             (f'   DIFFERENCE {diff:,.2f}' if diff is not None else "   (enter the statement ending balance to check the difference)"),
@@ -609,6 +623,27 @@ class V22Mixin:
         except Exception as exc: return messagebox.showerror("Bank Reconciliation", str(exc))
         self.load_bank_rec()
 
+    def bank_match_partial(self):
+        statement = self.bk_trees["statement"].selection()
+        book_ids = self.bk_trees["books"].selection()
+        if not statement or not book_ids:
+            return messagebox.showwarning("Bank Reconciliation", "Select one statement line and one or more book lines")
+        books = {str(row["id"]): row for row in (getattr(self, "bank_data", None) or {}).get("books", [])}
+        allocations = []
+        for book_id in book_ids:
+            book = books.get(str(book_id))
+            if not book: continue
+            amount = simpledialog.askstring("Partial Match",
+                f'Amount to allocate to {book["entry_number"]} (remaining {float(book["remaining_amount"]):,.2f}):',
+                parent=self)
+            if amount is None: return
+            allocations.append({"journal_line_id": int(book_id), "amount": amount})
+        try:
+            self.client.match_bank_partial(int(statement[0]), allocations)
+        except Exception as exc:
+            return messagebox.showerror("Bank Reconciliation", str(exc))
+        self.load_bank_rec()
+
     def bank_unmatch(self):
         s = self.bk_trees["statement"].selection()
         if not s: return messagebox.showwarning("Bank Reconciliation", "Select a matched statement line")
@@ -636,4 +671,3 @@ class V22Mixin:
         if not getattr(self, "bank_data", None): self.load_bank_rec()
         data = getattr(self, "bank_data", None)
         if data: report = data["report"]; self.output_sections(report["title"], report["meta"], report["sections"], "Bank_Reconciliation", mode)
-

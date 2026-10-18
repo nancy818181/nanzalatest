@@ -9,6 +9,7 @@ new number) and confirms. The rules that keep the books auditable:
 - Documents that may no longer change keep their number: books locked up to a date, a closed fiscal year, or a
   quarter whose VAT return is saved. Only the documents dated AFTER the last of those are renumbered, and the new
   numbers continue after the highest number kept.
+- Posted journal vouchers are immutable and are never renumbered.
 - A safety backup is made first, everything is changed in one step (all or nothing) and the audit trail keeps every
   old -> new number.
 - Nothing else changes: amounts, dates, accounts, allocations, attachments and links all point at the document
@@ -71,15 +72,20 @@ def plan(database, kind, year):
     lock = str(database.settings().get("books_locked_until", "") or "")
     with database.connect() as db:
         prefix = numbering.settings(db)[kind]["prefix"]
-        found = db.execute(f"SELECT id, {spec['column']} number, {spec['date']} day FROM {spec['table']} WHERE {spec['where']}").fetchall()
+        posting_column = ",posting_status" if kind == "journal_voucher" else ""
+        found = db.execute(f"SELECT id, {spec['column']} number, {spec['date']} day{posting_column} "
+                           f"FROM {spec['table']} WHERE {spec['where']}").fetchall()
     pattern = re.compile(rf"^{re.escape(prefix)}(?:-([A-Z][A-Z0-9]{{0,3}}))?-{year}-(\d+)$")
     groups = {}
     for row in found:
         match = pattern.match(str(row["number"] or "").strip())
         if not match: continue  # a number typed by hand, imported, or of another prefix: never touched
         iso = _iso(row["day"])
+        frozen = _frozen_reason(database, iso, lock)
+        if kind == "journal_voucher" and row["posting_status"] == "posted":
+            frozen = "posted journal vouchers are immutable"
         groups.setdefault(match.group(1) or "", []).append({"id": int(row["id"]), "date": iso, "old": str(row["number"]).strip(),
-                                                            "sequence": int(match.group(2)), "frozen": _frozen_reason(database, iso, lock), "branch": match.group(1) or ""})
+                                                            "sequence": int(match.group(2)), "frozen": frozen, "branch": match.group(1) or ""})
     rows = []; kept = []
     for branch, members in sorted(groups.items()):
         members.sort(key=lambda r: (r["date"] or "9999-99-99", r["sequence"], r["id"]))

@@ -233,7 +233,8 @@ def year_end_check(db, year, previous_year_db=None):
             FROM payments x LEFT JOIN parties p ON p.id=x.party_id""")]
     free = [r for r in free if abs(r["free"] or 0) >= 0.01]
     add(WARNING if free else OK, "Receipts / payments allocated",
-            (f"{len(free)} not (fully) allocated, e.g. " + ", ".join(f"{r['payment_number']} {r['party']} {r['free']:,.2f} {r['currency']}" for r in free[:4])) if free else "All allocated to invoices",
+            (f"{len(free)} not (fully) allocated, e.g. " + ", ".join(f"{r['payment_number']} {r['party']} {r['free']:,.2f} {r['currency']}" for r in free[:4])) if free \
+                else "All allocated to invoices",
         "Payment & Receipt: open each one and Auto Allocate (the ageing already applies them oldest first)" if free else "")
     # 7. negative stock
     try:

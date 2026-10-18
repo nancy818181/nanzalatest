@@ -58,9 +58,10 @@ class SalaryPaymentsTest(unittest.TestCase):
         self.assertEqual(self.db.unbalanced_entries(), [])
 
     def test_pending_approval_reserves_the_salary_but_is_not_a_posted_payment(self):
-        import approvals
-        row = self.posted(); payment = self.pay(row, Decimal(str(row["net_salary"])))
-        approvals.hold(self.db, payment["entry_id"], 1)
+        row = self.posted()
+        payment = payments.record(self.db, {"payroll_id": row["id"], "payment_date": "05-02-2026",
+            "amount": str(row["net_salary"]), "method": "Bank Transfer", "cash_account": "512"}, 1,
+            defer_posting=True)
         self.assertEqual(payments.outstanding(self.db, row), 0)
         self.assertNotEqual(payments.history(self.db, row["id"])[0]["posting_status"], "posted")
         with self.assertRaises(ValueError): self.pay(row, 1)

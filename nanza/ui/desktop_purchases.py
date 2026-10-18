@@ -442,6 +442,9 @@ class PurchasesMixin:
 
     def _apply_purchase_pdf(self, path, data):
         from desktop_stage3_common import review_handwriting
+        if isinstance(data, dict) and callable(getattr(getattr(self, "client", None), "accounts", None)):
+            from desktop_invoice_intake import annotate
+            data = annotate(self, data)
         if data is not None:
             data = review_handwriting(self, path, data)
             if data is None: return
@@ -484,6 +487,10 @@ class PurchasesMixin:
                                   (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
                                    "; Type unclear; review Purchases vs Assets before Save") +
                                   f"; {item_note}; PDF attaches when you press Save", fg=NAVY)
+            notification = data.get("notification_90") or {}
+            if notification.get("notify"):
+                f["pdf_label"].config(text=notification["message"] + " | " + f["pdf_label"].cget("text"),
+                                      fg="#146b37" if notification.get("type") == "success" else RED)
             if not f["id"] and auto_upload_on(self): self.after_idle(self.auto_save_purchase_upload)
         else:
             item_note = self.add_purchase_pdf_items({"items": [], "subtotal": None})
@@ -685,7 +692,7 @@ class PurchasesMixin:
         if getattr(self, "_auto_upload", None) is None:
             import app_runtime, json as _json
             try: value = bool(_json.loads((app_runtime.data_dir() / "upload_settings.json").read_text(encoding="utf-8")).get("auto_save", True))
-            except Exception: value = True
+            except (OSError, UnicodeError, ValueError, TypeError, AttributeError): value = True
             self._auto_upload = tk.BooleanVar(master=self, value=value)
         return self._auto_upload
 

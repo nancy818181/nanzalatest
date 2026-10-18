@@ -296,7 +296,8 @@ def export_invoice_pdf(path, invoice, items, logo_path=None, company=None):
 
     export=invoice.get("vat_treatment") in ("zero_rated","exempt")
     rate_text=invoice.get("vat_rate_text") or "11%"; vat_cur=invoice.get("vat_currency") or "LBP"  # 2.9.72: the company's VAT rate and currency
-    vat_label=f"VAT {rate_text}" if not export else f"<strike>VAT {rate_text}</strike> Export - zero rated (Art. 19)" if invoice.get("vat_treatment")=="zero_rated" else f"<strike>VAT {rate_text}</strike> Exempt (Art. 16-17)"
+    vat_label=f"VAT {rate_text}" if not export else f"<strike>VAT {rate_text}</strike> Export - zero rated (Art. 19)" if invoice.get("vat_treatment")=="zero_rated" else \
+        f"<strike>VAT {rate_text}</strike> Exempt (Art. 16-17)"
     tl=ParagraphStyle("t-l",parent=styles["Normal"],fontSize=9,alignment=TA_LEFT,textColor=colors.HexColor("#243544"))
     tr=ParagraphStyle("t-r",parent=styles["Normal"],fontSize=9,alignment=TA_RIGHT,textColor=colors.HexColor("#243544"))
     tlw=ParagraphStyle("t-lw",parent=tl,fontName="Helvetica-Bold",fontSize=10.5,textColor=colors.white)

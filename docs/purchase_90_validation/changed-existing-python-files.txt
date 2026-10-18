@@ -1,0 +1,9 @@
+nanza/api_ocr.py
+nanza/core/client.py
+nanza/core/server.py
+nanza/core/app_runtime.py
+nanza/ui/desktop_stage3_common.py
+nanza/ui/desktop_invoice_intake.py
+nanza/ui/desktop_purchases.py
+nanza/documents/invoice_intake.py
+nanza/documents/pdf_import.py

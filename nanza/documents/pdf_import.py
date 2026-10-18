@@ -994,6 +994,9 @@ def suggest_invoice_type(text):
     An invoice alone does not establish whether an expense has been paid or
     whether goods are held for resale. Conflicting or weak clues need review.
     """
+    from purchase_intake import purchase_evidence
+    if purchase_evidence(text):
+        return "Purchases"
     clues = {
         "Assets": (
             r"\bfixed assets?\b", r"\bcapital (?:asset|expenditure)\b",

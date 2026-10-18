@@ -3,7 +3,7 @@ settings on a date, its source and whether it is law already confirmed or still 
 to the tax adviser, and correct any value in Payroll > Tax & NSSF Settings (or Accounting Setup for VAT)."""
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from database_common import display_date, iso_date
 
@@ -12,7 +12,7 @@ CONFIRMED, CONFIRM, PENDING = "Law / decree - confirmed", "To confirm with the t
 
 def _money(value):
     try: return f"{Decimal(str(value)):,.0f}"
-    except Exception: return str(value or "")
+    except (InvalidOperation, TypeError, ValueError): return str(value or "")
 
 
 ADVISER_KEY = "tax_adviser_confirmation"
@@ -143,4 +143,3 @@ def settings_report(db, date):
         {"heading": "NSSF family allowance by period (LBP / month)", "headers": ["From", "To", "Spouse", "Per child (up to 5)", "Monthly maximum"], "rows": family},
         {"heading": "Standard posting accounts", "headers": ["Component", "Employees", "Managers"], "rows": accounts},
     ]}
-

@@ -10,7 +10,7 @@ from tkinter import messagebox, ttk
 
 from desktop_brains import EditableSheet
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"  # 2.9.59: the same colours on every screen
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, MUTED = "#8B1E1E", "#5f6b76"
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 NONE = "(none)"

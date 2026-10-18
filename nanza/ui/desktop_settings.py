@@ -145,11 +145,16 @@ class SettingsMixin:
                 self.action_button(lock_bar,"Unlock",self.unlock_books).pack(side="left",padx=4)
                 self.books_lock_label=tk.Label(lock_bar,text="",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")); self.books_lock_label.pack(side="left",padx=12)
             if is_admin: self.build_second_copy_box(backups)
-            tk.Label(backups,text="An automatic backup of this company and year is made every day when you open it (the newest 30 automatic copies are kept; manual and safety copies are never deleted). Keep a copy outside the computer too: Save Backup As... (USB / Drive).",
+            tk.Label(backups,text=(
+                "An automatic backup of this company and year is made every day when you open it (the newest 30 automatic copies are "
+                "kept; manual and safety copies are never deleted). Keep a copy outside the computer too: Save Backup As... (USB / "
+                "Drive)."
+            ),
                     bg=LIGHT,fg="#5f6b76",wraplength=1050,justify="left").pack(fill="x",padx=14)
             self.backups_tree=self.table(backups,[("name","Backup File",400),("kind","Type",100),("checked","Checked",90),("size","Size",100),("modified","Created",170)])
         rate_controls=tk.Frame(rates,bg=LIGHT); rate_controls.pack(fill="x",padx=10,pady=10)
-        self.rate_date=tk.StringVar(value=datetime.now().strftime("%d-%m-%Y")); self.rate_date_to=tk.StringVar(value=datetime.now().strftime("%d-%m-%Y")); self.rate_from=tk.StringVar(value="USD"); self.rate_to=tk.StringVar(value="LBP"); self.rate_value=tk.StringVar(value="1")
+        self.rate_date=tk.StringVar(value=datetime.now().strftime("%d-%m-%Y")); self.rate_date_to=tk.StringVar(value=datetime.now().strftime("%d-%m-%Y")); \
+            self.rate_from=tk.StringVar(value="USD"); self.rate_to=tk.StringVar(value="LBP"); self.rate_value=tk.StringVar(value="1")
         tk.Label(rate_controls,text="Date From",bg=LIGHT).pack(side="left"); self.date_entry(rate_controls,self.rate_date,12).pack(side="left",padx=4)
         tk.Label(rate_controls,text="Date To",bg=LIGHT).pack(side="left"); self.date_entry(rate_controls,self.rate_date_to,12).pack(side="left",padx=4)
         self.rate_from_box=ttk.Combobox(rate_controls,textvariable=self.rate_from,values=self.currency_codes,state="readonly",width=7); self.rate_from_box.pack(side="left",padx=4)
@@ -241,7 +246,8 @@ class SettingsMixin:
                 if hasattr(self,"sales_exempt_visibility"): self.sales_exempt_visibility()
             self.company_vat_registered.set(settings.get("company_vat_registered","Yes") or "Yes"); self.company_vat_date.set(settings.get("company_vat_date","") or "")
             if hasattr(self,"company_vat_rate"):
-                self.company_vat_rate.set(settings.get("vat_rate") or "11"); self.company_vat_currency.set(settings.get("vat_currency") or "LBP"); self.company_vat_second.set(settings.get("vat_second_currency") or "USD")
+                self.company_vat_rate.set(settings.get("vat_rate") or "11"); self.company_vat_currency.set(settings.get("vat_currency") or "LBP"); \
+                    self.company_vat_second.set(settings.get("vat_second_currency") or "USD")
                 for box in (self.vat_currency_box,self.vat_second_box): box.configure(values=self.currency_codes)
         except Exception as exc: return messagebox.showerror("Settings",str(exc))
         self.rates_tree.delete(*self.rates_tree.get_children())
@@ -392,7 +398,8 @@ class SettingsMixin:
         if not messagebox.askyesno("Restore Database","Restore this backup? A safety backup of current data will be created first."): return
         try: self.client.restore_backup(selected[0])
         except Exception as exc: return messagebox.showerror("Restore",str(exc))
-        messagebox.showinfo("Restore","Database restored successfully. Refreshing all pages."); self.load_dashboard(); self.load_invoices(); self.load_journal(); self.load_trial(); self.load_settings_pages(); self.load_payroll(); self.load_transactions(); self.load_vat_return()
+        messagebox.showinfo("Restore","Database restored successfully. Refreshing all pages."); self.load_dashboard(); self.load_invoices(); self.load_journal(); \
+            self.load_trial(); self.load_settings_pages(); self.load_payroll(); self.load_transactions(); self.load_vat_return()
 
     def save_exchange_rate(self):
         try: self.client.save_exchange_rate({"date_from":self.rate_date.get(),"date_to":self.rate_date_to.get(),"from_currency":self.rate_from.get(),

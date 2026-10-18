@@ -18,6 +18,7 @@ import tempfile
 import hmac
 import logging
 import sys
+from datetime import date
 from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -64,7 +65,7 @@ def _json_value(value):
 # 2.9.103: every request that only the administrator may make, in one place (checked before the request is handled).
 # A new administrator-only request is added here; a test fails when a request checks "admin" itself without being listed.
 ADMIN_ONLY = {
-    "GET": {"/api/users", "/api/audit-log", "/api/audit-report", "/api/audit-verify", "/api/renumber"},
+    "GET": {"/api/users", "/api/audit-log", "/api/audit-report", "/api/audit-verify", "/api/renumber", "/api/diagnostics"},
     "POST": {"/api/companies", "/api/companies/import", "/api/companies/year", "/api/accounting-setup", "/api/tax-adviser", "/api/vat-ledgers", "/api/vat-ledgers/create",
              "/api/vat-return/reopen", "/api/users", "/api/books-lock", "/api/backups/restore", "/api/settings", "/api/currencies",
              "/api/payroll/delete-period", "/api/payroll/apply-lebanese-rules", "/api/payroll/periods", "/api/payroll/settings",
@@ -176,21 +177,32 @@ class ApiHandler(BaseHTTPRequestHandler):
         return False
 
     def _previous_year_db(self, year):
-        try:
-            company_id = self.headers.get("X-Company-ID")
-            return self.company_manager.database(company_id, int(year) - 1) if company_id else None
-        except Exception:
-            return None
+        return self._year_db(int(year) - 1)
 
     def _year_db(self, year):
-        """2.9.52: the books of another fiscal year of the selected company (each year has its own file);
-        the current file when that year is kept in it (or not set up separately)."""
+        """Return the exact fiscal-year database, or None when that year's books are unavailable."""
+        year = int(year)
+        current_year = self.headers.get("X-Fiscal-Year")
+        company_id = self.headers.get("X-Company-ID")
+        if current_year is None:
+            companies = self.company_manager.list_companies(True)
+            company = next((item for item in companies if not company_id or item["id"] == company_id), None)
+            if company:
+                years = company.get("years", [])
+                current_year = max((int(item["year"]) for item in years), default=None)
+                company_id = company["id"]
+        if current_year is not None and int(current_year) == year:
+            return self.db
+        if not company_id:
+            return None
         try:
-            company_id = self.headers.get("X-Company-ID")
-            other = self.company_manager.database(company_id, int(year)) if company_id else None
-        except Exception:
-            other = None
-        return other or self.db
+            return self.company_manager.database(company_id, year)
+        except KeyError:
+            return None
+
+    @staticmethod
+    def _year_unavailable(year):
+        return {"error": f"Historical data for FY {year} unavailable - cannot compare"}
 
     def _licence_ended(self, path):
         """2.9.121: the licence (or trial) has ended: the books stay open READ ONLY - reports, exports and backups -
@@ -240,6 +252,16 @@ class ApiHandler(BaseHTTPRequestHandler):
             return self._json(200,{"items":[c for c in items if not allowed or str(c["id"]) in allowed]})
         if not self._select_database(): return
         if self._module_denied(user, path): return
+        if path.startswith("/api/ocr/status/"):
+            try:
+                from nanza.api_ocr import queue_status
+                return self._json(200, queue_status(
+                    self.db, path.rsplit("/", 1)[-1],
+                    self.headers.get("X-Company-ID")))
+            except KeyError as exc:
+                return self._json(404, {"error": str(exc)})
+            except (ValueError, sqlite3.Error) as exc:
+                return self._json(400, {"error": str(exc)})
         if path.startswith("/api/commercial"):
             import commercial_documents as commercial
             try:
@@ -267,19 +289,72 @@ class ApiHandler(BaseHTTPRequestHandler):
                     return self._json(200,ledger_reports.json_ready(result))
                 return self._json(200,{"sections":ledger_reports.json_ready(payroll_extras.payslip_sections(self.db,self._query(parsed,"month_end")))})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/diagnostics":
+            import diagnostics
+            try:
+                return self._json(200, ledger_reports.json_ready(
+                    diagnostics.build(self.db, self._query(parsed, "as_of") or None)))
+            except Exception as exc: return self._json(500, {"error": str(exc)})
+        if path == "/api/reports/cash-forecast/13-week":
+            import cash_forecast_13_week
+            try:
+                return self._json(200, ledger_reports.json_ready(
+                    cash_forecast_13_week.build(self.db, self._query(parsed, "as_of") or None)))
+            except Exception as exc: return self._json(400, {"error": str(exc)})
         if path in ("/api/dashboard/brief","/api/dashboard/executive"):
             try:
                 start=self._query(parsed,"date_from");end=self._query(parsed,"date_to")
                 from executive_dashboard import build as executive_build
                 builder=executive_build if path.endswith("/executive") else management_pack.brief
+                prior_db = self._previous_year_db(int(iso_date(start)[:4]))
                 result=builder(self.db,start,end,self._query(parsed,"currency","USD"),
-                    self._previous_year_db(int(iso_date(start)[:4])),self._query(parsed,"language","en"))
+                    prior_db,self._query(parsed,"language","en"))
                 return self._json(200,result)
             except (ValueError, KeyError, RuntimeError, OSError, sqlite3.Error, ArithmeticError) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/management-pack":  # 2.9.82
             try:
                 month_end=self._query(parsed,"month_end"); year=int(iso_date(month_end)[:4])
-                return self._json(200,ledger_reports.json_ready(management_pack.build(self.db,month_end,self._query(parsed,"currency","USD"),self._previous_year_db(year))))
+                prior_db = self._previous_year_db(year)
+                return self._json(200,ledger_reports.json_ready(management_pack.build(
+                    self.db,month_end,self._query(parsed,"currency","USD"),prior_db)))
+            except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/analytic-study":
+            try:
+                import analytic_study
+                start=iso_date(self._query(parsed,"date_from")); end=iso_date(self._query(parsed,"date_to"))
+                if start>end: raise ValueError("From Date cannot be after To Date")
+                sources=[]
+                unavailable_years=[]
+                for year in range(int(start[:4]),int(end[:4])+1):
+                    year_db = self._year_db(year)
+                    if year_db is None:
+                        unavailable_years.append(year)
+                    else:
+                        sources.append((year_db,max(start,f"{year}-01-01"),min(end,f"{year}-12-31")))
+                opening_db = self._year_db(int(start[:4])-1)
+                comparison_requested = str(
+                    self._query(parsed,"compare",self._query(parsed,"comparison",""))
+                ).casefold() in ("1","true","yes")
+                if opening_db is None and comparison_requested:
+                    return self._json(409, self._year_unavailable(int(start[:4])-1))
+                if not sources:
+                    if opening_db is None:
+                        return self._json(409, self._year_unavailable(int(end[:4])))
+                    sources.append((opening_db,start,end))
+                result=analytic_study.build_study(self.db,start,end,self._query(parsed,"currency","USD"),
+                    self._query(parsed,"language","en"),sources=sources,opening_db=opening_db)
+                if unavailable_years:
+                    result.setdefault("warnings",[]).extend(
+                        f"Historical data for FY {year} unavailable - study excludes that year"
+                        for year in unavailable_years
+                    )
+                if int(start[:4]) == 2026 and opening_db is None:
+                    result["comparative_2025"] = {
+                        "available": False,
+                        "status": "unavailable",
+                        "reason": "Historical data for FY 2025 unavailable - cannot compare",
+                    }
+                return self._json(200,ledger_reports.json_ready(result))
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/budget-alerts":  # 2.9.82
             try: return self._json(200,{"items":management_pack.budget_variances(self.db,self._query(parsed,"year"),self._query(parsed,"month"),
@@ -312,7 +387,14 @@ class ApiHandler(BaseHTTPRequestHandler):
             except (ValueError,KeyError,TypeError,sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/year-end-check":  # 2.9.81: the checks before closing a year
             try:
-                year=int(self._query(parsed,"year")); check=accounting_setup.year_end_check(self.db,year,self._previous_year_db(year))
+                year=int(self._query(parsed,"year")); prior_db=self._previous_year_db(year)
+                check=accounting_setup.year_end_check(self.db,year,prior_db)
+                if prior_db is None:
+                    check["results"].append({"status":"WARNING","check":"Historical comparison",
+                        "detail":self._year_unavailable(year-1)["error"],
+                        "fix":f"Create or restore fiscal year {year-1} to enable historical comparisons."})
+                    check["warnings"]+=1
+                    check["summary"]=f"{check['errors']} error(s), {check['warnings']} warning(s) before closing"
                 check["sections"]=accounting_setup.year_end_sections(check)
                 return self._json(200,check)
             except Exception as exc: return self._json(400,{"error":str(exc)})
@@ -363,8 +445,8 @@ class ApiHandler(BaseHTTPRequestHandler):
                 books=self.db
                 if str(options.get("view_year") or "").strip():  # 2.9.109: read another fiscal year of the company (read only)
                     view_year=int(options["view_year"]); books=self._year_db(view_year)
-                    if books is self.db and str(view_year)!=str(self.headers.get("X-Fiscal-Year") or ""):
-                        return self._json(400,{"error":f"There are no books for {view_year} in this company"})
+                    if books is None:
+                        return self._json(409,self._year_unavailable(view_year))
                 with books.connect() as connection:
                     department_id,project_id=books._dimension_ids(connection,{"department":options.get("department"),"project":options.get("project")})
                     # 2.9.62: several departments / projects ticked (codes); the budget needs exactly one
@@ -424,6 +506,9 @@ class ApiHandler(BaseHTTPRequestHandler):
                 if path.startswith("/api/inventory/counts/"): return self._json(200,inventory.get_count(self.db,int(path.rsplit("/",1)[-1])))
                 if path == "/api/inventory/report":
                     result=inventory.build_report(self.db,self._query(parsed,"report"),json.loads(self._query(parsed,"options","{}") or "{}"))
+                    return self._json(200,ledger_reports.json_ready(result))
+                if path == "/api/inventory/reconciliation":
+                    result=inventory.stock_ledger_check(self.db,self._query(parsed,"date") or date.today().isoformat())
                     return self._json(200,ledger_reports.json_ready(result))
             except KeyError as exc: return self._json(404,{"error":str(exc).strip("'")})
             except Exception as exc: return self._json(400,{"error":str(exc)})
@@ -512,14 +597,14 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/fiscal-year/journal":
             query=parse_qs(parsed.query)
             try:
-                company_id=self.headers.get("X-Company-ID"); year=int(query.get("year",[""])[0])
-                if not company_id: raise ValueError("Select a company first")
-                year_db=self.company_manager.database(company_id,year)
+                year=int(query.get("year",[""])[0]); year_db=self._year_db(year)
+                if year_db is None: return self._json(409,self._year_unavailable(year))
                 return self._json(200,{"items":year_db.journal(query.get("from_date",[None])[0],query.get("to_date",[None])[0],query.get("currency",[None])[0]),"year":year,"read_only":True})
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/fiscal-year/cash-flow":  # 2.9.79: cash flow of any fiscal year (its own file when kept per year)
             try:
                 year=int(self._query(parsed,"year")); year_db=self._year_db(year)
+                if year_db is None: return self._json(409, self._year_unavailable(year))
                 convert=self._query(parsed,"convert","")=="1" and self._query(parsed,"currency")
                 return self._json(200,{"items":(year_db.cash_flow_converted if convert else year_db.cash_flow)(self._query(parsed,"from_date"),
                         self._query(parsed,"to_date"),self._query(parsed,"currency")),"year":year})
@@ -527,9 +612,12 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path in ("/api/fiscal-year/profit-loss", "/api/fiscal-year/balance-sheet"):
             try:
                 year = int(self._query(parsed, "year")); year_db = self._year_db(year); currency = self._query(parsed, "currency")
+                if year_db is None: return self._json(409, self._year_unavailable(year))
                 convert = self._query(parsed, "convert", "") == "1" and currency  # 2.9.80: every currency converted (planning tools)
                 if path.endswith("profit-loss"):
-                    items = (year_db.profit_and_loss_converted if convert else year_db.profit_and_loss)(self._query(parsed, "from_date"), self._query(parsed, "to_date"), currency)
+                    items = (year_db.profit_and_loss_converted if convert else year_db.profit_and_loss)(
+                        self._query(parsed, "from_date"), self._query(parsed, "to_date"), currency,
+                        self._query(parsed, "department_id"), self._query(parsed, "project_id"))
                 else:
                     items = (year_db.balance_sheet_converted if convert else year_db.balance_sheet)(self._query(parsed, "to_date"), currency)
                 return self._json(200, {"items": items, "year": year, "separate_file": year_db is not self.db})
@@ -665,7 +753,9 @@ class ApiHandler(BaseHTTPRequestHandler):
             return self._json(200,result)
         if path == "/api/approvals":  # 2.9.100: what waits for approval, and the kinds chosen for this company
             import approvals
-            return self._json(200,{"items":approvals.pending(self.db),"types":approvals.types_on(self.db),"labels":approvals.TYPES})
+            may_view_payroll = user["role"] != "viewer" and self.master_db.user_can(user, "payroll")
+            return self._json(200,{"items":approvals.pending(self.db,may_view_payroll),
+                "types":approvals.types_on(self.db),"labels":approvals.TYPES})
         if path == "/api/tax-review":  # 2.9.98: the payroll and VAT rules applied, for the tax adviser
             import tax_review
             try: return self._json(200,tax_review.build(self.db,self._query(parsed,"date","")))
@@ -733,7 +823,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             query=parse_qs(parsed.query)
             convert=query.get("convert",[""])[0]=="1" and query.get("currency",[None])[0]  # 2.9.80
             return self._json(200,{"items":(self.db.profit_and_loss_converted if convert else self.db.profit_and_loss)(query.get("from_date",[None])[0],
-                    query.get("to_date",[None])[0],query.get("currency",[None])[0])})
+                    query.get("to_date",[None])[0],query.get("currency",[None])[0],query.get("department_id",[None])[0],
+                    query.get("project_id",[None])[0])})
         if path == "/api/fiscal-years":
             return self._json(200,{"items":self.db.list_fiscal_years()})
         if path == "/api/general-ledger":
@@ -746,6 +837,29 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/vat-report":
             query=parse_qs(parsed.query)
             return self._json(200,self.db.vat_report(query.get("from_date",[None])[0],query.get("to_date",[None])[0],query.get("currency",[None])[0]))
+        if path == "/api/cash-flow/monthly":
+            query=parse_qs(parsed.query)
+            currency=query.get("currency",[None])[0]
+            convert=query.get("convert",[""])[0]=="1" and currency
+            try:
+                start=iso_date(query.get("from_date",[None])[0]); end=iso_date(query.get("to_date",[None])[0])
+                if start>end: raise ValueError("From Date cannot be after To Date")
+                merged={}
+                for year in range(int(start[:4]),int(end[:4])+1):
+                    year_db=self._year_db(year)
+                    if year_db is None:
+                        return self._json(409, self._year_unavailable(year))
+                    first=max(start,f"{year}-01-01"); last=min(end,f"{year}-12-31")
+                    for row in year_db.cash_flow_monthly(first,last,currency,bool(convert)):
+                        key=(row["month"],row["currency"],row["source"])
+                        item=merged.setdefault(key,{**row,"inflow":0.0,"outflow":0.0})
+                        item["inflow"]+=float(row.get("inflow") or 0); item["outflow"]+=float(row.get("outflow") or 0)
+                items=[]
+                for key,row in sorted(merged.items()):
+                    row["inflow"]=round(row["inflow"],2); row["outflow"]=round(row["outflow"],2)
+                    row["net"]=round(row["inflow"]-row["outflow"],2); items.append(row)
+                return self._json(200,{"items":items})
+            except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/cash-flow":
             query=parse_qs(parsed.query)
             convert=query.get("convert",[""])[0]=="1" and query.get("currency",[None])[0]  # 2.9.80
@@ -759,6 +873,8 @@ class ApiHandler(BaseHTTPRequestHandler):
             try:
                 from_date=query.get("from_date",[""])[0]
                 prior_db=self._year_db(int(str(from_date)[:4])-1) if str(from_date)[:4].isdigit() else self.db
+                if prior_db is None:
+                    return self._json(409, self._year_unavailable(int(str(from_date)[:4])-1))
                 result=self.db.comparative_trial_balance(from_date,query.get("to_date",[""])[0],query.get("currency",[None])[0],prior_db=None if prior_db is self.db else prior_db)
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)  # exact decimal strings; this report's client restores Decimals
@@ -768,6 +884,12 @@ class ApiHandler(BaseHTTPRequestHandler):
                 from_date=query.get("from_date",[""])[0]
                 prior_db=self._year_db(int(str(from_date)[:4])-1) if str(from_date)[:4].isdigit() else self.db
                 result=self.db.comparative_reports(from_date,query.get("to_date",[""])[0],query.get("currency",[None])[0],prior_db=None if prior_db is self.db else prior_db)
+                if prior_db is None:
+                    result["prior_available"] = False
+                    result["warning"] = self._year_unavailable(int(str(from_date)[:4])-1)["error"]
+                    for item in result["items"]:
+                        item["prior"] = None
+                        item["variance"] = None
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
         return self._json(404, {"error": "Not found"})
@@ -777,7 +899,7 @@ class ApiHandler(BaseHTTPRequestHandler):
     _write_lock = threading.RLock()
 
     def _serialized(self, method):
-        if urlparse(self.path).path in ("/api/login", "/api/logout"): return method()
+        if urlparse(self.path).path in ("/api/login", "/api/logout", "/api/purchase/upload"): return method()
         with ApiHandler._write_lock: return method()
 
     def do_POST(self): return self._serialized(self._do_POST)
@@ -866,6 +988,31 @@ class ApiHandler(BaseHTTPRequestHandler):
             return self._json(423,{"error":"This fiscal year is closed and read-only"})
         if user["role"] == "viewer":
             return self._json(403,{"error":"Viewer access is read-only"})
+        if path == "/api/analytic-study/save":
+            try:
+                import analytic_study
+                start=iso_date(body.get("date_from")); end=iso_date(body.get("date_to"))
+                if start>end: raise ValueError("From Date cannot be after To Date")
+                insights=body.get("insights")
+                if not isinstance(insights,list) or len(insights)>100:
+                    raise ValueError("Provide no more than 100 analytic insights")
+                for insight in insights:
+                    if (not isinstance(insight,dict)
+                            or not isinstance(insight.get("kind"),str) or not insight["kind"].strip()
+                            or len(insight["kind"])>80
+                            or not isinstance(insight.get("severity"),str) or not insight["severity"].strip()
+                            or len(insight["severity"])>30
+                            or not isinstance(insight.get("text"),str) or not insight["text"].strip()
+                            or len(insight["text"])>4000
+                            or not isinstance(insight.get("details") or {},dict)):
+                        raise ValueError("Invalid analytic insight")
+                currency=str(body.get("currency") or "USD").upper()
+                language=str(body.get("language") or "en")
+                if len(currency)>12 or len(language)>12:
+                    raise ValueError("Invalid currency or language")
+                analytic_study.save_insights(self.db,insights,start,end,currency,language)
+                return self._json(201,{"saved":len(insights)})
+            except Exception as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/commercial"):
             import commercial_documents as commercial
             try:
@@ -879,6 +1026,53 @@ class ApiHandler(BaseHTTPRequestHandler):
                 return self._json(201,result)
             except (ValueError,KeyError,TypeError,IndexError,sqlite3.Error,ArithmeticError) as exc: return self._json(400,{"error":str(exc)})
         if self._module_denied(user, path): return
+        if path == "/api/purchase/intake":
+            from purchase_intake import annotate_purchase
+            reading = body.get("reading")
+            if not isinstance(reading, dict) or not isinstance(reading.get("items", []), list):
+                return self._json(400, {"error": "Provide invoice reading and item rows"})
+            if len(reading.get("items", [])) > 2000:
+                return self._json(400, {"error": "No more than 2000 item rows per intake"})
+            try:
+                return self._json(200, annotate_purchase(reading, self.db, user["id"], allow_create=True))
+            except (ValueError, KeyError, TypeError, sqlite3.Error) as exc:
+                return self._json(400, {"error": str(exc)})
+        if path == "/api/purchase/upload":
+            from nanza.api_ocr import queue_receipt, process_purchase_receipt
+            try:
+                content = base64.b64decode((body.get("content") or "").encode("ascii"), validate=True)
+                queued = queue_receipt(self.db, self.headers.get("X-Company-ID"), body.get("file_name"),
+                                       body.get("mime_type"), content, user["id"])
+                return self._json(201, process_purchase_receipt(self.db, queued["queue_id"],
+                                                              self.headers.get("X-Company-ID"), user["id"]))
+            except (ValueError, KeyError, TypeError, UnicodeError, OSError, sqlite3.Error) as exc:
+                return self._json(400, {"error": str(exc)})
+        if path == "/api/ocr/queue":
+            try:
+                from nanza.api_ocr import queue_receipt
+                content = base64.b64decode(
+                    (body.get("content") or "").encode("ascii"), validate=True)
+                result = queue_receipt(
+                    self.db, self.headers.get("X-Company-ID"), body.get("file_name"),
+                    body.get("mime_type"), content, user["id"], body.get("expense_id"))
+                return self._json(201, result)
+            except (ValueError, KeyError, TypeError, UnicodeError, sqlite3.Error) as exc:
+                return self._json(400, {"error": str(exc)})
+        if path == "/api/ai_chat":
+            try:
+                from nanza.ai_accountant.query_builder import query_accountant
+                from nanza.ai_accountant.responder import respond
+                question = str(body.get("question") or "").strip()
+                if not question or len(question) > 1000:
+                    raise ValueError("Enter a question of no more than 1000 characters")
+                result = query_accountant(self.db, question, user=user)
+                return self._json(200, {"answer": respond(result), "query": {
+                    "intent": result.get("intent"),
+                    "filters_applied": result.get("filters_applied", []),
+                    "row_count": len(result.get("rows") or []),
+                }})
+            except (ValueError, KeyError, TypeError, sqlite3.Error) as exc:
+                return self._json(400, {"error": str(exc)})
         if path == "/api/reports/financial-config":
             try:
                 import financial_statements
@@ -969,8 +1163,10 @@ class ApiHandler(BaseHTTPRequestHandler):
                 action=path.rsplit("/",1)[-1]
                 if action=="import": return self._json(201,{"added":bank_rec.add_statement_lines(self.db,body.get("account"),body.get("currency"),body.get("rows",[]),user["id"])})
                 if action=="auto-match": return self._json(200,{"matched":bank_rec.auto_match(self.db,body.get("account"),body.get("currency"),
-                        iso_date(body.get("from")),iso_date(body.get("to")),int(body.get("days") or 5))})
-                if action=="match": return self._json(200,{"ok":bank_rec.match(self.db,body.get("statement_id"),body.get("journal_line_id"))})
+                        iso_date(body.get("from")),iso_date(body.get("to")),int(body.get("days") or 5),user["id"])})
+                if action=="match": return self._json(200,{"ok":bank_rec.match(self.db,body.get("statement_id"),body.get("journal_line_id"),user["id"])})
+                if action=="match-partial": return self._json(200,{"ok":bank_rec.match_partial(
+                    self.db,body.get("statement_id"),body.get("allocations",[]),user["id"])})
                 if action=="unmatch": return self._json(200,{"ok":bank_rec.unmatch(self.db,body.get("statement_id"))})
                 if action=="delete": return self._json(200,{"ok":bank_rec.delete_statement_line(self.db,body.get("statement_id"))})
                 if action=="post": return self._json(201,{"voucher":bank_rec.post_statement_line(self.db,body.get("statement_id"),body.get("account_code"),user["id"])})
@@ -1131,11 +1327,17 @@ class ApiHandler(BaseHTTPRequestHandler):
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(200,result)
         if path == "/api/payments":
-            try: payment_id,note=self._save_with_approval(user,"payments",lambda:self.db.add_payment(body,user["id"]))
+            defer_posting=(self._approval_required("payments")
+                           and not self.master_db.user_can(user,"approve"))
+            try: payment_id,note=self._save_with_approval(user,"payments",lambda:self.db.add_payment(
+                body,user["id"],defer_posting=defer_posting))
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(201,{"payment_id":payment_id,**({"approval":note} if note else {})})
         if path == "/api/expenses":
-            try: expense_id,note=self._save_with_approval(user,"expenses",lambda:self.db.add_expense(body,user["id"]))
+            defer_posting=(self._approval_required("expenses")
+                           and not self.master_db.user_can(user,"approve"))
+            try: expense_id,note=self._save_with_approval(user,"expenses",lambda:self.db.add_expense(
+                body,user["id"],defer_posting=defer_posting))
             except Exception as exc: return self._json(400,{"error":str(exc)})
             if not note: _learn("learn_expense", self.db, expense_id, body.get("supplier"))
             return self._json(201,{"expense_id":expense_id,**({"approval":note} if note else {})})
@@ -1148,6 +1350,15 @@ class ApiHandler(BaseHTTPRequestHandler):
                     inv=self.db.approve_invoices(body.get("invoice_ids"),user,require_other=other)
                     done["approved"]+=list(inv.get("approved",[])); done["skipped"]+=list(inv.get("skipped",[]))
                 return self._json(200,done)
+            except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/approvals/reject":
+            if not self.master_db.user_can(user, "approve"):
+                return self._json(403,{"error":"You do not have permission to reject documents. Ask the administrator."})
+            import approvals
+            try:
+                result=approvals.reject_documents(
+                    self.db,body.get("entry_ids",[]),body.get("invoice_ids",[]),user,body.get("reason"))
+                return self._json(200,result)
             except Exception as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/employees":
             try: result=self.db.save_employee(body,user["id"])
@@ -1172,9 +1383,13 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/payroll/salary-payments":
             import payroll_payments
             try:
+                defer_posting=((self._approval_required("journal_vouchers")
+                                or self._approval_required("payments"))
+                               and not self.master_db.user_can(user,"approve"))
                 with self.db.connect() as connection:
                     if not connection.in_transaction: connection.execute("BEGIN IMMEDIATE")
-                    result=payroll_payments.record(self.db,body,user["id"])
+                    result=payroll_payments.record(
+                        self.db,body,user["id"],defer_posting=defer_posting)
                     result["approval"]=None
                     if (self._approval_required("journal_vouchers") or self._approval_required("payments")) and not self.master_db.user_can(user,"approve"):
                         import approvals
@@ -1218,7 +1433,21 @@ class ApiHandler(BaseHTTPRequestHandler):
             _learn("learn_tax_flag", self.db, body.get("source_type"), body.get("source_id"), bool(body.get("not_deductible")))
             return self._json(200,result)
         if path == "/api/journal-vouchers":
-            try: result,note=self._save_with_approval(user,"journal_vouchers",lambda:self.db.save_journal_voucher(body.get("voucher",{}),body.get("lines",[]),user["id"]))
+            defer_posting=(self._approval_required("journal_vouchers")
+                           and not self.master_db.user_can(user, "approve"))
+            try: result,note=self._save_with_approval(user,"journal_vouchers",lambda:self.db.save_journal_voucher(
+                body.get("voucher",{}),body.get("lines",[]),user["id"],defer_posting=defer_posting))
+            except Exception as exc: return self._json(400,{"error":str(exc)})
+            return self._json(201,{**result,**({"approval":note} if note else {})})
+        if path.startswith("/api/journal/") and path.endswith("/reverse"):
+            try:
+                entry_id=int(path.split("/")[-2])
+                defer_posting=(self._approval_required("journal_vouchers")
+                               and not self.master_db.user_can(user, "approve"))
+                result,note=self._save_with_approval(user,"journal_vouchers",
+                    lambda:self.db.reverse_journal_voucher(entry_id,body.get("date"),user["id"],
+                                                           defer_posting=defer_posting))
+            except KeyError as exc: return self._json(404,{"error":str(exc)})
             except Exception as exc: return self._json(400,{"error":str(exc)})
             return self._json(201,{**result,**({"approval":note} if note else {})})
         if path.startswith("/api/invoices/") and path.endswith("/items"):

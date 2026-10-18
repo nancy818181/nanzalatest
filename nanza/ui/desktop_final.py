@@ -13,7 +13,7 @@ from desktop_common import account_label, account_code  # 2.9.79
 from report_export import export_sections_excel, export_sections_pdf
 import vat_return as vat_rules
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"  # 2.9.59: the same colours on every screen
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, AMBER, MUTED = "#8B1E1E", "#8a5a00", "#5f6b76"
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
@@ -84,7 +84,7 @@ class FinalFeaturesMixin:
         inner = tk.Frame(canvas, bg=LIGHT); window = canvas.create_window((0, 0), window=inner, anchor="nw")
         def resize(_event=None):
             width=max(canvas.winfo_width(),inner.winfo_reqwidth())
-            canvas.itemconfigure(window,width=width)
+            canvas.itemconfigure(window,width=width,height=inner.winfo_reqheight())
             canvas.configure(scrollregion=canvas.bbox("all"))
             if inner.winfo_reqheight()>canvas.winfo_height()+1:
                 if not scroll.winfo_manager(): scroll.grid()
@@ -92,7 +92,7 @@ class FinalFeaturesMixin:
             if inner.winfo_reqwidth()>canvas.winfo_width()+1:
                 if not horizontal.winfo_manager(): horizontal.grid()
             else: horizontal.grid_remove()
-        inner.bind("<Configure>", resize)
+        inner.bind("<Configure>", lambda _event: canvas.after_idle(resize))
         canvas.bind("<Configure>", resize)
         outer.grid_rowconfigure(0,weight=1); outer.grid_columnconfigure(0,weight=1)
         canvas.grid(row=0,column=0,sticky="nsew")
@@ -780,7 +780,8 @@ class FinalFeaturesMixin:
         form = tk.Frame(users, bg=LIGHT); form.pack(fill="x", padx=10, pady=10)
         self.user_name = tk.StringVar(); self.user_password = tk.StringVar(); self.user_role = tk.StringVar(value="accountant"); self.user_language = tk.StringVar(value="en")
         self.user_expiry = tk.StringVar(value=(datetime.now() + timedelta(days=365)).strftime("%d-%m-%Y"))
-        self.user_active = tk.BooleanVar(value=True); self.user_payroll = tk.BooleanVar(value=True); self.user_vat = tk.BooleanVar(value=True); self.user_delete = tk.BooleanVar(value=False); self.user_approve = tk.BooleanVar(value=False); self.edit_user_id = None
+        self.user_active = tk.BooleanVar(value=True); self.user_payroll = tk.BooleanVar(value=True); self.user_vat = tk.BooleanVar(value=True); self.user_delete = \
+            tk.BooleanVar(value=False); self.user_approve = tk.BooleanVar(value=False); self.edit_user_id = None
         fields = (("Username", self.user_name, 16, ""), ("Password", self.user_password, 14, "*"))
         for column, (label, var, width, show) in enumerate(fields):
             tk.Label(form, text=label, bg=LIGHT).grid(row=0, column=column * 2, padx=4, sticky="w")

@@ -1,0 +1,25 @@
+17 failed, 976 passed, 62 skipped, 6 errors, 160 subtests passed in 335.24s (0:05:35)
+
+FAILED tests/test_arabic_reports.py::ArabicReportsTest::test_arabic_excel_and_pdf
+FAILED tests/test_final_features.py::LongReportExportTest::test_wide_multilingual_report_keeps_every_row_and_total
+FAILED tests/test_final_features.py::ArabicPdfAndNssfTest::test_arabic_text_in_pdf
+FAILED tests/test_help_pictures.py::HelpPicturesTest::test_every_topic_has_its_picture_and_steps_in_both_languages
+FAILED tests/test_help_pictures.py::HelpPicturesTest::test_help_is_shipped_with_the_program
+FAILED tests/test_help_pictures.py::HelpPicturesTest::test_main_help_opens_illustrated_guide
+FAILED tests/test_help_pictures.py::HelpPicturesTest::test_missing_picture_help_falls_back_to_text_guide
+FAILED tests/test_invoice_intake.py::IntakeSafetyTest::test_embedded_french_and_arabic_pdf_text_remains_local
+FAILED tests/test_neural_reader.py::NeuralReaderTest::test_worker_is_packaged_with_existing_offline_ocr_assets
+FAILED tests/test_v2_9_114.py::NanzaWordingTest::test_the_user_never_sees_saber_accounting
+FAILED tests/test_v2_9_42.py::PackagingTest::test_every_desktop_module_is_in_the_windows_build
+FAILED tests/test_v2_9_42.py::PackagingTest::test_user_guide_is_shipped_in_both_languages
+FAILED tests/test_v2_9_51.py::BuildCheckTest::test_workflow_stops_on_a_nested_upload_or_a_version_mismatch
+FAILED tests/test_v2_9_52.py::PermissionAndSigningTest::test_signing_is_optional_in_the_build
+FAILED tests/test_v2_9_55.py::LogoTest::test_logo_is_a_real_png - FileNotFoun...
+FAILED tests/test_v2_9_55.py::IconTest::test_icon_is_built_into_the_programs_and_the_installer
+FAILED tests/test_v2_9_55.py::SharpLogoTest::test_header_mark_and_login_logo_are_resized_cleanly
+ERROR tests/test_pdf_formats.py::PdfFormatsTest::test_layouts - reportlab.pdf...
+ERROR tests/test_pdf_formats.py::PdfFormatsTest::test_normalization - reportl...
+ERROR tests/test_v2_9_114.py::NanzaProgramFileTest::test_build_names_the_programs_nanza
+ERROR tests/test_v2_9_114.py::NanzaProgramFileTest::test_installed_copies_update_in_place_and_keep_their_data
+ERROR tests/test_v2_9_114.py::NanzaProgramFileTest::test_installer_uses_new_files_and_removes_old_ones
+ERROR tests/test_v2_9_114.py::NanzaProgramFileTest::test_programs_carry_nanza_file_details

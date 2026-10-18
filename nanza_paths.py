@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))  # the program folder (Assets/ is here)
-FOLDERS = ("core", "accounting", "tax", "payroll", "reports", "documents", "ui")
+FOLDERS = ("core", "accounting", "tax", "payroll", "reports", "documents", "ui", "ai_accountant")
 
 for _name in FOLDERS:
     _folder = ROOT / "nanza" / _name
@@ -21,11 +21,20 @@ for _name in FOLDERS:
 
 def program_files():
     """Every module of the program (not the tests), for the release checks."""
-    return sorted([*ROOT.glob("*.py"), *(ROOT / "nanza").rglob("*.py")])
+    active_root = ROOT / "nanza"
+    active_files = (path for path in active_root.rglob("*.py")
+                    if "nanza_backup" not in path.relative_to(active_root).parts)
+    return sorted([*ROOT.glob("*.py"), *active_files])
 
 
 def source(name):
-    """The file of a module by its file name ("server.py"), wherever its folder is."""
-    for path in program_files():
-        if path.name == name: return path
+    """Find a module in the active source tree, never in backups or delivery copies."""
+    active_root = ROOT / "nanza"
+    for folder in FOLDERS:
+        candidate = active_root / folder / name
+        if candidate.is_file():
+            return candidate
+    for path in ROOT.glob("*.py"):
+        if path.name == name:
+            return path
     raise FileNotFoundError(name)

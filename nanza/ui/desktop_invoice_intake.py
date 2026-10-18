@@ -21,6 +21,13 @@ def annotate(app, data):
             "Company chart or supplier lookup unavailable; suggestions withheld", exc_info=True
         )
     result = enrich(data, accounts, parties, documents)
+    if result.get("direction") == "purchase" and callable(getattr(app.client, "purchase_intake", None)):
+        try:
+            remote = app.client.purchase_intake(result)
+            if isinstance(remote, dict):
+                result = remote
+        except (RuntimeError, OSError, ValueError, TypeError):
+            result["review_warnings"].append("Server account suggestions unavailable; choose missing accounts manually")
     if result.get("invoice_number") and hasattr(app.client, "invoice_duplicates"):
         try:
             found = app.client.invoice_duplicates(

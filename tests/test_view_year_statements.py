@@ -34,7 +34,7 @@ class ViewYearTest(unittest.TestCase):
                 text = lambda result: repr(result)
                 self.assertNotIn("OLD-1", text(api.account_report(dict(options))))               # the current year does not have it
                 self.assertIn("OLD-1", text(api.account_report(dict(options, view_year=str(first_year)))))  # the other year does
-                with self.assertRaisesRegex(RuntimeError, "no books"):
+                with self.assertRaisesRegex(RuntimeError, "Historical data for FY 1999 unavailable"):
                     api.account_report(dict(options, view_year="1999"))
             finally:
                 http.shutdown(); http.server_close()

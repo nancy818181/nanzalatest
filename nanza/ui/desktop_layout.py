@@ -11,7 +11,7 @@ import logging
 import tkinter as tk
 from datetime import datetime
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
 MENU_BG, MENU_HOVER, MENU_TEXT, MENU_MUTED = "#0B1F33", "#1B3A57", "#FFFFFF", "#9FB3C8"
 RED, AMBER, GREEN = "#8B1E1E", "#B7791F", "#2E7D5B"
 
@@ -36,7 +36,7 @@ def _settings_file():
 
 def layout_settings():
     try: data = json.loads(_settings_file().read_text(encoding="utf-8"))
-    except Exception: data = {}
+    except (OSError, UnicodeError, ValueError, TypeError): data = {}
     return {"side_menu": bool(data.get("side_menu", True)), "folded": [str(g) for g in data.get("folded", []) if g],
             "hidden_columns": {str(k): [str(c) for c in v] for k, v in (data.get("hidden_columns") or {}).items() if isinstance(v, list)}}
 
