@@ -1,0 +1,19 @@
+{
+  "modules": [
+    "tests.test_v2_9_81"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_81.SetupTest.test_default_accounts_are_checked_and_used",
+    "tests.test_v2_9_81.SetupTest.test_doe_accepts_the_chosen_gain_account",
+    "tests.test_v2_9_81.SetupTest.test_hidden_modules_company_and_user",
+    "tests.test_v2_9_81.WindowTest.test_hidden_screen_and_report",
+    "tests.test_v2_9_81.WindowTest.test_settings_page_and_year_end_check_window",
+    "tests.test_v2_9_81.YearEndCheckTest.test_clean_books_are_ready",
+    "tests.test_v2_9_81.YearEndCheckTest.test_problems_are_found"
+  ],
+  "tests_run": 7,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

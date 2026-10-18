@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import calendar
 from datetime import datetime, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from database import display_date, iso_date
 from settlements import posted_payment_sql, settlement_amount, invoice_kind
@@ -14,7 +14,7 @@ BUCKETS = (30, 60, 90, 180)
 
 def _d(value):
     try: return Decimal(str(value if value not in (None, "") else 0))
-    except Exception: return ZERO
+    except (InvalidOperation, TypeError, ValueError): return ZERO
 
 
 def _money(value):
@@ -307,4 +307,3 @@ def dashboard_charts(db, options):
         if code.startswith(("51", "53")) and line["iso_date"] <= end: cash[line["code"]] = cash.get(line["code"], ZERO) + line["signed"][column]
     return {"basis": basis, "year": year, "months": [[calendar.month_abbr[i + 1], float(m[0]), float(m[1])] for i, m in enumerate(months)],
             "receivables": buckets, "top_clients": top, "cash": sorted([[code, float(v)] for code, v in cash.items() if abs(v) >= Decimal("0.01")], key=lambda x: -abs(x[1]))[:6]}
-

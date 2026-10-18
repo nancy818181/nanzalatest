@@ -1,0 +1,7 @@
+test_a_path_outside_the_data_folder_is_still_refused (tests.test_v2_9_75.MovedDataFolderTest.test_a_path_outside_the_data_folder_is_still_refused) ... ok
+test_copied_folder_opens_its_companies_and_remembers_the_new_place (tests.test_v2_9_75.MovedDataFolderTest.test_copied_folder_opens_its_companies_and_remembers_the_new_place) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.590s
+
+OK

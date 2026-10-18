@@ -785,9 +785,12 @@ def post_stock_variation(database, year, user_id):
     (37 -> 6051 / 6052, 31 -> 6151 / 6152, 33 -> 7211, 35 -> 7255)."""
     year = int(year); inv = settings(database); currency = inv["currency"]
     with database.connect() as db:
-        for row in db.execute("SELECT id FROM journal_entries WHERE source_type='journal_voucher' AND voucher_type='06' AND description LIKE ?", (f"STOCK VARIATION - {year}%",)).fetchall():
-            db.execute("DELETE FROM journal_entries WHERE id=?", (row["id"],))
+        old_entries = [dict(row) for row in db.execute("""SELECT e.id,e.entry_date FROM journal_entries e
+            WHERE e.source_type='journal_voucher' AND e.voucher_type='06' AND e.description LIKE ?
+            AND NOT EXISTS(SELECT 1 FROM journal_entries r WHERE r.reversal_of=e.id)""", (f"STOCK VARIATION - {year}%",))]
         accounts = {r["id"]: (r["stock_account"] or STOCK_ACCOUNT) for r in db.execute("SELECT id,stock_account FROM inventory_items")}
+    for old in old_entries:
+        database.reverse_journal_voucher(old["id"], old["entry_date"], user_id)
     # The stock already in the ledger (at year end, before this voucher) is cancelled; the counted closing stock replaces it.
     state = run_costing(database, f"{year}-12-31")
     groups = {STOCK_ACCOUNT: {"opening": ZERO, "closing": ZERO}}
@@ -868,13 +871,13 @@ def post_monthly_stock_variation(database, month_end, user_id):
     day = iso_date(month_end); year, month = int(day[:4]), int(day[5:7])
     last = f"{year}-{month:02d}-{monthrange(year, month)[1]:02d}"
     with database.connect() as db:
-        posted = sorted({r["description"][len("STOCK VARIATION MONTH - "):][:7] for r in db.execute(
-            "SELECT description FROM journal_entries WHERE source_type='journal_voucher' AND voucher_type='06' AND description LIKE ?", (f"STOCK VARIATION MONTH - {year}-%",))})
+        old_entries = [dict(row) for row in db.execute("""SELECT e.id,e.entry_date,e.description FROM journal_entries e
+            WHERE e.source_type='journal_voucher' AND e.voucher_type='06' AND e.description LIKE ?
+            AND NOT EXISTS(SELECT 1 FROM journal_entries r WHERE r.reversal_of=e.id)""", (f"STOCK VARIATION MONTH - {year}-%",))]
+        posted = sorted({r["description"][len("STOCK VARIATION MONTH - "):][:7] for r in old_entries})
     months = sorted({f"{year}-{month:02d}"} | {m for m in posted if m > f"{year}-{month:02d}"})
-    with database.connect() as db:
-        for m in months:
-            for row in db.execute("SELECT id FROM journal_entries WHERE source_type='journal_voucher' AND voucher_type='06' AND description LIKE ?", (f"STOCK VARIATION MONTH - {m}%",)).fetchall():
-                db.execute("DELETE FROM journal_entries WHERE id=?", (row["id"],))
+    for old in old_entries:
+        database.reverse_journal_voucher(old["id"], old["entry_date"], user_id)
     results = []
     for m in months:
         y, mo = int(m[:4]), int(m[5:7]); end = f"{y}-{mo:02d}-{monthrange(y, mo)[1]:02d}"
@@ -1161,7 +1164,10 @@ def get_count(database, count_id):
 
 def list_counts(database):
     with database.connect() as db:
-        return [dict(r) for r in db.execute("SELECT c.id,c.number,c.count_date,c.status,c.adjustment_numbers,w.code warehouse_code FROM physical_counts c JOIN warehouses w ON w.id=c.warehouse_id ORDER BY c.id DESC")]
+        return [dict(r) for r in db.execute((
+            "SELECT c.id,c.number,c.count_date,c.status,c.adjustment_numbers,w.code warehouse_code FROM physical_counts c JOIN "
+            "warehouses w ON w.id=c.warehouse_id ORDER BY c.id DESC"
+        ))]
 
 
 

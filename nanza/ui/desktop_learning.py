@@ -6,7 +6,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
 RED, MUTED = "#8B1E1E", "#5f6b76"
 FILE_TYPES = [("Invoice PDF or photo", "*.pdf *.jpg *.jpeg *.png *.tif *.tiff *.bmp")]
 SCOPE_NAMES = {"purchase": "Purchases", "expense": "Expenses"}

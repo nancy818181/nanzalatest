@@ -1,0 +1,5 @@
+test_a_stale_preview_changes_nothing (tests.test_renumber.RenumberTest.test_a_stale_preview_changes_nothing) ... ok
+test_journal_vouchers_expenses_and_invoices (tests.test_renumber.RenumberTest.test_journal_vouchers_expenses_and_invoices) ... ok
+test_locked_books_keep_their_numbers_and_the_rest_follows_on (tests.test_renumber.RenumberTest.test_locked_books_keep_their_numbers_and_the_rest_follows_on) ... ok
+test_numbers_typed_by_hand_are_never_touched (tests.test_renumber.RenumberTest.test_numbers_typed_by_hand_are_never_touched) ... ok
+test_only_the_administrator (tests.test_renumber.RenumberTest.test_only_the_administrator) ... 

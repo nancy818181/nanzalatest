@@ -1,0 +1,18 @@
+{
+  "modules": [
+    "tests.test_v2_9_69"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_69.AuditPackTest.test_cash_flow_reconciles_and_balance_sheet_balances",
+    "tests.test_v2_9_69.AuditPackTest.test_old_placeholder_texts_get_the_new_defaults",
+    "tests.test_v2_9_69.AuditPackTest.test_period_mode_with_comparative",
+    "tests.test_v2_9_69.AuditPackTest.test_section_order_and_two_years",
+    "tests.test_v2_9_69.MultiDeleteAndColumnsTest.test_delete_selection_and_toggle_columns",
+    "tests.test_v2_9_69.TopPartiesVatTest.test_vat_number_replaces_account"
+  ],
+  "tests_run": 6,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

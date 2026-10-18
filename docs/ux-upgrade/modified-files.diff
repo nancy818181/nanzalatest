@@ -1,0 +1,2418 @@
+--- a/.github/workflows/build-windows-installer.yml
++++ b/.github/workflows/build-windows-installer.yml
+@@ -141,6 +141,7 @@
+             pyinstaller --noconfirm --clean --onedir --windowed --noupx --icon Assets/nanza.ico @folders @modules `
+             --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/help;assets/help" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
+             --hidden-import commercial_documents --hidden-import executive_dashboard `
++            --hidden-import desktop_workbench --hidden-import nanza_delivery.ageing_report --hidden-import nanza_delivery.whatsapp_daily_summary --hidden-import nanza_delivery.custom_report_builder --hidden-import nanza_delivery.ai_accountant `
+             --hidden-import desktop_commercial --hidden-import desktop_executive `
+             --hidden-import arabic_reshaper --hidden-import bidi --hidden-import bidi.algorithm --collect-data arabic_reshaper `
+             --hidden-import payroll_reports --hidden-import vat_return --hidden-import desktop_final --hidden-import desktop_brains --hidden-import ledger_reports --hidden-import desktop_dimensions --hidden-import desktop_stage3 --hidden-import ai_mapper --hidden-import ai_service --hidden-import pdf_import --hidden-import pypdf --hidden-import pypdfium2 --hidden-import pytesseract --collect-all pypdfium2 --collect-all pypdfium2_raw --hidden-import year_end --hidden-import cnss_forms --hidden-import cnss_forms_ui --hidden-import party_similarity --hidden-import pdf_form_editor --hidden-import desktop_assets --hidden-import report_export --hidden-import payroll_excel_forms --hidden-import lebanese_payroll --hidden-import inventory --hidden-import fixed_assets --hidden-import desktop_inventory --hidden-import desktop_v22 --hidden-import chart_extra --hidden-import invoice_calc --hidden-import tafqeet --hidden-import business_reports --hidden-import financial_projection --hidden-import financial_statements --hidden-import app_runtime --hidden-import desktop_common --hidden-import desktop_invoices --hidden-import desktop_parties --hidden-import desktop_payroll --hidden-import desktop_reports --hidden-import desktop_settings --hidden-import desktop_stage3_common --hidden-import desktop_purchases --hidden-import desktop_asset_register --hidden-import desktop_expenses --hidden-import desktop_brains_common --hidden-import desktop_balance_reports --hidden-import desktop_payroll_sheet --hidden-import payroll_lines --hidden-import payroll_official --hidden-import office_tls --hidden-import vat_ledgers --hidden-import audit_chain --hidden-import audit_report --hidden-import desktop_attachments --hidden-import tax_review --hidden-import approvals --hidden-import release_check --hidden-import owner_access --hidden-import licence --hidden-import desktop_licence `
+--- a/.gitignore
++++ b/.gitignore
+@@ -3,3 +3,15 @@
+ /assets
+ Assets/Assets
+ __pycache__/
++
++# Development environments, credentials and private company data
++venv/
++.venv/
++*.py[cod]
++*.db
++*.db-*
++*.sqlite
++*.sqlite3
++.env
++.env.*
++*.zip
+--- a/README.md
++++ b/README.md
+@@ -1,4 +1,46 @@
+ # Nanza Accounting (formerly Saber Accounting)
++
++## Version 2.9.129 (daily workflow workbench / أدوات العمل اليومية)
++
++**EN:** Four integrated upgrades: one-click coloured ageing buckets with customer invoice drill-down;
++local WhatsApp daily-summary preview/copy; searchable, draggable sales-report filters with live preview,
++complete Excel/PDF export and company/user-scoped SQLite templates; and offline rule-based expense
++suggestions, duplicate inspection, a labelled 30-day cash illustration and bilingual profit explanation.
++Existing screens, analytic reports and payroll calculations are preserved. Ctrl+W opens summary preview;
++Ctrl+E opens custom reporting on the dashboard and exports inside the new report windows.
++
++**العربية:** أضفنا أدوات العمل اليومية: أعمار الذمم بألوان وفلاتر بنقرة واحدة وتفاصيل العميل،
++معاينة ونسخ ملخص واتساب محلي، تقارير مبيعات مخصصة بفلاتر قابلة للبحث والسحب ومعاينة تلقائية
++وقوالب محفوظة لكل مستخدم وشركة، واقتراحات حسابات محلية وتفسير تغيّر الربح وتقدير نقدي ٣٠ يوماً.
++التقارير التحليلية والوظائف السابقة وحسابات الرواتب محفوظة.
++
++**Scope / الحدود:** This improves workflow and UX toward the owner's **8–9/10 target**; no measured
++Odoo/Zoho parity score is claimed. Current active GUI is Tk/ttk (not CustomTkinter); the existing theme is
++retained without a framework migration. New code is in `nanza_delivery/*.py` and is called by the active
++`nanza/` app; the older nested delivery copy is not the runtime source.
++
++- WhatsApp: no paid API, no internet, no automatic messaging. A persisted **6pm local reminder** opens
++  preview while the app is running. The **Auto-send** control is disabled and explicitly says a messaging
++  gateway must be configured. No recipient or external transmission is silently assumed.
++- Ageing: uses existing payment/credit-note settlement logic. 0–30 includes not-yet-due balances;
++  90+ means **more than 90 days**, so day 90 remains in 61–90. Totals and overdue badges stay separate
++  by currency; credits are shown separately. Double-click a party for its open invoices.
++- Custom builder currently reports **posted sales lines**, not arbitrary SQL, payroll or a complete
++  Odoo Studio equivalent. Date/customer/product/warehouse/currency filters update after 350ms.
++  Drag filter headings to reorder cards. Warehouse matches only actual linked stock movements.
++  Header-only invoices are excluded and labelled. Preview is paginated; exports include all matching
++  lines up to 50,000, refusing larger exports rather than silently truncating. Native currencies and
++  credit-note signs are preserved. Templates save filters, not report results.
++- Offline suggestions are advisory heuristic scores against active posting expense accounts; nothing
++  is automatically posted or changed. Existing pre-save duplicate warnings remain in place; the new
++  duplicate endpoint also supports exact number/date/amount with optional party/currency/direction.
++- Forecast is a **historical average illustration**, not a due-date or 13-week commitment forecast.
++  No double-counting of outstanding invoices is introduced. Missing history remains unavailable.
++  Profit explanations compare equal-length adjacent periods within the selected year and identify
++  numerical contributors, not unsupported causal claims.
++- Background requests capture company/year/session; obsolete results are discarded. Workers never
++  access Tk widgets. No zero-latency or OCR-accuracy promise is made.
++- See `docs/ux-upgrade/VALIDATION.md` for exact validation and deployment limits.
+ 
+ ## Version 2.9.127 (reviewed intake, commercial documents and executive dashboard)
+ - Windows build repair: the setup fixture now supplies the correct executable name and explicitly exercises Windows and Linux. Installation refuses a runtime archive missing its platform executable before writing the ready marker. No checksum, model or runtime verification was removed.
+--- a/VALIDATION_REPORT.md
++++ b/VALIDATION_REPORT.md
+@@ -1,46 +1,76 @@
+-# Validation Report
+-
+-## Status
+-
+-**Not certified for live accounting data.** The latest full test run found two release regressions; both were fixed and their targeted tests now pass, but the entire suite has not been rerun since those fixes. Flutter validation and OCR processing are also incomplete.
+-
+-## Environment
+-
+-- Windows
+-- Python 3.11.9
+-- pytest 9.1.1
+-- Flutter/Dart: unavailable
+-
+-## Test results
+-
+-The most recent full run, before the latest targeted fixes, reported:
+-
+-- 1,061 passed
+-- 4 skipped
+-- 166 subtests passed
+-- 2 failed
+-
+-The failures were investigated and addressed:
+-
+-1. `ChartTemplateTest.test_every_account_the_program_posts_to_is_in_every_chart` identified the requested real accounts `6011`, `4211`, and `6264.1` missing from the cross-chart spine. Those codes are now included.
+-2. `ErrorHandlingTest.test_broad_excepts_do_not_grow` found one broad handler over the repository limit. The new invoice suggestion handler now catches the client and input errors it reports explicitly.
+-
+-After the feature changes, targeted account-assistant, account API, AI, chart-template, and release-check tests passed: **29 passed, 16 subtests passed**. The invoice-edit UI regression also passed independently.
+-
+-The full suite has **not** been rerun after the latest two fixes. Therefore, the latest full-suite counts are not a final all-green result.
+-
+-## Free AI Account feature
+-
+-- The chart loader discovered the active source file and loaded its real account codes, including all configured base accounts. The discovered chart in this repository contains 572 entries; it is not the 388-entry workbook described in the request.
+-- Arabic/English/French keyword suggestions and detailed-account creation are tested against both a fake client and an initialized company database.
+-- The test cases for electricity, generator/administration detail accounts, rent-office, and Ogero/internet passed. The company database generated `626340001` under `6263.4`, then reused it instead of duplicating the account.
+-- Focused feature tests: **6 passed** (included in the combined 29-test run above).
+-
+-## Mobile and OCR limitations
+-
+-- The Flutter project and mobile API wiring are present, but Flutter/Dart is unavailable in this environment. No `flutter analyze`, device test, or APK build was performed.
+-- OCR uploads can be queued and their status retrieved. An OCR processing worker was not demonstrated, so queueing does not establish OCR completion.
+-
+-## Release gate
+-
+-The source archive is a validation candidate, not a live-ready certification. Rerun `python -m pytest tests/ -q` after the final changes and complete Flutter/device and OCR-worker validation before using it with live accounting data.
++# NANZA 2.9.129 — workflow upgrade validation
++
++## Verdict and scope
++Source upgrade validated on Linux/Python 3.12 with a real Tk graphical display (1366×900).
++**Not a certification to deploy a new Windows installer to live accounting data.**
++The installer was not built or exercised here. Windows-only checks remain for Windows CI.
++Existing accounting/payroll calculations and all uploaded test files were retained.
++
++## Exact results
++
++| Run | Result |
++|---|---|
++| Uploaded source baseline, full pytest, headless | 1004 passed, 1 failed, 62 skipped; 164 subtests passed; 259.18s |
++| Uploaded-source payroll/salary/employee tests, real GUI | 95 passed, 972 deselected; 40 subtests passed; 33.98s |
++| Full unittest discovery with real GUI | **1093 tests run; OK, 2 skipped** (1091 successful); 522.820s |
++| Final new-feature + release checks after final UI/export/lifecycle changes | **33 passed**, 12 subtests passed; 13.97s |
++| Final payroll/salary/employee regression, real GUI | **95 passed**, 999 deselected; 40 subtests passed; 32.15s |
++
++The full discovery run loaded the first 26 added test cases. A further window-lifecycle case
++and the last UI/export refinements were validated in the final focused run (27 feature cases
++plus 6 release checks). No old test was deleted, renamed, skipped or relaxed.
++The original baseline release failure identified cache files from the uploaded archive and
++the Linux-only test asset symlink in the unindexed source directory. The release package/index
++excludes those development artifacts; release checks then pass without weakening their rules.
++
++The two full-run skips are exactly:
++- WindowsStartTest.test_speed_on_windows
++- WindowsStartTest.test_start_while_the_shm_file_is_held
++
++Some legacy full-suite GUI teardown paths emitted Tcl after-callback diagnostics. The focused
++final run is clean. New workbench poll/scope/reminder timers and expense traces now cancel on
++widget destruction; a new lifecycle regression verifies scheduled handles are removed.
++
++## Coverage and protection
++- 23 payroll/salary/employee source and related test files are byte-identical to the uploaded ZIP;
++  see protected-payroll-sha256.json.
++- Real SQLite tests cover date bucket boundaries, historical allocations, native currencies,
++  credit-note signs, pending invoice exclusion, warehouse links without multiplied amounts,
++  pagination/full export limits, user-isolated templates and reminder preferences.
++- HTTP tests cover authentication, company/year selection, viewer write refusal and read-only GETs.
++- GUI tests cover live preview, customer drill-down, template saving, actual PDF/Excel output,
++  Arabic Excel RTL, clipboard copy, stale-result rejection and closure cleanup.
++- Existing pre-save invoice duplicate confirmation remains active. The new optional inspection
++  function also tests number/date/amount, currency and editing exclusion.
++- New suggestions and forecasts do not post, create journals, alter payment status, change payroll,
++  or call a paid/external AI API. Their GUI calls use the existing authenticated local data service.
++
++## Measured query performance
++20,000 synthetic invoice headers and lines, five runs on this Linux environment:
++- First 500 matching custom-report lines: median **14.55ms**.
++- Complete ageing grouping: median **249.54ms**.
++These are query benchmarks only, not a reconciled company acceptance benchmark or Windows/end-to-end
++latency guarantee. Raw measurements are in benchmark.json. No OCR accuracy benchmark was performed.
++
++## Explicit remaining limits
++1. **WhatsApp auto-send is not implemented/configured.** Preview, copy and a persisted 6pm local
++   reminder are functional. The auto-send control is disabled and labelled as requiring a messaging
++   gateway. Nothing is transmitted, no recipient is assumed, and no paid messaging API is used.
++2. Custom reporting is an allowlisted **posted sales-line builder**, not arbitrary SQL/Odoo Studio.
++   Header-only invoices are labelled as excluded. Full exports stop at 50,000 lines with an error.
++   Date ranges are limited to the selected fiscal year's file; native currencies are never summed.
++3. The 30-day chart is explicitly a historical cash-average illustration, not a commitment forecast.
++   Existing analytic and longer-term cash-planning reports remain available.
++4. The active project is Tk/ttk, not CustomTkinter. Existing theme and RTL hooks are retained.
++   Native Windows fonts, compact-screen appearance, installer startup, update and backup/restore
++   should be acceptance-tested on Windows before a live rollout. Linux bitmap-font screenshots
++   are not evidence of final Windows Arabic typography.
++5. Odoo/Zoho 8–9/10 is a product target, not a measured or certified result of this change.
++6. The requested GitHub repository returned **404**, so publication is blocked by repository
++   existence/access. No alternate repository, release or main branch was changed.
++
++See USAGE.md for entry points, controls and operational limits. The four requested full-code files
++are under nanza_delivery/; the active integration is nanza/ui/desktop_workbench.py, desktop.py,
++desktop_expenses.py, core/server.py and core/client.py. The complete changed-file diff is included.
++
++Original uploaded validation history is preserved at docs/ux-upgrade/original-validation-report.md.
+--- a/installer.iss
++++ b/installer.iss
+@@ -1,5 +1,5 @@
+ #define MyAppName "Nanza Accounting"
+-#define MyAppVersion "2.9.127"
++#define MyAppVersion "2.9.129"
+ #define MyAppPublisher "Saber for Audit"
+ 
+ [Setup]
+--- a/nanza/core/app_runtime.py
++++ b/nanza/core/app_runtime.py
+@@ -220,7 +220,7 @@
+ 
+ 
+ # ------------------------------------------------------------------ update check (2.9.42)
+-APP_VERSION = "2.9.127"
++APP_VERSION = "2.9.129"
+ # Newest GitHub Release of the program. Another address can be put in <data folder>/update_url.txt
+ # (one line), for example when the repository is private and the installers are shared elsewhere.
+ DEFAULT_UPDATE_URL = "https://api.github.com/repos/nancy818181/nanzalatest/releases/latest"
+--- a/nanza/core/client.py
++++ b/nanza/core/client.py
+@@ -592,3 +592,12 @@
+     def save_asset_category(self,item): return self.request("POST","/api/asset-categories",item)["items"]
+     def asset_depreciation(self,month,account=None): return self.request("GET","/api/asset-depreciation?"+urlencode({k:v for k,v in {"month":month,"account":account}.items() if v}))
+     def post_asset_depreciation(self,account_code,month): return self.request("POST","/api/asset-depreciation/post",{"account_code":account_code,"month":month})
++
++    def workbench(self, action, **params):
++        return self.request("GET", "/api/workbench/" + action + "?" + urlencode({k:v for k,v in params.items() if v not in (None, "")}))
++
++    def save_custom_report(self, name, filters):
++        return self.request("POST", "/api/workbench/templates", {"name": name, "filters": filters})
++
++    def save_workbench_preferences(self, enabled, last_day=None):
++        return self.request("POST", "/api/workbench/preferences", {"reminder_6pm": enabled, "last_day": last_day})
+--- a/nanza/core/release_check.py
++++ b/nanza/core/release_check.py
+@@ -59,6 +59,7 @@
+         found.append("versions differ: " + ", ".join(f"{k} {val}" for k, val in v.items()))
+     program_modules = [
+         *root.glob("*.py"),
++        *(root / "nanza_delivery").glob("*.py"),
+         *(path for path in (root / "nanza").rglob("*.py")
+           if "nanza_backup" not in path.relative_to(root / "nanza").parts),
+     ]
+--- a/nanza/core/server.py
++++ b/nanza/core/server.py
+@@ -252,6 +252,42 @@
+             return self._json(200,{"items":[c for c in items if not allowed or str(c["id"]) in allowed]})
+         if not self._select_database(): return
+         if self._module_denied(user, path): return
++        if path.startswith("/api/workbench/"):
++            try:
++                from nanza_delivery import ageing_report, whatsapp_daily_summary, custom_report_builder, ai_accountant
++                action = path.rsplit("/", 1)[-1]
++                day = self._query(parsed, "date") or date.today().isoformat()
++                currency = self._query(parsed, "currency", "USD")
++                if action == "ageing":
++                    result = ageing_report.get_ageing_buckets(day, self.db, kind=self._query(parsed, "kind", "sale"), currency=self._query(parsed, "currency"))
++                elif action == "summary":
++                    result = {"text": whatsapp_daily_summary.generate_whatsapp_summary(day, self.db, currency=currency, language=self._query(parsed, "language", "en"))}
++                elif action == "forecast":
++                    result = ai_accountant.cashflow_forecast(self.db, as_of=day, currency=currency)
++                elif action == "suggest":
++                    description = self._query(parsed, "description", "")
++                    if len(description) > 2000: raise ValueError("Description is too long")
++                    result = ai_accountant.suggest_category(description, self.db.list_accounts())
++                elif action == "explain":
++                    result = {"text": ai_accountant.explain_profit_loss(self.db, start=self._query(parsed, "date_from"), end=self._query(parsed, "date_to"), currency=currency, language=self._query(parsed, "language", "en"))}
++                elif action in ("report", "report-export"):
++                    filters = {k: self._query(parsed, k) for k in custom_report_builder.FILTERS if self._query(parsed, k)}
++                    if action == "report-export":
++                        result = custom_report_builder.export_report(self.db, filters)
++                    else:
++                        result = custom_report_builder.build_report(self.db, filters, limit=self._query(parsed, "limit", "500"), offset=self._query(parsed, "offset", "0"))
++                elif action == "templates":
++                    result = {"items": custom_report_builder.list_templates(self.db, user["id"])}
++                elif action == "preferences":
++                    result = whatsapp_daily_summary.preferences(self.db, user["id"])
++                elif action == "duplicates":
++                    result = {"items": ai_accountant.detect_duplicate(self._query(parsed, "invoice_no"), self._query(parsed, "amount"), day, self.db,
++                        currency=self._query(parsed, "currency"), party_id=self._query(parsed, "party_id"), kind=self._query(parsed, "kind"), exclude_id=self._query(parsed, "exclude_id"))}
++                else:
++                    return self._json(404, {"error": "Unknown workbench action"})
++                return self._json(200, result)
++            except (ValueError, TypeError, KeyError, ArithmeticError, sqlite3.Error) as exc:
++                return self._json(400, {"error": str(exc)})
+         if path.startswith("/api/ocr/status/"):
+             try:
+                 from nanza.api_ocr import queue_status
+@@ -988,6 +1024,18 @@
+             return self._json(423,{"error":"This fiscal year is closed and read-only"})
+         if user["role"] == "viewer":
+             return self._json(403,{"error":"Viewer access is read-only"})
++        if path == "/api/workbench/templates":
++            try:
++                from nanza_delivery.custom_report_builder import save_template
++                return self._json(201, save_template(self.db, user["id"], body.get("name"), body.get("filters")))
++            except (ValueError, TypeError, sqlite3.Error) as exc:
++                return self._json(400, {"error": str(exc)})
++        if path == "/api/workbench/preferences":
++            try:
++                from nanza_delivery.whatsapp_daily_summary import save_preferences
++                return self._json(200, save_preferences(self.db, user["id"], body))
++            except (ValueError, TypeError, sqlite3.Error) as exc:
++                return self._json(400, {"error": str(exc)})
+         if path == "/api/analytic-study/save":
+             try:
+                 import analytic_study
+--- a/nanza/ui/desktop.py
++++ b/nanza/ui/desktop.py
+@@ -40,9 +40,10 @@
+ from desktop_payroll_sheet import PayrollSheetMixin
+ from desktop_projection import ProjectionMixin
+ from desktop_renumber import RenumberMixin  # 2.9.115
++from desktop_workbench import WorkbenchMixin
+ from desktop_setup_wizard import SetupWizardMixin  # 2.9.116
+ 
+-class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, LearningMixin, ProjectionMixin, PayrollSheetMixin, \
++class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, LearningMixin, ProjectionMixin, PayrollSheetMixin, \
+     InvoicesMixin, PartiesMixin, PayrollMixin,
+         ReportsMixin, SettingsMixin, AssetsMixin, V22Mixin, InventoryMixin, ProductionMixin, AccountToolsMixin, Stage3Mixin, DimensionsMixin,
+         BrainsScreensMixin, FinalFeaturesMixin, CNSSFormsMixin, tk.Tk):
+@@ -1111,9 +1112,11 @@
+         self.dashboard_chart=tk.Canvas(self.dashboard_tab,height=105,bg="white",highlightthickness=0)
+         # 2.9.60: the small monthly strip repeated the "by month" chart below; it is kept (exports use it) but not shown
+         self.build_dashboard_charts(self.dashboard_tab)
++        self.build_workbench_tools(self.dashboard_tab)
+         self.load_dashboard()
+ 
+     def load_dashboard(self):
++        self.refresh_workbench()
+         try: data=self.client.professional_dashboard(); rows=data["metrics"]
+         except Exception as exc: return messagebox.showerror("Error",str(exc))
+         selected=self.dashboard_base_currency.get()
+--- a/nanza/ui/desktop_expenses.py
++++ b/nanza/ui/desktop_expenses.py
+@@ -73,6 +73,36 @@
+         f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_expenses())
+         f["find_box"].bind("<Return>", lambda _e: self.expense_found())
+ 
++        self.install_offline_expense_hint(page, f)
++
++    def install_offline_expense_hint(self, page, form):
++        from desktop_workbench import async_call
++        hint = tk.Label(page, text="", bg=LIGHT, fg=NAVY, anchor="w")
++        hint.pack(fill="x", padx=12, pady=3)
++        state = {"timer": None}
++        def changed(*_):
++            if state["timer"]:
++                hint.after_cancel(state["timer"])
++            hint._wb_generation = getattr(hint, "_wb_generation", 0) + 1
++            text = form["vars"]["description"].get().strip()
++            hint.configure(text="")
++            if len(text) < 3:
++                return
++            def show(result):
++                code = result.get("account_code")
++                hint.configure(text=(f"Suggested / مقترح: {code} · {result.get('account_name', '')} · rule-based; review / راجع" if code else "No unambiguous account suggestion / لا يوجد اقتراح مؤكد"))
++            def request():
++                state["timer"] = None
++                async_call(hint, self, lambda c: c.workbench("suggest", description=text), show, hint)
++            state["timer"] = hint.after(450, request)
++        trace_id = form["vars"]["description"].trace_add("write", changed)
++        def cleanup(event):
++            if event.widget is hint:
++                if state["timer"]:
++                    hint.after_cancel(state["timer"])
++                form["vars"]["description"].trace_remove("write", trace_id)
++        hint.bind("<Destroy>", cleanup, add="+")
++
+     def expense_amounts_changed(self, key):
+         f = self.expense_form; v = f["vars"]
+         if key == "vat": f["vat_typed"] = True
+--- /dev/null
++++ b/nanza/ui/desktop_workbench.py
+@@ -0,0 +1,894 @@
++"""Responsive workbench: workers do I/O; only Tk's thread reads/writes widgets."""
++
++from __future__ import annotations
++import logging
++import queue
++import threading
++import tkinter as tk
++from tkinter import ttk, filedialog, messagebox, simpledialog
++from datetime import date, datetime
++from decimal import Decimal
++from client import ApiClient
++from desktop_common import NAVY, GOLD, LIGHT, flow_toolbars
++
++LOG = logging.getLogger("nanza.workbench")
++
++
++def frozen_client(source):
++    """A running worker must not follow a mutable selection into another company."""
++    client = ApiClient(source.base_url)
++    client.token, client.company_id, client.fiscal_year = source.token, source.company_id, source.fiscal_year
++    return client
++
++
++def context_key(app):
++    c = getattr(app, "client", None)
++    return (c.base_url, c.token, c.company_id, c.fiscal_year) if c is not None else None
++
++
++def async_call(owner, app, work, done, status=None):
++    """Bounded one-worker queue per widget, replacing obsolete pending requests."""
++    owner._wb_generation = getattr(owner, "_wb_generation", 0) + 1
++    generation = owner._wb_generation
++    key = context_key(app)
++    if not hasattr(owner, "_wb_jobs"):
++        owner._wb_jobs = queue.Queue(maxsize=1)
++        owner._wb_results = queue.Queue()
++
++        def worker():
++            while True:
++                job = owner._wb_jobs.get()
++                if job is None:
++                    return
++                seq, scope, client, task, callback = job
++                try:
++                    result = task(client)
++                    owner._wb_results.put((seq, scope, callback, result, None))
++                except (OSError, RuntimeError, ValueError, TypeError, KeyError, ArithmeticError) as exc:
++                    LOG.warning("Workbench operation failed", exc_info=True)
++                    owner._wb_results.put((seq, scope, callback, None, str(exc)))
++                finally:
++                    client.close()
++
++        owner._wb_thread = threading.Thread(target=worker, name="NanzaWorkbench", daemon=True)
++        owner._wb_thread.start()
++
++        def cleanup(event):
++            if event.widget is not owner:
++                return
++            timer = getattr(owner, "_wb_poll_id", None)
++            if timer:
++                owner.after_cancel(timer)
++            try:
++                stale_job = owner._wb_jobs.get_nowait()
++                if stale_job is not None:
++                    stale_job[2].close()
++            except queue.Empty:
++                pass
++            try:
++                owner._wb_jobs.put_nowait(None)
++            except queue.Full:
++                pass
++
++        owner.bind("<Destroy>", cleanup, add="+")
++
++        def poll():
++            if not owner.winfo_exists():
++                return
++            while True:
++                try:
++                    seq, scope, callback, value, error = owner._wb_results.get_nowait()
++                except queue.Empty:
++                    break
++                if seq != owner._wb_generation or context_key(app) != scope:
++                    continue
++                if error:
++                    if status is not None:
++                        status.configure(text=error, fg="#a32032")
++                    else:
++                        messagebox.showerror("NANZA", error, parent=owner)
++                else:
++                    callback(value)
++            owner._wb_poll_id = owner.after(60, poll)
++
++        owner._wb_poll_id = owner.after(60, poll)
++    job = (generation, key, frozen_client(app.client), work, done)
++    try:
++        stale = owner._wb_jobs.get_nowait()
++        if stale is not None:
++            stale[2].close()
++    except queue.Empty:
++        pass
++    owner._wb_jobs.put_nowait(job)
++
++
++def tooltip(widget, text):
++    state = {"window": None, "timer": None}
++
++    def leave(_event=None):
++        if state["timer"]:
++            widget.after_cancel(state["timer"])
++            state["timer"] = None
++        if state["window"]:
++            state["window"].destroy()
++            state["window"] = None
++
++    def show():
++        state["timer"] = None
++        w = tk.Toplevel(widget)
++        w.overrideredirect(True)
++        w.geometry(f"+{widget.winfo_rootx()+10}+{widget.winfo_rooty()+widget.winfo_height()+4}")
++        tk.Label(w, text=text, bg=NAVY, fg="white", padx=10, pady=6).pack()
++        state["window"] = w
++
++    widget.bind("<Enter>", lambda _e: state.update(timer=widget.after(500, show)), add="+")
++    widget.bind("<Leave>", leave, add="+")
++    widget.bind("<Destroy>", leave, add="+")
++
++
++def button(parent, text, command, hint=""):
++    b = tk.Button(
++        parent,
++        text=text,
++        command=command,
++        bg=NAVY,
++        fg="white",
++        activebackground=GOLD,
++        activeforeground=NAVY,
++        relief="flat",
++        padx=12,
++        pady=7,
++        cursor="hand2",
++    )
++    b.pack(side="left", padx=4, pady=4)
++    if hint:
++        tooltip(b, hint)
++    return b
++
++
++def table(parent, headers):
++    frame = tk.Frame(parent, bg="white")
++    frame.pack(fill="both", expand=True, padx=10, pady=8)
++    tree = ttk.Treeview(frame, columns=list(range(len(headers))), show="headings", height=12)
++    for i, h in enumerate(headers):
++        tree.heading(i, text=h)
++        tree.column(i, width=125, minwidth=75)
++    y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
++    x = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
++    tree.configure(yscrollcommand=y.set, xscrollcommand=x.set)
++    tree.grid(row=0, column=0, sticky="nsew")
++    y.grid(row=0, column=1, sticky="ns")
++    x.grid(row=1, column=0, sticky="ew")
++    frame.grid_rowconfigure(0, weight=1)
++    frame.grid_columnconfigure(0, weight=1)
++
++    def fit_columns(event):
++        # Keep totals visible at laptop widths; horizontal scrolling remains for very narrow windows.
++        width = max(60, (event.width - 20) // max(1, len(headers)))
++        for column in tree["columns"]:
++            tree.column(column, width=width, minwidth=60, stretch=True)
++
++    frame.bind("<Configure>", fit_columns, add="+")
++    return tree
++
++
++def show_rows(tree, rows):
++    tree.delete(*tree.get_children())
++    for row in rows:
++        tree.insert("", "end", values=[f"{v:,.2f}" if isinstance(v, Decimal) else v for v in row])
++
++
++def write_export(path, title, headers, rows, extension, language):
++    from report_export import export_sections_excel, export_sections_pdf
++
++    if extension == "xlsx":
++        rows = [
++            [
++                (
++                    "'" + value
++                    if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@"))
++                    else value
++                )
++                for value in row
++            ]
++            for row in rows
++        ]
++    sections = [
++        {"heading": title, "headers": headers, "rows": rows, "total_rows": [], "report_language": language}
++    ]
++    writer = export_sections_excel if extension == "xlsx" else export_sections_pdf
++    writer(path, title, [], sections)
++    return path
++
++
++def export_current(owner, title, headers, rows, extension="xlsx"):
++    if not rows:
++        return
++    path = filedialog.asksaveasfilename(
++        parent=owner, defaultextension="." + extension, filetypes=[(extension.upper(), "*." + extension)]
++    )
++    if not path:
++        return
++    app = getattr(owner, "app", None) or getattr(owner.master, "app", None)
++    if app is None:
++        raise RuntimeError("Export needs a selected application session")
++    language = app.language.get()
++    if language == "ar":
++        import arabic_ui
++
++        title = arabic_ui.translate(title)
++        headers = [arabic_ui.translate(h) for h in headers]
++    # Independent owner: changing filters does not cancel an explicitly requested export.
++    job = tk.Frame(owner)
++    owner._wb_export_done = False
++
++    def completed(_result):
++        owner._wb_export_done = True
++        if hasattr(owner, "status"):
++            owner.status.configure(text="Export saved / تم حفظ الملف", fg=NAVY)
++        job.destroy()
++
++    async_call(
++        job,
++        app,
++        lambda _client: write_export(path, title, headers, rows, extension, language),
++        completed,
++        getattr(owner, "status", None),
++    )
++
++
++class WorkbenchWindow(tk.Toplevel):
++    def __init__(self, app, title):
++        super().__init__(app)
++        self.app, self.scope = app, context_key(app)
++        self.title(title)
++        self.configure(bg=LIGHT)
++        self.geometry("1120x680")
++        self.minsize(780, 500)
++        self.status = tk.Label(
++            self,
++            text="",
++            bg=LIGHT,
++            fg=NAVY,
++            anchor="e" if app.language.get() == "ar" else "w",
++            wraplength=1000,
++        )
++        self.status.pack(side="bottom", fill="x", padx=12, pady=8)
++        self.bind("<Control-w>", lambda _e: app.open_whatsapp_summary())
++        self._wb_scope_id = self.after(300, self.check_scope)
++
++    def check_scope(self):
++        if context_key(self.app) != self.scope:
++            self.destroy()
++            return
++        self._wb_scope_id = self.after(300, self.check_scope)
++
++    def destroy(self):
++        for timer in (getattr(self, "_wb_scope_id", None), getattr(self, "pending", None)):
++            if timer:
++                self.after_cancel(timer)
++        super().destroy()
++
++
++class AgeingWindow(WorkbenchWindow):
++    def __init__(self, app):
++        super().__init__(app, "Ageing • أعمار الذمم")
++        self.data = None
++        self.visible = []
++        self.drill = None
++        controls = tk.Frame(self, bg=LIGHT)
++        controls.pack(fill="x", padx=8)
++        self.day = tk.StringVar(value=app.fiscal_today())
++        ttk.Entry(controls, textvariable=self.day, width=12).pack(side="left", padx=4)
++        self.kind = tk.StringVar(value="sale")
++        self.currency = tk.StringVar(value="")
++        ttk.Combobox(
++            controls, textvariable=self.kind, values=["sale", "purchase"], state="readonly", width=10
++        ).pack(side="left")
++        self.kind.trace_add("write", lambda *_: self.load())
++        button(
++            controls,
++            "Refresh / تحديث",
++            self.load,
++            "تحديث الذمم حسب تاريخ الاستحقاق والدفعات في التاريخ المختار",
++        )
++        button(controls, "Excel", self.export, "تصدير العرض الحالي إلى إكسل — Ctrl+E")
++        self.bind("<Control-e>", lambda _e: self.export())
++        chips = tk.Frame(self, bg=LIGHT)
++        chips.pack(fill="x", padx=8)
++        self.bucket = "All"
++        from nanza_delivery.ageing_report import BUCKETS, COLORS
++
++        for b in ("All", *BUCKETS):
++            chip = tk.Button(
++                chips,
++                text=b,
++                bg=COLORS.get(b, "white"),
++                relief="flat",
++                padx=18,
++                pady=8,
++                command=lambda value=b: self.filter(value),
++            )
++            chip.pack(side="left", padx=4, pady=4)
++            tooltip(chip, "فلتر بنقرة واحدة؛ 90+ يعني أكثر من 90 يوماً")
++        self.headers = ["Customer / Supplier", "Currency", *BUCKETS, "Credit", "Total", "Overdue"]
++        self.tree = table(self, self.headers)
++        for b, color in COLORS.items():
++            self.tree.tag_configure(b, background=color)
++        self.tree.bind("<Double-1>", self.open_invoices)
++        self.load()
++
++    def load(self):
++        day, kind = self.day.get(), self.kind.get()
++        self.status.configure(text="Loading / جارٍ التحميل…")
++        async_call(
++            self, self.app, lambda c: c.workbench("ageing", date=day, kind=kind), self.loaded, self.status
++        )
++
++    def loaded(self, result):
++        self.data = result
++        self.filter(self.bucket)
++
++    def filter(self, bucket):
++        self.bucket = bucket
++        if self.data is None:
++            return
++        from nanza_delivery.ageing_report import BUCKETS
++
++        self.visible = [
++            r for r in self.data["parties"] if bucket == "All" or Decimal(str(r["buckets"][bucket])) > 0
++        ]
++        self.rows = [
++            [
++                r["party_name"],
++                r["currency"],
++                *(Decimal(str(r["buckets"][b])) for b in BUCKETS),
++                Decimal(str(r["credit"])),
++                Decimal(str(r["total"])),
++                Decimal(str(r["overdue"])),
++            ]
++            for r in self.visible
++        ]
++        self.tree.delete(*self.tree.get_children())
++        for index, (row, party) in enumerate(zip(self.rows, self.visible)):
++            self.tree.insert(
++                "",
++                "end",
++                iid=str(index),
++                values=[f"{v:,.2f}" if isinstance(v, Decimal) else v for v in row],
++                tags=(party["severity"],),
++            )
++        totals = "; ".join(f"{c}: {Decimal(str(r['overdue'])):,.2f}" for c, r in self.data["totals"].items())
++        self.status.configure(
++            text=f'Overdue / المتأخر: {totals or "0"} | Double-click to view invoices. 0-30 includes not due; credits separate.',
++            fg=NAVY,
++        )
++
++    def export(self):
++        export_current(self, "Ageing", self.headers, getattr(self, "rows", []))
++
++    def open_invoices(self, _event=None):
++        selection = self.tree.selection()
++        if not selection:
++            return
++        party = self.visible[int(selection[0])]
++        dialog = tk.Toplevel(self)
++        dialog.title(party["party_name"])
++        dialog.geometry("920x450")
++        headers = ["Invoice", "Date", "Due", "Currency", "Outstanding", "Days", "Bucket"]
++        rows = [
++            [
++                r["invoice_number"],
++                r["invoice_date"],
++                r.get("due_date") or "",
++                r["currency"],
++                Decimal(str(r["outstanding"])),
++                r["days_overdue"],
++                r["bucket"],
++            ]
++            for r in party["invoices"]
++        ]
++        actions = tk.Frame(dialog)
++        actions.pack(fill="x")
++        button(actions, "Excel", lambda: export_current(dialog, "Customer invoices", headers, rows))
++        show_rows(table(dialog, headers), rows)
++
++
++class CustomReportWindow(WorkbenchWindow):
++    def __init__(self, app):
++        super().__init__(app, "Custom reports • تقارير مخصصة")
++        self.pending = None
++        self.page = 0
++        self.result = None
++        self.matches = {}
++        self._applying = False
++        self.vars = {
++            k: tk.StringVar()
++            for k in ("date_from", "date_to", "customer", "product", "warehouse", "currency")
++        }
++        today = app.fiscal_today()
++        from desktop_common import parse_user_date
++
++        day = parse_user_date(today).date()
++        self.vars["date_from"].set(day.replace(day=1).isoformat())
++        self.vars["date_to"].set(day.isoformat())
++        self.filters_bar = tk.Frame(self, bg=LIGHT)
++        self.filters_bar.pack(fill="x", padx=8, pady=6)
++        self.cards = []
++        self.boxes = {}
++        self.dragging = None
++        labels = {
++            "date_from": "From / من",
++            "date_to": "To / إلى",
++            "customer": "Customer / العميل",
++            "product": "Product / الصنف",
++            "warehouse": "Warehouse / المستودع",
++            "currency": "Currency / العملة",
++        }
++        for k, var in self.vars.items():
++            card = tk.Frame(
++                self.filters_bar,
++                bg="white",
++                padx=6,
++                pady=5,
++                highlightthickness=1,
++                highlightbackground="#dce2eb",
++            )
++            card.pack(side="left", fill="x", expand=True, padx=3)
++            grip = tk.Label(card, text="⋮⋮ " + labels[k], bg="white", fg=NAVY, cursor="fleur")
++            grip.pack(anchor="w")
++            grip.bind("<ButtonPress-1>", lambda _e, c=card: setattr(self, "dragging", c))
++            grip.bind("<ButtonRelease-1>", self.drop_filter)
++            tooltip(grip, "اسحب عنوان الفلتر لترتيبه؛ اكتب للبحث والقائمة تتحدّث تلقائياً")
++            entry = (
++                ttk.Entry(card, textvariable=var, width=12)
++                if k.startswith("date_")
++                else ttk.Combobox(card, textvariable=var, width=17)
++            )
++            entry.pack(fill="x")
++            self.boxes[k] = entry
++            self.cards.append(card)
++            if not k.startswith("date_"):
++                entry.bind("<KeyRelease>", lambda _e, field=k: self.search_choices(field))
++            var.trace_add("write", self.changed)
++        actions = tk.Frame(self, bg=LIGHT)
++        actions.pack(fill="x", padx=8)
++        button(actions, "Excel", lambda: self.export("xlsx"), "تصدير كل النتائج المطابقة — Ctrl+E")
++        button(actions, "PDF", lambda: self.export("pdf"), "تصدير كل النتائج المطابقة إلى PDF")
++        button(actions, "Save template / حفظ", self.save_template, "حفظ الفلاتر باسم لإعادة استخدامها")
++        self.template = tk.StringVar()
++        self.template_box = ttk.Combobox(actions, textvariable=self.template, state="readonly", width=24)
++        self.template_box.pack(side="left", padx=4)
++        self.template_box.bind("<<ComboboxSelected>>", self.apply_template)
++        button(actions, "←", lambda: self.change_page(-1), "الصفحة السابقة")
++        button(actions, "→", lambda: self.change_page(1), "الصفحة التالية")
++        from nanza_delivery.custom_report_builder import HEADERS
++
++        self.tree = table(self, HEADERS)
++        self.bind("<Control-e>", lambda _e: self.export("xlsx"))
++        # Metadata owner is separate: preview requests must not cancel dropdown population.
++        self.meta_owner = tk.Frame(self)
++        async_call(
++            self.meta_owner,
++            app,
++            lambda c: {
++                "customers": c.parties(),
++                "products": c.inventory_items(),
++                "warehouses": c.warehouses(),
++                "currencies": c.currencies(),
++                "templates": c.workbench("templates")["items"],
++            },
++            self.metadata,
++            self.status,
++        )
++        self.changed()
++
++    def drop_filter(self, event):
++        dragged = self.dragging
++        target = self.winfo_containing(event.x_root, event.y_root)
++        while target is not None and target not in self.cards:
++            target = getattr(target, "master", None)
++        if dragged is not None and target is not None and dragged is not target:
++            self.cards.remove(dragged)
++            self.cards.insert(self.cards.index(target), dragged)
++            for card in self.cards:
++                card.pack_forget()
++            for card in self.cards:
++                card.pack(side="left", fill="x", expand=True, padx=3)
++        self.dragging = None
++
++    def metadata(self, data):
++        self.matches = {
++            "customer": {
++                f"{r['name']} · {r['id']}": str(r["id"])
++                for r in data["customers"]
++                if r.get("kind") in ("customer", "both")
++            },
++            "product": {f"{r['sku']} · {r['name']}": r["sku"] for r in data["products"]},
++            "warehouse": {f"{r['code']} · {r['name']}": str(r["id"]) for r in data["warehouses"]},
++            "currency": {r["code"]: r["code"] for r in data["currencies"]},
++        }
++        for field, choices in self.matches.items():
++            self.boxes[field].configure(values=["", *choices])
++        self.templates = {r["name"]: r["filters"] for r in data["templates"]}
++        self.template_box.configure(values=list(self.templates))
++        self.changed()
++
++    def search_choices(self, field):
++        text = self.vars[field].get().casefold()
++        self.boxes[field].configure(
++            values=["", *(label for label in self.matches.get(field, {}) if text in label.casefold())]
++        )
++
++    def filters(self):
++        filters = {}
++        for k, var in self.vars.items():
++            value = var.get().strip()
++            if value and k in self.matches:
++                if value not in self.matches[k]:
++                    raise ValueError("Select a matching " + k + " / اختر قيمة من القائمة")
++                value = self.matches[k][value]
++            if value:
++                filters[k] = value
++        return filters
++
++    def changed(self, *_):
++        if self._applying:
++            return
++        self.page = 0
++        self.result = None
++        if self.pending:
++            self.after_cancel(self.pending)
++        # Invalidate the active request immediately, before debounce elapses.
++        self._wb_generation = getattr(self, "_wb_generation", 0) + 1
++        self.pending = self.after(350, self.refresh)
++
++    def refresh(self):
++        self.pending = None
++        try:
++            filters = self.filters()
++            from nanza_delivery.custom_report_builder import validate_filters
++
++            validate_filters(filters)
++        except ValueError as exc:
++            self.result = None
++            self.tree.delete(*self.tree.get_children())
++            self.status.configure(text=str(exc))
++            return
++        self.status.configure(text="Updating preview / تحديث المعاينة…")
++        page = self.page
++        async_call(
++            self,
++            self.app,
++            lambda c: c.workbench("report", **filters, limit=500, offset=page * 500),
++            self.loaded,
++            self.status,
++        )
++
++    def loaded(self, result):
++        self.result = result
++        result["rows"] = [[*r[:6], *(Decimal(str(v)) for v in r[6:])] for r in result["rows"]]
++        show_rows(self.tree, result["rows"])
++        totals = "; ".join(f"{code}: {Decimal(str(value)):,.2f}" for code, value in result["totals"].items())
++        self.status.configure(
++            text=f"Page {self.page+1} • {len(result['rows'])} lines • {totals} • {result['note']}", fg=NAVY
++        )
++
++    def change_page(self, direction):
++        if direction < 0 and self.page > 0 or direction > 0 and self.result and self.result["has_more"]:
++            self.page += direction
++            self.result = None
++            self.refresh()
++
++    def export(self, extension):
++        self._wb_export_done = False
++        if not self.result:
++            return
++        filters = dict(self.result["filters"])
++        self.status.configure(text="Preparing complete export / تحضير التصدير الكامل…")
++
++        def done(result):
++            rows = [[*r[:6], *(Decimal(str(v)) for v in r[6:])] for r in result["rows"]]
++            export_current(self, result["title"], result["headers"], rows, extension)
++            self.status.configure(text=f"Complete export: {len(rows)} lines / تصدير كامل")
++
++        async_call(self, self.app, lambda c: c.workbench("report-export", **filters), done, self.status)
++
++    def save_template(self):
++        try:
++            filters = self.filters()
++        except ValueError as exc:
++            self.status.configure(text=str(exc))
++            return
++        name = simpledialog.askstring("Template", "Name / اسم التقرير", parent=self)
++        if not name:
++            return
++
++        def saved(result):
++            self.templates[result["name"]] = result["filters"]
++            self.template_box.configure(values=list(self.templates))
++            self.template.set(result["name"])
++            self.status.configure(text="Template saved / تم الحفظ")
++
++        async_call(
++            self.meta_owner, self.app, lambda c: c.save_custom_report(name, filters), saved, self.status
++        )
++
++    def apply_template(self, _event=None):
++        filters = getattr(self, "templates", {}).get(self.template.get(), {})
++        self._applying = True
++        for k, var in self.vars.items():
++            raw = str(filters.get(k, ""))
++            var.set(next((label for label, value in self.matches.get(k, {}).items() if value == raw), raw))
++        self._applying = False
++        self.changed()
++
++
++class WhatsAppWindow(WorkbenchWindow):
++    def __init__(self, app):
++        super().__init__(app, "WhatsApp summary • ملخّص واتساب")
++        self.geometry("850x590")
++        self.ready = False
++        controls = tk.Frame(self, bg=LIGHT)
++        controls.pack(fill="x", padx=8)
++        self.day = tk.StringVar(value=app.fiscal_today())
++        self.currency = tk.StringVar(value="USD")
++        ttk.Entry(controls, textvariable=self.day, width=13).pack(side="left", padx=4)
++        currency_box = ttk.Combobox(
++            controls, textvariable=self.currency, values=["USD", "LBP", "EUR"], width=9
++        )
++        currency_box.pack(side="left")
++        button(controls, "Preview / معاينة", self.load, "معاينة قبل النسخ؛ لا يتم إرسال أي بيانات تلقائياً")
++        self.copy_button = button(
++            controls, "Copy / نسخ", self.copy, "نسخ النص المعروض للمشاركة يدوياً — Ctrl+W"
++        )
++        self.copy_button.configure(state="disabled")
++        self.text = tk.Text(self, wrap="word", font=("Segoe UI", 12), padx=18, pady=15, bg="white", fg=NAVY)
++        self.text.pack(fill="both", expand=True, padx=12, pady=8)
++        self.reminder = tk.BooleanVar(value=getattr(app, "_wb_reminder", False))
++        bar = tk.Frame(self, bg=LIGHT)
++        bar.pack(fill="x", padx=12)
++        ttk.Checkbutton(
++            bar,
++            text="6pm local reminder / تذكير الساعة ٦ (البرنامج مفتوح)",
++            variable=self.reminder,
++            command=self.save_reminder,
++        ).pack(anchor="w")
++        auto = ttk.Checkbutton(
++            bar,
++            text="Auto-send at 6pm / إرسال تلقائي: requires a configured messaging gateway",
++            state="disabled",
++        )
++        auto.pack(anchor="w")
++        tooltip(auto, "الإرسال التلقائي غير مهيأ؛ النسخ والتذكير محليان ومجانيان")
++        self.bind("<Control-w>", lambda _e: self.copy())
++        self.day.trace_add("write", lambda *_: self.invalidate())
++        self.currency.trace_add("write", lambda *_: self.invalidate())
++        self.load()
++
++    def invalidate(self):
++        self.ready = False
++        self.copy_button.configure(state="disabled")
++        self._wb_generation = getattr(self, "_wb_generation", 0) + 1
++
++    def load(self):
++        day, currency, language = self.day.get(), self.currency.get(), self.app.language.get()
++        self.invalidate()
++        self.status.configure(text="Preparing local preview / تحضير المعاينة…")
++        async_call(
++            self,
++            self.app,
++            lambda c: c.workbench("summary", date=day, currency=currency, language=language),
++            self.loaded,
++            self.status,
++        )
++
++    def loaded(self, result):
++        self.text.configure(state="normal")
++        self.text.delete("1.0", "end")
++        self.text.insert("1.0", result["text"])
++        self.text.configure(state="disabled")
++        self.ready = True
++        self.copy_button.configure(state="normal")
++        self.status.configure(
++            text="Review then copy. Nothing is sent automatically. / راجع النص ثم انسخه.", fg=NAVY
++        )
++
++    def copy(self):
++        if self.ready:
++            self.clipboard_clear()
++            self.clipboard_append(self.text.get("1.0", "end-1c"))
++            self.status.configure(text="Copied / تم النسخ")
++
++    def save_reminder(self):
++        enabled = self.reminder.get()
++        last_day = getattr(self.app, "_wb_last_day", None)
++        async_call(
++            self,
++            self.app,
++            lambda c: c.save_workbench_preferences(enabled, last_day),
++            self.preferences_saved,
++            self.status,
++        )
++
++    def preferences_saved(self, result):
++        self.app._wb_reminder = result["reminder_6pm"]
++        self.status.configure(text="Reminder saved / تم حفظ التذكير")
++
++
++class WorkbenchMixin:
++    def build_workbench_tools(self, parent):
++        panel = tk.Frame(parent, bg="white", highlightbackground="#dce2eb", highlightthickness=1)
++        panel.pack(fill="x", padx=12, pady=8)
++        actions = tk.Frame(panel, bg="white")
++        actions.pack(fill="x", padx=8)
++        button(
++            actions, "Ageing / أعمار الذمم", self.open_ageing_workbench, "الذمم المتأخرة والتفاصيل بنقرتين"
++        )
++        button(
++            actions,
++            "Custom reports / تقارير مخصصة",
++            self.open_custom_reports,
++            "فلاتر قابلة للسحب ومعاينة فورية",
++        )
++        button(
++            actions,
++            "Explain P&L / تفسير الربح",
++            self.open_profit_explanation,
++            "تفسير تغيّر الربح من الحسابات الفعلية",
++        )
++        button(
++            actions, "Copy WhatsApp Summary", self.open_whatsapp_summary, "معاينة ونسخ ملخص اليوم — Ctrl+W"
++        )
++        self._wb_badge = tk.Label(
++            actions, text="Overdue…", bg="#ffe1e5", fg="#a32032", padx=10, pady=7, cursor="hand2"
++        )
++        self._wb_badge.pack(side="right", padx=5)
++        self._wb_badge.bind("<Button-1>", lambda _e: self.open_ageing_workbench())
++        self._wb_canvas = tk.Canvas(panel, height=85, bg="white", highlightthickness=0)
++        self._wb_canvas.pack(fill="x", padx=12, pady=4)
++        self._wb_status = tk.Label(
++            panel, text="30-day cash illustration / تقدير نقدي ٣٠ يوماً", bg="white", fg=NAVY, anchor="w"
++        )
++        self._wb_status.pack(fill="x", padx=12)
++        self.bind("<Control-w>", lambda _e: self.open_whatsapp_summary())
++        self.bind("<Control-W>", lambda _e: self.open_whatsapp_summary())
++        self.bind("<Control-e>", self.export_workbench_shortcut)
++        self._wb_canvas.bind(
++            "<Configure>", lambda _e: self.draw_workbench_forecast(getattr(self, "_wb_forecast", {}))
++        )
++        flow_toolbars(actions)
++        self.refresh_workbench()
++        if not getattr(self, "_wb_clock_started", False):
++            self._wb_clock_started = True
++            self._wb_clock_id = self.after(60000, self.workbench_clock)
++            self.bind("<Destroy>", self.cancel_workbench_clock, add="+")
++
++    def export_workbench_shortcut(self, _event=None):
++        self.open_custom_reports()
++
++    def refresh_workbench(self):
++        owner = getattr(self, "_wb_canvas", None)
++        if owner is None or not owner.winfo_exists():
++            return
++        day = self.fiscal_today()
++        currency = self.dashboard_base_currency.get()
++        if currency == "All Currencies":
++            currency = "USD"
++        self._wb_canvas.delete("all")
++        self._wb_forecast = {}
++        self._wb_reminder = False
++        self._wb_last_day = None
++        self._wb_badge.configure(text="Overdue…")
++
++        def work(c):
++            return {
++                "ageing": c.workbench("ageing", date=day, kind="sale"),
++                "forecast": c.workbench("forecast", date=day, currency=currency),
++                "preferences": c.workbench("preferences"),
++            }
++
++        async_call(owner, self, work, self.fill_workbench, self._wb_status)
++
++    def fill_workbench(self, result):
++        totals = result["ageing"]["totals"]
++        self._wb_badge.configure(
++            text="Overdue / متأخر: "
++            + ("; ".join(f"{code} {Decimal(str(r['overdue'])):,.2f}" for code, r in totals.items()) or "0")
++        )
++        self._wb_forecast = result["forecast"]
++        self.draw_workbench_forecast(self._wb_forecast)
++        self._wb_reminder = result["preferences"]["reminder_6pm"]
++        self._wb_last_day = result["preferences"]["last_day"]
++
++    def draw_workbench_forecast(self, result):
++        canvas = getattr(self, "_wb_canvas", None)
++        if canvas is None or not canvas.winfo_exists():
++            return
++        canvas.delete("all")
++        points = result.get("points", [])
++        width = max(400, canvas.winfo_width())
++        if not points:
++            canvas.create_text(
++                12, 32, anchor="w", text="Insufficient cash history / لا توجد حركة نقدية كافية", fill=NAVY
++            )
++            return
++        values = [float(p["balance"]) for p in points]
++        lower, upper = min(values), max(values)
++        spread = upper - lower or max(1, abs(upper) * 0.1)
++        coords = []
++        for i, value in enumerate(values):
++            coords.extend([12 + i * (width - 24) / 30, 65 - (value - lower) / spread * 45])
++        canvas.create_line(*coords, fill="#187d67", width=3)
++        canvas.create_text(12, 77, anchor="w", text=f"Today {values[0]:,.2f} {result['currency']}", fill=NAVY)
++        canvas.create_text(
++            width - 12, 77, anchor="e", text=f"Day 30 {values[-1]:,.2f} {result['currency']}", fill=NAVY
++        )
++        self._wb_status.configure(
++            text=f"30-day illustration • {result['currency']} • {result['assumption']}", fg=NAVY
++        )
++
++    def workbench_clock(self):
++        from nanza_delivery.whatsapp_daily_summary import reminder_due
++
++        if getattr(self, "client", None) and reminder_due(
++            datetime.now(), getattr(self, "_wb_reminder", False), getattr(self, "_wb_last_day", None)
++        ):
++            self._wb_last_day = date.today().isoformat()
++            day = self._wb_last_day
++            owner = getattr(self, "_wb_canvas", None)
++            if owner is not None and owner.winfo_exists():
++                async_call(
++                    owner,
++                    self,
++                    lambda c: c.save_workbench_preferences(True, day),
++                    lambda _r: self.open_whatsapp_summary(),
++                    self._wb_status,
++                )
++        self._wb_clock_id = self.after(60000, self.workbench_clock)
++
++    def cancel_workbench_clock(self, event):
++        if event.widget is self and getattr(self, "_wb_clock_id", None):
++            self.after_cancel(self._wb_clock_id)
++
++    def open_profit_explanation(self):
++        window = WorkbenchWindow(self, "Profit explanation / تفسير الربح")
++        text = tk.Text(window, wrap="word", padx=15, pady=15, font=("Segoe UI", 12))
++        text.pack(fill="both", expand=True, padx=12, pady=12)
++        from desktop_common import parse_user_date
++
++        end = parse_user_date(self.fiscal_today()).date()
++        start = end.replace(day=1)
++        currency = self.dashboard_base_currency.get()
++        if currency == "All Currencies":
++            currency = "USD"
++        language = self.language.get()
++
++        def done(result):
++            text.insert("1.0", result["text"])
++            text.configure(state="disabled")
++            window.status.configure(text="Posted P&L only; preceding equal-length period / حسابات مرحّلة فقط")
++
++        async_call(
++            window,
++            self,
++            lambda c: c.workbench(
++                "explain",
++                date_from=start.isoformat(),
++                date_to=end.isoformat(),
++                currency=currency,
++                language=language,
++            ),
++            done,
++            window.status,
++        )
++        return window
++
++    def open_ageing_workbench(self):
++        return AgeingWindow(self)
++
++    def open_custom_reports(self):
++        return CustomReportWindow(self)
++
++    def open_whatsapp_summary(self):
++        return WhatsAppWindow(self)
+--- /dev/null
++++ b/nanza_delivery/ageing_report.py
+@@ -0,0 +1,76 @@
++"""Fast ageing presentation over the existing as-of settlement engine.
++
++No currencies are added together; advances remain visible separately.
++The last bucket is >90 (91+): day 90 belongs to 61-90.
++"""
++
++from decimal import Decimal
++from database_common import iso_date
++
++BUCKETS = ("0-30", "31-60", "61-90", "90+")
++COLORS = dict(zip(BUCKETS, ("#dff3e4", "#fff4bf", "#ffe0bb", "#ffd9df")))
++
++
++def bucket_for(days):
++    days = max(0, int(days))
++    return BUCKETS[0 if days <= 30 else 1 if days <= 60 else 2 if days <= 90 else 3]
++
++
++def get_ageing_buckets(as_of_date, database=None, *, kind="sale", currency=None):
++    """Use an explicitly selected company database, never a global/default DB."""
++    if database is None:
++        raise ValueError("Select a company database first")
++    if kind not in ("sale", "purchase"):
++        raise ValueError("Choose sale or purchase")
++    as_of = iso_date(as_of_date)
++    details = []
++    grouped = {}
++    for source in database.aging_report(as_of, kind, currency):
++        row = dict(source)
++        amount = Decimal(str(row["outstanding"]))
++        bucket = bucket_for(row["days_overdue"])
++        row.update(bucket=bucket, outstanding=amount)
++        details.append(row)
++        key = (row.get("account_number") or row.get("party_id") or row.get("party_name"), row["currency"])
++        item = grouped.setdefault(
++            key,
++            {
++                "party_name": row.get("party_name") or "",
++                "account_number": row.get("account_number"),
++                "currency": row["currency"],
++                "buckets": {b: Decimal(0) for b in BUCKETS},
++                "overdue": Decimal(0),
++                "not_due": Decimal(0),
++                "credit": Decimal(0),
++                "total": Decimal(0),
++                "invoices": [],
++                "severity": "0-30",
++            },
++        )
++        item["total"] += amount
++        item["invoices"].append(row)
++        if amount < 0:
++            item["credit"] += amount
++        else:
++            item["buckets"][bucket] += amount
++            item["overdue" if row["days_overdue"] > 0 else "not_due"] += amount
++            if BUCKETS.index(bucket) > BUCKETS.index(item["severity"]):
++                item["severity"] = bucket
++    parties = sorted(grouped.values(), key=lambda r: (r["currency"], r["party_name"].casefold()))
++    totals = {}
++    for item in parties:
++        target = totals.setdefault(
++            item["currency"], {b: Decimal(0) for b in (*BUCKETS, "overdue", "not_due", "credit", "total")}
++        )
++        for b in BUCKETS:
++            target[b] += item["buckets"][b]
++        for b in ("overdue", "not_due", "credit", "total"):
++            target[b] += item[b]
++    return {
++        "as_of": as_of,
++        "kind": kind,
++        "parties": parties,
++        "details": details,
++        "totals": totals,
++        "note": "0-30 includes not-yet-due balances; 90+ means more than 90 days. Credits shown separately.",
++    }
+--- /dev/null
++++ b/nanza_delivery/ai_accountant.py
+@@ -0,0 +1,142 @@
++"""Offline assistance. Suggestions are rules; forecasts are assumptions, not AI certainty."""
++
++from datetime import date, timedelta
++from decimal import Decimal
++from database_common import iso_date
++from nanza_delivery.whatsapp_daily_summary import cash_balance
++
++
++def suggest_category(description, accounts=()):
++    from nanza.ai_accountant.classifier import suggest_account
++
++    return suggest_account(description, accounts)
++
++
++def detect_duplicate(
++    invoice_no, amount, date, database=None, *, currency=None, party_id=None, kind=None, exclude_id=None
++):
++    if database is None:
++        raise ValueError("Select a company database first")
++    number = database.invoice_number_key(invoice_no)
++    if not number:
++        return []
++    day, amount = iso_date(date), Decimal(str(amount))
++    if not amount.is_finite():
++        raise ValueError("Invalid amount")
++    found = []
++    with database.connect() as connection:
++        rows = connection.execute(
++            "SELECT id,invoice_number,invoice_date,total,currency,party_id,kind,status FROM invoices WHERE status NOT IN ('deleted','cancelled')"
++        )
++        for r in rows:
++            if exclude_id is not None and r["id"] == int(exclude_id):
++                continue
++            if (
++                currency
++                and r["currency"] != currency
++                or party_id is not None
++                and r["party_id"] != int(party_id)
++                or kind
++                and r["kind"] != kind
++            ):
++                continue
++            if (
++                database.invoice_number_key(r["invoice_number"]) == number
++                and iso_date(r["invoice_date"]) == day
++                and Decimal(str(r["total"] or 0)) == amount
++            ):
++                found.append(dict(r))
++    return found
++
++
++def cashflow_forecast(database=None, *, as_of=None, currency="USD", history_days=90):
++    if database is None:
++        raise ValueError("Select a company database first")
++    if currency not in database.currency_codes():
++        raise ValueError("Choose a company currency")
++    if not 7 <= int(history_days) <= 366:
++        raise ValueError("History must be 7 to 366 days")
++    day = date.fromisoformat(iso_date(as_of or date.today().isoformat()))
++    first = max(day - timedelta(days=int(history_days) - 1), day.replace(month=1, day=1))
++    observed_days = (day - first).days + 1
++    # Actual cash movements only, excluding opening/closing journals.
++    months = database.cash_flow_monthly(first.isoformat(), day.isoformat(), currency)
++    inflow = sum((Decimal(str(r["inflow"])) for r in months), Decimal(0))
++    outflow = sum((Decimal(str(r["outflow"])) for r in months), Decimal(0))
++    with database.connect() as connection:
++        history = connection.execute("SELECT MIN(entry_date) FROM journal_entries").fetchone()[0]
++    balance = cash_balance(database, day.isoformat(), currency)
++    # Never extrapolate from an empty/new company or fabricate zero-growth confidence.
++    available = history is not None and bool(months)
++    average = (inflow - outflow) / observed_days if available else None
++    points = (
++        [{"date": (day + timedelta(days=i)).isoformat(), "balance": balance + average * i} for i in range(31)]
++        if available
++        else []
++    )
++    return {
++        "currency": currency,
++        "opening_cash": balance,
++        "daily_average": average,
++        "points": points,
++        "available": available,
++        "history_days": observed_days,
++        "history_from": first.isoformat(),
++        "assumption": "30-day illustration using average historical cash movement; no receivables/payables added. Selected company/year only. Not a commitment forecast.",
++    }
++
++
++def explain_profit_loss(database=None, *, start, end, currency="USD", language="en"):
++    if database is None:
++        raise ValueError("Select a company database first")
++    first, last = date.fromisoformat(iso_date(start)), date.fromisoformat(iso_date(end))
++    if first > last:
++        raise ValueError("Invalid period")
++    duration = (last - first).days + 1
++    prior_end = first - timedelta(days=1)
++    prior_start = prior_end - timedelta(days=duration - 1)
++    if prior_start.year != first.year:
++        return (
++            "المقارنة تحتاج ملف السنة السابقة؛ لا يوجد تفسير موثوق حالياً."
++            if language == "ar"
++            else "Comparison needs the prior-year file; no reliable explanation is available."
++        )
++    current = database.profit_and_loss(first.isoformat(), last.isoformat(), currency)
++    previous = database.profit_and_loss(prior_start.isoformat(), prior_end.isoformat(), currency)
++    if not previous:
++        return (
++            "لا توجد بيانات مقارنة مرحّلة." if language == "ar" else "No posted comparison data is available."
++        )
++
++    def profit(rows):
++        return sum(
++            (Decimal(str(r["amount"])) * (1 if r["type"] == "income" else -1) for r in rows), Decimal(0)
++        )
++
++    a, b = profit(current), profit(previous)
++    old = {r["code"]: Decimal(str(r["amount"])) for r in previous if r["type"] == "expense"}
++    changes = sorted(
++        (
++            (Decimal(str(r["amount"])) - old.get(r["code"], Decimal(0)), r["name_en"])
++            for r in current
++            if r["type"] == "expense"
++        ),
++        reverse=True,
++    )
++    percentage = (
++        f"{(a-b)/abs(b)*100:+.1f}%" if b else ("غير متاح" if language == "ar" else "not meaningful from zero")
++    )
++    driver = next(((delta, name) for delta, name in changes if delta > 0), None)
++    if language == "ar":
++        text = f"صافي الربح {a:,.2f} {currency}؛ التغيّر {a-b:+,.2f} ({percentage}) مقارنة بالفترة السابقة المساوية."
++        return text + (
++            f" أكبر زيادة بالمصاريف: {driver[1]} بقيمة {driver[0]:,.2f}. هذه مساهمة حسابية وليست إثباتاً للسبب."
++            if driver
++            else " لا توجد زيادة مصاريف محددة لتفسير التغيّر."
++        )
++    text = f"Net profit {a:,.2f} {currency}; change {a-b:+,.2f} ({percentage}) versus the preceding equal-length period."
++    return text + (
++        f" Largest expense increase: {driver[1]} by {driver[0]:,.2f}. This is a numerical contributor, not proof of causation."
++        if driver
++        else " No expense increase identified as a contributor."
++    )
+--- /dev/null
++++ b/nanza_delivery/custom_report_builder.py
+@@ -0,0 +1,178 @@
++"""Allowlisted, parameterized posted-sales reports and per-user company templates.
++
++Filters never contain SQL. Warehouse uses EXISTS so multiple stock movements
++cannot multiply invoice amounts. Only actual linked lines match a warehouse.
++"""
++
++import json
++from decimal import Decimal
++from database_common import iso_date
++
++FILTERS = {"date_from", "date_to", "customer", "product", "warehouse", "currency"}
++HEADERS = [
++    "Date",
++    "Invoice",
++    "Customer",
++    "Product",
++    "Description",
++    "Currency",
++    "Quantity",
++    "Subtotal",
++    "VAT",
++    "Total",
++]
++
++
++def validate_filters(filters):
++    if not isinstance(filters, dict) or set(filters) - FILTERS:
++        raise ValueError("Unsupported report filters")
++    result = {k: str(v).strip() for k, v in filters.items() if v not in (None, "")}
++    for field in ("date_from", "date_to"):
++        if not result.get(field):
++            raise ValueError("Choose a date range")
++        result[field] = iso_date(result[field])
++    if result["date_from"] > result["date_to"]:
++        raise ValueError("Date From cannot be after Date To")
++    if result["date_from"][:4] != result["date_to"][:4]:
++        raise ValueError("Choose a range within the selected fiscal year")
++    for field in ("customer", "warehouse"):
++        if field in result and (not result[field].isdigit() or int(result[field]) <= 0):
++            raise ValueError(f"Invalid {field}")
++    if any(len(v) > 120 for v in result.values()):
++        raise ValueError("Filter value is too long")
++    return result
++
++
++def build_report(database, filters, *, limit=500, offset=0):
++    filters = validate_filters(filters)
++    limit, offset = int(limit), int(offset)
++    if not 1 <= limit <= 5000 or offset < 0:
++        raise ValueError("Invalid page size")
++    day = "CASE WHEN i.invoice_date GLOB '??-??-????' THEN substr(i.invoice_date,7,4)||'-'||substr(i.invoice_date,4,2)||'-'||substr(i.invoice_date,1,2) ELSE i.invoice_date END"
++    conditions = ["i.status='posted'", "i.kind='sale'", f"{day}>=?", f"{day}<=?"]
++    params = [filters["date_from"], filters["date_to"]]
++    for field, sql in (
++        ("customer", "i.party_id=?"),
++        ("product", "l.item_code=?"),
++        ("currency", "i.currency=?"),
++    ):
++        if filters.get(field):
++            conditions.append(sql)
++            params.append(filters[field])
++    if filters.get("warehouse"):
++        conditions.append(
++            "EXISTS (SELECT 1 FROM stock_movements m WHERE m.invoice_item_id=l.id AND m.warehouse_id=?)"
++        )
++        params.append(int(filters["warehouse"]))
++    with database.connect() as connection:
++        records = [
++            dict(r)
++            for r in connection.execute(
++                f"""SELECT {day} day,i.id invoice_id,i.invoice_number,
++            p.name customer,l.item_code,l.description,i.currency,l.quantity,l.subtotal,l.vat,l.total,
++            CASE WHEN i.doc_subtype='credit_note' THEN -1 ELSE 1 END sign
++            FROM invoices i JOIN invoice_items l ON l.invoice_id=i.id LEFT JOIN parties p ON p.id=i.party_id
++            WHERE {' AND '.join(conditions)} ORDER BY {day},i.id,l.id LIMIT ? OFFSET ?""",
++                [*params, limit + 1, offset],
++            )
++        ]
++    more = len(records) > limit
++    records = records[:limit]
++    rows, totals = [], {}
++    for r in records:
++        amounts = [Decimal(str(r[k] or 0)) * r["sign"] for k in ("quantity", "subtotal", "vat", "total")]
++        rows.append(
++            [
++                r["day"],
++                r["invoice_number"],
++                r["customer"] or "",
++                r["item_code"] or "",
++                r["description"],
++                r["currency"],
++                *amounts,
++            ]
++        )
++        totals[r["currency"]] = totals.get(r["currency"], Decimal(0)) + amounts[-1]
++    return {
++        "title": "Custom posted sales / المبيعات المرحّلة",
++        "headers": HEADERS,
++        "rows": rows,
++        "totals": totals,
++        "has_more": more,
++        "offset": offset,
++        "next_offset": offset + len(rows),
++        "filters": filters,
++        "note": "Line totals, native currencies, net of credit notes. Header-only invoices without lines are excluded. Totals cover this page only.",
++    }
++
++
++def migrate(connection):
++    connection.execute("""CREATE TABLE IF NOT EXISTS custom_reports (
++        id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, name TEXT NOT NULL,
++        definition TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 1,
++        UNIQUE(user_id,name))""")
++
++
++def save_template(database, user_id, name, filters):
++    name = str(name or "").strip()
++    if not name or len(name) > 100:
++        raise ValueError("Enter a template name of at most 100 characters")
++    definition = json.dumps(validate_filters(filters), ensure_ascii=False, sort_keys=True)
++    with database.connect() as connection:
++        if not connection.in_transaction:
++            connection.execute("BEGIN IMMEDIATE")
++        migrate(connection)
++        connection.execute(
++            """INSERT INTO custom_reports(user_id,name,definition) VALUES(?,?,?)
++            ON CONFLICT(user_id,name) DO UPDATE SET definition=excluded.definition,revision=custom_reports.revision+1""",
++            (int(user_id), name, definition),
++        )
++    return {"name": name, "filters": json.loads(definition)}
++
++
++def list_templates(database, user_id):
++    # GET stays read-only, including on an untouched company.
++    with database.connect() as connection:
++        if not connection.execute(
++            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='custom_reports'"
++        ).fetchone():
++            return []
++        return [
++            {
++                "id": r["id"],
++                "name": r["name"],
++                "revision": r["revision"],
++                "filters": json.loads(r["definition"]),
++            }
++            for r in connection.execute(
++                "SELECT * FROM custom_reports WHERE user_id=? ORDER BY name", (int(user_id),)
++            )
++        ]
++
++
++def export_report(database, filters, *, max_rows=50000):
++    """Read a consistent snapshot; refuse oversized exports instead of silently truncating."""
++    rows = []
++    with database.connect() as connection:
++        if not connection.in_transaction:
++            connection.execute("BEGIN")
++        offset = 0
++        while True:
++            page = build_report(database, filters, limit=5000, offset=offset)
++            rows.extend(page["rows"])
++            if len(rows) > max_rows:
++                raise ValueError("Export exceeds 50,000 lines; narrow the filters")
++            if not page["has_more"]:
++                break
++            offset = page["next_offset"]
++    totals = {}
++    for row in rows:
++        totals[row[5]] = totals.get(row[5], Decimal(0)) + row[-1]
++    page.update(
++        rows=rows,
++        totals=totals,
++        offset=0,
++        has_more=False,
++        note="Complete filtered line report; native currencies, net of credit notes. Header-only invoices excluded.",
++    )
++    return page
+--- /dev/null
++++ b/nanza_delivery/whatsapp_daily_summary.py
+@@ -0,0 +1,138 @@
++"""Local WhatsApp text preparation. This module never sends messages."""
++
++from datetime import date as Date
++from decimal import Decimal
++from database_common import iso_date
++from nanza_delivery.ageing_report import get_ageing_buckets
++
++
++def cash_balance(database, day, currency):
++    rows = database._native_trial_balance("0001-01-01", iso_date(day), currency)
++    return sum(
++        (
++            r["closing_balance"]
++            for r in rows
++            if "".join(c for c in r["code"] if c.isdigit()).startswith(("51", "53"))
++        ),
++        Decimal(0),
++    )
++
++
++def daily_metrics(database, day, currency="USD"):
++    day = iso_date(day)
++    if currency not in database.currency_codes():
++        raise ValueError("Choose a company currency")
++    sales = Decimal(0)
++    for row in database.list_invoices():
++        if (
++            row["kind"] == "sale"
++            and row["status"] == "posted"
++            and row["currency"] == currency
++            and iso_date(row["invoice_date"]) == day
++        ):
++            sales += Decimal(str(row["total"] or 0)) * (-1 if row.get("doc_subtype") == "credit_note" else 1)
++    expenses = sum(
++        (
++            Decimal(str(r["amount"]))
++            for r in database.profit_and_loss(day, day, currency)
++            if r["type"] == "expense"
++        ),
++        Decimal(0),
++    )
++    ageing = get_ageing_buckets(day, database, currency=currency)
++    overdue = sorted(
++        (r for r in ageing["parties"] if r["overdue"] > 0), key=lambda r: (-r["overdue"], r["party_name"])
++    )[:3]
++    return {
++        "date": day,
++        "currency": currency,
++        "sales": sales,
++        "expenses": expenses,
++        "cash": cash_balance(database, day, currency),
++        "overdue": overdue,
++    }
++
++
++def generate_whatsapp_summary(date, database=None, *, currency="USD", language="en") -> str:
++    if database is None:
++        raise ValueError("Select a company database first")
++    m = daily_metrics(database, date, currency)
++    ar = language == "ar"
++    labels = (
++        [
++            "ملخص نانزا",
++            "المبيعات المرحّلة اليوم (شاملة الضريبة)",
++            "مصاريف قائمة الدخل اليوم",
++            "رصيد النقد والمصارف الدفتري",
++            "أعلى 3 عملاء متأخرين",
++        ]
++        if ar
++        else [
++            "NANZA daily summary",
++            "Posted sales today (VAT included)",
++            "P&L expenses today",
++            "Book cash / bank balance",
++            "Top 3 overdue customers",
++        ]
++    )
++    lines = [
++        f"📊 *{labels[0]} — {m['date']}*",
++        f"💱 {currency}",
++        f"💰 {labels[1]}: {m['sales']:,.2f}",
++        f"🧾 {labels[2]}: {m['expenses']:,.2f}",
++        f"🏦 {labels[3]}: {m['cash']:,.2f}",
++        f"⏰ *{labels[4]}*",
++    ]
++    lines.extend(
++        f"{i}. {r['party_name']}: {r['overdue']:,.2f} {currency}" for i, r in enumerate(m["overdue"], 1)
++    )
++    if not m["overdue"]:
++        lines.append("لا توجد ذمم متأخرة" if ar else "No overdue balances")
++    lines.append(
++        "هذه السنة والشركة فقط؛ العملات غير محوّلة."
++        if ar
++        else "Selected company/year only; native currency, no FX conversion."
++    )
++    return "\n".join(lines)
++
++
++def reminder_due(now, enabled, last_day=None):
++    """Local reminder only, while the application is open; no catch-up from yesterday."""
++    return bool(enabled and now.hour >= 18 and last_day != now.date().isoformat())
++
++
++def preferences(database, user_id):
++    with database.connect() as connection:
++        exists = connection.execute(
++            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='workbench_preferences'"
++        ).fetchone()
++        row = (
++            connection.execute(
++                "SELECT * FROM workbench_preferences WHERE user_id=?", (int(user_id),)
++            ).fetchone()
++            if exists
++            else None
++        )
++        return {
++            "reminder_6pm": bool(row["reminder_6pm"]) if row else False,
++            "last_day": row["last_day"] if row else None,
++            "auto_send_available": False,
++        }
++
++
++def save_preferences(database, user_id, values):
++    enabled = values.get("reminder_6pm")
++    if not isinstance(enabled, bool):
++        raise ValueError("Reminder must be true or false")
++    last = values.get("last_day")
++    if last is not None:
++        last = iso_date(last)
++    with database.connect() as connection:
++        connection.execute("""CREATE TABLE IF NOT EXISTS workbench_preferences (
++            user_id INTEGER PRIMARY KEY, reminder_6pm INTEGER NOT NULL DEFAULT 0, last_day TEXT)""")
++        connection.execute(
++            """INSERT INTO workbench_preferences(user_id,reminder_6pm,last_day) VALUES(?,?,?)
++            ON CONFLICT(user_id) DO UPDATE SET reminder_6pm=excluded.reminder_6pm,last_day=excluded.last_day""",
++            (int(user_id), int(enabled), last),
++        )
++    return preferences(database, user_id)
+--- a/nanza_paths.py
++++ b/nanza_paths.py
+@@ -24,7 +24,7 @@
+     active_root = ROOT / "nanza"
+     active_files = (path for path in active_root.rglob("*.py")
+                     if "nanza_backup" not in path.relative_to(active_root).parts)
+-    return sorted([*ROOT.glob("*.py"), *active_files])
++    return sorted([*ROOT.glob("*.py"), *(ROOT / "nanza_delivery").glob("*.py"), *active_files])
+ 
+ 
+ def source(name):
+--- /dev/null
++++ b/tests/test_workbench_upgrade.py
+@@ -0,0 +1,585 @@
++"""Daily-workflow regression tests: real SQLite books, scoped HTTP and UI concurrency."""
++
++import tempfile
++import threading
++import time
++import unittest
++from datetime import datetime
++from decimal import Decimal
++from http.server import ThreadingHTTPServer
++from pathlib import Path
++from unittest.mock import patch, Mock
++
++from database import Database
++from client import ApiClient
++from server import ApiHandler
++from company_manager import CompanyManager
++from nanza_delivery.ageing_report import bucket_for, get_ageing_buckets
++from nanza_delivery.whatsapp_daily_summary import (
++    generate_whatsapp_summary,
++    reminder_due,
++    preferences,
++    save_preferences,
++)
++from nanza_delivery.custom_report_builder import (
++    build_report,
++    export_report,
++    save_template,
++    list_templates,
++    validate_filters,
++)
++from nanza_delivery.ai_accountant import (
++    suggest_category,
++    detect_duplicate,
++    cashflow_forecast,
++    explain_profit_loss,
++)
++
++
++class BucketTest(unittest.TestCase):
++    def test_exact_boundaries(self):
++        for days, expected in (
++            (0, "0-30"),
++            (30, "0-30"),
++            (31, "31-60"),
++            (60, "31-60"),
++            (61, "61-90"),
++            (90, "61-90"),
++            (91, "90+"),
++        ):
++            with self.subTest(days=days):
++                self.assertEqual(bucket_for(days), expected)
++
++    def test_empty_requires_company(self):
++        with self.assertRaises(ValueError):
++            get_ageing_buckets("2026-10-01")
++
++    def test_reminder_never_sends_and_fires_once(self):
++        self.assertFalse(reminder_due(datetime(2026, 10, 18, 17, 59), True))
++        self.assertTrue(reminder_due(datetime(2026, 10, 18, 18, 0), True))
++        self.assertFalse(reminder_due(datetime(2026, 10, 18, 19, 0), True, "2026-10-18"))
++        self.assertFalse(reminder_due(datetime(2026, 10, 18, 19, 0), False))
++
++    def test_classifier_abstains_without_active_company_accounts(self):
++        self.assertTrue(suggest_category("fuel")["abstain"])
++        accounts = [
++            {"code": "699900001", "name_en": "Fuel", "type": "expense", "is_active": 0, "is_posting": 1}
++        ]
++        self.assertIsNone(suggest_category("fuel", accounts)["account_code"])
++
++    def test_classifier_uses_actual_chart_and_ambiguity(self):
++        account = {"code": "X-EXP-19", "name_en": "Fuel", "type": "expense", "is_active": 1, "is_posting": 1}
++        self.assertEqual(suggest_category("fuel", [account])["account_code"], "X-EXP-19")
++        self.assertIsNone(suggest_category("fuel", [account, dict(account, code="X-EXP-20")])["account_code"])
++
++    def test_sql_and_invalid_ranges_refused(self):
++        for filters in (
++            {"sql": "DROP TABLE invoices"},
++            {"date_from": "2026-02-30", "date_to": "2026-03-01"},
++            {"date_from": "2026-02-01", "date_to": "2026-01-01"},
++            {"date_from": "2025-12-01", "date_to": "2026-01-01"},
++            {"date_from": "2026-01-01", "date_to": "2026-02-01", "customer": "1 OR 1=1"},
++        ):
++            with self.subTest(filters=filters), self.assertRaises(ValueError):
++                validate_filters(filters)
++
++
++class WorkbenchDatabaseTest(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.tmp.cleanup)
++        self.db = Database(Path(self.tmp.name) / "company.db")
++        self.db.initialize("Workbench-test-2026!")
++        self.addCleanup(self.db.release)
++        self.user = 1
++        self.filters = {"date_from": "2026-01-01", "date_to": "2026-12-31"}
++
++    def invoice(
++        self,
++        number="SALE-1",
++        amount=100,
++        currency="USD",
++        day="2026-01-01",
++        status="posted",
++        subtype="invoice",
++        party="Client A",
++        line=True,
++    ):
++        if subtype == "credit_note":
++            return self.db.create_manual_invoice(
++                {
++                    "invoice_number": number,
++                    "invoice_date": day,
++                    "due_date": day,
++                    "kind": "sales",
++                    "party_name": party,
++                    "currency": currency,
++                    "status": status,
++                    "doc_subtype": subtype,
++                    "supplier_side": "C",
++                    "vat_side": "D",
++                    "expense_side": "D",
++                },
++                [
++                    {
++                        "description": "منتج Product",
++                        "quantity": 2,
++                        "unit_price": amount / 2,
++                        "vat_rate": 0,
++                        "item_code": "SKU-A",
++                    }
++                ],
++                1,
++            )
++        saved = self.db.import_invoice(
++            {
++                "invoice_number": number,
++                "invoice_date": day,
++                "due_date": day,
++                "kind": "sale",
++                "party_name": party,
++                "currency": currency,
++                "subtotal": amount,
++                "vat": 0,
++                "total": amount,
++                "status": status,
++                "doc_subtype": subtype,
++            },
++            self.user,
++        )
++        if line:
++            with self.db.connect() as c:
++                c.execute(
++                    """INSERT INTO invoice_items(invoice_id,description,quantity,unit_price,subtotal,vat_rate,vat,total,item_code)
++                    VALUES(?, 'منتج Product', '2', ?, ?, '0', '0', ?, 'SKU-A')""",
++                    (saved, str(amount / 2), str(amount), str(amount)),
++                )
++        return saved
++
++    def voucher(self, day, debit, credit, amount):
++        return self.db.save_journal_voucher(
++            {"entry_date": day, "currency": "USD", "description": "Workbench"},
++            [{"account_code": debit, "debit": amount}, {"account_code": credit, "credit": amount}],
++            self.user,
++        )
++
++    def test_ageing_native_currencies_and_credits_reconcile(self):
++        self.invoice(amount=100)
++        self.invoice("LBP-1", 10000, "LBP")
++        report = get_ageing_buckets("2026-02-01", self.db)
++        self.assertEqual(report["totals"]["USD"]["total"], Decimal("100"))
++        self.assertEqual(report["totals"]["LBP"]["total"], Decimal("10000"))
++        self.assertEqual(report["totals"]["USD"]["31-60"], Decimal("100"))
++        self.assertEqual(sum(r["total"] for r in report["parties"] if r["currency"] == "USD"), Decimal("100"))
++
++    def test_ageing_historical_payments_and_customer_drilldown(self):
++        invoice = self.invoice()
++        party = next(p for p in self.db.list_parties() if p["name"] == "Client A")
++        payment = self.db.add_payment(
++            {
++                "kind": "customer_receipt",
++                "payment_date": "2026-02-01",
++                "party_id": party["id"],
++                "currency": "USD",
++                "amount": 40,
++                "cash_account": "531",
++                "party_account": party["account_number"],
++            },
++            1,
++        )
++        self.db.save_allocations(payment, [{"invoice_id": invoice, "amount": 40}], 1)
++        before = get_ageing_buckets("2026-01-31", self.db)
++        after = get_ageing_buckets("2026-02-02", self.db)
++        self.assertEqual(before["totals"]["USD"]["total"], Decimal("100"))
++        self.assertEqual(after["parties"][0]["invoices"][0]["outstanding"], Decimal("60"))
++
++    def test_custom_report_exact_amounts_and_signed_notes(self):
++        self.invoice(amount=111)
++        self.invoice("CN-1", 11, subtype="credit_note")
++        report = build_report(self.db, self.filters)
++        self.assertEqual(report["totals"]["USD"], Decimal("100"))
++        self.assertEqual(len(report["rows"]), 2)
++        self.assertTrue(any(r[-1] == Decimal("-11") for r in report["rows"]))
++
++    def test_custom_report_filters_and_no_header_inflation(self):
++        self.invoice()
++        self.invoice("OTHER", 50, party="Client B")
++        self.invoice("HEADER", 999, line=False)
++        party = next(p for p in self.db.list_parties() if p["name"] == "Client A")
++        report = build_report(self.db, dict(self.filters, customer=party["id"], product="SKU-A"))
++        self.assertEqual(len(report["rows"]), 1)
++        self.assertEqual(report["totals"]["USD"], Decimal("100"))
++
++    def test_review_invoices_not_reported(self):
++        self.invoice(status="review")
++        self.assertEqual(build_report(self.db, self.filters)["rows"], [])
++        self.assertNotIn("100.00", generate_whatsapp_summary("2026-01-01", self.db))
++
++    def test_warehouse_requires_real_link_and_does_not_multiply(self):
++        saved = self.invoice()
++        with self.db.connect() as c:
++            line = c.execute("SELECT id FROM invoice_items WHERE invoice_id=?", (saved,)).fetchone()[0]
++            item = c.execute("INSERT INTO inventory_items(sku,name) VALUES('SKU-A','Test')").lastrowid
++            for _ in range(2):
++                c.execute(
++                    """INSERT INTO stock_movements(item_id,movement_date,quantity,unit_cost,warehouse_id,invoice_item_id)
++                    VALUES(?,'2026-01-01','1','2',1,?)""",
++                    (item, line),
++                )
++        report = build_report(self.db, dict(self.filters, warehouse="1"))
++        self.assertEqual(report["totals"]["USD"], Decimal("100"))
++        self.assertEqual(build_report(self.db, dict(self.filters, warehouse="999"))["rows"], [])
++
++    def test_pagination_and_complete_export(self):
++        for i in range(3):
++            self.invoice(str(i), i + 1)
++        first = build_report(self.db, self.filters, limit=2)
++        self.assertTrue(first["has_more"])
++        self.assertEqual(len(build_report(self.db, self.filters, limit=2, offset=2)["rows"]), 1)
++        full = export_report(self.db, self.filters)
++        self.assertEqual(len(full["rows"]), 3)
++        self.assertEqual(full["totals"]["USD"], Decimal("6"))
++        with self.assertRaisesRegex(ValueError, "narrow"):
++            export_report(self.db, self.filters, max_rows=2)
++
++    def test_templates_get_is_read_only_and_user_isolation(self):
++        self.assertEqual(list_templates(self.db, 1), [])
++        with self.db.connect() as c:
++            self.assertIsNone(c.execute("SELECT 1 FROM sqlite_master WHERE name='custom_reports'").fetchone())
++        save_template(self.db, 1, "My Monthly Sales", self.filters)
++        self.assertEqual(list_templates(self.db, 2), [])
++        self.assertEqual(list_templates(self.db, 1)[0]["filters"], self.filters)
++        save_template(self.db, 1, "My Monthly Sales", dict(self.filters, currency="LBP"))
++        self.assertEqual(list_templates(self.db, 1)[0]["revision"], 2)
++
++    def test_summary_signed_sales_cash_and_bilingual(self):
++        self.invoice(amount=100)
++        self.invoice("CN-1", 10, subtype="credit_note")
++        self.invoice("OTHER-CURRENCY", 10000, "LBP")
++        self.voucher("2026-01-01", "531", "10", 500)
++        text = generate_whatsapp_summary("2026-01-01", self.db)
++        self.assertIn("Posted sales today (VAT included): 90.00", text)
++        self.assertIn("balance: 500.00", text)
++        self.assertNotIn("10,000.00", text)
++        self.assertIn("ملخص نانزا", generate_whatsapp_summary("2026-01-01", self.db, language="ar"))
++
++    def test_duplicate_before_save_and_edit_exclusion(self):
++        invoice = self.invoice("DUP-1", 111)
++        self.assertEqual(len(detect_duplicate("DUP-1", 111, "2026-01-01", self.db, currency="USD")), 1)
++        self.assertEqual(detect_duplicate("DUP-1", 111, "2026-01-01", self.db, exclude_id=invoice), [])
++        self.assertEqual(detect_duplicate("DUP-1", 111, "2026-01-01", self.db, currency="LBP"), [])
++        self.assertEqual(detect_duplicate("DUP-1", 112, "2026-01-01", self.db), [])
++        self.assertEqual(detect_duplicate("", 111, "2026-01-01", self.db), [])
++
++    def test_forecast_no_history_abstains(self):
++        report = cashflow_forecast(self.db, as_of="2026-01-31")
++        self.assertFalse(report["available"])
++        self.assertEqual(report["points"], [])
++
++    def test_forecast_uses_cash_not_accrual_and_no_opening_growth(self):
++        self.voucher("2026-01-01", "531", "10", 1000)
++        self.voucher("2026-01-15", "531", "7011", 310)
++        self.invoice("UNPAID", 10000, day="2026-01-20")
++        report = cashflow_forecast(self.db, as_of="2026-01-31", history_days=31)
++        # Journal vouchers are actual cash movements; even a capital injection is a historical cash flow.
++        self.assertEqual(report["opening_cash"], Decimal("1310"))
++        self.assertEqual(report["daily_average"], Decimal("1310") / 31)
++        self.assertEqual(len(report["points"]), 31)
++        self.assertNotIn("10000", str(report["points"]))
++
++    def test_profit_explanation_computes_actual_comparison(self):
++        self.voucher("2026-02-01", "531", "7011", 200)
++        self.voucher("2026-02-02", "6263.1", "531", 20)
++        self.voucher("2026-03-01", "531", "7011", 200)
++        self.voucher("2026-03-02", "6263.1", "531", 50)
++        # March 1-28 versus February 1-28.
++        text = explain_profit_loss(self.db, start="2026-03-01", end="2026-03-28")
++        self.assertIn("change -30.00", text)
++        self.assertIn("30.00", text)
++        self.assertIn("not proof of causation", text)
++        self.assertIn(
++            "صافي الربح", explain_profit_loss(self.db, start="2026-03-01", end="2026-03-28", language="ar")
++        )
++
++    def test_no_fabricated_prior_year_explanation(self):
++        self.assertIn("prior-year", explain_profit_loss(self.db, start="2026-01-01", end="2026-01-31"))
++
++    def test_reminder_preferences_scoped_and_no_transmission(self):
++        self.assertFalse(preferences(self.db, 1)["reminder_6pm"])
++        save_preferences(self.db, 1, {"reminder_6pm": True, "last_day": "2026-10-18"})
++        self.assertTrue(preferences(self.db, 1)["reminder_6pm"])
++        self.assertFalse(preferences(self.db, 2)["reminder_6pm"])
++        self.assertFalse(preferences(self.db, 1)["auto_send_available"])
++
++
++class WorkbenchHttpTest(unittest.TestCase):
++    def test_auth_company_and_viewer_guards(self):
++        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
++            path = Path(folder) / "master.db"
++            db = Database(path)
++            db.initialize("Http-workbench-test!")
++            manager = CompanyManager(path)
++            if not manager.list_companies():
++                manager.create_company({"name": "Workbench Sample", "year": 2026}, db)
++            handler = type(
++                "WorkbenchHandler", (ApiHandler,), dict(db=db, master_db=db, company_manager=manager)
++            )
++            http = ThreadingHTTPServer(("127.0.0.1", 0), handler)
++            thread = threading.Thread(target=http.serve_forever, daemon=True)
++            thread.start()
++            try:
++                api = ApiClient(f"http://127.0.0.1:{http.server_port}")
++                with self.assertRaises(RuntimeError):
++                    api.workbench("templates")
++                api.login("admin", "Http-workbench-test!")
++                company = api.companies()[0]
++                year = int(company["years"][0]["year"])
++                api.select_company_year(company["id"], year)
++                filters = {"date_from": f"{year}-01-01", "date_to": f"{year}-12-31"}
++                api.save_custom_report("Scoped report", filters)
++                self.assertEqual(len(api.workbench("templates")["items"]), 1)
++                self.assertEqual(api.workbench("report", **filters)["rows"], [])
++                self.assertIn("parties", api.workbench("ageing", date=f"{year}-12-31"))
++                self.assertIn("text", api.workbench("summary", date=f"{year}-12-31"))
++                self.assertFalse(api.workbench("forecast", date=f"{year}-12-31")["available"])
++                self.assertTrue(api.workbench("suggest", description="unknown")["abstain"])
++                self.assertEqual(
++                    api.workbench("duplicates", invoice_no="X", amount="1", date=f"{year}-01-01")["items"], []
++                )
++                db.save_user({"username": "wbviewer", "password": "Viewer-workbench!", "role": "viewer"}, 1)
++                viewer = ApiClient(api.base_url)
++                viewer.login("wbviewer", "Viewer-workbench!")
++                viewer.select_company_year(company["id"], year)
++                self.assertEqual(viewer.workbench("templates")["items"], [])
++                with self.assertRaisesRegex(RuntimeError, "read-only"):
++                    viewer.save_custom_report("Forbidden", filters)
++                manager.create_year(company["id"], year + 1, 1)
++                api.select_company_year(company["id"], year + 1)
++                self.assertEqual(api.workbench("templates")["items"], [])
++                api.close()
++                viewer.close()
++            finally:
++                http.shutdown()
++                http.server_close()
++                thread.join(5)
++                for cached in list(manager._cache):
++                    manager._cache.pop(cached).release()
++                db.release()
++
++
++if __name__ == "__main__":
++    unittest.main()
++
++
++class WorkbenchGuiTest(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        import tkinter as tk
++
++        try:
++            probe = tk.Tk()
++            probe.destroy()
++        except tk.TclError:
++            raise unittest.SkipTest("No graphical display available")
++
++    def setUp(self):
++        import tkinter as tk
++        from desktop_workbench import WorkbenchMixin
++
++        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
++        self.addCleanup(self.tmp.cleanup)
++        path = Path(self.tmp.name) / "master.db"
++        self.db = Database(path)
++        self.db.initialize("Gui-workbench-test!")
++        self.manager = CompanyManager(path)
++        if not self.manager.list_companies():
++            self.manager.create_company({"name": "GUI company", "year": 2026}, self.db)
++        company = self.manager.list_companies()[0]
++        self.year = int(company["years"][0]["year"])
++        self.books = self.manager.database(company["id"], self.year)
++        self.books.import_invoice(
++            {
++                "invoice_number": "GUI-SALE",
++                "invoice_date": f"{self.year}-01-01",
++                "due_date": f"{self.year}-01-01",
++                "kind": "sale",
++                "party_name": "GUI Customer",
++                "currency": "USD",
++                "subtotal": 100,
++                "vat": 0,
++                "total": 100,
++            },
++            1,
++        )
++        with self.books.connect() as c:
++            invoice = c.execute("SELECT id FROM invoices WHERE invoice_number='GUI-SALE'").fetchone()[0]
++            c.execute(
++                """INSERT INTO invoice_items(invoice_id,description,quantity,unit_price,subtotal,vat_rate,vat,total,item_code)
++                VALUES(?,'اختبار Test','1','100','100','0','0','100','GUI-SKU')""",
++                (invoice,),
++            )
++        handler = type(
++            "GuiWorkbenchHandler",
++            (ApiHandler,),
++            dict(db=self.db, master_db=self.db, company_manager=self.manager),
++        )
++        self.http = ThreadingHTTPServer(("127.0.0.1", 0), handler)
++        self.thread = threading.Thread(target=self.http.serve_forever, daemon=True)
++        self.thread.start()
++
++        class TestApp(WorkbenchMixin, tk.Tk):
++            def fiscal_today(app):
++                return f"31-01-{self.year}"
++
++        self.app = TestApp()
++        self.app.geometry("1366x768")
++        self.app.client = ApiClient(f"http://127.0.0.1:{self.http.server_port}")
++        self.app.client.login("admin", "Gui-workbench-test!")
++        self.app.client.select_company_year(company["id"], self.year)
++        self.app.language = tk.StringVar(value="en")
++        self.app.dashboard_base_currency = tk.StringVar(value="USD")
++        import arabic_ui
++
++        arabic_ui.switch(self.app, "en")
++        self.app.errors = []
++        self.app.report_callback_exception = lambda *args: self.app.errors.append(args)
++        self.dialog_patch = patch(
++            "desktop_workbench.messagebox.showerror", side_effect=lambda *a, **k: self.app.errors.append(a)
++        )
++        self.dialog_patch.start()
++        self.addCleanup(self.dialog_patch.stop)
++
++    def tearDown(self):
++        import arabic_ui
++
++        arabic_ui.switch(self.app, "en")
++        self.app.destroy()
++        self.app.client.close()
++        self.http.shutdown()
++        self.http.server_close()
++        self.thread.join(5)
++        for cached in list(self.manager._cache):
++            self.manager._cache.pop(cached).release()
++        self.db.release()
++
++    def wait(self, predicate, timeout=8):
++        deadline = time.monotonic() + timeout
++        while time.monotonic() < deadline:
++            self.app.update()
++            if predicate():
++                return
++            time.sleep(0.01)
++        self.fail("UI did not complete its background operation")
++
++    def test_ageing_filter_drilldown_and_excel_export(self):
++        from desktop_workbench import AgeingWindow
++
++        window = AgeingWindow(self.app)
++        self.wait(lambda: window.data is not None)
++        self.assertEqual(len(window.tree.get_children()), 1)
++        window.filter("90+")
++        self.assertEqual(len(window.tree.get_children()), 0)
++        window.filter("0-30")
++        window.tree.selection_set("0")
++        window.open_invoices()
++        self.assertGreaterEqual(len(window.winfo_children()), 4)
++        output = Path(self.tmp.name) / "ageing.xlsx"
++        with patch("desktop_workbench.filedialog.asksaveasfilename", return_value=str(output)):
++            window.export()
++            self.wait(lambda: getattr(window, "_wb_export_done", False))
++        from openpyxl import load_workbook
++
++        book = load_workbook(output)
++        self.assertIn("GUI Customer", [cell.value for row in book.active for cell in row])
++        book.close()
++        self.assertEqual(self.app.errors, [])
++
++    def test_custom_live_preview_template_pdf_excel_and_rtl(self):
++        from desktop_workbench import CustomReportWindow
++
++        self.app.language.set("ar")
++        import arabic_ui
++
++        arabic_ui.switch(self.app, "ar")
++        window = CustomReportWindow(self.app)
++        self.wait(lambda: window.result is not None and bool(window.matches))
++        self.assertEqual(len(window.tree.get_children()), 1)
++        window.vars["currency"].set("LBP")
++        self.wait(lambda: window.result is not None and window.result["filters"].get("currency") == "LBP")
++        self.assertEqual(window.result["rows"], [])
++        window.vars["currency"].set("USD")
++        self.wait(lambda: window.result is not None and window.result["filters"].get("currency") == "USD")
++        with patch("desktop_workbench.simpledialog.askstring", return_value="My Monthly Sales"):
++            window.save_template()
++        self.wait(lambda: "My Monthly Sales" in window.templates)
++        for extension in ("xlsx", "pdf"):
++            output = Path(self.tmp.name) / ("custom." + extension)
++            with patch("desktop_workbench.filedialog.asksaveasfilename", return_value=str(output)):
++                window.export(extension)
++                self.wait(lambda: output.exists() and getattr(window, "_wb_export_done", False))
++            self.assertGreater(output.stat().st_size, 500)
++            if extension == "xlsx":
++                from openpyxl import load_workbook
++
++                book = load_workbook(output)
++                self.assertTrue(book.active.sheet_view.rightToLeft)
++                book.close()
++        self.assertEqual(self.app.errors, [])
++
++    def test_whatsapp_preview_copy_and_dashboard_card(self):
++        from desktop_workbench import WhatsAppWindow
++        import tkinter as tk
++
++        panel = tk.Frame(self.app)
++        panel.pack(fill="x")
++        self.app.build_workbench_tools(panel)
++        window = WhatsAppWindow(self.app)
++        self.wait(lambda: window.ready)
++        window.copy()
++        self.assertIn("Posted sales today", window.clipboard_get())
++        self.assertEqual(str(window.copy_button["state"]), "normal")
++        window.currency.set("LBP")
++        self.assertFalse(window.ready)
++        self.assertEqual(str(window.copy_button["state"]), "disabled")
++        self.wait(lambda: "USD" in self.app._wb_badge["text"])
++        self.assertEqual(self.app.errors, [])
++
++    def test_stale_results_discarded_on_company_switch(self):
++        import tkinter as tk
++        from desktop_workbench import async_call
++
++        owner = tk.Frame(self.app)
++        owner.pack()
++        release = threading.Event()
++        received = []
++        threads = []
++
++        def work(_client):
++            threads.append(threading.get_ident())
++            release.wait(2)
++            return "old company"
++
++        async_call(owner, self.app, work, received.append)
++        self.app.client.company_id = "different-company"
++        release.set()
++        self.wait(lambda: bool(threads))
++        deadline = time.monotonic() + 0.2
++        while time.monotonic() < deadline:
++            self.app.update()
++            time.sleep(0.01)
++        self.assertEqual(received, [])
++        self.assertNotEqual(threads[0], threading.get_ident())
++
++    def test_closing_window_cancels_scheduled_callbacks(self):
++        from desktop_workbench import CustomReportWindow
++
++        window = CustomReportWindow(self.app)
++        self.wait(lambda: window.result is not None and bool(window.matches))
++        timer = window._wb_poll_id
++        scope_timer = window._wb_scope_id
++        window.destroy()
++        remaining = self.app.tk.call("after", "info")
++        self.assertNotIn(timer, remaining)
++        self.assertNotIn(scope_timer, remaining)
++        self.app.update()
++        self.assertEqual(self.app.errors, [])

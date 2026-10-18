@@ -1,0 +1,74 @@
+[
+  {
+    "path": ".github/workflows/build-windows-installer.yml",
+    "status": "modified"
+  },
+  {
+    "path": ".gitignore",
+    "status": "modified"
+  },
+  {
+    "path": "README.md",
+    "status": "modified"
+  },
+  {
+    "path": "VALIDATION_REPORT.md",
+    "status": "modified"
+  },
+  {
+    "path": "installer.iss",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/core/app_runtime.py",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/core/client.py",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/core/release_check.py",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/core/server.py",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/ui/desktop.py",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/ui/desktop_expenses.py",
+    "status": "modified"
+  },
+  {
+    "path": "nanza/ui/desktop_workbench.py",
+    "status": "added"
+  },
+  {
+    "path": "nanza_delivery/ageing_report.py",
+    "status": "added"
+  },
+  {
+    "path": "nanza_delivery/ai_accountant.py",
+    "status": "added"
+  },
+  {
+    "path": "nanza_delivery/custom_report_builder.py",
+    "status": "added"
+  },
+  {
+    "path": "nanza_delivery/whatsapp_daily_summary.py",
+    "status": "added"
+  },
+  {
+    "path": "nanza_paths.py",
+    "status": "modified"
+  },
+  {
+    "path": "tests/test_workbench_upgrade.py",
+    "status": "added"
+  }
+]

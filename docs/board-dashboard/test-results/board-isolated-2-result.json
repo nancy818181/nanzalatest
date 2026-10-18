@@ -1,0 +1,20 @@
+{
+  "modules": [
+    "tests.test_atomic_saving"
+  ],
+  "test_ids": [
+    "tests.test_atomic_saving.AtomicSavingTest.test_a_step_that_fails_inside_undoes_only_itself",
+    "tests.test_atomic_saving.AtomicSavingTest.test_an_error_halfway_leaves_nothing",
+    "tests.test_atomic_saving.AtomicSavingTest.test_payment_and_expense_are_saved_whole",
+    "tests.test_atomic_saving.AtomicSavingTest.test_the_program_killed_halfway_leaves_nothing",
+    "tests.test_atomic_saving.CompanyAccessTest.test_a_user_opens_only_his_companies",
+    "tests.test_atomic_saving.HistoricalAgeingTest.test_later_receipt_and_credit_note",
+    "tests.test_atomic_saving.RollbackAfterStockTest.test_a_released_step_is_still_undone_when_the_save_fails_later",
+    "tests.test_atomic_saving.RollbackAfterStockTest.test_failure_after_stock_and_vat_reclass_leaves_nothing"
+  ],
+  "tests_run": 8,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

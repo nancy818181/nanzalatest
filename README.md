@@ -1,5 +1,70 @@
 # Nanza Accounting (formerly Saber Accounting)
 
+## Version 2.9.130 (Complete Board Dashboard / لوحة مجلس الإدارة)
+
+- Added a separate **Board Dashboard** beside the existing operational dashboard, with a navigation
+  button and **Ctrl+B**. The first four 2.9.129 upgrades are preserved, not rebuilt.
+- CustomTkinter shell with a Matplotlib vector board follows the supplied black/gold reference:
+  four KPIs and three columns for executive summary, monthly revenue/margins, debt covenant,
+  direct cash bridge, earnings bridge, capital structure, ratios, free cash flow and cash/coverage.
+  No QR code, advertising, footer links, social bar, map or footer is added.
+- Full-board PDF exports the same clean layout. Queries and export run in background workers;
+  company/year/session snapshots prevent stale results. The existing Tk application is retained.
+- All figures come from posted SQLite books. **The example $10.33M / $549K / 2.8x values are not
+  embedded.** Missing approved forecasts, debt-service schedules, prior-year data or reviewed
+  account mappings remain unavailable. Unknown covenants are never labelled compliant.
+- Administrator-only, audited account mapping uses active posting accounts from the actual chart.
+  FCF is withheld if a cash entry is mixed or unclassified; covenant debt/EBITDA and ROIC require
+  a completed full fiscal year. Year-end is actual historic 31 December cash, not an invented forecast.
+- بالعربي: أضفنا لوحة إدارة مستقلة بتصميم أسود وذهبي، مع المؤشرات والرسوم وتصدير PDF نظيف.
+  اللوحة اليومية والميزات الأربع السابقة والرواتب محفوظة. الأرقام من الدفاتر، والمؤشرات غير
+  المراجَعة تظهر غير متاحة. ربط الحسابات من صلاحية المدير ويُحفظ بسجل التدقيق.
+- **9/10 is a target, not a verified competitive score.** No unsupported claim about features
+  absent from Odoo/Zoho is made. New Windows installer and live-data deployment still require acceptance testing.
+- See `docs/board-dashboard/VALIDATION.md` for exact tests, formulas and outstanding limits.
+
+## Version 2.9.129 (daily workflow workbench / أدوات العمل اليومية)
+
+**EN:** Four integrated upgrades: one-click coloured ageing buckets with customer invoice drill-down;
+local WhatsApp daily-summary preview/copy; searchable, draggable sales-report filters with live preview,
+complete Excel/PDF export and company/user-scoped SQLite templates; and offline rule-based expense
+suggestions, duplicate inspection, a labelled 30-day cash illustration and bilingual profit explanation.
+Existing screens, analytic reports and payroll calculations are preserved. Ctrl+W opens summary preview;
+Ctrl+E opens custom reporting on the dashboard and exports inside the new report windows.
+
+**العربية:** أضفنا أدوات العمل اليومية: أعمار الذمم بألوان وفلاتر بنقرة واحدة وتفاصيل العميل،
+معاينة ونسخ ملخص واتساب محلي، تقارير مبيعات مخصصة بفلاتر قابلة للبحث والسحب ومعاينة تلقائية
+وقوالب محفوظة لكل مستخدم وشركة، واقتراحات حسابات محلية وتفسير تغيّر الربح وتقدير نقدي ٣٠ يوماً.
+التقارير التحليلية والوظائف السابقة وحسابات الرواتب محفوظة.
+
+**Scope / الحدود:** This improves workflow and UX toward the owner's **8–9/10 target**; no measured
+Odoo/Zoho parity score is claimed. Current active GUI is Tk/ttk (not CustomTkinter); the existing theme is
+retained without a framework migration. New code is in `nanza_delivery/*.py` and is called by the active
+`nanza/` app; the older nested delivery copy is not the runtime source.
+
+- WhatsApp: no paid API, no internet, no automatic messaging. A persisted **6pm local reminder** opens
+  preview while the app is running. The **Auto-send** control is disabled and explicitly says a messaging
+  gateway must be configured. No recipient or external transmission is silently assumed.
+- Ageing: uses existing payment/credit-note settlement logic. 0–30 includes not-yet-due balances;
+  90+ means **more than 90 days**, so day 90 remains in 61–90. Totals and overdue badges stay separate
+  by currency; credits are shown separately. Double-click a party for its open invoices.
+- Custom builder currently reports **posted sales lines**, not arbitrary SQL, payroll or a complete
+  Odoo Studio equivalent. Date/customer/product/warehouse/currency filters update after 350ms.
+  Drag filter headings to reorder cards. Warehouse matches only actual linked stock movements.
+  Header-only invoices are excluded and labelled. Preview is paginated; exports include all matching
+  lines up to 50,000, refusing larger exports rather than silently truncating. Native currencies and
+  credit-note signs are preserved. Templates save filters, not report results.
+- Offline suggestions are advisory heuristic scores against active posting expense accounts; nothing
+  is automatically posted or changed. Existing pre-save duplicate warnings remain in place; the new
+  duplicate endpoint also supports exact number/date/amount with optional party/currency/direction.
+- Forecast is a **historical average illustration**, not a due-date or 13-week commitment forecast.
+  No double-counting of outstanding invoices is introduced. Missing history remains unavailable.
+  Profit explanations compare equal-length adjacent periods within the selected year and identify
+  numerical contributors, not unsupported causal claims.
+- Background requests capture company/year/session; obsolete results are discarded. Workers never
+  access Tk widgets. No zero-latency or OCR-accuracy promise is made.
+- See `docs/ux-upgrade/VALIDATION.md` for exact validation and deployment limits.
+
 ## Version 2.9.127 (reviewed intake, commercial documents and executive dashboard)
 - Windows build repair: the setup fixture now supplies the correct executable name and explicitly exercises Windows and Linux. Installation refuses a runtime archive missing its platform executable before writing the ready marker. No checksum, model or runtime verification was removed.
 - This repairs the still-unreleased 2.9.127 without another version bump. A successful main build can now publish its missing release after a same-version retry; automatic pushes preserve existing release assets. Manual publication behavior is retained.
@@ -13,6 +78,7 @@
 - Help includes invoice-review/commercial-workflow illustrations and an optional local video player; no recorded video course is bundled. Version changes merged to main publish the Windows installer only after the build/tests pass; pull requests never publish a release.
 - Invoice review now opens PDFs and photos beside editable header fields, with page selection, image zoom/rotation, field origin and reader confidence where supplied. Unknown confidence stays unknown; local account-match scores are advisory, not OCR accuracy measurements.
 - Invoice/line classification uses only active accounts from the actual company chart; uncertain accounts and VAT treatment remain for accountant selection. Editable item review keeps missing quantities/prices missing instead of manufacturing 1 × total. Arabic, English and French content is preserved; French Tesseract language data is added to the Windows build.
+- Free AI account suggestions match invoice descriptions locally in Arabic, French and English against the discovered active chart. A detailed description can create a 9-digit child account under its real base account after a short typing pause; an existing matching child is reused. On invoice forms with an account selector, review the suggestion and choose "Use account" to apply it. No paid API or internet service is used.
 - Azure remains explicitly selected and optional. Its calculated subtotal is marked inferred. PDF/photo imports require human review and no longer auto-post from the reading alone. Existing manual/Excel workflows and all features remain available.
 - Added a concise period dashboard summary: cash/bank book balance, overdue AR/AP by counterparty, posted income/expenses/profit and same-period comparison, with PDF/Excel and explicit missing-prior-year information.
 - Payments, expenses and journal-voucher creation now save their approval state in the same transaction. Receivable/payable reports ignore held payments, handle refunds and exchange differences, and exclude draft invoices. Invoice lists show approved allocations separately from directly paid amounts.

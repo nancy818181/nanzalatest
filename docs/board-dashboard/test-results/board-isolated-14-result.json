@@ -1,0 +1,18 @@
+{
+  "modules": [
+    "tests.test_renumber"
+  ],
+  "test_ids": [
+    "tests.test_renumber.RenumberTest.test_a_stale_preview_changes_nothing",
+    "tests.test_renumber.RenumberTest.test_journal_vouchers_expenses_and_invoices",
+    "tests.test_renumber.RenumberTest.test_locked_books_keep_their_numbers_and_the_rest_follows_on",
+    "tests.test_renumber.RenumberTest.test_numbers_typed_by_hand_are_never_touched",
+    "tests.test_renumber.RenumberTest.test_only_the_administrator",
+    "tests.test_renumber.RenumberTest.test_receipts_follow_the_dates_and_their_journal_entries_follow"
+  ],
+  "tests_run": 6,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

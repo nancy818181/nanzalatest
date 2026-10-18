@@ -1,0 +1,7 @@
+test_layouts (tests.test_pdf_formats.PdfFormatsTest.test_layouts) ... ok
+test_normalization (tests.test_pdf_formats.PdfFormatsTest.test_normalization) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.224s
+
+OK

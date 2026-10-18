@@ -86,7 +86,7 @@ class PaymentsStore:
             return dict(row)
 
     @atomic  # 2.9.121
-    def add_payment(self, item, user_id):
+    def add_payment(self, item, user_id, defer_posting=False):
         self.require_eur_rate(item.get("currency"), item.get("payment_date"))
         kind=str(item.get("kind") or "").strip(); date=str(item.get("payment_date") or "").strip()
         self._assert_period_open(date)
@@ -144,10 +144,13 @@ class PaymentsStore:
             payment_id=result.lastrowid
             db.execute("UPDATE payments SET payment_number=?,payment_method=?,department_id=?,project_id=?,exchange_gain_account=?,exchange_loss_account=? WHERE id=?",
                 (number,str(item.get("payment_method") or "Cash").strip(),department_id,project_id,gain_account,loss_account,payment_id))
-            entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at)
-                VALUES(?,?,?,?,?,?,?,?)""",(number,date,
+            posting_status="draft" if defer_posting else "posted"
+            entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
+                created_by,created_at,posting_status,posted_at,posted_by)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(number,date,
                         str(item.get("description") or (("Receipt from " if kind=="customer_receipt" else "Payment to ")+party["name"])).strip(),"payment",
-                        payment_id,currency,user_id,utcnow()))
+                        payment_id,currency,user_id,utcnow(),posting_status,
+                        None if defer_posting else utcnow(),None if defer_posting else user_id))
             party_settlement=amount+exchange_diff
             if kind=="customer_receipt": lines=[(cash_account,amount-commission,Decimal("0")),(party_account,Decimal("0"),party_settlement)]
             else: lines=[(party_account,party_settlement,Decimal("0")),(cash_account,Decimal("0"),amount+commission)]
@@ -174,7 +177,7 @@ class PaymentsStore:
                 ORDER BY x.id DESC""")]
 
     @atomic  # 2.9.121
-    def add_expense(self, item, user_id):
+    def add_expense(self, item, user_id, defer_posting=False):
         self.require_eur_rate(item.get("currency"), item.get("expense_date"))
         date=str(item.get("expense_date") or "").strip(); self._assert_period_open(date); self._assert_vat_open(date)
         description=str(item.get("description") or "").strip()
@@ -202,10 +205,14 @@ class PaymentsStore:
             import numbering  # 2.9.116
             number=str(item.get("expense_number") or "").strip() or self._next_number(db,"expenses","expense_number",numbering.series(db,"expense"),date)
             db.execute("UPDATE expenses SET expense_number=? WHERE id=?",(number,expense_id))
-            entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at)
-                VALUES(?,?,?,?,?,?,?,?)""",(number if not db.execute("SELECT 1 FROM journal_entries WHERE entry_number=?",(number,)).fetchone() else f"EXP-{expense_id}",date,
-                description+(f" - {str(item.get('reference')).strip()}" if str(item.get("reference") or "").strip() and str(item.get("reference")).strip() not in description else ""),  # 2.9.87: the supplier's invoice number in the entry
-                "expense",expense_id,currency,user_id,utcnow()))
+            posting_status="draft" if defer_posting else "posted"
+            entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
+                created_by,created_at,posting_status,posted_at,posted_by)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?)""",(number if not db.execute("SELECT 1 FROM journal_entries WHERE entry_number=?",(number,)).fetchone() else f"EXP-{expense_id}",date,
+                description+(f" - {str(item.get('reference')).strip()}" if str(item.get("reference") or "").strip() and str(item.get("reference")).strip() not in \
+                    description else ""),  # 2.9.87: the supplier's invoice number in the entry
+                "expense",expense_id,currency,user_id,utcnow(),posting_status,
+                None if defer_posting else utcnow(),None if defer_posting else user_id))
             lines=[self._line_for_side(expense_account,with_vat,expense_side),self._line_for_side(expense_without_vat_account,without_vat,
                     expense_without_vat_side),self._line_for_side(vat_account,vat,vat_side),self._line_for_side(payment_account,total,payment_side)]
             difference=sum(Decimal(str(line[1]))-Decimal(str(line[2])) for line in lines)

@@ -1,0 +1,13 @@
+test_backups_of_the_nanza_main_file_are_listed (tests.test_v2_9_114.NanzaFileNamesTest.test_backups_of_the_nanza_main_file_are_listed) ... ok
+test_new_folder_gets_nanza_files_old_folder_keeps_saber_files (tests.test_v2_9_114.NanzaFileNamesTest.test_new_folder_gets_nanza_files_old_folder_keeps_saber_files) ... ok
+test_build_names_the_programs_nanza (tests.test_v2_9_114.NanzaProgramFileTest.test_build_names_the_programs_nanza) ... ok
+test_installed_copies_update_in_place_and_keep_their_data (tests.test_v2_9_114.NanzaProgramFileTest.test_installed_copies_update_in_place_and_keep_their_data) ... ok
+test_installer_uses_new_files_and_removes_old_ones (tests.test_v2_9_114.NanzaProgramFileTest.test_installer_uses_new_files_and_removes_old_ones) ... ok
+test_programs_carry_nanza_file_details (tests.test_v2_9_114.NanzaProgramFileTest.test_programs_carry_nanza_file_details) ... ok
+test_data_service_handshake_is_unchanged (tests.test_v2_9_114.NanzaWordingTest.test_data_service_handshake_is_unchanged) ... ok
+test_the_user_never_sees_saber_accounting (tests.test_v2_9_114.NanzaWordingTest.test_the_user_never_sees_saber_accounting) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.435s
+
+OK

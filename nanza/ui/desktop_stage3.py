@@ -13,6 +13,7 @@ from desktop_common import main_currency  # 2.9.71
 from desktop_stage3_common import _dd, _num
 from desktop_common import flow_toolbars
 from desktop_common import account_label, account_code  # 2.9.79
+from i18n import tr
 from desktop_purchases import PurchasesMixin
 from desktop_asset_register import AssetRegisterMixin
 from desktop_expenses import ExpensesMixin
@@ -28,7 +29,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         def poll():
             try: kind,value=events.get_nowait()
             except queue.Empty: self.after(100,poll); return
-            if kind=="error": messagebox.showerror("Local PDF assistance",value)
+            if kind=="error": messagebox.showerror(tr(self.language.get(),"ai_accountant_title"),value)
             else: success(value)
         self.after(100,poll)
         threading.Thread(target=run,daemon=True,name="SaberLocalAssist").start()
@@ -708,7 +709,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                 if row: documents.append({"id": row["id"], "invoice_number": row["invoice_number"], "invoice_date": row["invoice_date"], "kind": row["kind"], "doc_subtype": row.get("doc_subtype"),
                                           "currency": row["currency"], "total": float(row["total"] or 0), "open_amount": 0.0})
         for d in documents:
-            expected_kind = ("supplier_payment" if d.get("doc_subtype") == "credit_note" else "customer_receipt") if d["kind"] == "sale" else ("customer_receipt" if d.get("doc_subtype") == "credit_note" else "supplier_payment")
+            expected_kind = ("supplier_payment" if d.get("doc_subtype") == "credit_note" else "customer_receipt") if d["kind"] == "sale" else ("customer_receipt" if \
+                d.get("doc_subtype") == "credit_note" else "supplier_payment")
             if expected_kind != form["kind"] and d["id"] not in existing: continue
             open_amount = float(d["open_amount"]) + float(existing.get(d["id"], 0))
             row = {"invoice_id": d["id"], "expected_kind": expected_kind, "number": d["invoice_number"], "date": _dd(d["invoice_date"]),

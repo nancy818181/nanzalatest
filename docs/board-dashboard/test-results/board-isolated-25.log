@@ -1,0 +1,39 @@
+test_default_accounts_are_checked_and_used (tests.test_v2_9_81.SetupTest.test_default_accounts_are_checked_and_used) ... ok
+test_doe_accepts_the_chosen_gain_account (tests.test_v2_9_81.SetupTest.test_doe_accepts_the_chosen_gain_account) ... ok
+test_hidden_modules_company_and_user (tests.test_v2_9_81.SetupTest.test_hidden_modules_company_and_user) ... ok
+test_hidden_screen_and_report (tests.test_v2_9_81.WindowTest.test_hidden_screen_and_report) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_settings_page_and_year_end_check_window (tests.test_v2_9_81.WindowTest.test_settings_page_and_year_end_check_window) ... invalid command name "140014456919872<lambda>"
+    while executing
+"140014456919872<lambda>"
+    ("after" script)
+invalid command name "140015129770048<lambda>"
+    while executing
+"140015129770048<lambda>"
+    ("after" script)
+invalid command name "140015137840960collect"
+    while executing
+"140015137840960collect"
+    ("after" script)
+ok
+test_clean_books_are_ready (tests.test_v2_9_81.YearEndCheckTest.test_clean_books_are_ready) ... ok
+test_problems_are_found (tests.test_v2_9_81.YearEndCheckTest.test_problems_are_found) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 31.462s
+
+OK
+Nanza Accounting server running at http://127.0.0.1:54167
+For a new database, sign in as admin with this one-time initial password:
+admin12345
+Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py

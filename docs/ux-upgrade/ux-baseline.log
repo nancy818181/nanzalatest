@@ -1,0 +1,34 @@
+..s..................................................sss.................................................... [ 10%]
+.................................................... [ 14%]
+................................................................ [ 20%]
+..................................................................... [ 27%]
+................................................................ [ 33%]
+.......................................................... [ 38%]
+...........s....................................... [ 43%]
+.....................................................................................F........................... [ 54%]
+.............................................ss...........ssssssssss [ 60%]
+sssssssssssssssss.................................s................. [ 67%]
+...................................................s......s.......ss.. [ 73%]
+.s......s.................s..........ss.......s......................... [ 80%]
+....ss...s.....s.....................................................sss [ 87%]
+...............ss......s.................s..................ss.......... [ 93%]
+........sss.......s...............................................                                                                  [100%]
+=================================== FAILURES ===================================
+_____________ ReleaseCheckTest.test_repository_is_ready_to_release _____________
+
+self = <tests.test_release_check.ReleaseCheckTest testMethod=test_repository_is_ready_to_release>
+
+    def test_repository_is_ready_to_release(self):
+>       self.assertEqual(release_check.problems(), [])
+E       AssertionError: Lists differ: ['symbolic link in the repository: assets'[9456 chars]pyc'] != []
+E       
+E       First list contains 109 additional elements.
+E       First extra element 0:
+E       'symbolic link in the repository: assets'
+E       
+E       Diff is 10417 characters long. Set self.maxDiff to None to see it.
+
+tests/test_release_check.py:24: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_release_check.py::ReleaseCheckTest::test_repository_is_ready_to_release
+1 failed, 1004 passed, 62 skipped, 164 subtests passed in 259.18s (0:04:19)

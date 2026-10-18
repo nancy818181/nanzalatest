@@ -10,7 +10,7 @@ from tkinter import messagebox, ttk
 from desktop_brains import EditableSheet
 from desktop_common import flow_toolbars
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
 RED, MUTED, AMBER = "#8B1E1E", "#5f6b76", "#B7791F"
 
 

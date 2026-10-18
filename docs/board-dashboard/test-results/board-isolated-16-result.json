@@ -1,0 +1,39 @@
+{
+  "modules": [
+    "tests.test_ui_v2_9_18"
+  ],
+  "test_ids": [
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_assets_are_three_clear_tabs_and_an_asset_saves_from_its_account",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_automatic_doe_posts_one_voucher_per_currency",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_bulk_vat_account_is_used_when_importing_pdf_invoices",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_bulk_vat_account_only_changes_confirmed_selected_rows_and_import_payload",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_bulk_vat_requires_selection_and_account_and_respects_pdf_type_changes",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_close_the_books_lock_and_unlock_from_backup_page",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_digits_typed_in_any_date_field_get_dashes",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_edit_invoice_vat_selection_is_saved_as_account_code",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_family_allocation_shows_automatically_and_can_be_edited",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_import_preview_account_edits_advance_with_tab_and_offer_lookup",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_inventory_analysis_3d_options_exist_and_run",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_item_cost_is_a_link_to_the_stock_card",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_legal_document_saved_with_dates_and_no_file",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_mouse_wheel_scrolls_the_page_under_the_pointer",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_official_excel_forms_dialog_creates_a_filled_file",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_pdf_preview_type_can_be_selected_per_row",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_program_opens_on_the_dashboard_first_and_builds_the_rest",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_right_click_on_account_field_opens_account_search",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_right_click_on_plain_field_offers_searches",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_right_click_on_voucher_account_cell_or_editor_opens_f2_search",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_statement_copies_account_to_second_row_and_escape_keeps_the_report",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_stock_card_opens_from_items",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_tab_and_enter_from_voucher_header_edit_account_cell",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_transport_days_fill_the_transport_amount",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_unused_pages_stay_unbuilt_after_startup_events",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_usd_books_doe_for_one_selected_currency",
+    "tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_vat_account_name_selects_code_with_tab"
+  ],
+  "tests_run": 27,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

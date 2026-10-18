@@ -1,0 +1,23 @@
+test_confirmed_pdf_paths_teach_memory_through_the_api (tests.test_posting_rules.PostingRulesApiTest.test_confirmed_pdf_paths_teach_memory_through_the_api) ... ok
+test_saving_teaches_and_the_screen_gets_the_suggestion (tests.test_posting_rules.PostingRulesApiTest.test_saving_teaches_and_the_screen_gets_the_suggestion) ... ok
+test_arabic_repairs_and_advertising_classification (tests.test_posting_rules.PostingRulesTest.test_arabic_repairs_and_advertising_classification) ... ok
+test_bill_to_does_not_misidentify_the_currency_as_lbp (tests.test_posting_rules.PostingRulesTest.test_bill_to_does_not_misidentify_the_currency_as_lbp) ... ok
+test_buyer_and_supplier_numbers_are_disambiguated_by_supplier_name (tests.test_posting_rules.PostingRulesTest.test_buyer_and_supplier_numbers_are_disambiguated_by_supplier_name) ... ok
+test_classification_of_lines_and_fallbacks (tests.test_posting_rules.PostingRulesTest.test_classification_of_lines_and_fallbacks) ... ok
+test_confirmed_uploaded_invoice_can_teach_memory_without_learning_opening_balances (tests.test_posting_rules.PostingRulesTest.test_confirmed_uploaded_invoice_can_teach_memory_without_learning_opening_balances) ... ok
+test_expense_form_uses_learned_classification_for_a_new_supplier (tests.test_posting_rules.PostingRulesTest.test_expense_form_uses_learned_classification_for_a_new_supplier) ... ok
+test_expense_photo_is_sent_to_ocr_instead_of_only_attached (tests.test_posting_rules.PostingRulesTest.test_expense_photo_is_sent_to_ocr_instead_of_only_attached) ... ok
+test_expense_rule_only_with_a_supplier (tests.test_posting_rules.PostingRulesTest.test_expense_rule_only_with_a_supplier) ... ok
+test_keys_and_numbers (tests.test_posting_rules.PostingRulesTest.test_keys_and_numbers) ... ok
+test_learn_then_suggest_by_number_name_and_similar_name (tests.test_posting_rules.PostingRulesTest.test_learn_then_suggest_by_number_name_and_similar_name) ... ok
+test_ocr_invoice_reuses_the_posting_of_a_previous_invoice (tests.test_posting_rules.PostingRulesTest.test_ocr_invoice_reuses_the_posting_of_a_previous_invoice) ... ok
+test_only_purchases_of_the_purchases_screen_are_learned (tests.test_posting_rules.PostingRulesTest.test_only_purchases_of_the_purchases_screen_are_learned) ... ok
+test_tax_flag_follows_the_rule (tests.test_posting_rules.PostingRulesTest.test_tax_flag_follows_the_rule) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 4.771s
+
+OK
+Nanza Accounting server running at http://127.0.0.1:34907
+For a new database, sign in as admin with this one-time initial password:
+secret12345

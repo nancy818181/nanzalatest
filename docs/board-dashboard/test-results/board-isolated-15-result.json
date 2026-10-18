@@ -1,0 +1,20 @@
+{
+  "modules": [
+    "tests.test_salary_payments"
+  ],
+  "test_ids": [
+    "tests.test_salary_payments.SalaryPaymentsTest.test_api_salary_payment_obeys_voucher_approval",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_family_allocation_and_additional_payment_have_their_own_accounts",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_monthly_sheet_preserves_the_record_specific_allowance_account",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_overpayment_non_finite_amount_and_draft_payroll_are_refused",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_payment_cannot_be_edited_or_deleted_as_an_unlinked_voucher",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_pending_approval_reserves_the_salary_but_is_not_a_posted_payment",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_reversal_restores_salary_balance_without_deleting_history",
+    "tests.test_salary_payments.SalaryPaymentsTest.test_salary_month_is_separate_from_payment_date_and_partial_payments_reconcile"
+  ],
+  "tests_run": 8,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

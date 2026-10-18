@@ -1,0 +1,9 @@
+test_text_round_trip (tests.test_v2_9_50_filters.ChoiceTextTest.test_text_round_trip) ... ok
+test_ledger_lines_kept_for_the_ticked_values (tests.test_v2_9_50_filters.FinancialFilterTest.test_ledger_lines_kept_for_the_ticked_values) ... ok
+test_brands_categories_and_projects_in_any_combination (tests.test_v2_9_50_filters.InventoryMultiFilterTest.test_brands_categories_and_projects_in_any_combination) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 1.072s
+
+OK
+Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py

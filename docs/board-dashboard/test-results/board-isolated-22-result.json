@@ -1,0 +1,14 @@
+{
+  "modules": [
+    "tests.test_v2_9_64"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_64.UpgradeMarkerTest.test_marker_follows_the_upgrade_code",
+    "tests.test_v2_9_64.UpgradeMarkerTest.test_old_file_missing_a_column_is_upgraded"
+  ],
+  "tests_run": 2,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

@@ -227,7 +227,7 @@ class SaberAccountingTest(unittest.TestCase):
             db=Database(Path(folder)/"manual.db"); db.initialize("secret")
             user=db.user_for_token(db.login("admin","secret")["token"])
             invoice={"invoice_number":"M-1","invoice_date":"14-09-2026","party_name":"Manual Supplier",
-                     "kind":"purchase","currency":"USD","source_file":"Journal Voucher"}
+                     "kind":"purchase","currency":"USD","source_file":"Journal Voucher","status":"draft"}
             items=[
                 {"description":"Automatic VAT","quantity":2,"unit_price":50,"vat_rate":11},
                 {"description":"Edited subtotal","quantity":1,"unit_price":100,"subtotal":90,"vat_rate":5},
@@ -244,8 +244,9 @@ class SaberAccountingTest(unittest.TestCase):
             self.assertEqual(float(lines[1]["subtotal"]),90.0)
             self.assertEqual(float(lines[2]["vat"]),1.0)
             voucher=next(row for row in db.journal() if row["source_id"]==invoice_id)
-            db.delete_journal_voucher(voucher["entry_id"],user["id"])
-            self.assertFalse(any(row["id"]==invoice_id for row in db.list_invoices()))
+            with self.assertRaisesRegex(ValueError,"immutable"):
+                db.delete_journal_voucher(voucher["entry_id"],user["id"])
+            self.assertTrue(any(row["id"]==invoice_id for row in db.list_invoices()))
 
     def test_sales_invoice_draft_and_custom_nine_digit_posting_accounts(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -307,7 +308,7 @@ class SaberAccountingTest(unittest.TestCase):
             saved=db.save_journal_voucher({"entry_date":"22-09-2026","description":"Opening adjustment","currency":"USD"},[
                 {"account_code":"531","description":"Cash","debit":100,"credit":0},
                 {"account_code":"601100000","description":"Expense reversal","debit":50,"credit":0},
-                {"account_code":"4011","description":"Supplier","debit":0,"credit":150}],user["id"])
+                {"account_code":"4011","description":"Supplier","debit":0,"credit":150}],user["id"],defer_posting=True)
             self.assertEqual(saved["voucher"]["entry_number"],"JV-2026-000001"); self.assertEqual(len(saved["lines"]),3)
             entry_id=saved["voucher"]["id"]
             edited=db.save_journal_voucher({"entry_number":"JV-CUSTOM-1","entry_date":"22-09-2026","description":"Edited adjustment","currency":"USD"},[
@@ -315,6 +316,11 @@ class SaberAccountingTest(unittest.TestCase):
             self.assertEqual(edited["voucher"]["entry_number"],"JV-CUSTOM-1"); self.assertEqual(len(edited["lines"]),2)
             db.delete_journal_voucher(entry_id,user["id"])
             with self.assertRaises(KeyError): db.journal_voucher_detail(entry_id)
+            posted=db.save_journal_voucher({"entry_date":"22-09-2026","description":"Posted adjustment","currency":"USD"},[
+                {"account_code":"531","debit":100},{"account_code":"4011","credit":100}],user["id"])["voucher"]
+            with self.assertRaisesRegex(ValueError,"immutable"):
+                db.save_journal_voucher({"entry_date":"22-09-2026","description":"Changed","currency":"USD"},[
+                    {"account_code":"531","debit":200},{"account_code":"4011","credit":200}],user["id"],posted["id"])
 
     def test_branches_filter_invoices_vouchers_trial_and_statement(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -1,0 +1,14 @@
+{
+  "modules": [
+    "tests.test_v2_9_86"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_86.NewItemsTest.test_created_flag_and_notice",
+    "tests.test_v2_9_86.NewItemsTest.test_warning_only_from_90_percent"
+  ],
+  "tests_run": 2,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

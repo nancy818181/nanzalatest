@@ -1,0 +1,7 @@
+test_family_counted_from_the_month_of_the_event (tests.test_v2_9_96.FamilyDatesTest.test_family_counted_from_the_month_of_the_event) ... ok
+test_listed_children_and_bad_dates (tests.test_v2_9_96.FamilyDatesTest.test_listed_children_and_bad_dates) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.753s
+
+OK

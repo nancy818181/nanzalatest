@@ -1,0 +1,33 @@
+test_every_screen_opens_in_arabic (tests.test_arabic_ui.ArabicScreensTest.test_every_screen_opens_in_arabic) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_arabic_mirrors_and_translates (tests.test_arabic_ui.RightToLeftTest.test_arabic_mirrors_and_translates) ... invalid command name "140521711341888<lambda>"
+    while executing
+"140521711341888<lambda>"
+    ("after" script)
+invalid command name "140521713218560edit_new_line"
+    while executing
+"140521713218560edit_new_line"
+    ("after" script)
+ok
+test_english_unchanged (tests.test_arabic_ui.RightToLeftTest.test_english_unchanged) ... ok
+test_the_list_is_sound (tests.test_arabic_ui.TextsTest.test_the_list_is_sound) ... ok
+test_translate (tests.test_arabic_ui.TextsTest.test_translate) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 34.911s
+
+OK
+Nanza Accounting server running at http://127.0.0.1:40043
+For a new database, sign in as admin with this one-time initial password:
+admin12345
+Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py

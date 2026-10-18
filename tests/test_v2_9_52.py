@@ -83,7 +83,8 @@ class EarlierYearsTest(unittest.TestCase):
             client = ApiClient(url); client.login("admin", "StrongPass123")
             company = client.companies()[0]; year = company["years"][0]["year"]; client.select_company_year(company["id"], year)
             self.assertEqual(client.fiscal_year_profit_loss(year, f"{year}-01-01", f"{year}-12-31", "USD"), [])
-            self.assertIsInstance(client.fiscal_year_balance_sheet(int(year) - 1, f"{int(year) - 1}-12-31", "USD"), list)   # no file for that year: this one
+            with self.assertRaisesRegex(RuntimeError, f"Historical data for FY {int(year) - 1} unavailable"):
+                client.fiscal_year_balance_sheet(int(year) - 1, f"{int(year) - 1}-12-31", "USD")
             # delete permission
             client.save_user({"username": "clerk", "password": "Clerk12345", "role": "accountant", "language": "en", "permissions": {"payroll": True, "vat": True, "delete": False}})
             clerk = ApiClient(url); clerk.login("clerk", "Clerk12345"); clerk.select_company_year(company["id"], year)

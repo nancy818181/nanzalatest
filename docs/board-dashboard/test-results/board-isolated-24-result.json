@@ -1,0 +1,14 @@
+{
+  "modules": [
+    "tests.test_v2_9_75"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_75.MovedDataFolderTest.test_a_path_outside_the_data_folder_is_still_refused",
+    "tests.test_v2_9_75.MovedDataFolderTest.test_copied_folder_opens_its_companies_and_remembers_the_new_place"
+  ],
+  "tests_run": 2,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

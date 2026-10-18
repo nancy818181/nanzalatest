@@ -1,0 +1,16 @@
+test_comparative_reads_last_years_file_and_projection_history (tests.test_v2_9_52.EarlierYearsTest.test_comparative_reads_last_years_file_and_projection_history) ... ok
+test_server_reads_another_fiscal_year (tests.test_v2_9_52.EarlierYearsTest.test_server_reads_another_fiscal_year) ... ok
+test_delete_permission_defaults (tests.test_v2_9_52.PermissionAndSigningTest.test_delete_permission_defaults) ... ok
+test_signing_is_optional_in_the_build (tests.test_v2_9_52.PermissionAndSigningTest.test_signing_is_optional_in_the_build) ... ok
+test_a_failed_copy_never_fails_the_backup (tests.test_v2_9_52.SecondCopyTest.test_a_failed_copy_never_fails_the_backup) ... Second backup copy failed for saber_accounting_2026-10-19_003655.db: disk full
+ok
+test_each_backup_is_copied_and_old_automatic_copies_pruned (tests.test_v2_9_52.SecondCopyTest.test_each_backup_is_copied_and_old_automatic_copies_pruned) ... ok
+test_any_combination_of_warehouses (tests.test_v2_9_52.WarehouseChoiceTest.test_any_combination_of_warehouses) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 2.748s
+
+OK
+Nanza Accounting server running at http://127.0.0.1:43355
+For a new database, sign in as admin with this one-time initial password:
+StrongPass123

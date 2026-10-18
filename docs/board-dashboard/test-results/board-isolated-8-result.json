@@ -1,0 +1,30 @@
+{
+  "modules": [
+    "tests.test_invoice_returns"
+  ],
+  "test_ids": [
+    "tests.test_invoice_returns.InvoiceReturnTest.test_active_linked_credit_blocks_source_edit_and_cancel_and_cancellation_releases_qty",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_backdated_purchase_return_cannot_make_later_stock_issue_negative",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_cancelling_credit_rolls_back_if_its_receipt_was_consumed_later",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_concurrent_returns_cannot_overrun_source_quantity",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_exempt_discounted_sales_return_uses_saved_net_line_value_and_zero_vat",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_fifo_purchase_return_rejects_when_original_layer_was_consumed",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_fifo_sales_return_reintroduces_the_consumed_original_layers",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_marking_credit_deleted_rolls_back_if_its_receipt_was_consumed_later",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_non_usd_purchase_stock_cost_is_converted_and_return_copies_rate",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_nonrecoverable_purchase_vat_reclassification_is_reversed_once",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_post_failure_rolls_back_credit_journal_link_and_stock",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_purchase_return_is_linked_credit_note_with_issue_stock_and_no_refund",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_purchase_return_rejects_exhausted_stock",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_return_is_idempotent_and_rejects_reused_key_with_different_payload",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_return_rejects_unposted_invoice_without_mutating_it",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_return_respects_closed_return_period_without_posting",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_sales_return_is_linked_credit_note_with_receipt_stock_and_no_refund",
+    "tests.test_invoice_returns.InvoiceReturnTest.test_sales_return_restores_original_issue_cost_not_current_average_or_sales_price"
+  ],
+  "tests_run": 18,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

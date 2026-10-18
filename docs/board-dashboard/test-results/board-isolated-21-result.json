@@ -1,0 +1,17 @@
+{
+  "modules": [
+    "tests.test_v2_9_59"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_59.DateDisplayTests.test_amount_columns",
+    "tests.test_v2_9_59.DateDisplayTests.test_display_cells_turns_iso_dates_around",
+    "tests.test_v2_9_59.PaletteTests.test_one_palette",
+    "tests.test_v2_9_59.TkLayoutTests.test_toolbar_wraps_instead_of_cutting_off",
+    "tests.test_v2_9_59.TkLayoutTests.test_tree_shows_dd_mm_but_program_reads_original"
+  ],
+  "tests_run": 5,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

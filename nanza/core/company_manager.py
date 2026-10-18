@@ -421,13 +421,13 @@ class CompanyManager:
         result=Database(self._database_path(current["database"])).reopen_fiscal_year(year,user_id)
         current["status"]="open"
         next_year=next((item for item in company.get("years",[]) if int(item["year"])==year+1),None)
-        removed_opening=0
+        reversed_opening=0
         if next_year:
-            with Database(self._database_path(next_year["database"])).connect() as db:
-                ids=[row["id"] for row in db.execute("SELECT id FROM journal_entries WHERE source_type='opening' AND entry_number LIKE ?",(f"OPEN-{year+1}-%",))]
-                for entry_id in ids: db.execute("DELETE FROM journal_entries WHERE id=?",(entry_id,))
-                removed_opening=len(ids)
-        self._write(data); return {**result,"company":company,"removed_opening_entries":removed_opening}
+            next_database=Database(self._database_path(next_year["database"]))
+            import year_end
+            reversed_opening=year_end.reverse_or_remove_openings(next_database,year+1,user_id)
+        self._write(data); return {**result,"company":company,"removed_opening_entries":reversed_opening,
+                                   "reversed_opening_entries":reversed_opening}
 
     def refresh_opening(self,company_id,source_year,user_id):
         source_year=int(source_year); target_year=source_year+1; company=self._company(company_id)
@@ -435,15 +435,16 @@ class CompanyManager:
         target_record=next((item for item in company.get("years",[]) if int(item["year"])==target_year),None)
         if not source_record or not target_record: raise ValueError(f"Both fiscal years {source_year} and {target_year} must exist")
         source=Database(self._database_path(source_record["database"])); target=Database(self._database_path(target_record["database"]))
+        import year_end
+        replaced=year_end.reverse_or_remove_openings(target,target_year,user_id)
         with target.connect() as db:
-            ids=[row["id"] for row in db.execute("SELECT id FROM journal_entries WHERE source_type='opening' AND entry_number LIKE ?",(f"OPEN-{target_year}-%",))]
-            for entry_id in ids: db.execute("DELETE FROM journal_entries WHERE id=?",(entry_id,))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (user_id,"refresh_opening","fiscal_year",target_year,json.dumps({"source_year":source_year,"replaced":len(ids)}),utcnow()))
+                (user_id,"refresh_opening","fiscal_year",target_year,json.dumps({"source_year":source_year,"replaced":replaced}),utcnow()))
         vouchers=self._opening_balances(source,target,target_year,user_id)
         import inventory
         inventory.carry_forward(source,target,target_year,user_id)
-        return {"source_year":source_year,"target_year":target_year,"opening_vouchers":vouchers,"replaced":len(ids),"provisional":source_record.get("status")!="closed"}
+        return {"source_year":source_year,"target_year":target_year,"opening_vouchers":vouchers,"replaced":replaced,
+                "reversed_opening_entries":replaced,"provisional":source_record.get("status")!="closed"}
 
     def close_and_open_year(self,company_id,year,user_id):
         """Close one company year, create its next database, and post opening vouchers."""

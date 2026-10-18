@@ -40,9 +40,11 @@ from desktop_settings import SettingsMixin
 from desktop_payroll_sheet import PayrollSheetMixin
 from desktop_projection import ProjectionMixin
 from desktop_renumber import RenumberMixin  # 2.9.115
+from desktop_workbench import WorkbenchMixin
 from desktop_setup_wizard import SetupWizardMixin  # 2.9.116
 
-class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, LearningMixin, ProjectionMixin, PayrollSheetMixin, InvoicesMixin, PartiesMixin, PayrollMixin,
+class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtrasMixin, AccountingSetupMixin, LearningMixin, ProjectionMixin, PayrollSheetMixin, \
+    InvoicesMixin, PartiesMixin, PayrollMixin,
         ReportsMixin, SettingsMixin, AssetsMixin, V22Mixin, InventoryMixin, ProductionMixin, AccountToolsMixin, Stage3Mixin, DimensionsMixin,
         BrainsScreensMixin, FinalFeaturesMixin, CNSSFormsMixin, tk.Tk):
     def __init__(self):
@@ -80,11 +82,13 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         self.import_view_currency = tk.StringVar(value="All Currencies")
         self.trial_from_date = tk.StringVar()
         self.trial_to_date = tk.StringVar()
-        self.trial_account = tk.StringVar(); self.trial_account_from=tk.StringVar(); self.trial_account_to=tk.StringVar(); self.trial_scope=tk.StringVar(value="Detailed Trial Balance"); self.trial_display_currency=tk.StringVar(value="USD + LBP")
+        self.trial_account = tk.StringVar(); self.trial_account_from=tk.StringVar(); self.trial_account_to=tk.StringVar(); \
+            self.trial_scope=tk.StringVar(value="Detailed Trial Balance"); self.trial_display_currency=tk.StringVar(value="USD + LBP")
         self.trial_posting_status=tk.StringVar(value="Posted Only")
         self.invoice_account_search=tk.StringVar()
         self.invoice_sort_by=tk.StringVar(value="Date"); self.invoice_sort_order=tk.StringVar(value="Descending")
-        self.invoice_branch=tk.StringVar(value="All Branches"); self.manual_branch=tk.StringVar(value="Head Office"); self.trial_branch=tk.StringVar(value="All Branches"); self.statement_branch=tk.StringVar(value="All Branches")
+        self.invoice_branch=tk.StringVar(value="All Branches"); self.manual_branch=tk.StringVar(value="Head Office"); \
+            self.trial_branch=tk.StringVar(value="All Branches"); self.statement_branch=tk.StringVar(value="All Branches")
         self.statement_party = tk.StringVar()
         self.statement_from_date = tk.StringVar()
         self.statement_to_date = tk.StringVar()
@@ -208,6 +212,7 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
                 if skip_self_scrolling and scrolls_itself(widget, horizontal, amount): return  # its own binding scrolled it
                 if getattr(widget, "_saber_scroll_page", False):
                     try:
+                        widget.update_idletasks()
                         view = widget.xview() if horizontal else widget.yview()
                         # 2.9.99: a page inside a page (Payroll > Tax & NSSF Settings): at its end the wheel goes on and scrolls
                         # the outer page, so the bottom of the form can always be reached on a small screen
@@ -699,6 +704,12 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         self.tab_choice=tk.StringVar(value=self.tab_names[0])
         self.tab_buttons=nav_buttons
         self._page_attributes=[attribute for attribute,_name in shown]
+        self.bind("<Control-b>",lambda _event:self.open_board_dashboard())
+        self.bind("<Control-B>",lambda _event:self.open_board_dashboard())
+        board_parent=menu_holder if side_menu else top
+        self.board_nav_button=tk.Button(board_parent,text="📊 Board Dashboard",command=self.open_board_dashboard,
+            bg=GOLD,fg=NAVY,relief="flat",pady=7,cursor="hand2")
+        self.board_nav_button.pack(side="bottom" if side_menu else "right",fill="x" if side_menu else "none",padx=5,pady=4)
         if side_menu:
             nav_buttons.extend(desktop_layout.build_side_menu(self,menu_holder,self._page_attributes,self.main_tab_pages,self.tab_names))
         else:
@@ -828,7 +839,8 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         body=[[r.get("entry_number"),r.get("entry_date"),r.get("description") or "",r.get("account_code"),r.get("account_name") or "",r.get("party_name") or "",r.get("currency"),
                float(r.get("debit") or 0),float(r.get("credit") or 0)] for r in rows]
         body.append(["TOTAL","","","","","","",round(sum(float(r.get("debit") or 0) for r in rows),2),round(sum(float(r.get("credit") or 0) for r in rows),2)])
-        meta=[f"From {self.journal_from_date.get() or '-'} to {self.journal_to_date.get() or '-'}"]+([f"Voucher: {self.journal_find.get()}"] if self.journal_find.get().strip() else [])+([f"Details: {self.journal_find_details.get()}"] if self.journal_find_details.get().strip() else [])
+        meta=[f"From {self.journal_from_date.get() or '-'} to {self.journal_to_date.get() or '-'}"]+([f"Voucher: {self.journal_find.get()}"] if \
+            self.journal_find.get().strip() else [])+([f"Details: {self.journal_find_details.get()}"] if self.journal_find_details.get().strip() else [])
         self.output_sections("General Journal",meta,[{"heading":f"{len(rows)} line(s)","headers":headers,"rows":body,"total_rows":[len(body)-1]}],"General_Journal",
                              {"preview":"preview","pdf":"pdf","print":"print"}[mode])
 
@@ -1106,9 +1118,11 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
         self.dashboard_chart=tk.Canvas(self.dashboard_tab,height=105,bg="white",highlightthickness=0)
         # 2.9.60: the small monthly strip repeated the "by month" chart below; it is kept (exports use it) but not shown
         self.build_dashboard_charts(self.dashboard_tab)
+        self.build_workbench_tools(self.dashboard_tab)
         self.load_dashboard()
 
     def load_dashboard(self):
+        self.refresh_workbench()
         try: data=self.client.professional_dashboard(); rows=data["metrics"]
         except Exception as exc: return messagebox.showerror("Error",str(exc))
         selected=self.dashboard_base_currency.get()
@@ -1146,8 +1160,8 @@ class SaberApp(SetupWizardMixin, RenumberMixin, ReportsExtrasMixin, PayrollExtra
 
     # 2.9.116: the figures as KPI cards (as in Zoho): one row per currency, a large number per card with a colour
     # strip that says what it is. The same figures as before, only shown larger.
-    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#B78B45"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
-               ("receivables","Receivables","#102A43"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
+    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#d4a017"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
+               ("receivables","Receivables","#0a1931"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
 
     def draw_kpi_cards(self,rows):
         holder=self.dashboard_cards

@@ -1,0 +1,11 @@
+test_new_currency_and_trial_balance_columns (tests.test_currency_ageing.CurrencyAgeingTest.test_new_currency_and_trial_balance_columns) ... ok
+test_stock_ageing_buckets_and_warehouse (tests.test_currency_ageing.CurrencyAgeingTest.test_stock_ageing_buckets_and_warehouse) ... ok
+test_stock_card_item_range (tests.test_currency_ageing.CurrencyAgeingTest.test_stock_card_item_range) ... ok
+test_warehouse_costs_reconcile_after_transfer_and_new_receipt (tests.test_currency_ageing.CurrencyAgeingTest.test_warehouse_costs_reconcile_after_transfer_and_new_receipt) ... ok
+test_warehouse_rounding_keeps_displayed_total_in_balance (tests.test_currency_ageing.CurrencyAgeingTest.test_warehouse_rounding_keeps_displayed_total_in_balance) ... ok
+test_zero_cost_fifo_layer_survives_year_end_opening (tests.test_currency_ageing.CurrencyAgeingTest.test_zero_cost_fifo_layer_survives_year_end_opening) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.573s
+
+OK

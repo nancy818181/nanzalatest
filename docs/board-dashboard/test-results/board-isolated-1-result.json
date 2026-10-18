@@ -1,0 +1,17 @@
+{
+  "modules": [
+    "tests.test_arabic_ui"
+  ],
+  "test_ids": [
+    "tests.test_arabic_ui.ArabicScreensTest.test_every_screen_opens_in_arabic",
+    "tests.test_arabic_ui.RightToLeftTest.test_arabic_mirrors_and_translates",
+    "tests.test_arabic_ui.RightToLeftTest.test_english_unchanged",
+    "tests.test_arabic_ui.TextsTest.test_the_list_is_sound",
+    "tests.test_arabic_ui.TextsTest.test_translate"
+  ],
+  "tests_run": 5,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

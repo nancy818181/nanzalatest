@@ -1,0 +1,13 @@
+test_five_users_save_at_the_same_time (tests.test_network_multiuser.MultiUserHttpsTest.test_five_users_save_at_the_same_time) ... ok
+test_five_users_save_at_the_same_time (tests.test_network_multiuser.MultiUserNetworkTest.test_five_users_save_at_the_same_time) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.594s
+
+OK
+Nanza Accounting server running at https://127.0.0.1:53533
+For a new database, sign in as admin with this one-time initial password:
+Admin-2025!
+Nanza Accounting server running at http://127.0.0.1:47271
+For a new database, sign in as admin with this one-time initial password:
+Admin-2025!

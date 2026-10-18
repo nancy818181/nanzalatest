@@ -1,0 +1,23 @@
+{
+  "report_preview_500": {
+    "milliseconds": [
+      14.55,
+      14.37,
+      14.07,
+      14.92,
+      14.82
+    ],
+    "median_ms": 14.55
+  },
+  "ageing_20000": {
+    "milliseconds": [
+      244.54,
+      249.54,
+      250.11,
+      283.93,
+      242.18
+    ],
+    "median_ms": 249.54
+  },
+  "dataset": "20,000 synthetic invoices and lines; query benchmark only, not a reconciled company or OCR benchmark. Linux, 5 runs."
+}

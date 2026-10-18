@@ -16,7 +16,8 @@ def migrate(connection):
 
 def history(db, payroll_id):
     with db.connect() as connection:
-        return [dict(row) for row in connection.execute("""SELECT s.*,e.entry_number,COALESCE(e.approval_status,'posted') posting_status
+        return [dict(row) for row in connection.execute("""SELECT s.*,e.entry_number,
+            COALESCE(NULLIF(e.approval_status,''),e.posting_status,'posted') posting_status
             FROM salary_payments s LEFT JOIN journal_entries e ON e.id=s.entry_id
             WHERE payroll_id=? ORDER BY s.id""", (int(payroll_id),))]
 
@@ -28,7 +29,7 @@ def outstanding(db, record):
 
 
 @atomic
-def record(db, item, user_id):
+def record(db, item, user_id, defer_posting=False):
     with db.connect() as connection:
         row = connection.execute("""SELECT p.*,e.full_name FROM payroll_records p
             JOIN employees e ON e.id=p.employee_id WHERE p.id=?""", (int(item.get("payroll_id") or 0),)).fetchone()
@@ -59,7 +60,8 @@ def record(db, item, user_id):
         voucher = db.save_journal_voucher({"entry_date": day, "currency": row["currency"], "voucher_type": "03",
             "description": f"Salary payment {month} - {row['full_name']} - {row['payroll_number']}"},
             [{"account_code": payable, "debit": str(amount), "credit": "0", "reference": reference},
-             {"account_code": cash, "debit": "0", "credit": str(amount), "reference": reference}], user_id)["voucher"]
+             {"account_code": cash, "debit": "0", "credit": str(amount), "reference": reference}], user_id,
+            defer_posting=defer_posting)["voucher"]
         payment_id = connection.execute("""INSERT INTO salary_payments
             (payroll_id,entry_id,payment_date,amount,currency,cash_account,payable_account,method,reference,created_by,created_at)
             VALUES(?,?,?,?,?,?,?,?,?,?,?)""", (row["id"], voucher["id"], day, str(amount), row["currency"], cash,

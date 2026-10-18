@@ -1,0 +1,27 @@
+{
+  "modules": [
+    "tests.test_posting_rules"
+  ],
+  "test_ids": [
+    "tests.test_posting_rules.PostingRulesApiTest.test_confirmed_pdf_paths_teach_memory_through_the_api",
+    "tests.test_posting_rules.PostingRulesApiTest.test_saving_teaches_and_the_screen_gets_the_suggestion",
+    "tests.test_posting_rules.PostingRulesTest.test_arabic_repairs_and_advertising_classification",
+    "tests.test_posting_rules.PostingRulesTest.test_bill_to_does_not_misidentify_the_currency_as_lbp",
+    "tests.test_posting_rules.PostingRulesTest.test_buyer_and_supplier_numbers_are_disambiguated_by_supplier_name",
+    "tests.test_posting_rules.PostingRulesTest.test_classification_of_lines_and_fallbacks",
+    "tests.test_posting_rules.PostingRulesTest.test_confirmed_uploaded_invoice_can_teach_memory_without_learning_opening_balances",
+    "tests.test_posting_rules.PostingRulesTest.test_expense_form_uses_learned_classification_for_a_new_supplier",
+    "tests.test_posting_rules.PostingRulesTest.test_expense_photo_is_sent_to_ocr_instead_of_only_attached",
+    "tests.test_posting_rules.PostingRulesTest.test_expense_rule_only_with_a_supplier",
+    "tests.test_posting_rules.PostingRulesTest.test_keys_and_numbers",
+    "tests.test_posting_rules.PostingRulesTest.test_learn_then_suggest_by_number_name_and_similar_name",
+    "tests.test_posting_rules.PostingRulesTest.test_ocr_invoice_reuses_the_posting_of_a_previous_invoice",
+    "tests.test_posting_rules.PostingRulesTest.test_only_purchases_of_the_purchases_screen_are_learned",
+    "tests.test_posting_rules.PostingRulesTest.test_tax_flag_follows_the_rule"
+  ],
+  "tests_run": 15,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

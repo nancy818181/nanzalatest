@@ -1,7 +1,10 @@
 import unittest
 from datetime import datetime
 
-from financial_projection import completed_months, future_months, month_range, trailing_average, long_term_projection
+from financial_projection import (
+    completed_months, five_year_cashflow_forecast, future_months, month_range,
+    trailing_average, long_term_projection,
+)
 
 
 class FinancialProjectionTest(unittest.TestCase):
@@ -16,6 +19,20 @@ class FinancialProjectionTest(unittest.TestCase):
     def test_trailing_average_includes_zero_activity_months(self):
         self.assertEqual(trailing_average({6:{"amount":30},8:{"amount":60}},8,"amount"),30)
         self.assertEqual(trailing_average({},0,"amount"),0)
+
+    def test_cashflow_scenarios_adjust_receipts_and_payments_directionally(self):
+        history = [
+            {"month": f"{year}-{month:02d}", "currency": "USD", "inflow": 100, "outflow": 80}
+            for year in (2024, 2025) for month in range(1, 13)
+        ]
+        forecasts = five_year_cashflow_forecast(history, start_year=2026)
+        for scenario, expected in (
+            ("Conservative", (90, 84)),
+            ("Realistic", (100, 80)),
+            ("Optimistic", (110, 76)),
+        ):
+            january = next(row for row in forecasts[scenario]["months"] if row["month"] == "2026-01")
+            self.assertEqual((january["inflow"], january["outflow"]), expected)
 
     def test_long_term_projection_compounds_growth_by_full_years(self):
         rows=long_term_projection({"sales":100000},2026,"2029-12-31",growth_rate=0.10)

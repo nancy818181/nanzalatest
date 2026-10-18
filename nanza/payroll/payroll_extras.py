@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from database import display_date, iso_date, utcnow
 
@@ -33,7 +33,7 @@ def migrate(db):
 
 def _d(value):
     try: return Decimal(str(value if value not in (None, "") else 0).replace(",", ""))
-    except Exception: return ZERO
+    except (InvalidOperation, TypeError, ValueError): return ZERO
 
 
 def _lbp(db, amount, currency, day):
@@ -174,7 +174,10 @@ def eos_sections(result):
             {"heading": "Entry", "headers": ["Account", "Debit", "Credit"], "rows": entry, "total_rows": []},
             {"heading": "Notes", "headers": ["Note"], "rows": [[n] for n in result["notes"] + [
                 "Indemnity = last monthly salary x years of service (Social Security Law Art. 50-54); the NSSF pays it from the 8.5% contributions and the employer pays the difference.",
-                "Contributions paid = the employer end-of-service share in Nanza's posted payroll + 'End-of-service contributions before Nanza' on the employee. An estimate for the accounts, not the NSSF settlement."]],
+                (
+                    "Contributions paid = the employer end-of-service share in Nanza's posted payroll + 'End-of-service contributions before "
+                    "Nanza' on the employee. An estimate for the accounts, not the NSSF settlement."
+                )]],
                         "total_rows": []}]
 
 

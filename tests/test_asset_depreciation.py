@@ -45,7 +45,10 @@ class AssetDepreciationTest(unittest.TestCase):
         self.assertEqual(result["amounts"],{"LBP":149166.67,"USD":220.0})
         self.assertEqual(len(result["vouchers"]),3)
         with self.db.connect() as c:
-            rows=[dict(r) for r in c.execute("SELECT a.asset_code,a.currency asset_currency,e.currency entry_currency,p.amount FROM fixed_asset_postings p JOIN fixed_assets a ON a.id=p.asset_id JOIN journal_entries e ON e.id=p.entry_id")]
+            rows=[dict(r) for r in c.execute((
+                "SELECT a.asset_code,a.currency asset_currency,e.currency entry_currency,p.amount FROM fixed_asset_postings p JOIN "
+                "fixed_assets a ON a.id=p.asset_id JOIN journal_entries e ON e.id=p.entry_id"
+            ))]
         self.assertEqual(len(rows),3)
         self.assertTrue(all(row["asset_currency"]==row["entry_currency"] for row in rows))
         self.assertEqual(self.db.unbalanced_entries(),[])

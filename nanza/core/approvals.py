@@ -54,11 +54,21 @@ def hold(db, entry_id, user_id=None):
     """Set the journal lines of an entry aside: it waits for approval and is in no report."""
     with db.connect() as connection:
         columns = ",".join(_line_columns(connection))
-        if not connection.execute("SELECT 1 FROM journal_lines WHERE entry_id=?", (int(entry_id),)).fetchone(): return False
+        entry = connection.execute(
+            "SELECT posting_status,approval_status FROM journal_entries WHERE id=?",
+            (int(entry_id),),
+        ).fetchone()
+        if not entry or not connection.execute(
+                "SELECT 1 FROM journal_lines WHERE entry_id=?", (int(entry_id),)).fetchone():
+            return False
+        if entry["posting_status"] == "posted":
+            raise ValueError("Posted journal entries are immutable; create a reversal instead")
+        if entry["approval_status"] == "review":
+            raise ValueError("This journal entry is already waiting for approval")
+        connection.execute("UPDATE journal_entries SET approval_status='review' WHERE id=?", (int(entry_id),))
         connection.execute("DELETE FROM held_journal_lines WHERE entry_id=?", (int(entry_id),))
         connection.execute(f"INSERT INTO held_journal_lines({columns},held_at) SELECT {columns},? FROM journal_lines WHERE entry_id=?", (utcnow(), int(entry_id)))
         connection.execute("DELETE FROM journal_lines WHERE entry_id=?", (int(entry_id),))
-        connection.execute("UPDATE journal_entries SET approval_status='review' WHERE id=?", (int(entry_id),))
         connection.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                            (user_id, "hold", "journal_entry", int(entry_id), json.dumps({"waiting": "approval"}), utcnow()))
     return True
@@ -77,15 +87,17 @@ def entry_of(db, kind, result):
     return int(row["id"]) if row else None
 
 
-def pending(db):
+def pending(db, include_payroll=True):
     """Everything waiting for approval: invoices in review and held entries (vouchers, payments, expenses)."""
     with db.connect() as connection:
         users = {row["id"]: row["username"] for row in connection.execute("SELECT id,username FROM users")}
         invoices = [dict(r) for r in connection.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.kind,i.currency,i.total,i.created_by,p.name party
             FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.status='review' ORDER BY i.id""")]
-        entries = [dict(r) for r in connection.execute("""SELECT e.id,e.entry_number,e.entry_date,e.description,e.source_type,e.currency,e.created_by,
+        payroll_filter = "" if include_payroll else (
+            "AND NOT EXISTS (SELECT 1 FROM salary_payments s WHERE s.entry_id=e.id)")
+        entries = [dict(r) for r in connection.execute(f"""SELECT e.id,e.entry_number,e.entry_date,e.description,e.source_type,e.currency,e.created_by,
             (SELECT DSUM(CAST(debit AS REAL)) FROM held_journal_lines h WHERE h.entry_id=e.id) amount
-            FROM journal_entries e WHERE e.approval_status='review' ORDER BY e.id""")]
+            FROM journal_entries e WHERE e.approval_status='review' {payroll_filter} ORDER BY e.id""")]
     kind_of = {value: key for key, value in SOURCE_OF.items()}
     rows = [{"kind": "invoices", "id": i["id"], "number": i["invoice_number"], "date": display_date(i["invoice_date"]),
              "description": f"{'Sale' if i['kind'] == 'sale' else 'Purchase'} - {i.get('party') or ''}", "currency": i["currency"],
@@ -108,8 +120,61 @@ def approve_entries(db, entry_ids, user, require_other=True):
             back = ",".join(c for c in columns.split(",") if c != "id")  # new line numbers (the old ones may be used again meanwhile)
             connection.execute(f"INSERT INTO journal_lines({back}) SELECT {back} FROM held_journal_lines WHERE entry_id=? ORDER BY id", (int(entry_id),))
             connection.execute("DELETE FROM held_journal_lines WHERE entry_id=?", (int(entry_id),))
-            connection.execute("UPDATE journal_entries SET approval_status=NULL WHERE id=?", (int(entry_id),))
+            connection.execute("""UPDATE journal_entries SET approval_status=NULL,posting_status='posted',
+                posted_at=?,posted_by=?,rejection_reason=NULL WHERE id=?""",
+                (utcnow(),user["id"],int(entry_id)))
             connection.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                                (user["id"], "approve", "journal_entry", int(entry_id), json.dumps({"entry": row["entry_number"], "prepared_by": row["created_by"]}), utcnow()))
             approved.append(row["entry_number"])
     return {"approved": approved, "skipped": skipped}
+
+
+def reject_documents(db, entry_ids, invoice_ids, user, reason):
+    reason = str(reason or "").strip()
+    if not reason or len(reason) > 1000:
+        raise ValueError("Enter a rejection reason of no more than 1000 characters")
+    rejected, skipped = [], []
+    with db.connect() as connection:
+        columns = _line_columns(connection)
+        line_columns = ",".join(column for column in columns if column != "id")
+        for entry_id in entry_ids or []:
+            row = connection.execute(
+                "SELECT id,entry_number,created_by,approval_status FROM journal_entries WHERE id=?",
+                (int(entry_id),)).fetchone()
+            if not row or row["approval_status"] != "review":
+                skipped.append(f"{entry_id}: not waiting for approval")
+                continue
+            if row["created_by"] == user["id"] and user["role"] != "admin":
+                skipped.append(f"{row['entry_number']}: prepared by you - another user must review it")
+                continue
+            connection.execute(
+                f"INSERT INTO journal_lines({line_columns}) SELECT {line_columns} "
+                "FROM held_journal_lines WHERE entry_id=? ORDER BY id", (int(entry_id),))
+            connection.execute("DELETE FROM held_journal_lines WHERE entry_id=?", (int(entry_id),))
+            connection.execute("""UPDATE journal_entries SET approval_status='rejected',
+                posting_status='draft',rejection_reason=? WHERE id=?""", (reason,int(entry_id)))
+            connection.execute("""INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at)
+                VALUES(?,?,?,?,?,?)""", (user["id"],"reject","journal_entry",int(entry_id),
+                json.dumps({"entry":row["entry_number"],"reason":reason}),utcnow()))
+            rejected.append(row["entry_number"])
+        for invoice_id in invoice_ids or []:
+            row=connection.execute(
+                "SELECT id,invoice_number,created_by,status FROM invoices WHERE id=?",
+                (int(invoice_id),)).fetchone()
+            if not row or row["status"] != "review":
+                skipped.append(f"{invoice_id}: invoice is not waiting for approval")
+                continue
+            if row["created_by"] == user["id"] and user["role"] != "admin":
+                skipped.append(f"{row['invoice_number']}: prepared by you - another user must review it")
+                continue
+            connection.execute(
+                "UPDATE invoices SET status='draft',rejection_reason=? WHERE id=?",
+                (reason,int(invoice_id)))
+            connection.execute("""UPDATE journal_entries SET posting_status='draft',
+                posted_at=NULL,posted_by=NULL,rejection_reason=? WHERE source_type='invoice' AND source_id=?""",
+                (reason,int(invoice_id)))
+            connection.execute("""INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at)
+                VALUES(?,?,?,?,?,?)""", (user["id"],"reject","invoice",int(invoice_id),
+                json.dumps({"invoice_number":row["invoice_number"],"reason":reason}),utcnow()))
+            rejected.append(row["invoice_number"])
+    return {"rejected": rejected, "skipped": skipped}

@@ -1,0 +1,14 @@
+{
+  "modules": [
+    "tests.test_v2_9_96"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_96.FamilyDatesTest.test_family_counted_from_the_month_of_the_event",
+    "tests.test_v2_9_96.FamilyDatesTest.test_listed_children_and_bad_dates"
+  ],
+  "tests_run": 2,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

@@ -1,0 +1,200 @@
+test_aging_forecast_duplicate_and_profit_intents_execute (tests.test_ai_accountant_real.RealAccountantQueryTests.test_aging_forecast_duplicate_and_profit_intents_execute) ... ok
+test_ar_aging_reconciles_to_posted_control_balance (tests.test_ai_accountant_real.RealAccountantQueryTests.test_ar_aging_reconciles_to_posted_control_balance) ... ok
+test_arabic_question_maps_account_and_period (tests.test_ai_accountant_real.RealAccountantQueryTests.test_arabic_question_maps_account_and_period) ... ok
+test_duplicate_check_finds_supplier_invoices_within_seven_days (tests.test_ai_accountant_real.RealAccountantQueryTests.test_duplicate_check_finds_supplier_invoices_within_seven_days) ... ok
+test_fuel_filter_returns_only_fuel_accounts_and_sources (tests.test_ai_accountant_real.RealAccountantQueryTests.test_fuel_filter_returns_only_fuel_accounts_and_sources) ... ok
+test_requested_arabic_and_french_intents_are_detected (tests.test_ai_accountant_real.RealAccountantQueryTests.test_requested_arabic_and_french_intents_are_detected) ... ok
+test_asset_validation_and_configured_currency (tests.test_asset_depreciation.AssetDepreciationTest.test_asset_validation_and_configured_currency) ... ok
+test_depreciation_voucher_cannot_be_changed_independently_of_the_asset (tests.test_asset_depreciation.AssetDepreciationTest.test_depreciation_voucher_cannot_be_changed_independently_of_the_asset) ... ok
+test_linked_asset_purchase_cannot_disappear_from_the_books (tests.test_asset_depreciation.AssetDepreciationTest.test_linked_asset_purchase_cannot_disappear_from_the_books) ... ok
+test_monthly_table_and_one_entry_per_account (tests.test_asset_depreciation.AssetDepreciationTest.test_monthly_table_and_one_entry_per_account) ... ok
+test_net_value_never_negative_and_validation (tests.test_asset_depreciation.AssetDepreciationTest.test_net_value_never_negative_and_validation) ... ok
+test_posting_link_failure_rolls_back_the_journal_voucher (tests.test_asset_depreciation.AssetDepreciationTest.test_posting_link_failure_rolls_back_the_journal_voucher) ... ok
+test_same_asset_account_keeps_currencies_and_posting_accounts_separate (tests.test_asset_depreciation.AssetDepreciationTest.test_same_asset_account_keeps_currencies_and_posting_accounts_separate) ... ok
+test_a_failed_check_does_not_block_the_next_change (tests.test_balance_guard.BalanceGuardTest.test_a_failed_check_does_not_block_the_next_change) ... Unbalanced entry T-6 refused: debit 1, credit 0
+ok
+test_balanced_entry_is_saved (tests.test_balance_guard.BalanceGuardTest.test_balanced_entry_is_saved) ... ok
+test_changing_or_removing_a_line_cannot_unbalance_a_saved_entry (tests.test_balance_guard.BalanceGuardTest.test_changing_or_removing_a_line_cannot_unbalance_a_saved_entry) ... Unbalanced entry T-4 refused: debit 120, credit 100
+Unbalanced entry T-4 refused: debit 0, credit 100
+ok
+test_entries_saved_by_older_versions_are_listed_for_review (tests.test_balance_guard.BalanceGuardTest.test_entries_saved_by_older_versions_are_listed_for_review) ... ok
+test_one_sided_entry_is_refused (tests.test_balance_guard.BalanceGuardTest.test_one_sided_entry_is_refused) ... Unbalanced entry T-3 refused: debit 5, credit 0
+ok
+test_rounding_up_to_one_cent_is_accepted (tests.test_balance_guard.BalanceGuardTest.test_rounding_up_to_one_cent_is_accepted) ... ok
+test_unbalanced_entry_is_refused_and_nothing_is_saved (tests.test_balance_guard.BalanceGuardTest.test_unbalanced_entry_is_refused_and_nothing_is_saved) ... Unbalanced entry T-2 refused: debit 100, credit 90
+ok
+test_a_file_that_is_not_a_company_is_refused (tests.test_company_import.CompanyImportTest.test_a_file_that_is_not_a_company_is_refused) ... ok
+test_add_from_file_copies_and_lists_it (tests.test_company_import.CompanyImportTest.test_add_from_file_copies_and_lists_it) ... ok
+test_file_copied_into_the_companies_folder_is_found (tests.test_company_import.CompanyImportTest.test_file_copied_into_the_companies_folder_is_found) ... ok
+test_cash_profit_and_missing_comparison_are_distinct (tests.test_dashboard_brief.DashboardBriefTest.test_cash_profit_and_missing_comparison_are_distinct) ... ok
+test_client_restores_exact_decimal_cells_for_exports (tests.test_dashboard_brief.DashboardBriefTest.test_client_restores_exact_decimal_cells_for_exports) ... ok
+test_customer_advance_does_not_hide_another_customers_overdue_balance (tests.test_dashboard_brief.DashboardBriefTest.test_customer_advance_does_not_hide_another_customers_overdue_balance) ... ok
+test_prior_profit_and_leap_day_comparison (tests.test_dashboard_brief.DashboardBriefTest.test_prior_profit_and_leap_day_comparison) ... ok
+test_nssf_2026_ceiling_change_and_manual_sickness_override (tests.test_employee_r3.EmployeeRegistrationTest.test_nssf_2026_ceiling_change_and_manual_sickness_override) ... ok
+test_nssf_declaration_frequency_counts_roster_at_selected_month (tests.test_employee_r3.EmployeeRegistrationTest.test_nssf_declaration_frequency_counts_roster_at_selected_month) ... ok
+test_nssf_roster_counts_employees_without_payroll (tests.test_employee_r3.EmployeeRegistrationTest.test_nssf_roster_counts_employees_without_payroll) ... ok
+test_nssf_settlement_requires_filed_months_and_reconciles_saved_wages (tests.test_employee_r3.EmployeeRegistrationTest.test_nssf_settlement_requires_filed_months_and_reconciles_saved_wages) ... ok
+test_registration_fields_are_saved_and_preserved_on_edit (tests.test_employee_r3.EmployeeRegistrationTest.test_registration_fields_are_saved_and_preserved_on_edit) ... ok
+test_salary_tax_uses_only_half_child_deduction_when_spouse_works (tests.test_employee_r3.EmployeeRegistrationTest.test_salary_tax_uses_only_half_child_deduction_when_spouse_works) ... ok
+test_arabic_pdf_column_order_does_not_depend_on_ui_language (tests.test_financial_reconciliation.FinancialReconciliationTest.test_arabic_pdf_column_order_does_not_depend_on_ui_language) ... ok
+test_complete_cash_flow_with_exchange_effect_reconciles (tests.test_financial_reconciliation.FinancialReconciliationTest.test_complete_cash_flow_with_exchange_effect_reconciles) ... ok
+test_exact_large_amount_formatting_does_not_round_through_float (tests.test_financial_reconciliation.FinancialReconciliationTest.test_exact_large_amount_formatting_does_not_round_through_float) ... ok
+test_incomplete_override_does_not_silently_take_effect (tests.test_financial_reconciliation.FinancialReconciliationTest.test_incomplete_override_does_not_silently_take_effect) ... ok
+test_manual_cash_flow_difference_is_reported (tests.test_financial_reconciliation.FinancialReconciliationTest.test_manual_cash_flow_difference_is_reported) ... ok
+test_opposite_unmapped_balances_do_not_cancel_the_warning (tests.test_financial_reconciliation.FinancialReconciliationTest.test_opposite_unmapped_balances_do_not_cancel_the_warning) ... ok
+test_print_headers_and_notes_do_not_repeat_entire_narratives (tests.test_financial_reconciliation.FinancialReconciliationTest.test_print_headers_and_notes_do_not_repeat_entire_narratives) ... ok
+test_standalone_report_is_available_without_audit_or_notes (tests.test_financial_reconciliation.FinancialReconciliationTest.test_standalone_report_is_available_without_audit_or_notes) ... ok
+test_balance_screen_applies_the_same_account_range_as_export (tests.test_financial_reconciliation.FinancialScreenTest.test_balance_screen_applies_the_same_account_range_as_export) ... ok
+test_export_carries_company_period_currency_and_account_scope (tests.test_financial_reconciliation.FinancialScreenTest.test_export_carries_company_period_currency_and_account_scope) ... ok
+test_date_ambiguity_does_not_depend_on_the_model_admitting_uncertainty (tests.test_invoice_evidence.InvoiceEvidenceTest.test_date_ambiguity_does_not_depend_on_the_model_admitting_uncertainty) ... ok
+test_item_evidence_never_becomes_an_accounting_line_without_review (tests.test_invoice_evidence.InvoiceEvidenceTest.test_item_evidence_never_becomes_an_accounting_line_without_review) ... ok
+test_partial_rows_never_masquerade_as_complete_item_extraction (tests.test_invoice_evidence.InvoiceEvidenceTest.test_partial_rows_never_masquerade_as_complete_item_extraction) ... ok
+test_schema_marker_tracks_salary_payment_migrations (tests.test_invoice_evidence.InvoiceEvidenceTest.test_schema_marker_tracks_salary_payment_migrations) ... ok
+test_secondary_reader_warning_is_not_lost (tests.test_invoice_evidence.InvoiceEvidenceTest.test_secondary_reader_warning_is_not_lost) ... ok
+test_uncertain_header_values_never_enter_consensus_even_if_both_readers_agree (tests.test_invoice_evidence.InvoiceEvidenceTest.test_uncertain_header_values_never_enter_consensus_even_if_both_readers_agree) ... ok
+test_uncertain_item_amount_is_not_used_for_arithmetic (tests.test_invoice_evidence.InvoiceEvidenceTest.test_uncertain_item_amount_is_not_used_for_arithmetic) ... ok
+test_wrong_line_arithmetic_is_flagged_without_repairing_written_numbers (tests.test_invoice_evidence.InvoiceEvidenceTest.test_wrong_line_arithmetic_is_flagged_without_repairing_written_numbers) ... ok
+test_alerts_skip_documents_that_do_not_apply (tests.test_legal_documents_applies.LegalDocumentsAppliesTest.test_alerts_skip_documents_that_do_not_apply) ... ok
+test_bad_dates_are_refused (tests.test_legal_documents_applies.LegalDocumentsAppliesTest.test_bad_dates_are_refused) ... ok
+test_dates_are_saved_without_a_file (tests.test_legal_documents_applies.LegalDocumentsAppliesTest.test_dates_are_saved_without_a_file) ... ok
+test_edit_dates_tick_and_attach_file_later (tests.test_legal_documents_applies.LegalDocumentsAppliesTest.test_edit_dates_tick_and_attach_file_later) ... ok
+test_marked_expense_is_listed_and_still_booked (tests.test_non_deductible_expenses.NonDeductibleExpensesTest.test_marked_expense_is_listed_and_still_booked) ... ok
+test_editing_same_party_does_not_warn_about_itself (tests.test_party_similarity.PartySimilarityTests.test_editing_same_party_does_not_warn_about_itself) ... Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py
+ok
+test_exact_name_does_not_silently_update_existing_party (tests.test_party_similarity.PartySimilarityTests.test_exact_name_does_not_silently_update_existing_party) ... ok
+test_near_match_can_be_reviewed_or_saved_after_confirmation (tests.test_party_similarity.PartySimilarityTests.test_near_match_can_be_reviewed_or_saved_after_confirmation) ... ok
+test_normalization_and_ninety_percent_boundary (tests.test_party_similarity.PartySimilarityTests.test_normalization_and_ninety_percent_boundary) ... ok
+test_actual_days_across_28_29_30_and_31_day_months (tests.test_payroll_partial_month.PartialMonthPayrollTest.test_actual_days_across_28_29_30_and_31_day_months) ... ok
+test_leave_date_and_month_without_employment (tests.test_payroll_partial_month.PartialMonthPayrollTest.test_leave_date_and_month_without_employment) ... ok
+test_may_hire_prorates_base_salary_and_income_tax (tests.test_payroll_partial_month.PartialMonthPayrollTest.test_may_hire_prorates_base_salary_and_income_tax) ... ok
+test_bundled_language_files_use_tessdata_prefix_not_a_windows_path_option (tests.test_pdf_real_scans.RealScanTests.test_bundled_language_files_use_tessdata_prefix_not_a_windows_path_option) ... ok
+test_contractor_variation_order_all_fields (tests.test_pdf_real_scans.RealScanTests.test_contractor_variation_order_all_fields) ... ok
+test_section_total_is_not_taken_as_subtotal_when_another_total_reconciles (tests.test_pdf_real_scans.RealScanTests.test_section_total_is_not_taken_as_subtotal_when_another_total_reconciles) ... ok
+test_unlabelled_amounts_and_lbp_vat_line_of_a_usd_invoice (tests.test_pdf_real_scans.RealScanTests.test_unlabelled_amounts_and_lbp_vat_line_of_a_usd_invoice) ... ok
+test_agreement_and_explicit_zero_still_require_review (tests.test_reader_consensus.ReaderConsensusTest.test_agreement_and_explicit_zero_still_require_review) ... ok
+test_boolean_and_nonfinite_values_are_not_agreements (tests.test_reader_consensus.ReaderConsensusTest.test_boolean_and_nonfinite_values_are_not_agreements) ... ok
+test_cancel_between_readers_does_not_start_the_second_model (tests.test_reader_consensus.ReaderConsensusTest.test_cancel_between_readers_does_not_start_the_second_model) ... ok
+test_disputed_and_single_reader_amounts_are_withheld (tests.test_reader_consensus.ReaderConsensusTest.test_disputed_and_single_reader_amounts_are_withheld) ... ok
+test_reordered_or_unmatched_items_are_not_positionally_combined (tests.test_reader_consensus.ReaderConsensusTest.test_reordered_or_unmatched_items_are_not_positionally_combined) ... ok
+test_the_two_readers_are_independent_and_their_conflict_reaches_the_result (tests.test_reader_consensus.ReaderConsensusTest.test_the_two_readers_are_independent_and_their_conflict_reaches_the_result) ... ok
+test_a_missing_euro_rate_is_never_one_dollar (tests.test_review_fixes.ReviewFixesTest.test_a_missing_euro_rate_is_never_one_dollar) ... ok
+test_an_invoice_is_never_allocated_more_than_is_open (tests.test_review_fixes.ReviewFixesTest.test_an_invoice_is_never_allocated_more_than_is_open) ... ok
+test_vat_amounts_are_read_exactly (tests.test_review_fixes.ReviewFixesTest.test_vat_amounts_are_read_exactly) ... ok
+test_vat_settlement_is_replaced_whole (tests.test_review_fixes.ReviewFixesTest.test_vat_settlement_is_replaced_whole) ... ok
+test_decrees_and_manual_period_override (tests.test_schooling_rules.SchoolingRulesTest.test_decrees_and_manual_period_override) ... ok
+test_existing_auto_company_reads_schooling_rules_without_replacing_settings (tests.test_schooling_rules.SchoolingRulesTest.test_existing_auto_company_reads_schooling_rules_without_replacing_settings) ... ok
+test_base_exception_rolls_back_pooled_transaction_before_next_request (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_base_exception_rolls_back_pooled_transaction_before_next_request) ... ok
+test_damaged_indexes_block_initialization_before_migration (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_damaged_indexes_block_initialization_before_migration) ... ok
+test_full_and_partial_month_budget_proration_is_explicit (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_full_and_partial_month_budget_proration_is_explicit) ... ok
+test_monthly_values_reconcile_and_unavailable_metrics_stay_blank (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_monthly_values_reconcile_and_unavailable_metrics_stay_blank) ... ok
+test_process_death_during_transaction_recovers_without_partial_invoice (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_process_death_during_transaction_recovers_without_partial_invoice) ... ok
+test_separate_connections_serialize_commercial_numbers_without_duplicates (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_separate_connections_serialize_commercial_numbers_without_duplicates) ... ok
+test_zero_income_margin_is_unavailable_and_arabic_is_preserved (tests.test_v127_executive_recovery.ExecutiveRecoveryTest.test_zero_income_margin_is_unavailable_and_arabic_is_preserved) ... ok
+test_group_boxes_go_only_to_their_items (tests.test_v2_9_106.CustomsGroupsTest.test_group_boxes_go_only_to_their_items) ... ok
+test_group_without_items_is_shared_by_all (tests.test_v2_9_106.CustomsGroupsTest.test_group_without_items_is_shared_by_all) ... ok
+test_copy_missing_tables_fails (tests.test_v2_9_42.BackupCheckTest.test_copy_missing_tables_fails) ... Backup company_2026_partial.db failed its check (missing tables: app_settings, audit_log, bank_statement_lines, bank_statement_matches, bom_headers, bom_lines, branches, budgets, case_attachments, commercial_documents, commercial_events, currencies, departments, document_cases, employees, exchange_rate_samples, exchange_rates, expense_attachments, expenses, fiscal_years, fixed_asset_attachments, fixed_asset_postings, fixed_assets, held_journal_lines, income_exemptions, inventory_items, invoice_attachments, invoice_items, invoices, item_categories, item_units, journal_entries, journal_lines, landed_cost_parts, landed_cost_sources, leave_records, login_attempts, nssf_filed_wages, ocr_queue, parties, party_documents, payment_allocations, payments, payroll_records, payroll_settings, physical_counts, projects, salary_payments, sessions, stock_documents, stock_movements, tax_flags, users, vat_adjustments, vat_returns, vat_settings, warehouses)
+ok
+test_damaged_copy_is_set_aside_and_reported (tests.test_v2_9_42.BackupCheckTest.test_damaged_copy_is_set_aside_and_reported) ... Backup company_2026_bad.db failed its check (cannot be opened: file is not a database)
+ok
+test_new_backup_is_checked_and_marked_ok (tests.test_v2_9_42.BackupCheckTest.test_new_backup_is_checked_and_marked_ok) ... ok
+test_older_backups_show_not_checked (tests.test_v2_9_42.BackupCheckTest.test_older_backups_show_not_checked) ... ok
+test_every_desktop_module_is_in_the_windows_build (tests.test_v2_9_42.PackagingTest.test_every_desktop_module_is_in_the_windows_build) ... ok
+test_installer_and_program_have_the_same_version (tests.test_v2_9_42.PackagingTest.test_installer_and_program_have_the_same_version) ... ok
+test_screens_moved_in_2_9_42_are_still_part_of_the_window (tests.test_v2_9_42.PackagingTest.test_screens_moved_in_2_9_42_are_still_part_of_the_window) ... ok
+test_user_guide_is_shipped_in_both_languages (tests.test_v2_9_42.PackagingTest.test_user_guide_is_shipped_in_both_languages) ... ok
+test_address_can_be_changed_or_switched_off (tests.test_v2_9_42.UpdateCheckTest.test_address_can_be_changed_or_switched_off) ... ok
+test_newer_release_is_reported_once_a_day (tests.test_v2_9_42.UpdateCheckTest.test_newer_release_is_reported_once_a_day) ... ok
+test_offline_or_broken_answer_never_raises (tests.test_v2_9_42.UpdateCheckTest.test_offline_or_broken_answer_never_raises) ... ok
+test_same_or_older_version_and_simple_file_format (tests.test_v2_9_42.UpdateCheckTest.test_same_or_older_version_and_simple_file_format) ... ok
+test_versions_compare_as_numbers (tests.test_v2_9_42.UpdateCheckTest.test_versions_compare_as_numbers) ... ok
+test_items_not_matching_the_amount_fall_back_to_the_amount_only (tests.test_v2_9_50_upload.ImportPdfItemsTest.test_items_not_matching_the_amount_fall_back_to_the_amount_only) ... ok
+test_new_items_are_created_and_received_with_the_entry (tests.test_v2_9_50_upload.ImportPdfItemsTest.test_new_items_are_created_and_received_with_the_entry) ... ok
+test_only_complete_rows_are_saved_without_questions (tests.test_v2_9_50_upload.ImportPdfItemsTest.test_only_complete_rows_are_saved_without_questions) ... ok
+test_missing_fields_stop_the_automatic_save (tests.test_v2_9_50_upload.PurchaseUploadTest.test_missing_fields_stop_the_automatic_save) ... ok
+test_rows_columns_and_layers_of_any_kind (tests.test_v2_9_54.AnalysisThreeDimensionsTest.test_rows_columns_and_layers_of_any_kind) ... ok
+test_a_currency_the_company_does_not_use_never_stops_the_import (tests.test_v2_9_54.CurrencyNotEnabledTest.test_a_currency_the_company_does_not_use_never_stops_the_import) ... ok
+test_formula_only_rows_are_skipped_and_incomplete_rows_flagged (tests.test_v2_9_54.ExcelRowsTest.test_formula_only_rows_are_skipped_and_incomplete_rows_flagged) ... ok
+test_purchase_return_sends_goods_back_and_debits_the_supplier (tests.test_v2_9_54.ReturnsTypedDirectlyTest.test_purchase_return_sends_goods_back_and_debits_the_supplier) ... ok
+test_sales_return_brings_goods_back (tests.test_v2_9_54.ReturnsTypedDirectlyTest.test_sales_return_brings_goods_back) ... ok
+test_documents_offered_on_the_screens (tests.test_v2_9_54.ScreenFixesTest.test_documents_offered_on_the_screens) ... ok
+test_inner_screen_frame_finds_its_tab (tests.test_v2_9_54.ScreenFixesTest.test_inner_screen_frame_finds_its_tab) ... ok
+test_500_message_names_the_request_and_error (tests.test_v2_9_61.ErrorDetailTests.test_500_message_names_the_request_and_error) ... ok
+test_json_values (tests.test_v2_9_61.ErrorDetailTests.test_json_values) ... ok
+test_open_entry_reports_the_step (tests.test_v2_9_61.ErrorDetailTests.test_open_entry_reports_the_step) ... Opening entry INV-1249 failed while reading the invoice list
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_balance_reports.py", line 214, in open_entry_source
+    invoice = next((r for r in self.client.invoices() if r["id"] == source_id), None)
+                               ^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/tests/test_v2_9_61.py", line 24, in broken
+    def broken(): raise RuntimeError("boom")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: boom
+ok
+test_move_and_merge (tests.test_v2_9_66.AccountToolsTest.test_move_and_merge) ... ok
+test_transfer_balance (tests.test_v2_9_66.AccountToolsTest.test_transfer_balance) ... ok
+test_unused_accounts_and_delete (tests.test_v2_9_66.AccountToolsTest.test_unused_accounts_and_delete) ... ok
+Nanza Accounting server running at http://127.0.0.1:51005
+For a new database, sign in as admin with this one-time initial password:
+admin12345
+test_financial_reports_first_and_switching_company (tests.test_v2_9_66.PagesOrderTest.test_financial_reports_first_and_switching_company) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_totals_and_drag (tests.test_v2_9_66.SelectionTest.test_totals_and_drag) ... ok
+test_flags (tests.test_v2_9_66.WithoutOpeningClosingTest.test_flags) ... ok
+test_every_currency_of_settings_gets_daily_rates_and_typed_rates_are_kept (tests.test_v2_9_71.AllRatesTest.test_every_currency_of_settings_gets_daily_rates_and_typed_rates_are_kept) ... ok
+test_offline_years_are_reported_not_fatal (tests.test_v2_9_71.AllRatesTest.test_offline_years_are_reported_not_fatal) ... ok
+test_note_tables_show_names_without_account_numbers (tests.test_v2_9_71.AuditNotesTest.test_note_tables_show_names_without_account_numbers) ... ok
+test_company_is_created_with_its_two_main_currencies_and_a_new_year_keeps_them (tests.test_v2_9_71.MainCurrenciesTest.test_company_is_created_with_its_two_main_currencies_and_a_new_year_keeps_them) ... ok
+test_screens_read_the_main_currencies_once_per_company (tests.test_v2_9_71.MainCurrenciesTest.test_screens_read_the_main_currencies_once_per_company) ... ok
+test_settings_save_and_check_the_second_main_currency (tests.test_v2_9_71.MainCurrenciesTest.test_settings_save_and_check_the_second_main_currency) ... ok
+test_chosen_account_replaces_the_expense_account_of_the_selected_rows_only (tests.test_v2_9_71.OneAccountForSelectedTest.test_chosen_account_replaces_the_expense_account_of_the_selected_rows_only) ... ok
+test_unknown_account_or_field_is_refused (tests.test_v2_9_71.OneAccountForSelectedTest.test_unknown_account_or_field_is_refused) ... ok
+test_only_account_starting_with_the_typed_number_is_taken (tests.test_v2_9_71.VoucherAccountTypingTest.test_only_account_starting_with_the_typed_number_is_taken) ... ok
+test_unknown_number_asks_for_the_search_instead_of_an_error (tests.test_v2_9_71.VoucherAccountTypingTest.test_unknown_number_asks_for_the_search_instead_of_an_error) ... ok
+test_paid_invoices_move_to_the_new_cash_account_unpaid_ones_are_listed (tests.test_v2_9_78.CashAccountForSelectedTest.test_paid_invoices_move_to_the_new_cash_account_unpaid_ones_are_listed) ... ok
+test_aed_and_sar_have_a_rate_every_day (tests.test_v2_9_78.DailyGulfRatesTest.test_aed_and_sar_have_a_rate_every_day) ... ok
+test_doe_in_eur_moves_only_the_eur_value (tests.test_v2_9_78.EuroDoeTest.test_doe_in_eur_moves_only_the_eur_value) ... ok
+test_retro_is_taxed_with_the_pay_of_its_month_less_the_tax_already_withheld (tests.test_v2_9_78.RetroTaxTest.test_retro_is_taxed_with_the_pay_of_its_month_less_the_tax_already_withheld) ... ok
+test_an_older_year_without_settings_takes_them_from_another_year (tests.test_v2_9_83.AuditPackTest.test_an_older_year_without_settings_takes_them_from_another_year) ... ok
+test_cover_page_and_excel_sheets (tests.test_v2_9_83.AuditPackTest.test_cover_page_and_excel_sheets) ... ok
+test_information_entered_once_reaches_every_year_and_every_text (tests.test_v2_9_83.AuditPackTest.test_information_entered_once_reaches_every_year_and_every_text) ... ok
+test_standard_text_saved_by_an_older_version_follows_the_new_one (tests.test_v2_9_83.AuditPackTest.test_standard_text_saved_by_an_older_version_follows_the_new_one) ... ok
+test_each_quarter_uses_its_own_turnover (tests.test_v2_9_83.QuarterRatioTest.test_each_quarter_uses_its_own_turnover) ... ok
+test_provisional_ratio_is_not_used_and_q4_has_no_annual_adjustment (tests.test_v2_9_83.QuarterRatioTest.test_provisional_ratio_is_not_used_and_q4_has_no_annual_adjustment) ... ok
+test_the_annual_method_can_still_be_chosen (tests.test_v2_9_83.QuarterRatioTest.test_the_annual_method_can_still_be_chosen) ... ok
+Nanza Accounting server running at http://127.0.0.1:35411
+For a new database, sign in as admin with this one-time initial password:
+Admin-2025!
+test_four_users_and_a_second_program_at_the_same_time (tests.test_v2_9_88.MultiUserTest.test_four_users_and_a_second_program_at_the_same_time) ... ok
+test_speed_on_windows (tests.test_v2_9_88.WindowsStartTest.test_speed_on_windows) ... skipped 'Windows only: a file held by another program'
+test_start_while_the_shm_file_is_held (tests.test_v2_9_88.WindowsStartTest.test_start_while_the_shm_file_is_held) ... skipped 'Windows only: a file held by another program'
+Nanza Accounting server running at http://127.0.0.1:42307
+For a new database, sign in as admin with this one-time initial password:
+Admin-2025!
+test_before_and_after_in_the_audit_trail (tests.test_v2_9_93.ApprovalTest.test_before_and_after_in_the_audit_trail) ... ok
+test_maker_checker (tests.test_v2_9_93.ApprovalTest.test_maker_checker) ... ok
+test_document_date_and_currency_conversion_with_credit_and_payable (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_document_date_and_currency_conversion_with_credit_and_payable) ... ok
+test_excess_input_vat_and_brought_forward_credit_carry_to_next_period (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_excess_input_vat_and_brought_forward_credit_carry_to_next_period) ... ok
+test_exempt_purchase_preserves_declared_vat_and_reclasses_ledger (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_exempt_purchase_preserves_declared_vat_and_reclasses_ledger) ... ok
+test_exports_do_not_label_internal_references_as_ministry_boxes (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_exports_do_not_label_internal_references_as_ministry_boxes) ... ok
+test_filing_values_and_employer_details (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_filing_values_and_employer_details) ... ok
+test_filtered_or_draft_inclusive_is_not_a_filing_worksheet (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_filtered_or_draft_inclusive_is_not_a_filing_worksheet) ... ok
+test_mixed_use_deduction_offsets_output_vat_before_payable (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_mixed_use_deduction_offsets_output_vat_before_payable) ... ok
+test_payable_rounding_to_10000_from_25_11_2024 (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_payable_rounding_to_10000_from_25_11_2024) ... ok
+test_pdf_item_rows_are_suggestions_not_invented_totals (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_pdf_item_rows_are_suggestions_not_invented_totals) ... ok
+test_refund_request_reduces_credit_and_flags_manual_eligibility_check (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_refund_request_reduces_credit_and_flags_manual_eligibility_check) ... ok
+test_specimen_inspired_worksheet_keeps_every_internal_ref_once_and_no_ministry_boxes (tests.test_vat_filing_worksheet.VATFilingWorksheetTest.test_specimen_inspired_worksheet_keeps_every_internal_ref_once_and_no_ministry_boxes) ... ok
+
+----------------------------------------------------------------------
+Ran 158 tests in 46.036s
+
+OK (skipped=2)

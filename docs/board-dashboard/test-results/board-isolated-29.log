@@ -1,0 +1,8 @@
+test_save_rejects_same_warehouse_before_posting (tests.test_warehouse_transfer_ui.WarehouseTransferUiTest.test_save_rejects_same_warehouse_before_posting) ... ok
+test_shortcut_opens_transfer_with_distinct_warehouses (tests.test_warehouse_transfer_ui.WarehouseTransferUiTest.test_shortcut_opens_transfer_with_distinct_warehouses) ... ok
+test_shortcut_requires_two_active_warehouses (tests.test_warehouse_transfer_ui.WarehouseTransferUiTest.test_shortcut_requires_two_active_warehouses) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+OK

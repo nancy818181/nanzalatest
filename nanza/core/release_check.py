@@ -57,7 +57,13 @@ def problems(root=ROOT):
     v = versions(root)
     if len(set(v.values())) != 1 or None in v.values():
         found.append("versions differ: " + ", ".join(f"{k} {val}" for k, val in v.items()))
-    for module in sorted([*root.glob("*.py"), *(root / "nanza").rglob("*.py")]):  # 2.9.117: the program is in folders
+    program_modules = [
+        *root.glob("*.py"),
+        *(root / "nanza_delivery").glob("*.py"),
+        *(path for path in (root / "nanza").rglob("*.py")
+          if "nanza_backup" not in path.relative_to(root / "nanza").parts),
+    ]
+    for module in sorted(program_modules):
         try: compile(module.read_text(encoding="utf-8"), str(module), "exec")  # checks the syntax without writing a .pyc
         except (SyntaxError, ValueError, UnicodeDecodeError) as exc: found.append(f"does not compile: {module.name}: {exc}")
     return found

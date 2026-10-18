@@ -1,0 +1,15 @@
+{
+  "modules": [
+    "tests.test_v2_9_91"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_91.FastDatesTest.test_same_results_and_errors",
+    "tests.test_v2_9_91.IdlePagesTest.test_pages_wait_while_the_user_types",
+    "tests.test_v2_9_91.VatOnceTest.test_documents_read_once_per_return"
+  ],
+  "tests_run": 3,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

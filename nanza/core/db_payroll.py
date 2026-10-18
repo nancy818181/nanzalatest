@@ -498,7 +498,7 @@ class PayrollStore:
             try:
                 birth=iso_date(str(employee["birth_date"]),"Date of birth")
                 age=int(period[:4])-int(birth[:4])-(1 if period[5:]<birth[5:] else 0)
-            except Exception: age=None
+            except (KeyError, TypeError, ValueError): age=None
         nationality=str(employee["nationality"] or "").strip().lower()
         lebanese_terms=("lebanese","lebanon","lb","\u0644\u0628\u0646\u0627\u0646\u064a","\u0644\u0628\u0646\u0627\u0646\u064a\u0629","\u0644\u0628\u0646\u0627\u0646")
         is_foreign=bool(nationality) and not any(term in nationality for term in lebanese_terms)

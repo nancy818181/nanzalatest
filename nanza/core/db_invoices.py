@@ -50,7 +50,10 @@ class InvoicesStore:
                 raise ValueError("Invoice replacement is blocked while existing invoices have payments recorded")
         backup_path = self.backup("safety") if make_backup else None
         with self.connect() as db:
-            entry_ids = [r["id"] for r in db.execute("SELECT id FROM journal_entries WHERE source_type IN ('invoice','invoice_reversal','vat_reclass') AND (source_type!='vat_reclass' OR entry_number LIKE 'VATND-INV-%')")]
+            entry_ids = [r["id"] for r in db.execute((
+                "SELECT id FROM journal_entries WHERE source_type IN ('invoice','invoice_reversal','vat_reclass') AND "
+                "(source_type!='vat_reclass' OR entry_number LIKE 'VATND-INV-%')"
+            ))]
             if entry_ids:
                 marks = ",".join("?" for _ in entry_ids)
                 db.execute(f"DELETE FROM journal_lines WHERE entry_id IN ({marks})", entry_ids)
@@ -138,13 +141,20 @@ class InvoicesStore:
                 supplier_side,vat_side,expense_side,expense_no_vat_account,expense_no_vat_side,
                 item.get("source_file"), item.get("source_row"), due_date, payment_status, str(amount_paid), user_id, utcnow()))
             invoice_id = cur.lastrowid
+            if status == "posted":
+                db.execute("UPDATE invoices SET posted_at=?,posted_by=? WHERE id=?",
+                           (utcnow(),user_id,invoice_id))
             branch_id=self._branch_id(db,item)
             db.execute("UPDATE invoices SET payment_method=?,description=?,branch_id=? WHERE id=?",(str(item.get("payment_method") or "").strip() or None,
                     str(item.get("description") or "").strip() or None,branch_id,invoice_id))
             entry_number = f"INV-{invoice_id}"
-            entry = db.execute("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,branch_id,created_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+            posting_status="posted" if status=="posted" else "draft"
+            entry = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,
+                currency,branch_id,created_by,created_at,posting_status,posted_at,posted_by)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (entry_number, item.get("invoice_date"), f"{entry_type.replace('_',' ').title()} {item['invoice_number']}", "invoice", invoice_id,
-                        item.get("currency", "USD"),branch_id, user_id, utcnow()))
+                        item.get("currency", "USD"),branch_id, user_id, utcnow(),posting_status,
+                 utcnow() if posting_status=="posted" else None,user_id if posting_status=="posted" else None))
             if kind == "sale":
                 revenue=[(str(a).strip(),Decimal(str(v))) for a,v in (item.get("revenue_splits") or [])]
                 if revenue and abs(sum(v for _a,v in revenue)-Decimal(str(subtotal)))<Decimal("0.01"):  # 2.9.90
@@ -451,7 +461,11 @@ class InvoicesStore:
             try: self._assert_period_open(row["invoice_date"]); self._assert_vat_open(row["invoice_date"])
             except ValueError as exc: skipped.append(f"{row['invoice_number']}: {exc}"); continue
             with self.connect() as db:
-                db.execute("UPDATE invoices SET status='posted' WHERE id=? AND status='review'", (invoice_id,))
+                db.execute("""UPDATE invoices SET status='posted',posted_at=?,posted_by=?,rejection_reason=NULL
+                    WHERE id=? AND status='review'""", (utcnow(),user["id"],invoice_id))
+                db.execute("""UPDATE journal_entries SET posting_status='posted',posted_at=?,posted_by=?,
+                    rejection_reason=NULL WHERE source_type='invoice' AND source_id=?""",
+                    (utcnow(),user["id"],invoice_id))
                 db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                            (user["id"], "approve", "invoice", invoice_id, json.dumps({"invoice_number": row["invoice_number"], "prepared_by": row["created_by"],
                                    "before": "review", "after": "posted"}), utcnow()))

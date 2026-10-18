@@ -97,10 +97,11 @@ class NoLineLimitTest(_Base):
             cash = db.execute("SELECT id FROM accounts WHERE code='531'").fetchone()[0]
             sales = self.db._account_id(db, "701100001")
             for n in range(count):
-                entry = db.execute("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,currency,created_by,created_at) VALUES(?,?,?,?,?,?,?)",
+                entry = db.execute("INSERT INTO journal_entries(entry_number,entry_date,description,source_type,currency,created_by,created_at,posting_status) VALUES(?,?,?,?,?,?,?,'draft')",
                                    (f"JV-{n}", "2026-03-01", "cash sale", "journal_voucher", "USD", self.user, "2026-03-01")).lastrowid
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,debit,credit) VALUES(?,?,?,?)", (entry, cash, "10", "0"))
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,debit,credit) VALUES(?,?,?,?)", (entry, sales, "0", "10"))
+            db.execute("UPDATE journal_entries SET posting_status='posted',posted_at='2026-03-01',posted_by=? WHERE description='cash sale'", (self.user,))
         self.assertEqual(len(self.db.journal()), count * 2)
         flow = self.db.cash_flow("2026-01-01", "2026-12-31", "USD")
         self.assertEqual(sum(r["inflow"] for r in flow), count * 10)

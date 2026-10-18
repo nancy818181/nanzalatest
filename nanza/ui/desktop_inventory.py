@@ -14,7 +14,7 @@ from multi_select import MultiSelect, chosen_values
 from inventory import ANALYSIS_DIMENSIONS
 from desktop_common import flow_toolbars
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"  # 2.9.59: the same colours on every screen
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, MUTED = "#8B1E1E", "#5f6b76"
 DOC_TYPES = {"Opening Stock": "opening", "Stock Receipt": "receipt", "Stock Issue": "issue", "Adjustment +": "adjustment_in", "Adjustment -": "adjustment_out", "Transfer": "transfer"}
 REPORTS = {"Inventory Summary": "summary", "Stock by Brand & Warehouse": "brands", "Stock Ageing": "ageing", "Inventory Analysis (3D)": "analysis3d",
@@ -248,7 +248,10 @@ class InventoryMixin:
         tk.Button(bottom, text="Save", command=self.save_stock_document, bg=GOLD, fg=NAVY, border=0, padx=18, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(12, 3))
         tk.Button(bottom, text="Delete Document", command=self.delete_stock_document, bg=RED, fg="white", border=0, padx=12, pady=7).pack(side="left", padx=3)
         self.sd_total = tk.Label(bottom, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold")); self.sd_total.pack(side="right", padx=8)
-        self.sd_info = tk.Label(page, text="Item Code: type the code or press F2 in the cell. Issues, adjustments - and transfers leave at the current cost; receipts and opening stock need a unit cost.",
+        self.sd_info = tk.Label(page, text=(
+            "Item Code: type the code or press F2 in the cell. Issues, adjustments - and transfers leave at the current cost; "
+            "receipts and opening stock need a unit cost."
+        ),
                                 bg=LIGHT, fg=MUTED, anchor="w"); self.sd_info.pack(side="bottom", fill="x", padx=10)
         columns = [("line", "#", 40, "center"), ("sku", "Item Code", 110, "w"), ("name", "Item", 260, "w"), ("unit", "Unit", 60, "center"), ("quantity", "Quantity", 100, "e"),
                    ("unit_cost", "Unit Cost", 110, "e"), ("value", "Value", 120, "e"), ("on_hand", "On Hand", 100, "e")]
@@ -366,7 +369,8 @@ class InventoryMixin:
         self.sd_id = doc["id"]; v = self.sd_vars; labels = {val: k for k, val in DOC_TYPES.items()}
         v["type"].set(labels[doc["doc_type"]]); v["number"].set(doc["number"]); v["date"].set(_dd(doc["doc_date"]))
         v["project"].set(f'{doc["project_code"]} - {doc["project_name"]}' if doc.get("project_code") else ""); v["branch"].set(doc.get("branch_name") or "")
-        v["warehouse"].set(f'{doc["warehouse_code"]} - {doc["warehouse_name"]}'); v["party"].set(doc.get("party_name") or ""); v["reference"].set(doc.get("reference") or ""); v["notes"].set(doc.get("notes") or "")
+        v["warehouse"].set(f'{doc["warehouse_code"]} - {doc["warehouse_name"]}'); v["party"].set(doc.get("party_name") or ""); v["reference"].set(doc.get("reference") or \
+            ""); v["notes"].set(doc.get("notes") or "")
         if doc.get("to_warehouse_code"): v["to_warehouse"].set(next((f'{w["code"]} - {w["name"]}' for w in self.warehouse_rows if w["code"] == doc["to_warehouse_code"]), ""))
         self.stock_sheet.clear()
         for line in doc["lines"]:
@@ -404,7 +408,8 @@ class InventoryMixin:
     def build_inventory_reports_page(self, page):
         bar = tk.Frame(page, bg=LIGHT); bar.pack(fill="x", padx=8, pady=6); year = getattr(self, "current_fiscal_year", datetime.now().year)
         self.ir_report = tk.StringVar(value="Stock Valuation"); self.ir_from = tk.StringVar(value=f"01-01-{year}"); self.ir_to = tk.StringVar(value=f"31-12-{year}")
-        self.ir_warehouse = tk.StringVar(value="All"); self.ir_item = tk.StringVar(); self.ir_item_to = tk.StringVar(); self.ir_method = tk.StringVar(value="Company setting"); self.ir_days = tk.StringVar(value="90")
+        self.ir_warehouse = tk.StringVar(value="All"); self.ir_item = tk.StringVar(); self.ir_item_to = tk.StringVar(); self.ir_method = \
+            tk.StringVar(value="Company setting"); self.ir_days = tk.StringVar(value="90")
         self.ir_category = tk.StringVar(value="All"); self.ir_zero = tk.BooleanVar(value=False)
         self.ir_report_box = ttk.Combobox(bar, textvariable=self.ir_report, values=list(REPORTS), state="readonly", width=22)
         self.ir_report_box.pack(side="left", padx=(0, 8))
@@ -856,8 +861,13 @@ class InventoryMixin:
     def save_count(self, post):
         lines = [{"item_id": r["item_id"], "sku": r["sku"], "counted": r["counted"]} for r in self.pc_sheet.ordered() if r.get("counted") not in ("", None)]
         if not lines: return messagebox.showwarning("Physical Inventory", "Enter at least one physical count")
-        if post and not messagebox.askyesno("Physical Inventory", "Apply the physical count?\n\n- The stock quantities become the counted quantities (adjustment + / - documents).\n"
-                                            "- The difference is posted in the journal (JV): surplus Dr stock 37 / Cr stock variation, shortage the other way,\n  valued at the item cost on the count date."): return
+        if post and not messagebox.askyesno(
+                "Physical Inventory",
+                ("Apply the physical count?\n\n- The stock quantities become the counted quantities "
+                 "(adjustment + / - documents).\n"
+                 "- The difference is posted in the journal (JV): surplus Dr stock 37 / Cr stock "
+                 "variation, shortage the other way,\n  valued at the item cost on the count date.")):
+            return
         try: saved = self.client.save_physical_count({"count_date": self.pc_vars["date"].get(), "warehouse_id": self.warehouse_id_of(self.pc_vars["warehouse"].get())}, lines, self.pc_id, post)
         except Exception as exc: return messagebox.showerror("Physical Inventory", str(exc))
         self.pc_id = saved["id"]

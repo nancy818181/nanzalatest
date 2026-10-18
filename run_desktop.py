@@ -1,4 +1,8 @@
-"""Start Nanza Accounting: one copy per Windows user, its own private data service, an error log."""
+"""Start Nanza Accounting: one copy per Windows user and its private data service.
+
+The authenticated desktop registers the Board Dashboard sidebar button and Ctrl+B
+in nanza/ui/desktop.py; the existing operational dashboard remains unchanged.
+"""
 import nanza_paths  # noqa: F401  2.9.117: the program's folders (nanza/...) on the import path
 import json
 import logging

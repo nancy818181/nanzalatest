@@ -1,0 +1,7 @@
+test_marker_follows_the_upgrade_code (tests.test_v2_9_64.UpgradeMarkerTest.test_marker_follows_the_upgrade_code) ... ok
+test_old_file_missing_a_column_is_upgraded (tests.test_v2_9_64.UpgradeMarkerTest.test_old_file_missing_a_column_is_upgraded) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.386s
+
+OK

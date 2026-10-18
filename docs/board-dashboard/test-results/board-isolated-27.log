@@ -1,0 +1,9 @@
+test_same_results_and_errors (tests.test_v2_9_91.FastDatesTest.test_same_results_and_errors) ... ok
+test_pages_wait_while_the_user_types (tests.test_v2_9_91.IdlePagesTest.test_pages_wait_while_the_user_types) ... ok
+test_documents_read_once_per_return (tests.test_v2_9_91.VatOnceTest.test_documents_read_once_per_return) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.742s
+
+OK
+Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py

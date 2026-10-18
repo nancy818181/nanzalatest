@@ -1,0 +1,19 @@
+{
+  "modules": [
+    "tests.test_chart_templates"
+  ],
+  "test_ids": [
+    "tests.test_chart_templates.ChartTemplateTest.test_chart_from_excel_adds_and_names_but_never_deletes",
+    "tests.test_chart_templates.ChartTemplateTest.test_company_without_a_choice_gets_the_lebanese_chart",
+    "tests.test_chart_templates.ChartTemplateTest.test_every_account_the_program_posts_to_is_in_every_chart",
+    "tests.test_chart_templates.ChartTemplateTest.test_every_chart_runs_the_daily_work_and_the_reports",
+    "tests.test_chart_templates.ChartTemplateTest.test_lebanese_company_is_exactly_as_before",
+    "tests.test_chart_templates.ChartTemplateTest.test_saudi_chart_names_accounts_and_upgrade",
+    "tests.test_chart_templates.ChartTemplateTest.test_wizard_details_reach_the_company_settings"
+  ],
+  "tests_run": 7,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

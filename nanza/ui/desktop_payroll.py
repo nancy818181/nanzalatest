@@ -145,7 +145,10 @@ class PayrollMixin:
         tk.Label(family_reference,text="Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. "
             "2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831.",
             bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=950).pack(fill="x",pady=(4,0))
-        tk.Label(settings_page,text="Salary-tax policy used here: no spouse deduction when the spouse works; half the child deduction. Confirm this dependent split with your accountant. Tax applies only above the taxable threshold.",
+        tk.Label(settings_page,text=(
+            "Salary-tax policy used here: no spouse deduction when the spouse works; half the child deduction. Confirm this dependent "
+            "split with your accountant. Tax applies only above the taxable threshold."
+        ),
             bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=950).grid(row=15,column=0,columnspan=6,padx=10,pady=4,sticky="w")
         mapping_frame=tk.LabelFrame(settings_page,text="Standard Posting Accounts",bg=LIGHT,padx=8,pady=6); mapping_frame.grid(row=16,column=0,columnspan=6,padx=10,pady=8,sticky="ew")
         self.payroll_employee_accounts={key:tk.StringVar() for key in ("salary","transport","overtime","commission","retro_salary","schooling","bonus",

@@ -1,0 +1,26 @@
+test_cash_flow_reconciles_and_balance_sheet_balances (tests.test_v2_9_69.AuditPackTest.test_cash_flow_reconciles_and_balance_sheet_balances) ... ok
+test_old_placeholder_texts_get_the_new_defaults (tests.test_v2_9_69.AuditPackTest.test_old_placeholder_texts_get_the_new_defaults) ... ok
+test_period_mode_with_comparative (tests.test_v2_9_69.AuditPackTest.test_period_mode_with_comparative) ... ok
+test_section_order_and_two_years (tests.test_v2_9_69.AuditPackTest.test_section_order_and_two_years) ... ok
+test_delete_selection_and_toggle_columns (tests.test_v2_9_69.MultiDeleteAndColumnsTest.test_delete_selection_and_toggle_columns) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_vat_number_replaces_account (tests.test_v2_9_69.TopPartiesVatTest.test_vat_number_replaces_account) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 37.381s
+
+OK
+Nanza Accounting server running at http://127.0.0.1:48953
+For a new database, sign in as admin with this one-time initial password:
+admin12345
+Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py

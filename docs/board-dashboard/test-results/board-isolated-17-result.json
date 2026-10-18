@@ -1,0 +1,15 @@
+{
+  "modules": [
+    "tests.test_v2_9_101"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_101.ColumnFitTest.test_columns_show_title_and_fill_width",
+    "tests.test_v2_9_101.NewItemDetailsTest.test_ask_settings_and_set_details",
+    "tests.test_v2_9_101.UpgradeFingerprintTest.test_new_tables_change_the_upgrade_fingerprint"
+  ],
+  "tests_run": 3,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

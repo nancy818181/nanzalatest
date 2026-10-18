@@ -1,0 +1,15 @@
+{
+  "modules": [
+    "tests.test_due_inventory_updates"
+  ],
+  "test_ids": [
+    "tests.test_due_inventory_updates.DueAndInventoryTest.test_daily_exchange_rate_is_average_of_entries",
+    "tests.test_due_inventory_updates.DueAndInventoryTest.test_party_terms_and_invoice_override",
+    "tests.test_due_inventory_updates.DueAndInventoryTest.test_stock_reports_and_count_snapshot"
+  ],
+  "tests_run": 3,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

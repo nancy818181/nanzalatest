@@ -1,0 +1,14 @@
+{
+  "missing_python_files": [],
+  "changed_original_python_files": [
+    "nanza_paths.py",
+    "run_desktop.py",
+    "nanza/ui/desktop_expenses.py",
+    "nanza/ui/desktop.py",
+    "nanza/core/server.py",
+    "nanza/core/release_check.py",
+    "nanza/core/client.py",
+    "nanza/core/app_runtime.py"
+  ],
+  "original_python_file_count": 418
+}

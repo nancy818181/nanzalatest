@@ -1,0 +1,10 @@
+test_amount_columns (tests.test_v2_9_59.DateDisplayTests.test_amount_columns) ... ok
+test_display_cells_turns_iso_dates_around (tests.test_v2_9_59.DateDisplayTests.test_display_cells_turns_iso_dates_around) ... ok
+test_one_palette (tests.test_v2_9_59.PaletteTests.test_one_palette) ... ok
+test_toolbar_wraps_instead_of_cutting_off (tests.test_v2_9_59.TkLayoutTests.test_toolbar_wraps_instead_of_cutting_off) ... ok
+test_tree_shows_dd_mm_but_program_reads_original (tests.test_v2_9_59.TkLayoutTests.test_tree_shows_dd_mm_but_program_reads_original) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.080s
+
+OK

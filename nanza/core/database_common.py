@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS invoices (
  id INTEGER PRIMARY KEY, invoice_number TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('sale','purchase')),
  invoice_date TEXT, party_id INTEGER REFERENCES parties(id), currency TEXT NOT NULL, exchange_rate TEXT NOT NULL DEFAULT '1',
  subtotal TEXT, vat TEXT, total TEXT, status TEXT NOT NULL DEFAULT 'posted', currency_issue TEXT NOT NULL DEFAULT '',
+ posted_at TEXT, posted_by INTEGER REFERENCES users(id), rejection_reason TEXT,
  deductible_subtotal TEXT NOT NULL DEFAULT '0', non_deductible_subtotal TEXT NOT NULL DEFAULT '0',
  supplier_account TEXT NOT NULL DEFAULT '4011', vat_account TEXT NOT NULL DEFAULT '442660000', expense_account TEXT NOT NULL DEFAULT '601100000',
  entry_type TEXT NOT NULL DEFAULT 'purchase', debit_override TEXT, credit_override TEXT,
@@ -95,7 +96,9 @@ CREATE TABLE IF NOT EXISTS case_attachments (
 );
 CREATE TABLE IF NOT EXISTS journal_entries (
  id INTEGER PRIMARY KEY, entry_number TEXT NOT NULL UNIQUE, entry_date TEXT, description TEXT, source_type TEXT,
- source_id INTEGER, currency TEXT NOT NULL, branch_id INTEGER REFERENCES branches(id), created_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL
+ source_id INTEGER, currency TEXT NOT NULL, branch_id INTEGER REFERENCES branches(id), created_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL,
+ posting_status TEXT NOT NULL DEFAULT 'posted', reversal_of INTEGER REFERENCES journal_entries(id),
+ posted_at TEXT, posted_by INTEGER REFERENCES users(id), rejection_reason TEXT
 );
 CREATE TABLE IF NOT EXISTS journal_lines (
  id INTEGER PRIMARY KEY, entry_id INTEGER NOT NULL REFERENCES journal_entries(id) ON DELETE CASCADE,
@@ -130,6 +133,13 @@ CREATE TABLE IF NOT EXISTS expenses (
  expense_side TEXT NOT NULL DEFAULT 'D', expense_without_vat_side TEXT NOT NULL DEFAULT 'D',
  vat_side TEXT NOT NULL DEFAULT 'D', payment_side TEXT NOT NULL DEFAULT 'C',
  reference TEXT, created_by INTEGER REFERENCES users(id), created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ocr_queue (
+ id INTEGER PRIMARY KEY, company_id TEXT NOT NULL, expense_id INTEGER REFERENCES expenses(id),
+ attachment_id INTEGER, file_path TEXT NOT NULL, file_name TEXT NOT NULL,
+ mime_type TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+ result_json TEXT, error TEXT, created_by INTEGER REFERENCES users(id),
+ created_at TEXT NOT NULL, processed_at TEXT
 );
 CREATE TABLE IF NOT EXISTS exchange_rates (
  id INTEGER PRIMARY KEY, rate_date TEXT NOT NULL, from_currency TEXT NOT NULL, to_currency TEXT NOT NULL,

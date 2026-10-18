@@ -1,0 +1,7 @@
+test_created_flag_and_notice (tests.test_v2_9_86.NewItemsTest.test_created_flag_and_notice) ... ok
+test_warning_only_from_90_percent (tests.test_v2_9_86.NewItemsTest.test_warning_only_from_90_percent) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.574s
+
+OK

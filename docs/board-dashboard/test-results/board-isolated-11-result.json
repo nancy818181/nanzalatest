@@ -1,0 +1,30 @@
+{
+  "modules": [
+    "tests.test_payroll_declaration"
+  ],
+  "test_ids": [
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_bad_allowances_are_refused",
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_company_can_mark_a_taxable_allowance_not_subject_to_nssf",
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_nssf_branches_switched_off_in_the_register",
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_one_off_grant_is_taxed_like_a_bonus",
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_reported_nssf_base_includes_the_allowances_used_in_contributions",
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_saved_and_posted_with_allowances_balanced_and_cumulative",
+    "tests.test_payroll_declaration.AllowanceCalculationTest.test_taxable_allowances_raise_tax_and_nssf_exempt_ones_do_not",
+    "tests.test_payroll_declaration.CatalogueTest.test_every_allowance_sits_on_an_r6_line",
+    "tests.test_payroll_declaration.MonthlyAnnualReconciliationTest.test_full_year_employee_and_manager_tables_equal_twelve_months",
+    "tests.test_payroll_declaration.OfficialStatementsTest.test_audit_statement_reconciles",
+    "tests.test_payroll_declaration.OfficialStatementsTest.test_movement_month_and_year_to_date",
+    "tests.test_payroll_declaration.OfficialStatementsTest.test_r10_quarter_equals_r5_when_all_pay_is_in_the_quarter",
+    "tests.test_payroll_declaration.OfficialStatementsTest.test_r5_boxes_add_up_and_split_managers_from_employees",
+    "tests.test_payroll_declaration.OfficialStatementsTest.test_r6_lines_split_taxable_and_not",
+    "tests.test_payroll_declaration.OfficialStatementsTest.test_registers",
+    "tests.test_payroll_declaration.PayrollSheetTest.test_rows_payloads_and_window",
+    "tests.test_payroll_declaration.PayrollSheetTest.test_sheet_window_calculates_saves_and_posts",
+    "tests.test_payroll_declaration.RegisterTest.test_register_fields_are_saved_kept_and_checked"
+  ],
+  "tests_run": 18,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

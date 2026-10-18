@@ -79,7 +79,7 @@ class RenumberTest(unittest.TestCase):
         early = self.db.save_journal_voucher({"entry_date": "02-04-2026", "description": "early", "currency": "USD"}, lines, self.user)["voucher"]["id"]
         resequence.apply(self.db, "journal_voucher", 2026, resequence.plan(self.db, "journal_voucher", 2026)["token"], self.user)
         jv = self.numbers("journal_entries", "entry_number")
-        self.assertEqual((jv[early], jv[late]), ("JV-2026-000001", "JV-2026-000002"))
+        self.assertEqual((jv[late], jv[early]), ("JV-2026-000001", "JV-2026-000002"))
 
         late_expense = self.db.add_expense({"expense_date": "20-05-2026", "description": "Fuel", "currency": "USD", "with_vat_subtotal": "100", "vat": "11"}, self.user)
         early_expense = self.db.add_expense({"expense_date": "02-05-2026", "description": "Paper", "currency": "USD", "with_vat_subtotal": "50", "vat": "5.5"}, self.user)

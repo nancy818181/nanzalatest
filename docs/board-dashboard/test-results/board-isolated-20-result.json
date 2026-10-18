@@ -1,0 +1,19 @@
+{
+  "modules": [
+    "tests.test_v2_9_52"
+  ],
+  "test_ids": [
+    "tests.test_v2_9_52.EarlierYearsTest.test_comparative_reads_last_years_file_and_projection_history",
+    "tests.test_v2_9_52.EarlierYearsTest.test_server_reads_another_fiscal_year",
+    "tests.test_v2_9_52.PermissionAndSigningTest.test_delete_permission_defaults",
+    "tests.test_v2_9_52.PermissionAndSigningTest.test_signing_is_optional_in_the_build",
+    "tests.test_v2_9_52.SecondCopyTest.test_a_failed_copy_never_fails_the_backup",
+    "tests.test_v2_9_52.SecondCopyTest.test_each_backup_is_copied_and_old_automatic_copies_pruned",
+    "tests.test_v2_9_52.WarehouseChoiceTest.test_any_combination_of_warehouses"
+  ],
+  "tests_run": 7,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

@@ -1,0 +1,16 @@
+{
+  "modules": [
+    "tests.test_financial_languages"
+  ],
+  "test_ids": [
+    "tests.test_financial_languages.FinancialLanguagesTest.test_a_text_the_user_rewrote_is_kept",
+    "tests.test_financial_languages.FinancialLanguagesTest.test_excel_pack_in_french_and_arabic",
+    "tests.test_financial_languages.FinancialLanguagesTest.test_same_figures_in_every_language",
+    "tests.test_financial_languages.FinancialLanguagesTest.test_texts_are_translated"
+  ],
+  "tests_run": 4,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

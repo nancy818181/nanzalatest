@@ -1,0 +1,11 @@
+test_every_main_screen_has_a_topic (tests.test_help_pictures.HelpPicturesTest.test_every_main_screen_has_a_topic) ... ok
+test_every_topic_has_its_picture_and_steps_in_both_languages (tests.test_help_pictures.HelpPicturesTest.test_every_topic_has_its_picture_and_steps_in_both_languages) ... ok
+test_help_is_shipped_with_the_program (tests.test_help_pictures.HelpPicturesTest.test_help_is_shipped_with_the_program) ... ok
+test_main_help_opens_illustrated_guide (tests.test_help_pictures.HelpPicturesTest.test_main_help_opens_illustrated_guide) ... ok
+test_missing_picture_help_falls_back_to_text_guide (tests.test_help_pictures.HelpPicturesTest.test_missing_picture_help_falls_back_to_text_guide) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.609s
+
+OK
+Chart found at: /workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/accounting/lebanese_accounts.py

@@ -382,6 +382,10 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if "linked_invoice_id" not in invoice_cols: db.execute("ALTER TABLE invoices ADD COLUMN linked_invoice_id INTEGER")
             if "vat_treatment" not in invoice_cols: db.execute("ALTER TABLE invoices ADD COLUMN vat_treatment TEXT NOT NULL DEFAULT 'standard'")
             if "vat_use" not in invoice_cols: db.execute("ALTER TABLE invoices ADD COLUMN vat_use TEXT NOT NULL DEFAULT 'mixed'")
+            for column, definition in (("posted_at", "TEXT"), ("posted_by", "INTEGER REFERENCES users(id)"),
+                                       ("rejection_reason", "TEXT")):
+                if column not in invoice_cols:
+                    db.execute(f"ALTER TABLE invoices ADD COLUMN {column} {definition}")
             expense_cols={row["name"] for row in db.execute("PRAGMA table_info(expenses)")}
             if "vat_use" not in expense_cols: db.execute("ALTER TABLE expenses ADD COLUMN vat_use TEXT NOT NULL DEFAULT 'mixed'")
             return_cols={row["name"] for row in db.execute("PRAGMA table_info(vat_returns)")}
@@ -389,6 +393,12 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if "deduction_ratio" not in return_cols: db.execute("ALTER TABLE vat_returns ADD COLUMN deduction_ratio TEXT")
             entry_columns={row["name"] for row in db.execute("PRAGMA table_info(journal_entries)")}
             if "voucher_type" not in entry_columns: db.execute("ALTER TABLE journal_entries ADD COLUMN voucher_type TEXT NOT NULL DEFAULT '01'")
+            for column, definition in (("posting_status", "TEXT NOT NULL DEFAULT 'posted'"),
+                                       ("reversal_of", "INTEGER REFERENCES journal_entries(id)"),
+                                       ("posted_at", "TEXT"), ("posted_by", "INTEGER REFERENCES users(id)"),
+                                       ("rejection_reason", "TEXT")):
+                if column not in entry_columns:
+                    db.execute(f"ALTER TABLE journal_entries ADD COLUMN {column} {definition}")
             import inventory
             inventory.migrate(db)
             import commercial_documents
@@ -577,6 +587,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 "CREATE INDEX IF NOT EXISTS idx_budgets_year ON budgets(year)",
             ):
                 db.execute(index_sql)
+            self._install_accounting_controls(db)
             # Refresh the query planner statistics so it actually uses the
             # indexes above.
             db.execute("ANALYZE")
@@ -586,6 +597,89 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                        (self._schema_version(),))
             db.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('startup_schema_signature',?)",
                        (self._startup_schema_signature(db),))
+
+    @staticmethod
+    def _install_accounting_controls(db):
+        """Enforce posted journal immutability and closed-year locks below the API layer."""
+        db.executescript("""
+            DROP TRIGGER IF EXISTS posted_journal_update;
+            CREATE TRIGGER posted_journal_update BEFORE UPDATE ON journal_entries
+            WHEN OLD.source_type='journal_voucher' AND OLD.source_id IS NULL AND OLD.posting_status='posted'
+            BEGIN SELECT RAISE(ABORT,'POSTED JOURNAL ENTRIES ARE IMMUTABLE; create a reversal'); END;
+
+            DROP TRIGGER IF EXISTS posted_journal_delete;
+            CREATE TRIGGER posted_journal_delete BEFORE DELETE ON journal_entries
+            WHEN OLD.source_type='journal_voucher' AND OLD.source_id IS NULL AND OLD.posting_status='posted'
+            BEGIN SELECT RAISE(ABORT,'POSTED JOURNAL ENTRIES ARE IMMUTABLE; create a reversal'); END;
+
+            DROP TRIGGER IF EXISTS posted_journal_line_insert;
+            CREATE TRIGGER posted_journal_line_insert BEFORE INSERT ON journal_lines
+            WHEN EXISTS(SELECT 1 FROM journal_entries e WHERE e.id=NEW.entry_id
+                        AND e.source_type='journal_voucher' AND e.source_id IS NULL AND e.posting_status='posted')
+            BEGIN SELECT RAISE(ABORT,'POSTED JOURNAL ENTRIES ARE IMMUTABLE; create a reversal'); END;
+
+            DROP TRIGGER IF EXISTS posted_journal_line_update;
+            CREATE TRIGGER posted_journal_line_update BEFORE UPDATE ON journal_lines
+            WHEN EXISTS(SELECT 1 FROM journal_entries e WHERE e.id=OLD.entry_id
+                        AND e.source_type='journal_voucher' AND e.source_id IS NULL AND e.posting_status='posted')
+              OR EXISTS(SELECT 1 FROM journal_entries e WHERE e.id=NEW.entry_id
+                        AND e.source_type='journal_voucher' AND e.source_id IS NULL AND e.posting_status='posted')
+            BEGIN SELECT RAISE(ABORT,'POSTED JOURNAL ENTRIES ARE IMMUTABLE; create a reversal'); END;
+
+            DROP TRIGGER IF EXISTS posted_journal_line_delete;
+            CREATE TRIGGER posted_journal_line_delete BEFORE DELETE ON journal_lines
+            WHEN EXISTS(SELECT 1 FROM journal_entries e WHERE e.id=OLD.entry_id
+                        AND e.source_type='journal_voucher' AND e.source_id IS NULL AND e.posting_status='posted')
+            BEGIN SELECT RAISE(ABORT,'POSTED JOURNAL ENTRIES ARE IMMUTABLE; create a reversal'); END;
+
+            DROP TRIGGER IF EXISTS closed_year_entry_insert;
+            CREATE TRIGGER closed_year_entry_insert BEFORE INSERT ON journal_entries
+            WHEN EXISTS(SELECT 1 FROM fiscal_years f WHERE f.status='closed'
+              AND f.year=CAST(CASE WHEN substr(NEW.entry_date,3,1)='-' THEN substr(NEW.entry_date,7,4)
+                                   ELSE substr(NEW.entry_date,1,4) END AS INTEGER))
+            BEGIN SELECT RAISE(ABORT,'FISCAL YEAR CLOSED: entries cannot be added or changed'); END;
+            DROP TRIGGER IF EXISTS closed_year_entry_update;
+            CREATE TRIGGER closed_year_entry_update BEFORE UPDATE ON journal_entries
+            WHEN EXISTS(SELECT 1 FROM fiscal_years f WHERE f.status='closed'
+              AND f.year=CAST(CASE WHEN substr(OLD.entry_date,3,1)='-' THEN substr(OLD.entry_date,7,4)
+                                   ELSE substr(OLD.entry_date,1,4) END AS INTEGER))
+              OR EXISTS(SELECT 1 FROM fiscal_years f WHERE f.status='closed'
+              AND f.year=CAST(CASE WHEN substr(NEW.entry_date,3,1)='-' THEN substr(NEW.entry_date,7,4)
+                                   ELSE substr(NEW.entry_date,1,4) END AS INTEGER))
+            BEGIN SELECT RAISE(ABORT,'FISCAL YEAR CLOSED: entries cannot be added or changed'); END;
+            DROP TRIGGER IF EXISTS closed_year_entry_delete;
+            CREATE TRIGGER closed_year_entry_delete BEFORE DELETE ON journal_entries
+            WHEN EXISTS(SELECT 1 FROM fiscal_years f WHERE f.status='closed'
+              AND f.year=CAST(CASE WHEN substr(OLD.entry_date,3,1)='-' THEN substr(OLD.entry_date,7,4)
+                                   ELSE substr(OLD.entry_date,1,4) END AS INTEGER))
+            BEGIN SELECT RAISE(ABORT,'FISCAL YEAR CLOSED: entries cannot be added or changed'); END;
+
+            DROP TRIGGER IF EXISTS closed_year_line_insert;
+            CREATE TRIGGER closed_year_line_insert BEFORE INSERT ON journal_lines
+            WHEN EXISTS(SELECT 1 FROM journal_entries e JOIN fiscal_years f
+              ON f.year=CAST(CASE WHEN substr(e.entry_date,3,1)='-' THEN substr(e.entry_date,7,4)
+                                  ELSE substr(e.entry_date,1,4) END AS INTEGER)
+              WHERE e.id=NEW.entry_id AND f.status='closed')
+            BEGIN SELECT RAISE(ABORT,'FISCAL YEAR CLOSED: entries cannot be added or changed'); END;
+            DROP TRIGGER IF EXISTS closed_year_line_update;
+            CREATE TRIGGER closed_year_line_update BEFORE UPDATE ON journal_lines
+            WHEN EXISTS(SELECT 1 FROM journal_entries e JOIN fiscal_years f
+              ON f.year=CAST(CASE WHEN substr(e.entry_date,3,1)='-' THEN substr(e.entry_date,7,4)
+                                  ELSE substr(e.entry_date,1,4) END AS INTEGER)
+              WHERE e.id=OLD.entry_id AND f.status='closed')
+              OR EXISTS(SELECT 1 FROM journal_entries e JOIN fiscal_years f
+              ON f.year=CAST(CASE WHEN substr(e.entry_date,3,1)='-' THEN substr(e.entry_date,7,4)
+                                  ELSE substr(e.entry_date,1,4) END AS INTEGER)
+              WHERE e.id=NEW.entry_id AND f.status='closed')
+            BEGIN SELECT RAISE(ABORT,'FISCAL YEAR CLOSED: entries cannot be added or changed'); END;
+            DROP TRIGGER IF EXISTS closed_year_line_delete;
+            CREATE TRIGGER closed_year_line_delete BEFORE DELETE ON journal_lines
+            WHEN EXISTS(SELECT 1 FROM journal_entries e JOIN fiscal_years f
+              ON f.year=CAST(CASE WHEN substr(e.entry_date,3,1)='-' THEN substr(e.entry_date,7,4)
+                                  ELSE substr(e.entry_date,1,4) END AS INTEGER)
+              WHERE e.id=OLD.entry_id AND f.status='closed')
+            BEGIN SELECT RAISE(ABORT,'FISCAL YEAR CLOSED: entries cannot be added or changed'); END;
+        """)
 
     def _auto_lebanese_payroll_rules(self):
         """If the Tax & NSSF settings were never filled in (all NSSF ceilings are 0), load the official Lebanese
@@ -797,7 +891,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
 
     def _ensure_party_account(self, db, party):
         if party["kind"] not in ("customer","supplier","both"): return None
-        category=(party["account_category"] or ("client" if party["kind"]=="customer" else "supplier")) if "account_category" in party.keys() else ("client" if party["kind"]=="customer" else "supplier")
+        category=(party["account_category"] or ("client" if party["kind"]=="customer" else "supplier")) if "account_category" in party.keys() else ("client" if \
+            party["kind"]=="customer" else "supplier")
         prefix={"client":"4111","supplier":"4011","asset_supplier":"4031","other_payable":"4619"}.get(category,"4011")
         account_number=party["account_number"]
         if not account_number:
@@ -951,7 +1046,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         files=self._backup_files(); checks=self._backup_checks()
         return [{"checked":("ok" if checks[path.name].get("ok") else "FAILED") if path.name in checks else "not checked","name":path.name,
                 "size":path.stat().st_size,"modified":datetime.fromtimestamp(path.stat().st_mtime).isoformat(),
-                 "kind":"safety" if "_safety" in path.stem else "automatic" if path.stem.endswith("_auto") else "older version" if path.name.startswith(("saber_accounting_","nanza_accounting_")) and self.backup_label else "backup"}
+                 "kind":"safety" if "_safety" in path.stem else "automatic" if path.stem.endswith("_auto") else "older version" if \
+                     path.name.startswith(("saber_accounting_","nanza_accounting_")) and self.backup_label else "backup"}
                 for path in sorted(files.values(),key=lambda p:p.stat().st_mtime,reverse=True)]
 
     def backup_path(self, name):
@@ -1165,7 +1261,8 @@ def _schema_fingerprint():
         for constant in code.co_consts:
             if isinstance(constant, str): texts.append(constant)
             elif hasattr(constant, "co_consts"): collect(constant)
-    functions = [getattr(Database, name, None) for name in ("_initialize", "_auto_lebanese_payroll_rules", "_upgrade_default_family_allowance_periods")]
+    functions = [getattr(Database, name, None) for name in ("_initialize", "_install_accounting_controls",
+                 "_auto_lebanese_payroll_rules", "_upgrade_default_family_allowance_periods")]
     functions += [inventory.migrate, fixed_assets.migrate, bank_rec.migrate, payroll_extras.migrate, chart_extra.ensure_accounts,
                   audit_chain.migrate, approvals.migrate, payroll_payments.migrate, commercial_documents.migrate,
                   __import__('owner_access').migrate] + list(getattr(inventory, "MIGRATIONS", ()))

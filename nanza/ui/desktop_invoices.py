@@ -10,9 +10,79 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 from desktop_common import main_currency  # 2.9.71
 from desktop_sales_invoice import SalesInvoiceMixin  # 2.9.94: the sales invoice screen
+from free_accounts import suggest_and_autocreate
 
 
 class InvoicesMixin(SalesInvoiceMixin):
+    def _bind_ai_account_suggestion(self, parent, description, account_variable=None, row=0, columnspan=4,
+                                    kind_variable=None):
+        frame = tk.Frame(parent, bg=LIGHT)
+        frame.grid(row=row, column=0, columnspan=columnspan, sticky="w", padx=8, pady=(2, 6))
+        label = tk.Label(frame, text="", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=620)
+        label.pack(side="left", padx=(0, 8))
+        use_button = None
+        if account_variable is not None:
+            use_button = tk.Button(frame, text="Use account", bg="#e7f0e8", fg="#176b2c", border=0,
+                                   padx=8, pady=2)
+        state = {"after_id": None, "code": None}
+
+        def apply_suggestion():
+            state["after_id"] = None
+            if not parent.winfo_exists():
+                return
+            if kind_variable is not None and kind_variable.get().strip().casefold() in ("sale", "sales"):
+                state["code"] = None
+                label.config(text="")
+                if use_button:
+                    use_button.pack_forget()
+                return
+            text = description.get().strip()
+            if not text:
+                state["code"] = None
+                label.config(text="")
+                if use_button:
+                    use_button.pack_forget()
+                return
+            try:
+                result = suggest_and_autocreate(text, self.client)
+            except (RuntimeError, ValueError, OSError) as exc:
+                state["code"] = None
+                label.config(text=f"AI account suggestion unavailable: {exc}", fg="#8B1E1E")
+                if use_button:
+                    use_button.pack_forget()
+                return
+            if not result.get("found"):
+                state["code"] = None
+                label.config(text="")
+                if use_button:
+                    use_button.pack_forget()
+                return
+            state["code"] = result.get("new_9digit_code") or result["base_code"]
+            label.config(
+                text=f'اقتراح AI: {result["base_code"]} - {result["base_name"]}'
+                + (f'   |   تم إنشاء {result["new_9digit_code"]} تلقائيا - 9 digits'
+                   if result.get("auto_created") else ""),
+                fg="#176b2c" if result.get("auto_created") else NAVY,
+            )
+            if use_button:
+                use_button.config(command=lambda: account_variable.set(state["code"]))
+                use_button.pack(side="left")
+
+        def schedule(*_args):
+            if state["after_id"] is not None:
+                try:
+                    parent.after_cancel(state["after_id"])
+                except tk.TclError:
+                    pass
+            if parent.winfo_exists():
+                state["after_id"] = parent.after(450, apply_suggestion)
+
+        description.trace_add("write", schedule)
+        if kind_variable is not None:
+            kind_variable.trace_add("write", schedule)
+        schedule()
+        return frame
+
     def build_invoices(self):
         l=self.language.get(); self.invoice_tree=self.table(self.invoices_tab,[("no",tr(l,"invoice_no"),125),("status","Status",70),("date",tr(l,"date"),88),
                 ("party",tr(l,"party"),160),("branch","Branch",120),("kind","Type",90),("currency",tr(l,"currency"),60),("deductible","Deductible",95),
@@ -223,6 +293,8 @@ class InvoicesMixin(SalesInvoiceMixin):
             elif key in ("invoice_date","due_date"): widget=self.date_entry(details,variables[key],27)
             else: widget=tk.Entry(details,textvariable=variables[key],width=27)
             widget.grid(row=grid_row,column=grid_column+1,padx=(5,14),pady=6,sticky="w")
+        self._bind_ai_account_suggestion(details, variables["description"], variables["expense_account"],
+                                         row=(len(fields)+1)//2, columnspan=4, kind_variable=variables["kind"])
 
         postings=tk.LabelFrame(window,text="Accounts and amounts",bg=LIGHT,padx=8,pady=6); postings.grid(row=1,column=0,sticky="ew",padx=12,pady=(8,0))
         for column,title in enumerate(("Line","Account","D / C","Amount")):
@@ -300,7 +372,8 @@ class InvoicesMixin(SalesInvoiceMixin):
                 if values.get("due_date"): values["due_date"]=formatted_user_date(values["due_date"])
             except ValueError: return messagebox.showwarning("Invoices","Enter 8 date digits: DDMMYYYY",parent=window)
             try:
-                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; vat=float(values["vat"]); total=float(values["total"])
+                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; \
+                    vat=float(values["vat"]); total=float(values["total"])
                 amount_paid=float(values["amount_paid"] or 0)
             except ValueError:
                 return messagebox.showwarning("Invoices","Deductible, Non-Deductible, VAT, and Total must be valid numbers",parent=window)
@@ -645,12 +718,15 @@ class InvoicesMixin(SalesInvoiceMixin):
             elif key in ("invoice_date","due_date"): widget=self.date_entry(form,variables[key],27)
             else: widget=tk.Entry(form,textvariable=variables[key],width=27)
             widget.grid(row=rr,column=cc+1,padx=(5,14),pady=7)
+        self._bind_ai_account_suggestion(form, variables["description"], variables["expense_account"],
+                                         row=(len(fields)+1)//2, columnspan=4, kind_variable=variables["kind"])
         def save():
             values={key:var.get().strip() for key,var in variables.items()}
             try:
                 values["invoice_date"]=formatted_user_date(values["invoice_date"])
                 if values.get("due_date"): values["due_date"]=formatted_user_date(values["due_date"])
-                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; vat=float(values["vat"]); total=float(values["total"])
+                deductible=float(values["deductible_subtotal"]); non_deductible=float(values["non_deductible_subtotal"]); subtotal=deductible+non_deductible; \
+                    vat=float(values["vat"]); total=float(values["total"])
             except ValueError:
                 return messagebox.showwarning("Invoices","Check the date and amounts",parent=window)
             if not values["party_name"] or abs(subtotal+vat-total)>0.005:
@@ -661,7 +737,7 @@ class InvoicesMixin(SalesInvoiceMixin):
             except Exception as exc: return messagebox.showerror("Invoices",str(exc),parent=window)
             window.destroy(); self.load_invoices(); self.load_dashboard(); self.load_journal(); self.load_trial(); self.load_statement_parties()
             messagebox.showinfo("Invoices","Invoice row added successfully")
-        tk.Button(form,text="Save Invoice",command=save,bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=24,pady=8).grid(row=10,column=0,columnspan=4,pady=16)
+        tk.Button(form,text="Save Invoice",command=save,bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=24,pady=8).grid(row=11,column=0,columnspan=4,pady=16)
 
     def add_item_to_selected_invoice(self):
         selected=self.invoice_tree.selection()
@@ -675,6 +751,10 @@ class InvoicesMixin(SalesInvoiceMixin):
         for index,(label,key) in enumerate(fields):
             tk.Label(window,text=label,bg=LIGHT).grid(row=index,column=0,sticky="w",padx=14,pady=6)
             tk.Entry(window,textvariable=variables[key],width=30).grid(row=index,column=1,padx=14,pady=6)
+        invoice_row = self.invoice_rows.get(str(invoice_id), {})
+        item_kind = tk.StringVar(master=window, value=invoice_row.get("kind") or "")
+        self._bind_ai_account_suggestion(window, variables["description"], row=len(fields), columnspan=2,
+                                         kind_variable=item_kind)
         def save():
             item={key:var.get().strip() for key,var in variables.items()}
             try:
@@ -686,5 +766,4 @@ class InvoicesMixin(SalesInvoiceMixin):
             except Exception as exc: return messagebox.showerror("Invoices",str(exc),parent=window)
             window.destroy(); self.load_invoices(); self.load_dashboard(); self.load_journal(); self.load_trial()
             messagebox.showinfo("Invoices","Item added and invoice totals updated")
-        tk.Button(window,text="Add Item",command=save,bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=24,pady=8).grid(row=6,column=0,columnspan=2,pady=14)
-
+        tk.Button(window,text="Add Item",command=save,bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=24,pady=8).grid(row=7,column=0,columnspan=2,pady=14)

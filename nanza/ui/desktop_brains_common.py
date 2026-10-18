@@ -11,7 +11,7 @@ from tkinter import messagebox, ttk
 
 from report_export import export_sections_pdf
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"  # 2.9.59: the same colours on every screen
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, MUTED = "#8B1E1E", "#5f6b76"
 VOUCHER_TYPES = ["01 - General Voucher", "02 - Receipt Voucher", "03 - Payment Voucher", "04 - Opening Voucher", "05 - Closing Voucher", "06 - Adjustment", "07 - DOE (Difference of Exchange)"]
 

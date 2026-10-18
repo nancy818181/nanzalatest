@@ -114,7 +114,8 @@ def build_report(database, report, options):
                             sum((m[8] for m in members), ZERO), "", ""]); totals_index.append(len(grouped) - 1)
         count = len(rows); rows = grouped
         rows.append(["TOTAL", f"{count} item(s)", "", "", "", "", total, "", sales_total.quantize(Decimal("0.01")), "", ""])
-        title = "Stock Valuation"; sections.append({"heading": f"Stock valuation at {display_date(date_to)} - {'weighted average' if method != 'fifo' else 'FIFO'}" + (f" - {warehouse.label(warehouses)}" if warehouse else " - all warehouses"),
+        title = "Stock Valuation"; sections.append({"heading": f"Stock valuation at {display_date(date_to)} - {'weighted average' if method != 'fifo' else 'FIFO'}" + \
+            (f" - {warehouse.label(warehouses)}" if warehouse else " - all warehouses"),
                                                      "headers": headers, "rows": rows, "total_rows": totals_index + [len(rows) - 1]})
         if not warehouse and len(warehouses) > 1:
             by_wh = [[w["code"], w["name"], sum((_reported_warehouse_values(state[i]).get(wid, ZERO)
@@ -164,7 +165,8 @@ def build_report(database, report, options):
             rows.append(["", "", "TOTAL / CLOSING", "", "", total_in, total_out, "", "", qty_balance, value_balance.quantize(Decimal("0.01"))])
             item = items[item_id]
             unit=item["unit"]; card_totals[unit]=card_totals.get(unit,ZERO)+qty_balance
-            sections.append({"heading": f"{item['sku']} - {item['name']} ({item['unit']}) | {display_date(date_from)} to {display_date(date_to)}" + (f" - {warehouse.label(warehouses)}" if warehouse else ""),
+            sections.append({"heading": f"{item['sku']} - {item['name']} ({item['unit']}) | {display_date(date_from)} to {display_date(date_to)}" + \
+                (f" - {warehouse.label(warehouses)}" if warehouse else ""),
                              "headers": ["Date", "Document", "Type", "Warehouse", "Party / Reference", "In", "Out", f"Unit Cost ({currency})", "Value", "Balance Qty", "Balance Value"],
                              "rows": rows, "total_rows": [0, len(rows) - 1]})
         title = "Stock Cards" if options.get("item_to_id") else "Stock Card"
@@ -556,7 +558,8 @@ def ageing_report(database, options, items, warehouses, in_category, currency, m
                         f"Value over {threshold} days", "Avg Age (days)", "Last Issue"],
                  "rows": risk or [["No stock older than this"] + [""] * 5], "total_rows": []}]
     meta = [f"Company: {company.get('company_name') or '-'}   Inventory currency: {currency}   Costing: {'FIFO' if method == 'fifo' else 'Weighted average'}",
-            f"Stock ageing as of {display_date(date_to)}   Buckets: {', '.join(labels)}" + (f"   Warehouse: {warehouses[int(options['warehouse_id'])]['code']}" if str(options.get('warehouse_id') or '').isdigit() else "")]
+            f"Stock ageing as of {display_date(date_to)}   Buckets: {', '.join(labels)}" + (f"   Warehouse: {warehouses[int(options['warehouse_id'])]['code']}" if \
+                str(options.get('warehouse_id') or '').isdigit() else "")]
     if method != "fifo" and options.get("warehouse_id"):
         meta.append("Warehouse age buckets are estimated from the company-wide receipt mix; values use the company-wide moving average.")
     return {"title": "Stock Ageing Report", "meta": meta, "sections": sections}

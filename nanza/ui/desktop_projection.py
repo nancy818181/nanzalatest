@@ -83,7 +83,7 @@ class ProjectionMixin:
 
     def load_projection_assumptions(self):
         try: stored = json.loads(self._projection_file().read_text(encoding="utf-8")).get(self._projection_key())
-        except Exception: stored = None
+        except (OSError, UnicodeError, ValueError, TypeError, AttributeError): stored = None
         self.pj_assumptions = stored or pm.default_assumptions(int(self.pj["base_year"].get() or datetime.now().year), int(self.pj["years"].get() or 3))
         for key, field in (("base_year", "base_year"), ("years", "years"), ("spread", "scenario_spread"), ("tax", "tax_rate"), ("dso", "dso"), ("dpo", "dpo"), ("life", "asset_life")):
             value = self.pj_assumptions.get(field)
@@ -140,7 +140,7 @@ class ProjectionMixin:
         except ValueError as exc: return messagebox.showwarning("Projection", str(exc))
         path = self._projection_file()
         try: data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception: data = {}
+        except (OSError, UnicodeError, ValueError, TypeError): data = {}
         data[self._projection_key()] = assumptions
         try: path.parent.mkdir(parents=True, exist_ok=True); path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except OSError as exc: return messagebox.showerror("Projection", f"The assumptions could not be saved: {exc}")

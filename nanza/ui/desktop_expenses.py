@@ -5,6 +5,8 @@ from desktop_stage3_common import (  # 2.9.102: the names this module uses (no m
     bulk_action, filedialog, GOLD, LIGHT, messagebox, mimetypes, MUTED, NAVY, Path, prepare_pdf_reading, PURCHASE_USES,
     read_invoice_pdf, run_with_progress, RED, tk, ttk
 )
+from tkinter import simpledialog
+from i18n import tr
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 from desktop_common import main_currency  # 2.9.71
 from datetime import datetime
@@ -70,6 +72,36 @@ class ExpensesMixin:
         f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.expense_found())
         f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_expenses())
         f["find_box"].bind("<Return>", lambda _e: self.expense_found())
+
+        self.install_offline_expense_hint(page, f)
+
+    def install_offline_expense_hint(self, page, form):
+        from desktop_workbench import async_call
+        hint = tk.Label(page, text="", bg=LIGHT, fg=NAVY, anchor="w")
+        hint.pack(fill="x", padx=12, pady=3)
+        state = {"timer": None}
+        def changed(*_):
+            if state["timer"]:
+                hint.after_cancel(state["timer"])
+            hint._wb_generation = getattr(hint, "_wb_generation", 0) + 1
+            text = form["vars"]["description"].get().strip()
+            hint.configure(text="")
+            if len(text) < 3:
+                return
+            def show(result):
+                code = result.get("account_code")
+                hint.configure(text=(f"Suggested / مقترح: {code} · {result.get('account_name', '')} · rule-based; review / راجع" if code else "No unambiguous account suggestion / لا يوجد اقتراح مؤكد"))
+            def request():
+                state["timer"] = None
+                async_call(hint, self, lambda c: c.workbench("suggest", description=text), show, hint)
+            state["timer"] = hint.after(450, request)
+        trace_id = form["vars"]["description"].trace_add("write", changed)
+        def cleanup(event):
+            if event.widget is hint:
+                if state["timer"]:
+                    hint.after_cancel(state["timer"])
+                form["vars"]["description"].trace_remove("write", trace_id)
+        hint.bind("<Destroy>", cleanup, add="+")
 
     def expense_amounts_changed(self, key):
         f = self.expense_form; v = f["vars"]
@@ -263,7 +295,8 @@ class ExpensesMixin:
         except Exception: rows = []
         lists = self.dimension_lists(); departments = {d["id"]: d["code"] for d in lists["departments"]}; projects = {p["id"]: p["code"] for p in lists["projects"]}
         f["rows"] = {str(r["id"]): r for r in rows}; f["tree"].delete(*f["tree"].get_children())
-        f["find_map"] = {f'{r.get("expense_number") or r["id"]} | {_dd(r["expense_date"])} | {r["description"]} | {r["total"]:,.2f} {r["currency"]}': r["id"] for r in rows}; f["find_box"]["values"] = list(f["find_map"])
+        f["find_map"] = {f'{r.get("expense_number") or r["id"]} | {_dd(r["expense_date"])} | {r["description"]} | {r["total"]:,.2f} {r["currency"]}': r["id"] for r in \
+            rows}; f["find_box"]["values"] = list(f["find_map"])
         if not getattr(self, "_expense_accounts", None):
             try:
                 accounts = self.client.accounts()
@@ -280,15 +313,35 @@ class ExpensesMixin:
                         projects.get(r.get("project_id"))) if x)))
 
     def suggest_expense_account(self):
-        from ai_mapper import suggest_account
         form = self.expense_form["vars"]
-        suggestion = suggest_account(form["description"].get(), getattr(self, "_expense_accounts", []))
-        if not suggestion:
-            messagebox.showinfo("Account suggestion", "Enter a more specific expense description and choose an account manually.")
+        language = self.language.get()
+        from nanza.ai_accountant.classifier import suggest_account
+        try:
+            accounts = self.client.accounts()
+            suggestion = suggest_account(form["description"].get(), accounts)
+        except (OSError, RuntimeError, ValueError, TypeError, KeyError) as exc:
+            return messagebox.showerror(tr(language, "account_suggestion"), str(exc))
+        if suggestion.get("ambiguous"):
+            candidates = suggestion["candidates"]
+            choices = "\n".join(
+                f"{index}. {item.get('account_code')} - {item.get('name') or ''}"
+                for index, item in enumerate(candidates, 1)
+            )
+            choice = simpledialog.askinteger(
+                tr(language, "account_suggestion"),
+                tr(language, "choose_account_candidate").format(choices=choices),
+                parent=self, minvalue=1, maxvalue=len(candidates))
+            if choice is not None:
+                form["account"].set(candidates[choice - 1]["account_code"])
             return
-        if messagebox.askyesno("Account suggestion",
-                               f"Use {suggestion['code']} - {suggestion['name']}?\nPlease verify the account before saving."):
-            form["account"].set(suggestion["code"])
+        if suggestion.get("abstain"):
+            return messagebox.showinfo(
+                tr(language, "account_suggestion"), tr(language, "account_suggestion_abstained"))
+        if messagebox.askyesno(
+            tr(language, "account_suggestion"),
+            tr(language, "account_suggestion_confirm").format(
+                code=suggestion["account_code"], name=suggestion["account_name"])):
+            form["account"].set(suggestion["account_code"])
 
     def ai_suggest_expense_account(self):
         from ai_service import suggest_account

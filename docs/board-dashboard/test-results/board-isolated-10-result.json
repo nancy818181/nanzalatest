@@ -1,0 +1,22 @@
+{
+  "modules": [
+    "tests.test_ocr_review_safety"
+  ],
+  "test_ids": [
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_a_photo_cannot_be_implicitly_confirmed_without_a_review_window",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_asset_reading_is_dispatched_before_ocr_starts",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_cancelled_expense_review_keeps_the_previous_attachment",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_expense_reading_is_dispatched_before_ocr_starts",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_local_review_warning_is_idempotent",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_merging_readings_preserves_inference_warnings",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_photo_preparation_preserves_original",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_sales_reading_is_dispatched_before_ocr_starts",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_utility_total_is_not_fabricated_from_base_plus_vat",
+    "tests.test_ocr_review_safety.ReadingSafetyTest.test_window_dispatch_starts_work_and_delivers_result_on_ui_thread"
+  ],
+  "tests_run": 10,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

@@ -1,0 +1,14 @@
+{
+  "modules": [
+    "tests.test_pdf_formats"
+  ],
+  "test_ids": [
+    "tests.test_pdf_formats.PdfFormatsTest.test_layouts",
+    "tests.test_pdf_formats.PdfFormatsTest.test_normalization"
+  ],
+  "tests_run": 2,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

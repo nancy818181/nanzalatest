@@ -1,0 +1,376 @@
+test_assets_are_three_clear_tabs_and_an_asset_saves_from_its_account (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_assets_are_three_clear_tabs_and_an_asset_saves_from_its_account) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_automatic_doe_posts_one_voucher_per_currency (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_automatic_doe_posts_one_voucher_per_currency) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_bulk_vat_account_is_used_when_importing_pdf_invoices (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_bulk_vat_account_is_used_when_importing_pdf_invoices) ... ok
+test_bulk_vat_account_only_changes_confirmed_selected_rows_and_import_payload (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_bulk_vat_account_only_changes_confirmed_selected_rows_and_import_payload) ... invalid command name "140283206529152<lambda>"
+    while executing
+"140283206529152<lambda>"
+    ("after" script)
+ok
+test_bulk_vat_requires_selection_and_account_and_respects_pdf_type_changes (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_bulk_vat_requires_selection_and_account_and_respects_pdf_type_changes) ... invalid command name "140283222945344<lambda>"
+    while executing
+"140283222945344<lambda>"
+    ("after" script)
+invalid command name "140283208443200<lambda>"
+    while executing
+"140283208443200<lambda>"
+    ("after" script)
+ok
+test_close_the_books_lock_and_unlock_from_backup_page (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_close_the_books_lock_and_unlock_from_backup_page) ... invalid command name "140283222181888<lambda>"
+    while executing
+"140283222181888<lambda>"
+    ("after" script)
+invalid command name "140283208448832<lambda>"
+    while executing
+"140283208448832<lambda>"
+    ("after" script)
+invalid command name "140283221116352<lambda>"
+    while executing
+"140283221116352<lambda>"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140283221450880<lambda>"
+    while executing
+"140283221450880<lambda>"
+    ("after" script)
+ok
+test_digits_typed_in_any_date_field_get_dashes (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_digits_typed_in_any_date_field_get_dashes) ... ok
+test_edit_invoice_vat_selection_is_saved_as_account_code (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_edit_invoice_vat_selection_is_saved_as_account_code) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140283377638720<lambda>"
+    while executing
+"140283377638720<lambda>"
+    ("after" script)
+ok
+test_family_allocation_shows_automatically_and_can_be_edited (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_family_allocation_shows_automatically_and_can_be_edited) ... invalid command name "140283211300992apply_suggestion"
+    while executing
+"140283211300992apply_suggestion"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_import_preview_account_edits_advance_with_tab_and_offer_lookup (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_import_preview_account_edits_advance_with_tab_and_offer_lookup) ... ok
+test_inventory_analysis_3d_options_exist_and_run (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_inventory_analysis_3d_options_exist_and_run) ... invalid command name "140283210783744<lambda>"
+    while executing
+"140283210783744<lambda>"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140282678546176<lambda>"
+    while executing
+"140282678546176<lambda>"
+    ("after" script)
+ok
+test_item_cost_is_a_link_to_the_stock_card (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_item_cost_is_a_link_to_the_stock_card) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_legal_document_saved_with_dates_and_no_file (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_legal_document_saved_with_dates_and_no_file) ... Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140283552011712collect"
+    while executing
+"140283552011712collect"
+    ("after" script)
+invalid command name "140283394217024collect"
+    while executing
+"140283394217024collect"
+    ("after" script)
+ok
+test_mouse_wheel_scrolls_the_page_under_the_pointer (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_mouse_wheel_scrolls_the_page_under_the_pointer) ... ok
+test_official_excel_forms_dialog_creates_a_filled_file (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_official_excel_forms_dialog_creates_a_filled_file)
+2.9.107: the button opens Payroll > NSSF & MOF Forms with the employee; Create Excel writes the filled form. ... invalid command name "140282379888192<lambda>"
+    while executing
+"140282379888192<lambda>"
+    ("after" script)
+invalid command name "140282235182784<lambda>"
+    while executing
+"140282235182784<lambda>"
+    ("after" script)
+invalid command name "140283207281152collect"
+    while executing
+"140283207281152collect"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140283414897856collect"
+    while executing
+"140283414897856collect"
+    ("after" script)
+invalid command name "140283209933056collect"
+    while executing
+"140283209933056collect"
+    ("after" script)
+invalid command name "140283223073280collect"
+    while executing
+"140283223073280collect"
+    ("after" script)
+ok
+test_pdf_preview_type_can_be_selected_per_row (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_pdf_preview_type_can_be_selected_per_row) ... ok
+test_program_opens_on_the_dashboard_first_and_builds_the_rest (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_program_opens_on_the_dashboard_first_and_builds_the_rest) ... invalid command name "140282286418496<lambda>"
+    while executing
+"140282286418496<lambda>"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140282083345728<lambda>"
+    while executing
+"140282083345728<lambda>"
+    ("after" script)
+invalid command name "140283212031488collect"
+    while executing
+"140283212031488collect"
+    ("after" script)
+invalid command name "140283379923648collect"
+    while executing
+"140283379923648collect"
+    ("after" script)
+invalid command name "140283550608384check_auto_logout"
+    while executing
+"140283550608384check_auto_logout"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_right_click_on_account_field_opens_account_search (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_right_click_on_account_field_opens_account_search) ... invalid command name "140282279263808edit_new_line"
+    while executing
+"140282279263808edit_new_line"
+    ("after" script)
+invalid command name "140282263680128<lambda>"
+    while executing
+"140282263680128<lambda>"
+    ("after" script)
+invalid command name "140281722528128poll"
+    while executing
+"140281722528128poll"
+    ("after" script)
+invalid command name "140283200814592collect"
+    while executing
+"140283200814592collect"
+    ("after" script)
+ok
+test_right_click_on_plain_field_offers_searches (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_right_click_on_plain_field_offers_searches) ... ok
+test_right_click_on_voucher_account_cell_or_editor_opens_f2_search (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_right_click_on_voucher_account_cell_or_editor_opens_f2_search) ... invalid command name "140282039096448<lambda>"
+    while executing
+"140282039096448<lambda>"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140281720502784<lambda>"
+    while executing
+"140281720502784<lambda>"
+    ("after" script)
+invalid command name "140283506978816collect"
+    while executing
+"140283506978816collect"
+    ("after" script)
+invalid command name "140282800582016collect"
+    while executing
+"140282800582016collect"
+    ("after" script)
+ok
+test_statement_copies_account_to_second_row_and_escape_keeps_the_report (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_statement_copies_account_to_second_row_and_escape_keeps_the_report) ... ok
+test_stock_card_opens_from_items (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_stock_card_opens_from_items) ... invalid command name "140282648204224collect"
+    while executing
+"140282648204224collect"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140282039740480<lambda>"
+    while executing
+"140282039740480<lambda>"
+    ("after" script)
+ok
+test_tab_and_enter_from_voucher_header_edit_account_cell (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_tab_and_enter_from_voucher_header_edit_account_cell) ... invalid command name "140282773196544collect"
+    while executing
+"140282773196544collect"
+    ("after" script)
+ok
+test_transport_days_fill_the_transport_amount (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_transport_days_fill_the_transport_amount) ... invalid command name "140282058812224<lambda>"
+    while executing
+"140282058812224<lambda>"
+    ("after" script)
+invalid command name "140281526671872<lambda>"
+    while executing
+"140281526671872<lambda>"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140282647246592collect"
+    while executing
+"140282647246592collect"
+    ("after" script)
+ok
+test_unused_pages_stay_unbuilt_after_startup_events (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_unused_pages_stay_unbuilt_after_startup_events) ... invalid command name "140282522966656collect"
+    while executing
+"140282522966656collect"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+invalid command name "140282497501952collect"
+    while executing
+"140282497501952collect"
+    ("after" script)
+invalid command name "140282230493632collect"
+    while executing
+"140282230493632collect"
+    ("after" script)
+ok
+test_usd_books_doe_for_one_selected_currency (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_usd_books_doe_for_one_selected_currency) ... invalid command name "140281511478464edit_new_line"
+    while executing
+"140281511478464edit_new_line"
+    ("after" script)
+invalid command name "140281149941056<lambda>"
+    while executing
+"140281149941056<lambda>"
+    ("after" script)
+Comparative trial balance failed
+Traceback (most recent call last):
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/ui/desktop_reports.py", line 600, in fetch
+    try: ctb=client.comparative_trial_balance(dates[0],dates[1],currency)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 363, in comparative_trial_balance
+    result=self.request("GET",f"/api/comparative-trial-balance?{query}")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/7717b4a57052/nanza-ux-upgrade/nanzalatest-main/nanza/core/client.py", line 152, in request
+    raise RuntimeError(message)
+RuntimeError: Historical data for FY 2025 unavailable - cannot compare
+ok
+test_vat_account_name_selects_code_with_tab (tests.test_ui_v2_9_18.ProgramWindowFixesTest.test_vat_account_name_selects_code_with_tab) ... ok

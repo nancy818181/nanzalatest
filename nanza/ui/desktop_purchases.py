@@ -685,7 +685,7 @@ class PurchasesMixin:
         if getattr(self, "_auto_upload", None) is None:
             import app_runtime, json as _json
             try: value = bool(_json.loads((app_runtime.data_dir() / "upload_settings.json").read_text(encoding="utf-8")).get("auto_save", True))
-            except Exception: value = True
+            except (OSError, UnicodeError, ValueError, TypeError, AttributeError): value = True
             self._auto_upload = tk.BooleanVar(master=self, value=value)
         return self._auto_upload
 

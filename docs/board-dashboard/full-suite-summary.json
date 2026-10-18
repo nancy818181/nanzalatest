@@ -1,0 +1,55 @@
+{
+  "tests_run": 1111,
+  "passed": 1109,
+  "skipped": [
+    [
+      "test_speed_on_windows (tests.test_v2_9_88.WindowsStartTest.test_speed_on_windows)",
+      "Windows only: a file held by another program"
+    ],
+    [
+      "test_start_while_the_shm_file_is_held (tests.test_v2_9_88.WindowsStartTest.test_start_while_the_shm_file_is_held)",
+      "Windows only: a file held by another program"
+    ]
+  ],
+  "failures": 0,
+  "errors": 0,
+  "payroll_salary_employee_cases": 95,
+  "unique_ids_match_full_discovery": true,
+  "execution": "Four completed batches plus 30 separately isolated modules for the remaining batch",
+  "reports": [
+    "board-group-0-result.json",
+    "board-group-1-result.json",
+    "board-group-2-result.json",
+    "board-group-4-result.json",
+    "board-isolated-0-result.json",
+    "board-isolated-1-result.json",
+    "board-isolated-10-result.json",
+    "board-isolated-11-result.json",
+    "board-isolated-12-result.json",
+    "board-isolated-13-result.json",
+    "board-isolated-14-result.json",
+    "board-isolated-15-result.json",
+    "board-isolated-16-result.json",
+    "board-isolated-17-result.json",
+    "board-isolated-18-result.json",
+    "board-isolated-19-result.json",
+    "board-isolated-2-result.json",
+    "board-isolated-20-result.json",
+    "board-isolated-21-result.json",
+    "board-isolated-22-result.json",
+    "board-isolated-23-result.json",
+    "board-isolated-24-result.json",
+    "board-isolated-25-result.json",
+    "board-isolated-26-result.json",
+    "board-isolated-27-result.json",
+    "board-isolated-28-result.json",
+    "board-isolated-29-result.json",
+    "board-isolated-3-result.json",
+    "board-isolated-4-result.json",
+    "board-isolated-5-result.json",
+    "board-isolated-6-result.json",
+    "board-isolated-7-result.json",
+    "board-isolated-8-result.json",
+    "board-isolated-9-result.json"
+  ]
+}

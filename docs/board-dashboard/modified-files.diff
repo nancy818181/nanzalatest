@@ -1,0 +1,1635 @@
+diff --git a/.github/workflows/build-windows-installer.yml b/.github/workflows/build-windows-installer.yml
+index 7f9361d..328fbc7 100644
+--- a/.github/workflows/build-windows-installer.yml
++++ b/.github/workflows/build-windows-installer.yml
+@@ -141,6 +141,7 @@ jobs:
+             pyinstaller --noconfirm --clean --onedir --windowed --noupx --icon Assets/nanza.ico @folders @modules `
+             --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/help;assets/help" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
+             --hidden-import commercial_documents --hidden-import executive_dashboard `
++            --hidden-import nanza_delivery.complete_board_dashboard --collect-all customtkinter --collect-all matplotlib `
+             --hidden-import desktop_workbench --hidden-import nanza_delivery.ageing_report --hidden-import nanza_delivery.whatsapp_daily_summary --hidden-import nanza_delivery.custom_report_builder --hidden-import nanza_delivery.ai_accountant `
+             --hidden-import desktop_commercial --hidden-import desktop_executive `
+             --hidden-import arabic_reshaper --hidden-import bidi --hidden-import bidi.algorithm --collect-data arabic_reshaper `
+diff --git a/README.md b/README.md
+index 269bf54..16531d4 100644
+--- a/README.md
++++ b/README.md
+@@ -1,5 +1,28 @@
+ # Nanza Accounting (formerly Saber Accounting)
+ 
++## Version 2.9.130 (Complete Board Dashboard / لوحة مجلس الإدارة)
++
++- Added a separate **Board Dashboard** beside the existing operational dashboard, with a navigation
++  button and **Ctrl+B**. The first four 2.9.129 upgrades are preserved, not rebuilt.
++- CustomTkinter shell with a Matplotlib vector board follows the supplied black/gold reference:
++  four KPIs and three columns for executive summary, monthly revenue/margins, debt covenant,
++  direct cash bridge, earnings bridge, capital structure, ratios, free cash flow and cash/coverage.
++  No QR code, advertising, footer links, social bar, map or footer is added.
++- Full-board PDF exports the same clean layout. Queries and export run in background workers;
++  company/year/session snapshots prevent stale results. The existing Tk application is retained.
++- All figures come from posted SQLite books. **The example $10.33M / $549K / 2.8x values are not
++  embedded.** Missing approved forecasts, debt-service schedules, prior-year data or reviewed
++  account mappings remain unavailable. Unknown covenants are never labelled compliant.
++- Administrator-only, audited account mapping uses active posting accounts from the actual chart.
++  FCF is withheld if a cash entry is mixed or unclassified; covenant debt/EBITDA and ROIC require
++  a completed full fiscal year. Year-end is actual historic 31 December cash, not an invented forecast.
++- بالعربي: أضفنا لوحة إدارة مستقلة بتصميم أسود وذهبي، مع المؤشرات والرسوم وتصدير PDF نظيف.
++  اللوحة اليومية والميزات الأربع السابقة والرواتب محفوظة. الأرقام من الدفاتر، والمؤشرات غير
++  المراجَعة تظهر غير متاحة. ربط الحسابات من صلاحية المدير ويُحفظ بسجل التدقيق.
++- **9/10 is a target, not a verified competitive score.** No unsupported claim about features
++  absent from Odoo/Zoho is made. New Windows installer and live-data deployment still require acceptance testing.
++- See `docs/board-dashboard/VALIDATION.md` for exact tests, formulas and outstanding limits.
++
+ ## Version 2.9.129 (daily workflow workbench / أدوات العمل اليومية)
+ 
+ **EN:** Four integrated upgrades: one-click coloured ageing buckets with customer invoice drill-down;
+diff --git a/installer.iss b/installer.iss
+index 2bba954..102b76e 100644
+--- a/installer.iss
++++ b/installer.iss
+@@ -1,5 +1,5 @@
+ #define MyAppName "Nanza Accounting"
+-#define MyAppVersion "2.9.129"
++#define MyAppVersion "2.9.130"
+ #define MyAppPublisher "Saber for Audit"
+ 
+ [Setup]
+diff --git a/nanza/core/app_runtime.py b/nanza/core/app_runtime.py
+index b23a5ee..dbd403d 100644
+--- a/nanza/core/app_runtime.py
++++ b/nanza/core/app_runtime.py
+@@ -220,7 +220,7 @@ INSTANCE: SingleInstance | None = None
+ 
+ 
+ # ------------------------------------------------------------------ update check (2.9.42)
+-APP_VERSION = "2.9.129"
++APP_VERSION = "2.9.130"
+ # Newest GitHub Release of the program. Another address can be put in <data folder>/update_url.txt
+ # (one line), for example when the repository is private and the installers are shared elsewhere.
+ DEFAULT_UPDATE_URL = "https://api.github.com/repos/nancy818181/nanzalatest/releases/latest"
+diff --git a/nanza/core/server.py b/nanza/core/server.py
+index ae0cbba..07025fd 100644
+--- a/nanza/core/server.py
++++ b/nanza/core/server.py
+@@ -258,7 +258,19 @@ class ApiHandler(BaseHTTPRequestHandler):
+                 action = path.rsplit("/", 1)[-1]
+                 day = self._query(parsed, "date") or date.today().isoformat()
+                 currency = self._query(parsed, "currency", "USD")
+-                if action == "ageing":
++                if action == "board":
++                    from nanza_delivery.complete_board_dashboard import build_board
++                    start=self._query(parsed,"date_from")
++                    end=self._query(parsed,"date_to")
++                    year=int(iso_date(end)[:4])
++                    result=build_board(self.db,start,end,currency,self._previous_year_db(year),self._query(parsed,"language","en"))
++                    companies=self.company_manager.list_companies(True)
++                    selected=next((c for c in companies if c["id"]==self.headers.get("X-Company-ID")),companies[0] if companies else {})
++                    result["company_name"]=selected.get("name","")
++                elif action == "board-settings":
++                    from nanza_delivery.complete_board_dashboard import settings
++                    result=settings(self.db)
++                elif action == "ageing":
+                     result = ageing_report.get_ageing_buckets(day, self.db, kind=self._query(parsed, "kind", "sale"), currency=self._query(parsed, "currency"))
+                 elif action == "summary":
+                     result = {"text": whatsapp_daily_summary.generate_whatsapp_summary(day, self.db, currency=currency, language=self._query(parsed, "language", "en"))}
+@@ -1018,12 +1030,22 @@ class ApiHandler(BaseHTTPRequestHandler):
+             except Exception as exc: return self._json(400,{"error":str(exc)})
+             return self._json(201,{"company":result})
+         if not self._select_database(): return
+-        fiscal_admin_paths=("/api/reports/financial-config","/api/fiscal-years/reopen","/api/fiscal-years/refresh-opening","/api/fiscal-years/delete")
++        fiscal_admin_paths=("/api/reports/financial-config","/api/fiscal-years/reopen",
++                            "/api/fiscal-years/refresh-opening","/api/fiscal-years/delete",
++                            "/api/workbench/board-settings")
+         if path not in fiscal_admin_paths and self.headers.get("X-Company-ID") and self.headers.get("X-Fiscal-Year") and self.company_manager.year_status(self.headers.get("X-Company-ID"),
+                 self.headers.get("X-Fiscal-Year"))=="closed":
+             return self._json(423,{"error":"This fiscal year is closed and read-only"})
+         if user["role"] == "viewer":
+             return self._json(403,{"error":"Viewer access is read-only"})
++        if path == "/api/workbench/board-settings":
++            if user["role"]!="admin":
++                return self._json(403,{"error":"Administrator permission required"})
++            try:
++                from nanza_delivery.complete_board_dashboard import save_settings
++                return self._json(200,save_settings(self.db,body.get("config"),user["id"]))
++            except (ValueError,TypeError,KeyError,ArithmeticError,sqlite3.Error) as exc:
++                return self._json(400,{"error":str(exc)})
+         if path == "/api/workbench/templates":
+             try:
+                 from nanza_delivery.custom_report_builder import save_template
+diff --git a/nanza/ui/desktop.py b/nanza/ui/desktop.py
+index 867b3b6..b5b8dbd 100644
+--- a/nanza/ui/desktop.py
++++ b/nanza/ui/desktop.py
+@@ -704,6 +704,12 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
+         self.tab_choice=tk.StringVar(value=self.tab_names[0])
+         self.tab_buttons=nav_buttons
+         self._page_attributes=[attribute for attribute,_name in shown]
++        self.bind("<Control-b>",lambda _event:self.open_board_dashboard())
++        self.bind("<Control-B>",lambda _event:self.open_board_dashboard())
++        board_parent=menu_holder if side_menu else top
++        self.board_nav_button=tk.Button(board_parent,text="📊 Board Dashboard",command=self.open_board_dashboard,
++            bg=GOLD,fg=NAVY,relief="flat",pady=7,cursor="hand2")
++        self.board_nav_button.pack(side="bottom" if side_menu else "right",fill="x" if side_menu else "none",padx=5,pady=4)
+         if side_menu:
+             nav_buttons.extend(desktop_layout.build_side_menu(self,menu_holder,self._page_attributes,self.main_tab_pages,self.tab_names))
+         else:
+diff --git a/nanza/ui/desktop_workbench.py b/nanza/ui/desktop_workbench.py
+index d2d4ca6..27355fc 100644
+--- a/nanza/ui/desktop_workbench.py
++++ b/nanza/ui/desktop_workbench.py
+@@ -884,6 +884,19 @@ class WorkbenchMixin:
+         )
+         return window
+ 
++    def open_board_dashboard(self):
++        notebook = getattr(self, "main_notebook", None)
++        if (
++            getattr(self, "client", None) is None
++            or not getattr(self, "current_user", None)
++            or notebook is None
++            or not notebook.winfo_exists()
++        ):
++            return None
++        from nanza_delivery.complete_board_dashboard import open_board
++
++        return open_board(self)
++
+     def open_ageing_workbench(self):
+         return AgeingWindow(self)
+ 
+diff --git a/nanza_delivery/complete_board_dashboard.py b/nanza_delivery/complete_board_dashboard.py
+new file mode 100644
+index 0000000..a9f146e
+--- /dev/null
++++ b/nanza_delivery/complete_board_dashboard.py
+@@ -0,0 +1,1086 @@
++"""Read-only board model and clean vector board. No external AI or sample balances."""
++
++from __future__ import annotations
++import calendar
++import json
++from collections import defaultdict
++from datetime import date, timedelta
++from decimal import Decimal
++from database_common import iso_date
++
++ZERO = Decimal(0)
++GOLD, BLACK, GREEN, RED = "#c8a54c", "#171717", "#26775c", "#a73f42"
++GROUPS = {
++    "cogs": "Cost of sales",
++    "sga": "SG&A",
++    "interest": "Interest expense",
++    "depreciation": "Depreciation / amortisation",
++    "tax": "Income tax expense",
++    "senior_debt": "Senior funded debt",
++    "subordinated_debt": "Subordinated funded debt",
++    "current_assets": "Current assets",
++    "current_liabilities": "Current liabilities",
++    "capex": "Cash-flow: capital expenditure",
++    "operating_cash": "Cash-flow: operating counterparts",
++    "financing_cash": "Cash-flow: financing counterparts",
++}
++LIMITS = {
++    "debt_ebitda_max",
++    "current_ratio_min",
++    "debt_equity_max",
++    "roic_min",
++    "interest_coverage_min",
++    "ebitda_margin_target",
++    "sga_max",
++}
++
++
++def settings(database):
++    with database.connect() as connection:
++        exists = connection.execute(
++            "SELECT 1 FROM sqlite_master WHERE name='board_dashboard_settings' AND type='table'"
++        ).fetchone()
++        row = (
++            connection.execute("SELECT config FROM board_dashboard_settings WHERE id=1").fetchone()
++            if exists
++            else None
++        )
++    return json.loads(row["config"]) if row else {"reviewed": False, **{k: [] for k in GROUPS}, "targets": {}}
++
++
++def validate_config(database, config):
++    if not isinstance(config, dict) or set(config) - set(GROUPS) - {"reviewed", "targets"}:
++        raise ValueError("Unsupported board settings")
++    if not isinstance(config.get("reviewed", False), bool):
++        raise ValueError("Reviewed must be a boolean")
++    accounts = {r["code"]: r for r in database.list_accounts() if r["is_active"] and r["is_posting"]}
++    result = {"reviewed": config.get("reviewed", False)}
++    for group in GROUPS:
++        values = config.get(group, [])
++        if (
++            not isinstance(values, list)
++            or len(values) > 1000
++            or any(not isinstance(v, str) or v not in accounts for v in values)
++        ):
++            raise ValueError(f"{group}: select active posting accounts from this company")
++        if len(set(values)) != len(values):
++            raise ValueError(f"{group}: duplicate account")
++        wanted = (
++            ("expense",)
++            if group in ("cogs", "sga", "interest", "depreciation", "tax")
++            else (
++                ("liability",)
++                if group in ("senior_debt", "subordinated_debt", "current_liabilities")
++                else ("asset",) if group in ("current_assets", "capex") else None
++            )
++        )
++        if wanted and any(accounts[v]["type"] not in wanted for v in values):
++            raise ValueError(f"{group}: incorrect account type")
++        result[group] = values
++    for groups in [
++        ("cogs", "sga", "interest", "depreciation", "tax"),
++        ("senior_debt", "subordinated_debt"),
++        ("capex", "operating_cash", "financing_cash"),
++    ]:
++        chosen = []
++        for group in groups:
++            chosen.extend(result[group])
++        if len(chosen) != len(set(chosen)):
++            raise ValueError("Overlapping board account groups")
++    target = config.get("targets", {})
++    if not isinstance(target, dict) or set(target) - LIMITS:
++        raise ValueError("Unsupported board target")
++    result["targets"] = {}
++    for key, value in target.items():
++        if value in (None, ""):
++            continue
++        number = Decimal(str(value))
++        if not number.is_finite() or number <= 0 or number > 100000:
++            raise ValueError("Targets must be positive finite numbers")
++        result["targets"][key] = str(number)
++    return result
++
++
++def save_settings(database, config, user_id):
++    config = validate_config(database, config)
++    with database.connect() as connection:
++        if not connection.in_transaction:
++            connection.execute("BEGIN IMMEDIATE")
++        connection.execute("""CREATE TABLE IF NOT EXISTS board_dashboard_settings (
++            id INTEGER PRIMARY KEY CHECK(id=1),schema_version INTEGER NOT NULL DEFAULT 1,
++            config TEXT NOT NULL,updated_by INTEGER NOT NULL,updated_at TEXT NOT NULL)""")
++        connection.execute(
++            """INSERT INTO board_dashboard_settings(id,config,updated_by,updated_at) VALUES(1,?,?,CURRENT_TIMESTAMP)
++            ON CONFLICT(id) DO UPDATE SET config=excluded.config,updated_by=excluded.updated_by,updated_at=excluded.updated_at""",
++            (json.dumps(config, ensure_ascii=False), int(user_id)),
++        )
++        connection.execute(
++            """INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at)
++            VALUES(?,'update','board_dashboard_settings',1,?,CURRENT_TIMESTAMP)""",
++            (int(user_id), json.dumps(config)),
++        )
++    return config
++
++
++def _value(row, currency):
++    value = row["signed"].get(currency)
++    if value is None:
++        raise ValueError("A ledger line has no reviewed currency conversion")
++    return Decimal(str(value))
++
++
++def _cash(row):
++    # Same cash/bank convention as the existing executive dashboard.
++    return "".join(c for c in row["code"] if c.isdigit()).startswith(("51", "53"))
++
++
++def _performance(lines, currency):
++    income = sum((-_value(r, currency) for r in lines if r["account_type"] == "income"), ZERO)
++    expenses = sum((_value(r, currency) for r in lines if r["account_type"] == "expense"), ZERO)
++    return income, income - expenses
++
++
++def _ratio(a, b):
++    return a / b if a is not None and b is not None and b > 0 else None
++
++
++def _yoy(current, previous):
++    return (
++        (current - previous) / abs(previous) * 100
++        if current is not None and previous not in (None, 0)
++        else None
++    )
++
++
++def build_board(database, start, end, currency="USD", prior_db=None, language="en"):
++    start, end = iso_date(start), iso_date(end)
++    if start > end or start[:4] != end[:4]:
++        raise ValueError("Choose a period within one fiscal year")
++    if currency not in database.currency_codes():
++        raise ValueError("Choose a company currency")
++    config = validate_config(database, settings(database))
++    reviewed = config["reviewed"]
++    # Read one snapshot; all chart values come from the same selected books.
++    with database.connect() as connection:
++        if not connection.in_transaction:
++            connection.execute("BEGIN")
++        all_lines = database._converted_lines(currency, None, end)
++    lines = [r for r in all_lines if start <= r["iso_date"] <= end]
++    income, profit = _performance(lines, currency)
++    cash = sum((_value(r, currency) for r in all_lines if _cash(r)), ZERO)
++    prior_income = prior_profit = prior_cash = None
++    prior_warning = None
++
++    def previous(day):
++        d = date.fromisoformat(day)
++        try:
++            return d.replace(year=d.year - 1).isoformat()
++        except ValueError:
++            return d.replace(year=d.year - 1, day=28).isoformat()
++
++    prior_start, prior_end = previous(start), previous(end)
++    candidate = prior_db
++    if candidate is None and any(prior_start <= r["iso_date"] <= prior_end for r in all_lines):
++        candidate = database
++    if candidate is not None:
++        try:
++            prior_all = candidate._converted_lines(currency, None, prior_end)
++            prior_period = [r for r in prior_all if prior_start <= r["iso_date"] <= prior_end]
++            if prior_period:
++                prior_income, prior_profit = _performance(prior_period, currency)
++                prior_cash = sum((_value(r, currency) for r in prior_all if _cash(r)), ZERO)
++        except (ValueError, ArithmeticError, LookupError) as exc:
++            prior_warning = str(exc)
++
++    def amount(group, source=lines):
++        return (
++            sum((_value(r, currency) for r in source if r["code"] in config[group]), ZERO)
++            if reviewed
++            else None
++        )
++
++    cogs, sga, interest, da, tax = [amount(k) for k in ("cogs", "sga", "interest", "depreciation", "tax")]
++    ebit = profit + interest + tax if reviewed else None
++    ebitda = ebit + da if reviewed else None
++    senior = -amount("senior_debt", all_lines) if reviewed else None
++    subordinated = -amount("subordinated_debt", all_lines) if reviewed else None
++    debt = senior + subordinated if reviewed else None
++    equity = -sum((_value(r, currency) for r in all_lines if r["account_type"] == "equity"), ZERO)
++    # Current-year earnings may not yet have been closed into equity.
++    accumulated_profit = _performance(all_lines, currency)[1]
++    total_equity = equity + accumulated_profit
++    assets = amount("current_assets", all_lines)
++    liabilities = -amount("current_liabilities", all_lines) if reviewed else None
++    full_year = start.endswith("01-01") and end.endswith("12-31") and date.fromisoformat(end) <= date.today()
++    debt_ratio = _ratio(debt, ebitda) if full_year else None
++    interest_coverage = _ratio(ebit, interest)
++    current_ratio = _ratio(assets, liabilities)
++    debt_equity = _ratio(debt, total_equity)
++    # ROIC needs average invested capital at period start and end; no annualisation of partial periods.
++    opening_lines = [
++        r
++        for r in all_lines
++        if r["iso_date"] < start or r.get("source_type") == "opening" and r["iso_date"] == start
++    ]
++    opening_cash = sum((_value(r, currency) for r in opening_lines if _cash(r)), ZERO)
++    opening_debt = -sum(
++        (
++            _value(r, currency)
++            for r in opening_lines
++            if r["code"] in set(config["senior_debt"] + config["subordinated_debt"])
++        ),
++        ZERO,
++    )
++    opening_equity = (
++        -sum((_value(r, currency) for r in opening_lines if r["account_type"] == "equity"), ZERO)
++        + _performance(opening_lines, currency)[1]
++    )
++    invested = (
++        (opening_debt + opening_equity - opening_cash + debt + total_equity - cash) / 2 if reviewed else None
++    )
++    roic = (
++        _ratio(ebit - tax, invested) * 100
++        if full_year and reviewed and _ratio(ebit - tax, invested) is not None
++        else None
++    )
++    cash_groups = defaultdict(lambda: ZERO)
++    grouped_entries = defaultdict(list)
++    for row in lines:
++        grouped_entries[row["entry_id"]].append(row)
++        if _cash(row):
++            cash_groups[row.get("source_type") or "other"] += _value(row, currency)
++    beginning = sum((_value(r, currency) for r in all_lines if _cash(r) and r["iso_date"] < start), ZERO)
++    waterfall = [
++        {"label": "Beginning cash", "value": beginning},
++        *(
++            {"label": key.replace("_", " ").title(), "value": value}
++            for key, value in sorted(cash_groups.items())
++            if value
++        ),
++        {"label": "Ending cash", "value": cash},
++    ]
++    cashflow_by_month = defaultdict(
++        lambda: {"operating": ZERO, "capex": ZERO, "financing": ZERO, "unclassified": ZERO}
++    )
++    for entry in grouped_entries.values():
++        net = sum((_value(r, currency) for r in entry if _cash(r)), ZERO)
++        if not net or entry[0].get("source_type") == "opening":
++            continue
++        others = {r["code"] for r in entry if not _cash(r) and _value(r, currency) != 0}
++        categories = []
++        for label, group in [
++            ("operating", "operating_cash"),
++            ("capex", "capex"),
++            ("financing", "financing_cash"),
++        ]:
++            if others and others <= set(config[group]):
++                categories.append(label)
++        classification = categories[0] if reviewed and len(categories) == 1 else "unclassified"
++        cashflow_by_month[entry[0]["iso_date"][:7]][classification] += net
++    fcf_available = reviewed and not any(v["unclassified"] for v in cashflow_by_month.values())
++    # Any unmatched entry prevents FCF even if unmatched positives/negatives happen to cancel.
++    unmatched = 0
++    for entry in grouped_entries.values():
++        net = sum((_value(r, currency) for r in entry if _cash(r)), ZERO)
++        if not net or entry[0].get("source_type") == "opening":
++            continue
++        others = {r["code"] for r in entry if not _cash(r) and _value(r, currency) != 0}
++        if (
++            not reviewed
++            or sum(
++                bool(others) and others <= set(config[g])
++                for g in ("operating_cash", "capex", "financing_cash")
++            )
++            != 1
++        ):
++            unmatched += 1
++    fcf_available = fcf_available and unmatched == 0
++    if fcf_available:
++        classification_totals = {
++            key: sum((row[key] for row in cashflow_by_month.values()), ZERO)
++            for key in ("operating", "capex", "financing")
++        }
++        opening_adjustments = sum(
++            (_value(r, currency) for r in lines if _cash(r) and r.get("source_type") == "opening"), ZERO
++        )
++        waterfall = [{"label": "Beginning cash", "value": beginning}]
++        if opening_adjustments:
++            waterfall.append({"label": "Opening balances", "value": opening_adjustments})
++        waterfall.extend(
++            {"label": label, "value": classification_totals[key]}
++            for key, label in [
++                ("operating", "Operating cash"),
++                ("capex", "Capital expenditure"),
++                ("financing", "Financing cash"),
++            ]
++            if classification_totals[key]
++        )
++        waterfall.append({"label": "Ending cash", "value": cash})
++    last_month = int(end[5:7])
++    first_month = max(int(start[5:7]), last_month - 5)
++    months = []
++    for month in range(first_month, last_month + 1):
++        key = f"{start[:4]}-{month:02d}"
++        rows = [r for r in lines if r["iso_date"][:7] == key]
++        revenue, net_income = _performance(rows, currency)
++        cost = amount("cogs", rows)
++        cf = cashflow_by_month[key]
++        months.append(
++            {
++                "month": calendar.month_abbr[month],
++                "key": key,
++                "revenue": revenue,
++                "gross_margin": (
++                    _ratio(revenue - cost, revenue) * 100
++                    if reviewed and _ratio(revenue - cost, revenue) is not None
++                    else None
++                ),
++                "fcf": cf["operating"] + cf["capex"] if fcf_available else None,
++            }
++        )
++    limits = {key: Decimal(value) for key, value in config["targets"].items()}
++    debt_status = "Unknown"
++    if debt_ratio is not None and limits.get("debt_ebitda_max") is not None:
++        debt_status = "Compliant" if debt_ratio <= limits["debt_ebitda_max"] else "Breach"
++    metrics = {
++        "revenue": income,
++        "cash": cash,
++        "net_income": profit,
++        "year_end": cash if end.endswith("12-31") and date.fromisoformat(end) <= date.today() else None,
++        "revenue_yoy": _yoy(income, prior_income),
++        "profit_yoy": _yoy(profit, prior_profit),
++        "cash_yoy": _yoy(cash, prior_cash),
++        "year_end_yoy": (
++            _yoy(cash, prior_cash)
++            if end.endswith("12-31") and date.fromisoformat(end) <= date.today()
++            else None
++        ),
++        "ebitda": ebitda,
++        "ebit": ebit,
++        "ebitda_margin": _ratio(ebitda, income) * 100 if _ratio(ebitda, income) is not None else None,
++        "sga_percent": _ratio(sga, income) * 100 if _ratio(sga, income) is not None else None,
++        "senior_debt": senior,
++        "subordinated_debt": subordinated,
++        "equity": total_equity,
++        "capital": debt + total_equity if reviewed else None,
++        "debt_ebitda": debt_ratio,
++        "interest_coverage": interest_coverage,
++        "current_ratio": current_ratio,
++        "debt_equity": debt_equity,
++        "roic": roic,
++        "debt_status": debt_status,
++        "dscr": None,
++        "fcf": sum((m["fcf"] for m in months), ZERO) if fcf_available else None,
++    }
++    # Six-chart-month FCF is deliberately not labelled full-year YTD.
++    summary = [
++        f"Revenue {income:,.0f} {currency}; net income {profit:,.0f} {currency}.",
++        f"Book cash {cash:,.0f} {currency} as of {end}.",
++    ]
++    if metrics["revenue_yoy"] is not None:
++        summary.append(f"Revenue change {metrics['revenue_yoy']:+.1f}% versus the same prior-year period.")
++    if debt_status != "Unknown":
++        summary.append(f"Funded debt / full-year EBITDA: {debt_status.lower()}.")
++    if not reviewed:
++        summary.append("Account mapping needs accountant review before advanced ratios are available.")
++    if language == "ar":
++        summary = [
++            f"الإيرادات {income:,.0f} {currency}؛ صافي الربح {profit:,.0f} {currency}.",
++            f"رصيد النقد الدفتري {cash:,.0f} {currency} بتاريخ {end}.",
++        ]
++        if not reviewed:
++            summary.append("المؤشرات المتقدمة تحتاج مراجعة ربط الحسابات.")
++    return {
++        "start": start,
++        "end": end,
++        "currency": currency,
++        "year": int(start[:4]),
++        "language": language,
++        "metrics": metrics,
++        "months": months,
++        "waterfall": waterfall,
++        "summary": summary,
++        "targets": limits,
++        "reviewed": reviewed,
++        "unclassified_cash_entries": unmatched,
++        "prior_warning": prior_warning,
++        "bridge": [
++            {"label": "Net income", "value": profit},
++            {"label": "Interest", "value": interest},
++            {"label": "Income tax", "value": tax},
++            {"label": "D&A", "value": da},
++            {"label": "EBITDA", "value": ebitda},
++        ],
++        "notes": {
++            "year_end": "Actual cash at 31 December only; no approved year-end forecast feed is configured.",
++            "covenant": "Debt / EBITDA compliance is available only for a full fiscal year with reviewed mappings and a user-entered limit. DSCR requires a debt-service schedule.",
++            "fcf": "Operating cash plus net capex cash; unavailable if any non-opening cash entry is unclassified or mixed. Only displayed months are summed.",
++            "ratios": "Current assets / current liabilities; funded debt / equity including unclosed earnings; ROIC=(EBIT-tax)/average invested capital, full-year only.",
++            "waterfall": "Direct posted cash movement by source, including opening movements; not inferred AR/AP or cash conversion days.",
++        },
++    }
++
++
++def _number(value):
++    return Decimal(str(value)) if value is not None else None
++
++
++def compact(value, currency="", percent=False, ratio=False):
++    value = _number(value)
++    if value is None:
++        return "—"
++    if percent:
++        return f"{value:.1f}%"
++    if ratio:
++        return f"{value:.1f}x"
++    sign = "−" if value < 0 else ""
++    amount = abs(value)
++    symbol = {"USD": "$", "EUR": "€", "LBP": "LBP "}.get(currency, currency + " " if currency else "")
++    scale, suffix = (
++        (Decimal(1000000000000), "T")
++        if amount >= 1000000000000
++        else (
++            (Decimal(1000000000), "B")
++            if amount >= 1000000000
++            else (
++                (Decimal(1000000), "M")
++                if amount >= 1000000
++                else (Decimal(1000), "K") if amount >= 1000 else (Decimal(1), "")
++            )
++        )
++    )
++    return f"{sign}{symbol}{amount/scale:.2f}".rstrip("0").rstrip(".") + suffix
++
++
++def _display(text, language="en"):
++    if language == "ar" and any("\u0600" <= c <= "\u06ff" for c in str(text)):
++        import arabic_reshaper
++        from bidi.algorithm import get_display
++
++        return get_display(arabic_reshaper.reshape(str(text)))
++    return str(text)
++
++
++def render_board(data):
++    """One vector figure is shared by Tk and full-board PDF; no links, ads or footer."""
++    from matplotlib.figure import Figure
++    from matplotlib.patches import FancyBboxPatch, Rectangle
++    from matplotlib.ticker import FuncFormatter
++    from matplotlib import font_manager
++    import textwrap
++    import nanza_paths
++
++    ar = data.get("language") == "ar"
++    family = "DejaVu Sans"
++    font = nanza_paths.ROOT / "Assets" / "fonts" / "Amiri-Regular.ttf"
++    if ar and font.exists():
++        font_manager.fontManager.addfont(str(font))
++        family = "Amiri"
++    figure = Figure(figsize=(12.8, 8.5), dpi=100, facecolor="white")
++    background = figure.add_axes([0, 0, 1, 1])
++    background.set_axis_off()
++    background.set_xlim(0, 1)
++    background.set_ylim(0, 1)
++    background.add_patch(Rectangle((0, 0.915), 1, 0.085, color=BLACK))
++
++    def txt(ax, x, y, text, size=10, color=BLACK, weight="normal", ha="left", va="center", **kw):
++        return ax.text(
++            x,
++            y,
++            _display(text, "ar" if ar else "en"),
++            fontsize=size,
++            color=color,
++            fontweight=weight,
++            ha=ha,
++            va=va,
++            fontfamily=family,
++            **kw,
++        )
++
++    txt(background, 0.035, 0.958, "NANZA", 29, GOLD, "bold")
++    txt(
++        background,
++        0.275,
++        0.966,
++        "The Complete Board Dashboard" if not ar else "لوحة الإدارة المالية الشاملة",
++        16,
++        "white",
++        "bold",
++    )
++    txt(
++        background,
++        0.275,
++        0.938,
++        data.get("company_name")
++        or (
++            "Income statement · Balance sheet · Cash flow"
++            if not ar
++            else "قائمة الدخل • الميزانية • التدفقات النقدية"
++        ),
++        9,
++        "#e1e1e1",
++    )
++    txt(background, 0.965, 0.961, f"FY{data['year']} • Board Review", 11, GOLD, "bold", ha="right")
++    txt(background, 0.965, 0.936, f"{data['end']} • {data['currency']}", 9, "white", ha="right")
++    metrics = data["metrics"]
++    currency = data["currency"]
++    icons = ["Revenue", "Cash", "Net", "Year"]
++    kpis = [
++        ("Revenue", "الإيرادات", "revenue", "revenue_yoy"),
++        ("Cash", "النقد", "cash", "cash_yoy"),
++        ("Net Income", "صافي الربح", "net_income", "profit_yoy"),
++        ("Year-End", "نهاية السنة", "year_end", "year_end_yoy"),
++    ]
++    for i, (en, arabic, key, delta) in enumerate(kpis):
++        x = 0.035 + i * 0.238
++        background.add_patch(
++            FancyBboxPatch(
++                (x, 0.748),
++                0.224,
++                0.15,
++                boxstyle="round,pad=.003,rounding_size=.004",
++                facecolor="white",
++                edgecolor="#dfdfdf",
++                linewidth=1,
++            )
++        )
++        if i == 0:
++            for bar, height in enumerate((0.025, 0.041, 0.032)):
++                background.add_patch(
++                    Rectangle(
++                        (x + 0.014 + bar * 0.012, 0.807),
++                        0.008,
++                        height,
++                        fill=False,
++                        edgecolor=GOLD,
++                        linewidth=1.5,
++                    )
++                )
++        elif i == 1:
++            for step in range(3):
++                background.add_patch(
++                    Rectangle(
++                        (x + 0.014 + step * 0.003, 0.809 + step * 0.011),
++                        0.032,
++                        0.015,
++                        fill=False,
++                        edgecolor=GOLD,
++                        linewidth=1.5,
++                    )
++                )
++        elif i == 2:
++            background.plot(
++                [x + 0.014, x + 0.027, x + 0.037, x + 0.049],
++                [0.812, 0.834, 0.827, 0.853],
++                color=GOLD,
++                linewidth=2,
++            )
++            background.annotate(
++                "",
++                xy=(x + 0.049, 0.853),
++                xytext=(x + 0.037, 0.827),
++                arrowprops={"arrowstyle": "->", "color": GOLD, "lw": 2},
++            )
++        else:
++            background.add_patch(
++                Rectangle((x + 0.014, 0.811), 0.035, 0.039, fill=False, edgecolor=GOLD, linewidth=1.5)
++            )
++            background.plot([x + 0.014, x + 0.049], [0.839, 0.839], color=GOLD, linewidth=1.5)
++        txt(background, x + 0.061, 0.875, arabic if ar else en, 12, GOLD, "bold")
++        value = metrics.get(key)
++        txt(
++            background,
++            x + 0.061,
++            0.83,
++            compact(value, currency),
++            27,
++            RED if value is not None and _number(value) < 0 else BLACK,
++            "bold",
++        )
++        change = metrics.get(delta)
++        if change is not None:
++            change = _number(change)
++            txt(background, x + 0.061, 0.776, f"{change:+.1f}% YoY", 9, GREEN if change >= 0 else RED, "bold")
++        else:
++            label = (
++                "Actual cash · no forecast"
++                if key == "year_end" and value is not None
++                else "No approved forecast" if key == "year_end" else "YoY unavailable"
++            )
++            txt(background, x + 0.061, 0.776, label, 8, "#777777")
++
++    def panel(x, y, w, h, title, arabic):
++        background.add_patch(
++            FancyBboxPatch(
++                (x, y),
++                w,
++                h,
++                boxstyle="round,pad=.002,rounding_size=.005",
++                facecolor="white",
++                edgecolor="#cfcfcf",
++                linewidth=1,
++            )
++        )
++        background.add_patch(Rectangle((x, y + h - 0.042), w, 0.042, color=BLACK))
++        background.add_patch(Rectangle((x, y + h - 0.004), w, 0.004, color=GOLD))
++        txt(background, x + 0.009, y + h - 0.023, arabic if ar else title, 12, GOLD, "bold")
++        ax = figure.add_axes([x + 0.012, y + 0.012, w - 0.024, h - 0.062])
++        ax.set_axis_off()
++        return ax
++
++    left = 0.035
++    middle = 0.357
++    right = 0.679
++    width = 0.286
++    summary = panel(left, 0.38, width, 0.34, "Exec Summary", "ملخص الإدارة")
++    summary_text = "\n".join(textwrap.fill(line, 43 if not ar else 46) for line in data["summary"][:3])
++    txt(summary, 0.01, 0.97, summary_text, 9, va="top", linespacing=1.5)
++    for y, key, label, target in [
++        (0.28, "ebitda_margin", "EBITDA Margin", "ebitda_margin_target"),
++        (0.085, "sga_percent", "SG&A as % Revenue", "sga_max"),
++    ]:
++        txt(summary, 0.01, y + 0.075, label, 9, weight="bold")
++        txt(summary, 0.99, y + 0.075, compact(metrics.get(key), percent=True), 11, weight="bold", ha="right")
++        summary.add_patch(Rectangle((0.01, y), 0.98, 0.022, color="#eeeeee"))
++        v = _number(metrics.get(key))
++        if v is not None:
++            summary.add_patch(
++                Rectangle((0.01, y), min(0.98, max(0, float(v) / 100) * 0.98), 0.022, color=GOLD)
++            )
++        limit = data.get("targets", {}).get(target)
++        txt(
++            summary,
++            0.01,
++            y - 0.04,
++            "Target " + (compact(limit, percent=True) if limit is not None else "not configured"),
++            7,
++            "#777777",
++        )
++    panel(left, 0.055, width, 0.305, "Revenue and Margins", "الإيرادات والهوامش")
++    revenue_ax = figure.add_axes([left + 0.034, 0.1, width - 0.064, 0.19])
++    months = data["months"]
++    xs = list(range(len(months)))
++    revenues = [float(_number(r["revenue"])) for r in months]
++    revenue_ax.bar(xs, revenues, color=GOLD, width=0.58, alpha=0.85)
++    revenue_ax.set_xticks(xs, [r["month"] for r in months], fontsize=8)
++    revenue_ax.yaxis.set_major_formatter(FuncFormatter(lambda value, _: compact(value)))
++    revenue_ax.tick_params(axis="y", labelsize=7)
++    revenue_ax.spines[["top", "right"]].set_visible(False)
++    revenue_ax.grid(axis="y", alpha=0.16)
++    margins = [r["gross_margin"] for r in months]
++    if margins and any(v is not None for v in margins):
++        second = revenue_ax.twinx()
++        second.plot(
++            xs,
++            [float(_number(v)) if v is not None else float("nan") for v in margins],
++            color=BLACK,
++            marker="o",
++            linewidth=1.4,
++        )
++        second.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.0f}%"))
++        second.tick_params(labelsize=7)
++        second.spines["top"].set_visible(False)
++    cov = panel(middle, 0.535, width, 0.185, "Funded Debt Covenant", "تعهدات الديون المموّلة")
++    status = metrics["debt_status"]
++    tone = GREEN if status == "Compliant" else RED if status == "Breach" else "#777777"
++    txt(cov, 0.01, 0.83, status, 12, tone, "bold")
++    txt(cov, 0.98, 0.83, compact(metrics["debt_ebitda"], ratio=True), 16, weight="bold", ha="right")
++    txt(cov, 0.01, 0.57, "Debt / full-year EBITDA", 8)
++    limit = data.get("targets", {}).get("debt_ebitda_max")
++    txt(
++        cov,
++        0.01,
++        0.34,
++        "Limit: " + (compact(limit, ratio=True) if limit is not None else "not configured"),
++        8,
++        "#777777",
++    )
++    txt(cov, 0.01, 0.1, "DSCR: —  ·  debt-service schedule needed", 8, "#777777")
++    panel(middle, 0.29, width, 0.225, "Cash-to-Cash Waterfall", "جسر حركة النقد")
++    bridge_ax = figure.add_axes([middle + 0.095, 0.325, width - 0.125, 0.14])
++    rows = data["waterfall"]
++    if len(rows) > 7:
++        rows = [
++            rows[0],
++            *rows[1:5],
++            {"label": "Other movements", "value": sum((_number(r["value"]) for r in rows[5:-1]), ZERO)},
++            rows[-1],
++        ]
++    values = [float(_number(r["value"])) for r in rows]
++    bridge_ax.barh(
++        range(len(rows)),
++        values,
++        color=[GOLD if i in (0, len(rows) - 1) else GREEN if v >= 0 else RED for i, v in enumerate(values)],
++        height=0.62,
++    )
++    bridge_ax.set_yticks(range(len(rows)), [r["label"] for r in rows], fontsize=7)
++    bridge_ax.invert_yaxis()
++    bridge_ax.spines[["top", "right", "bottom"]].set_visible(False)
++    bridge_ax.tick_params(axis="x", bottom=False, labelbottom=False)
++    for i, v in enumerate(values):
++        bridge_ax.annotate(compact(v), (v, i), fontsize=7, ha="left" if v >= 0 else "right", va="center")
++    bridge = panel(middle, 0.055, width, 0.215, "Built as a Bridge", "جسر تفسير الربح")
++    items = data["bridge"]
++    for i, item in enumerate(items):
++        y = 0.9 - i * 0.19
++        txt(bridge, 0.02, y, item["label"], 9, weight="bold" if i in (0, 4) else "normal")
++        txt(
++            bridge,
++            0.98,
++            y,
++            compact(item["value"], currency),
++            10,
++            GOLD if i == 4 else BLACK,
++            "bold" if i == 4 else "normal",
++            ha="right",
++        )
++    capital = panel(right, 0.55, width, 0.17, "Capital Structure", "هيكل رأس المال")
++    components = [metrics["senior_debt"], metrics["equity"], metrics["subordinated_debt"]]
++    if (
++        all(v is not None and _number(v) >= 0 for v in components)
++        and sum((_number(v) for v in components), ZERO) > 0
++    ):
++        donut = figure.add_axes([right + 0.008, 0.566, 0.09, 0.098])
++        donut.pie(
++            [float(_number(v)) for v in components],
++            colors=[GOLD, BLACK, "#aaaaaa"],
++            wedgeprops={"width": 0.28, "edgecolor": "white"},
++        )
++        donut.set_aspect("equal")
++    else:
++        txt(capital, 0.12, 0.47, "—", 28, "#888888", ha="center")
++    txt(capital, 0.37, 0.84, "Senior debt  " + compact(components[0]), 7)
++    txt(capital, 0.37, 0.62, "Equity  " + compact(components[1]), 7)
++    txt(capital, 0.37, 0.4, "Subordinated  " + compact(components[2]), 7)
++    txt(capital, 0.99, 0.16, compact(metrics["capital"], currency), 17, weight="bold", ha="right")
++    ratios = panel(right, 0.365, width, 0.165, "Ratios Against Target", "المؤشرات مقابل المستهدف")
++    for y, key, label, target, percentage, lower_better in [
++        (0.85, "current_ratio", "Current ratio", "current_ratio_min", False, False),
++        (0.52, "debt_equity", "Debt / equity", "debt_equity_max", False, True),
++        (0.19, "roic", "ROIC", "roic_min", True, False),
++    ]:
++        v = _number(metrics.get(key))
++        limit = _number(data.get("targets", {}).get(target))
++        tone = (
++            "#777777"
++            if v is None or limit is None
++            else GREEN if (v <= limit if lower_better else v >= limit) else RED
++        )
++        txt(ratios, 0.01, y, label, 9)
++        txt(
++            ratios,
++            0.66,
++            y,
++            compact(v, percent=percentage, ratio=not percentage),
++            10,
++            weight="bold",
++            ha="right",
++        )
++        txt(ratios, 0.99, y, compact(limit, percent=percentage, ratio=not percentage), 8, tone, ha="right")
++    fcf = panel(right, 0.205, width, 0.14, "Free Cash Flow", "التدفق النقدي الحر")
++    fcf_values = [r["fcf"] for r in months]
++    if fcf_values and all(v is not None for v in fcf_values):
++        ax = figure.add_axes([right + 0.025, 0.227, width - 0.05, 0.066])
++        ax.bar(xs, [float(_number(v)) for v in fcf_values], color=GOLD, width=0.62)
++        ax.set_xticks(xs, [r["month"] for r in months], fontsize=7)
++        ax.yaxis.set_visible(False)
++        ax.spines[["top", "right", "left"]].set_visible(False)
++    else:
++        txt(fcf, 0.5, 0.5, "—", 24, "#888888", ha="center")
++    coverage = panel(right, 0.055, width, 0.13, "Year-End Cash & Coverage", "نقد نهاية السنة والتغطية")
++    txt(coverage, 0.01, 0.88, "Year-end cash", 8)
++    txt(coverage, 0.99, 0.88, "Interest coverage", 8, ha="right")
++    txt(coverage, 0.01, 0.38, compact(metrics["year_end"], currency), 19, weight="bold")
++    txt(
++        coverage, 0.99, 0.38, compact(metrics["interest_coverage"], ratio=True), 19, weight="bold", ha="right"
++    )
++    return figure
++
++
++def export_board_pdf(data, path):
++    """Re-render a snapshot with Agg; vector PDF contains the full clean board, no footer."""
++    from pathlib import Path
++    import tempfile
++    import os
++
++    target = Path(path)
++    with tempfile.NamedTemporaryFile(
++        dir=target.parent, suffix=".pdf", prefix=".nanza-board-", delete=False
++    ) as tmp:
++        temporary = Path(tmp.name)
++    figure = None
++    try:
++        figure = render_board(data)
++        figure.savefig(temporary, format="pdf", facecolor="white")
++        os.replace(temporary, target)
++    finally:
++        if figure is not None:
++            figure.clear()
++        temporary.unlink(missing_ok=True)
++    return str(target)
++
++
++def open_board(app):
++    """CustomTkinter shell over the existing Tk app; original dashboard stays intact."""
++    import customtkinter as ctk
++    import tkinter as tk
++    from tkinter import filedialog, messagebox
++    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
++    from desktop_workbench import async_call, context_key, tooltip
++    from desktop_common import parse_user_date
++
++    class BoardWindow(ctk.CTkToplevel):
++        def __init__(self):
++            super().__init__(app, fg_color="white")
++            self.app = app
++            self.scope = context_key(app)
++            self.data = None
++            self.figure = None
++            self.canvas = None
++            self.title("NANZA | The Complete Board Dashboard")
++            scale = max(1.0, self._get_window_scaling())
++            width = min(1280, int((self.winfo_screenwidth() - 40) / scale))
++            height = min(890, int((self.winfo_screenheight() - 80) / scale))
++            self.geometry(f"{width}x{height}")
++            self.minsize(min(950, width), min(650, height))
++            self.bar = ctk.CTkFrame(self, fg_color=BLACK, corner_radius=0, height=35)
++            self.bar.pack(fill="x")
++            initial_day = parse_user_date(app.fiscal_today()).date()
++            if initial_day.year < date.today().year:
++                initial_day = initial_day.replace(month=12, day=31)
++            self.day = tk.StringVar(value=initial_day.isoformat())
++            currency = app.dashboard_base_currency.get()
++            self.currency = tk.StringVar(value="USD" if currency == "All Currencies" else currency)
++            ctk.CTkEntry(self.bar, textvariable=self.day, width=115, height=27).pack(
++                side="left", padx=6, pady=4
++            )
++            self.currency_box = ctk.CTkComboBox(
++                self.bar, variable=self.currency, values=["USD", "LBP", "EUR"], width=90, height=27
++            )
++            self.currency_box.pack(side="left", padx=4)
++            self.refresh_button = ctk.CTkButton(
++                self.bar, text="↻", width=36, height=27, fg_color=GOLD, text_color=BLACK, command=self.load
++            )
++            self.refresh_button.pack(side="left", padx=4)
++            self.configure_button = ctk.CTkButton(
++                self.bar,
++                text="⚙",
++                width=36,
++                height=27,
++                fg_color=GOLD,
++                text_color=BLACK,
++                command=self.configure_accounts,
++            )
++            self.configure_button.pack(side="right", padx=4)
++            self.pdf_button = ctk.CTkButton(
++                self.bar,
++                text="PDF",
++                width=65,
++                height=27,
++                fg_color=GOLD,
++                text_color=BLACK,
++                command=self.export,
++            )
++            self.pdf_button.pack(side="right", padx=4)
++            tooltip(self.refresh_button, "تحديث بيانات الشركة والسنة المختارتين؛ لا يتم ترحيل أي قيد")
++            tooltip(
++                self.configure_button,
++                "ربط المؤشرات بالحسابات الفعلية وإدخال حدود التعهدات بعد مراجعة المحاسب",
++            )
++            tooltip(self.pdf_button, "تصدير كامل اللوحة إلى PDF، بلا روابط أو تذييل أو إعلانات")
++            self.holder = tk.Frame(self, bg="white")
++            self.holder.pack(fill="both", expand=True)
++            self.state_label = tk.Label(
++                self.holder, text="Loading board / تحميل اللوحة…", bg="white", fg=BLACK
++            )
++            self.state_label.pack(expand=True)
++            self.bind("<Control-b>", lambda _e: self.lift())
++            self.bind("<Control-e>", lambda _e: self.export())
++            self._scope_timer = self.after(300, self.check_scope)
++            self.load()
++
++        def check_scope(self):
++            if context_key(app) != self.scope:
++                self.destroy()
++                return
++            self._scope_timer = self.after(300, self.check_scope)
++
++        def destroy(self):
++            timer = getattr(self, "_scope_timer", None)
++            if timer:
++                self.after_cancel(timer)
++            super().destroy()
++
++        def load(self):
++            try:
++                end = parse_user_date(self.day.get()).date().isoformat()
++            except ValueError as exc:
++                return messagebox.showerror("Board", str(exc), parent=self)
++            start = end[:4] + "-01-01"
++            currency = self.currency.get()
++            language = app.language.get()
++            self.pdf_button.configure(state="disabled")
++            self.data = None
++            async_call(
++                self,
++                app,
++                lambda c: c.workbench(
++                    "board", date_from=start, date_to=end, currency=currency, language=language
++                ),
++                self.loaded,
++            )
++
++        def loaded(self, data):
++            self.data = data
++            if self.canvas is not None:
++                self.canvas.get_tk_widget().destroy()
++            if self.figure is not None:
++                self.figure.clear()
++            self.state_label.pack_forget()
++            self.figure = render_board(data)
++            self.canvas = FigureCanvasTkAgg(self.figure, master=self.holder)
++            self.canvas.get_tk_widget().pack(fill="both", expand=True)
++            self.canvas.draw_idle()
++            self.pdf_button.configure(state="normal")
++            tooltip(
++                self.canvas.get_tk_widget(),
++                "الأرقام من القيود المرحّلة. الشرطة — تعني بيانات أو إعدادات غير متاحة. افتح ⚙ لربط الحسابات. نهاية السنة الفعلية ليست توقعاً.",
++            )
++
++        def export(self):
++            if self.data is None:
++                return
++            path = filedialog.asksaveasfilename(
++                parent=self, defaultextension=".pdf", filetypes=[("PDF", "*.pdf")]
++            )
++            if not path:
++                return
++            snapshot = self.data
++            self.pdf_button.configure(state="disabled")
++            # A separate worker owner keeps PDF work independent of refresh requests.
++            owner = tk.Frame(self)
++
++            def done(_result):
++                self.pdf_button.configure(state="normal")
++                owner.destroy()
++
++            async_call(owner, app, lambda _c: export_board_pdf(snapshot, path), done)
++
++        def configure_accounts(self):
++            if getattr(app, "current_user", None) and app.current_user.get("role") != "admin":
++                return messagebox.showinfo(
++                    "Board", "Account mapping requires administrator permission.", parent=self
++                )
++            owner = tk.Frame(self)
++
++            def show(result):
++                owner.destroy()
++                dialog = ctk.CTkToplevel(self, fg_color="white")
++                dialog.title("Board account mapping / ربط الحسابات")
++                dialog.geometry("850x710")
++                config = result["config"]
++                accounts = result["accounts"]
++                labels = {
++                    f"{r['code']} · {r['name_en']}": r["code"]
++                    for r in accounts
++                    if r["is_active"] and r["is_posting"]
++                }
++                variables = {}
++                scroller = ctk.CTkScrollableFrame(dialog, fg_color="white")
++                scroller.pack(fill="both", expand=True, padx=12, pady=12)
++                for group, title in GROUPS.items():
++                    row = ctk.CTkFrame(scroller, fg_color="#f4f4f4")
++                    row.pack(fill="x", pady=3)
++                    ctk.CTkLabel(row, text=title, width=240, anchor="w", text_color=BLACK).pack(
++                        side="left", padx=6
++                    )
++                    var = tk.StringVar(value=", ".join(config.get(group, [])))
++                    variables[group] = var
++                    ctk.CTkEntry(row, textvariable=var, width=330).pack(side="left", padx=5)
++
++                    def choose(g=group, v=var):
++                        popup = ctk.CTkToplevel(dialog)
++                        popup.title(GROUPS[g])
++                        popup.geometry("600x450")
++                        search = tk.StringVar()
++                        ctk.CTkEntry(
++                            popup, textvariable=search, placeholder_text="Search accounts / ابحث"
++                        ).pack(fill="x", padx=10, pady=8)
++                        box = tk.Listbox(popup, selectmode="multiple", exportselection=False)
++                        box.pack(fill="both", expand=True, padx=10)
++                        selected = {x.strip() for x in v.get().split(",") if x.strip()}
++                        visible = []
++
++                        def redraw(*_):
++                            visible[:] = [
++                                label for label in labels if search.get().casefold() in label.casefold()
++                            ]
++                            box.delete(0, "end")
++                            for i, label in enumerate(visible):
++                                box.insert("end", label)
++                                if labels[label] in selected:
++                                    box.selection_set(i)
++
++                        def remember(_event=None):
++                            selected.difference_update(labels[label] for label in visible)
++                            selected.update(labels[visible[i]] for i in box.curselection())
++
++                        box.bind("<<ListboxSelect>>", remember)
++                        search.trace_add("write", redraw)
++                        redraw()
++                        ctk.CTkButton(
++                            popup,
++                            text="Use selection",
++                            command=lambda: (v.set(", ".join(sorted(selected))), popup.destroy()),
++                        ).pack(pady=8)
++
++                    ctk.CTkButton(row, text="…", width=30, command=choose).pack(side="left")
++                target_vars = {}
++                for target in sorted(LIMITS):
++                    row = ctk.CTkFrame(scroller, fg_color="white")
++                    row.pack(fill="x", pady=3)
++                    ctk.CTkLabel(
++                        row, text=target.replace("_", " ").title(), width=280, anchor="w", text_color=BLACK
++                    ).pack(side="left")
++                    var = tk.StringVar(value=str(config.get("targets", {}).get(target, "")))
++                    target_vars[target] = var
++                    ctk.CTkEntry(row, textvariable=var, width=120).pack(side="left")
++                reviewed = tk.BooleanVar(value=config.get("reviewed", False))
++                ctk.CTkCheckBox(
++                    dialog,
++                    text="I reviewed all mappings; empty groups mean confirmed zero / راجعت الربط",
++                    variable=reviewed,
++                    text_color=BLACK,
++                ).pack(pady=8)
++
++                def save():
++                    payload = {
++                        key: [x.strip() for x in value.get().split(",") if x.strip()]
++                        for key, value in variables.items()
++                    }
++                    payload.update(
++                        reviewed=reviewed.get(),
++                        targets={k: v.get() for k, v in target_vars.items() if v.get().strip()},
++                    )
++
++                    def saved(_r):
++                        dialog.destroy()
++                        self.load()
++
++                    async_call(
++                        dialog,
++                        app,
++                        lambda c: c.request("POST", "/api/workbench/board-settings", {"config": payload}),
++                        saved,
++                    )
++
++                ctk.CTkButton(dialog, text="Save reviewed settings / حفظ", command=save).pack(pady=8)
++
++            async_call(
++                owner,
++                app,
++                lambda c: {"config": c.workbench("board-settings"), "accounts": c.accounts()},
++                show,
++            )
++
++    return BoardWindow()
+diff --git a/requirements.txt b/requirements.txt
+index a4f377c..899b03f 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -12,3 +12,6 @@ cryptography>=42
+ numpy>=1.26
+ tzdata>=2024.1
+ opencv-python-headless==4.10.0.84
++
++customtkinter==5.2.2
++matplotlib==3.10.9
+diff --git a/run_desktop.py b/run_desktop.py
+index e92fe6a..3ba0fa0 100644
+--- a/run_desktop.py
++++ b/run_desktop.py
+@@ -1,4 +1,8 @@
+-"""Start Nanza Accounting: one copy per Windows user, its own private data service, an error log."""
++"""Start Nanza Accounting: one copy per Windows user and its private data service.
++
++The authenticated desktop registers the Board Dashboard sidebar button and Ctrl+B
++in nanza/ui/desktop.py; the existing operational dashboard remains unchanged.
++"""
+ import nanza_paths  # noqa: F401  2.9.117: the program's folders (nanza/...) on the import path
+ import json
+ import logging
+diff --git a/tests/test_complete_board.py b/tests/test_complete_board.py
+new file mode 100644
+index 0000000..0538fb1
+--- /dev/null
++++ b/tests/test_complete_board.py
+@@ -0,0 +1,353 @@
++"""Board dashboard: posted-book arithmetic, safe abstention and clean exported layout."""
++
++import tempfile
++import unittest
++from decimal import Decimal
++from pathlib import Path
++from unittest.mock import patch
++
++from database import Database
++from nanza_delivery.complete_board_dashboard import (
++    build_board,
++    settings,
++    save_settings,
++    validate_config,
++    render_board,
++    export_board_pdf,
++    GROUPS,
++)
++
++
++class BoardDataTest(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory()
++        self.addCleanup(self.tmp.cleanup)
++        self.db = Database(Path(self.tmp.name) / "board.db")
++        self.db.initialize("Board-fixture-2024!")
++        self.addCleanup(self.db.release)
++        definitions = [
++            ("799910001", "Board revenue", "income"),
++            ("109910001", "Board capital", "equity"),
++            ("539910001", "Board bank", "asset"),
++            ("699910001", "Interest", "expense"),
++            ("699910002", "Depreciation", "expense"),
++            ("699910003", "Income tax", "expense"),
++            ("699910004", "Cost of goods", "expense"),
++            ("699910005", "Admin", "expense"),
++            ("169910001", "Senior loan", "liability"),
++            ("169910002", "Subordinated loan", "liability"),
++            ("219910001", "Equipment", "asset"),
++        ]
++        with self.db.connect() as c:
++            c.executemany("INSERT OR IGNORE INTO accounts(code,name_en,type) VALUES(?,?,?)", definitions)
++        self.config = {
++            "reviewed": True,
++            **{key: [] for key in GROUPS},
++            "targets": {"debt_ebitda_max": "3.5", "current_ratio_min": "1.5"},
++        }
++        self.config.update(
++            cogs=["699910004"],
++            sga=["699910005"],
++            interest=["699910001"],
++            depreciation=["699910002"],
++            tax=["699910003"],
++            senior_debt=["169910001"],
++            subordinated_debt=["169910002"],
++            current_assets=["539910001"],
++            current_liabilities=["169910001"],
++            operating_cash=["799910001", "699910001", "699910003", "699910004", "699910005"],
++            capex=["219910001"],
++            financing_cash=["109910001", "169910001", "169910002"],
++        )
++
++    def post(self, day, debit, credit, amount):
++        self.db.save_journal_voucher(
++            {"entry_date": day, "currency": "USD", "description": "Board fixture"},
++            [{"account_code": debit, "debit": amount}, {"account_code": credit, "credit": amount}],
++            1,
++        )
++
++    def model(self, start="2024-01-01", end="2024-12-31"):
++        return build_board(self.db, start, end, "USD")
++
++    def populate(self):
++        self.post("2024-01-01", "539910001", "109910001", 1000)
++        self.post("2024-01-02", "539910001", "169910001", 300)
++        self.post("2024-07-01", "539910001", "799910001", 100)
++        self.post("2024-08-01", "539910001", "799910001", 100)
++        self.post("2024-08-02", "699910004", "539910001", 80)
++        self.post("2024-08-03", "699910005", "539910001", 20)
++        self.post("2024-08-04", "699910001", "539910001", 10)
++        self.post("2024-08-05", "699910003", "539910001", 5)
++        self.post("2024-08-06", "699910002", "219910001", 15)
++        self.post("2024-08-07", "219910001", "539910001", 50)
++
++    def test_defaults_are_read_only_and_do_not_invent_covenant_or_forecast(self):
++        self.assertFalse(settings(self.db)["reviewed"])
++        report = self.model(end="2024-10-18")
++        self.assertEqual(report["metrics"]["debt_status"], "Unknown")
++        for key in ["debt_ebitda", "ebitda", "current_ratio", "roic", "year_end", "dscr", "fcf"]:
++            self.assertIsNone(report["metrics"][key], key)
++        with self.db.connect() as c:
++            self.assertIsNone(
++                c.execute("SELECT 1 FROM sqlite_master WHERE name='board_dashboard_settings'").fetchone()
++            )
++
++    def test_signed_revenue_profit_cash_and_waterfall_reconcile(self):
++        self.populate()
++        self.post("2024-08-08", "799910001", "539910001", 20)
++        report = self.model()
++        m = report["metrics"]
++        self.assertEqual(m["revenue"], Decimal("180"))
++        self.assertEqual(m["net_income"], Decimal("50"))
++        self.assertEqual(m["cash"], Decimal("1315"))
++        self.assertEqual(
++            report["waterfall"][0]["value"]
++            + sum((r["value"] for r in report["waterfall"][1:-1]), Decimal(0)),
++            m["cash"],
++        )
++        self.assertEqual(sum((r["revenue"] for r in report["months"]), Decimal(0)), Decimal("180"))
++
++    def test_reviewed_ebitda_ratios_and_debt_covenant(self):
++        self.populate()
++        save_settings(self.db, self.config, 1)
++        m = self.model()["metrics"]
++        self.assertEqual(m["net_income"], Decimal("70"))
++        self.assertEqual(m["ebit"], Decimal("85"))
++        self.assertEqual(m["ebitda"], Decimal("100"))
++        self.assertEqual(m["debt_ebitda"], Decimal("3"))
++        self.assertEqual(m["debt_status"], "Compliant")
++        self.assertEqual(m["interest_coverage"], Decimal("8.5"))
++        self.assertEqual(m["equity"], Decimal("1070"))
++        self.assertEqual(m["current_ratio"], Decimal("1335") / 300)
++        self.assertEqual(m["roic"], Decimal("80") / Decimal("17.5") * 100)
++
++    def test_breach_is_not_reported_as_compliant(self):
++        self.populate()
++        self.config["targets"]["debt_ebitda_max"] = "2.5"
++        save_settings(self.db, self.config, 1)
++        self.assertEqual(self.model()["metrics"]["debt_status"], "Breach")
++
++    def test_partial_year_covenant_and_roic_abstain(self):
++        self.populate()
++        save_settings(self.db, self.config, 1)
++        report = self.model(end="2024-10-18")
++        self.assertIsNone(report["metrics"]["debt_ebitda"])
++        self.assertIsNone(report["metrics"]["roic"])
++        self.assertIsNone(report["metrics"]["year_end"])
++        self.assertEqual(report["metrics"]["debt_status"], "Unknown")
++
++    def test_fcf_is_real_operating_plus_capex_cash_not_profit(self):
++        self.populate()
++        save_settings(self.db, self.config, 1)
++        report = self.model()
++        self.assertEqual(report["unclassified_cash_entries"], 0)
++        self.assertEqual(report["metrics"]["fcf"], Decimal("35"))
++        self.assertEqual(sum((r["fcf"] for r in report["months"]), Decimal(0)), Decimal("35"))
++        self.assertNotEqual(report["metrics"]["fcf"], report["metrics"]["net_income"])
++
++    def test_unclassified_cash_entries_block_even_when_they_cancel(self):
++        self.populate()
++        save_settings(self.db, self.config, 1)
++        self.post("2024-08-08", "539910001", "6263.1", 10)
++        self.post("2024-08-09", "6263.1", "539910001", 10)
++        report = self.model()
++        self.assertEqual(report["unclassified_cash_entries"], 2)
++        self.assertIsNone(report["metrics"]["fcf"])
++        self.assertTrue(all(r["fcf"] is None for r in report["months"]))
++
++    def test_mixed_cash_counterparts_cannot_be_guessed(self):
++        save_settings(self.db, self.config, 1)
++        self.db.save_journal_voucher(
++            {"entry_date": "2024-08-01", "currency": "USD", "description": "Mixed cash"},
++            [
++                {"account_code": "539910001", "credit": 100},
++                {"account_code": "699910005", "debit": 40},
++                {"account_code": "219910001", "debit": 60},
++            ],
++            1,
++        )
++        report = self.model()
++        self.assertEqual(report["unclassified_cash_entries"], 1)
++        self.assertIsNone(report["metrics"]["fcf"])
++
++    def test_invalid_and_overlapping_company_mappings_refused(self):
++        for changes in (
++            {"cogs": ["NOT-AN-ACCOUNT"]},
++            {"cogs": ["699910001"], "interest": ["699910001"]},
++            {"targets": {"debt_ebitda_max": "NaN"}},
++            {"senior_debt": ["539910001"]},
++        ):
++            with self.subTest(changes=changes), self.assertRaises(ValueError):
++                validate_config(self.db, dict(self.config, **changes))
++
++    def test_retired_accounts_are_not_silently_used(self):
++        with self.db.connect() as c:
++            c.execute("UPDATE accounts SET active=0 WHERE code='699910001'")
++        with self.assertRaises(ValueError):
++            validate_config(self.db, self.config)
++
++    def test_missing_prior_data_stays_unknown_and_signed_yoy_is_correct(self):
++        self.post("2024-07-01", "539910001", "799910001", 120)
++        report = self.model()
++        self.assertIsNone(report["metrics"]["revenue_yoy"])
++        self.post("2023-07-01", "539910001", "799910001", 100)
++        self.assertEqual(self.model()["metrics"]["revenue_yoy"], Decimal("20"))
++
++    def test_prior_year_file_is_authoritative_and_current_model_survives_prior_conversion_error(self):
++        self.post("2024-07-01", "539910001", "799910001", 120)
++        prior = type(
++            "Prior",
++            (),
++            {"_converted_lines": lambda *args: (_ for _ in ()).throw(ValueError("Missing prior rate"))},
++        )()
++        report = build_board(self.db, "2024-01-01", "2024-12-31", prior_db=prior)
++        self.assertEqual(report["metrics"]["revenue"], Decimal("120"))
++        self.assertIsNone(report["metrics"]["revenue_yoy"])
++        self.assertIn("Missing prior rate", report["prior_warning"])
++
++    def test_future_year_end_is_never_presented_as_actual(self):
++        report = self.model("2090-01-01", "2090-12-31")
++        self.assertIsNone(report["metrics"]["year_end"])
++        self.assertEqual(report["metrics"]["debt_status"], "Unknown")
++
++    def test_clean_full_board_pdf_and_no_example_balances(self):
++        self.populate()
++        save_settings(self.db, self.config, 1)
++        report = self.model()
++        figure = render_board(report)
++        self.assertEqual(tuple(round(v, 1) for v in figure.get_size_inches()), (12.8, 8.5))
++        texts = " ".join(t.get_text() for ax in figure.axes for t in ax.texts)
++        for forbidden in ["LinkedIn", "http", "QR", "10.33M", "549K", "14.2M", "Confidential"]:
++            self.assertNotIn(forbidden, texts)
++        path = Path(self.tmp.name) / "board.pdf"
++        export_board_pdf(report, path)
++        from pypdf import PdfReader
++
++        pdf = PdfReader(path)
++        self.assertEqual(len(pdf.pages), 1)
++        content = pdf.pages[0].extract_text()
++        self.assertIn("NANZA", content)
++        self.assertIn("The Complete Board Dashboard", content)
++        self.assertNotIn("LinkedIn", content)
++        figure.clear()
++
++    def test_settings_are_audited_and_do_not_change_accounting(self):
++        self.populate()
++        with self.db.connect() as c:
++            before = c.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0]
++        save_settings(self.db, self.config, 1)
++        with self.db.connect() as c:
++            self.assertEqual(c.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0], before)
++            self.assertEqual(
++                c.execute(
++                    "SELECT COUNT(*) FROM audit_log WHERE entity='board_dashboard_settings'"
++                ).fetchone()[0],
++                1,
++            )
++
++
++class BoardApiTest(unittest.TestCase):
++    def test_board_routes_are_authenticated_and_mapping_is_admin_only(self):
++        from http.server import ThreadingHTTPServer
++        import threading
++        from company_manager import CompanyManager
++        from client import ApiClient
++        from server import ApiHandler
++
++        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
++            path = Path(folder) / "master.db"
++            db = Database(path)
++            db.initialize("Board-api-fixture!")
++            manager = CompanyManager(path)
++            if not manager.list_companies():
++                manager.create_company({"name": "Board company", "year": 2024}, db)
++            handler = type(
++                "BoardApiHandler", (ApiHandler,), dict(db=db, master_db=db, company_manager=manager)
++            )
++            http = ThreadingHTTPServer(("127.0.0.1", 0), handler)
++            worker = threading.Thread(target=http.serve_forever, daemon=True)
++            worker.start()
++            try:
++                api = ApiClient(f"http://127.0.0.1:{http.server_port}")
++                with self.assertRaises(RuntimeError):
++                    api.workbench("board-settings")
++                api.login("admin", "Board-api-fixture!")
++                company = api.companies()[0]
++                year = int(company["years"][0]["year"])
++                api.select_company_year(company["id"], year)
++                result = api.workbench("board", date_from=f"{year}-01-01", date_to=f"{year}-12-31")
++                self.assertEqual(result["metrics"]["debt_status"], "Unknown")
++                config = api.workbench("board-settings")
++                api.request("POST", "/api/workbench/board-settings", {"config": config})
++                db.save_user(
++                    {"username": "boarduser", "password": "Board-user-fixture!", "role": "accountant"}, 1
++                )
++                user = ApiClient(api.base_url)
++                user.login("boarduser", "Board-user-fixture!")
++                user.select_company_year(company["id"], year)
++                with self.assertRaisesRegex(RuntimeError, "Administrator"):
++                    user.request("POST", "/api/workbench/board-settings", {"config": config})
++                self.assertIn(
++                    "metrics", user.workbench("board", date_from=f"{year}-01-01", date_to=f"{year}-12-31")
++                )
++                registry = manager._read()
++                for entry in registry["companies"]:
++                    if entry["id"] == company["id"]:
++                        for fiscal in entry["years"]:
++                            if int(fiscal["year"]) == year:
++                                fiscal["status"] = "closed"
++                manager._write(registry)
++                api.request("POST", "/api/workbench/board-settings", {"config": config})
++                self.assertIn(
++                    "metrics", api.workbench("board", date_from=f"{year}-01-01", date_to=f"{year}-12-31")
++                )
++                api.close()
++                user.close()
++            finally:
++                http.shutdown()
++                http.server_close()
++                worker.join(5)
++                for cached in list(manager._cache):
++                    manager._cache.pop(cached).release()
++                db.release()
++
++
++class BoardGuiTest(unittest.TestCase):
++    def test_customtkinter_window_loads_from_selected_books_and_exports_pdf(self):
++        import tkinter as tk
++
++        try:
++            probe = tk.Tk()
++            probe.destroy()
++        except tk.TclError:
++            raise unittest.SkipTest("No graphical display")
++        from tests.test_workbench_upgrade import WorkbenchGuiTest
++        from nanza_delivery.complete_board_dashboard import open_board
++
++        case = WorkbenchGuiTest("test_ageing_filter_drilldown_and_excel_export")
++        case.setUp()
++        try:
++            window = open_board(case.app)
++            case.wait(lambda: window.data is not None and window.canvas is not None)
++            import customtkinter as ctk
++
++            self.assertIsInstance(window, ctk.CTkToplevel)
++            self.assertEqual(Decimal(window.data["metrics"]["revenue"]), Decimal("100"))
++            self.assertEqual(window.data["metrics"]["debt_status"], "Unknown")
++            self.assertEqual(len(window.figure.axes) >= 10, True)
++            target = Path(case.tmp.name) / "board.pdf"
++            with patch("tkinter.filedialog.asksaveasfilename", return_value=str(target)):
++                window.export()
++                case.wait(
++                    lambda: target.exists() and str(window.pdf_button.cget("state")) == "normal", timeout=12
++                )
++            from pypdf import PdfReader
++
++            self.assertEqual(len(PdfReader(target).pages), 1)
++            self.assertEqual(case.app.errors, [])
++            window.destroy()
++            case.app.update()
++        finally:
++            case.tearDown()
++            case.doCleanups()

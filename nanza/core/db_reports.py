@@ -12,19 +12,24 @@ from settlements import posted_payment_sql, invoice_kind as payment_invoice_kind
 
 class ReportsStore:
     # ---------------------------------------------------------------- 2.9.80: every currency converted (planning tools)
-    def _converted_lines(self, currency, from_date=None, to_date=None, without_opening=False):
+    def _converted_lines(self, currency, from_date=None, to_date=None, without_opening=False,
+                         department_id=None, project_id=None):
         """Posted journal lines with their value in `currency` (USD, LBP or any currency of the company), whatever
         the currency they were entered in. Closing entries are left out."""
         import ledger_reports
         options = {"first_column": currency, "second_column": "none", "posting_status": "posted", "without_closing": True, "exclude_closing": True}
         if without_opening: options["without_opening"] = True
+        if department_id is not None: options["department_id"] = department_id
+        if project_id is not None: options["project_id"] = project_id
         start = _soft_iso(from_date) or "0000-01-01"; end = _soft_iso(to_date) or "9999-12-31"
         return [row for row in ledger_reports._load_lines(self, options) if start <= row["iso_date"] <= end]
 
-    def profit_and_loss_converted(self, from_date=None, to_date=None, currency="USD"):
+    def profit_and_loss_converted(self, from_date=None, to_date=None, currency="USD",
+                                  department_id=None, project_id=None):
         """The P&L of every transaction (LBP payroll, EUR expenses ...) in one currency: same rows as profit_and_loss."""
         totals = {}
-        for row in self._converted_lines(currency, from_date, to_date):
+        for row in self._converted_lines(currency, from_date, to_date, department_id=department_id,
+                                         project_id=project_id):
             if row["account_type"] not in ("income", "expense"): continue
             value = row["signed"].get(currency) or Decimal("0")
             item = totals.setdefault(row["code"], {"currency": currency, "code": row["code"], "name_en": row["name_en"], "type": row["account_type"], "debit": Decimal("0"), "credit": Decimal("0")})
@@ -49,6 +54,51 @@ class ReportsStore:
             item["net"] = item["inflow"] - item["outflow"]
         return sorted(grouped.values(), key=lambda r: r["category"])
 
+    def cash_flow_monthly(self, from_date=None, to_date=None, currency=None, convert=False):
+        """Monthly cash movements by currency and origin, excluding opening and closing entries."""
+        from_date = _soft_iso(from_date); to_date = _soft_iso(to_date)
+        categories = {"invoice": "Operating - Invoices", "expense": "Operating - Expenses",
+                      "payroll": "Operating - Payroll", "payment": "Operating - Receipts / Payments"}
+        grouped = {}
+        if convert and currency:
+            lines = self._converted_lines(currency, from_date, to_date, without_opening=True)
+            for row in lines:
+                digits = "".join(ch for ch in str(row.get("code") or "") if ch.isdigit())
+                if not digits.startswith(("51", "53")) or row.get("source_type") in ("opening", "year_close"):
+                    continue
+                value = float(row["signed"].get(currency) or 0)
+                key = (row["iso_date"][:7], currency, row.get("source_type") or "other")
+                item = grouped.setdefault(key, {"inflow": 0.0, "outflow": 0.0})
+                if value > 0: item["inflow"] += value
+                else: item["outflow"] -= value
+        else:
+            normalized_date = """CASE WHEN e.entry_date GLOB '??-??-????'
+                THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
+                ELSE e.entry_date END"""
+            conditions = ["(a.code LIKE '51%' OR a.code LIKE '53%')",
+                          "COALESCE(e.source_type,'other') NOT IN ('opening','year_close')"]
+            parameters = []
+            if from_date: conditions.append(f"{normalized_date}>=?"); parameters.append(from_date)
+            if to_date: conditions.append(f"{normalized_date}<=?"); parameters.append(to_date)
+            if currency: conditions.append("e.currency=?"); parameters.append(currency)
+            with self.connect() as db:
+                rows = db.execute(f"""SELECT substr({normalized_date},1,7) month,e.currency,
+                    COALESCE(e.source_type,'other') source,
+                    DSUM(CASE WHEN CAST(j.debit AS REAL)-CAST(j.credit AS REAL)>0 THEN CAST(j.debit AS REAL)-CAST(j.credit AS REAL) ELSE 0 END) inflow,
+                    DSUM(CASE WHEN CAST(j.debit AS REAL)-CAST(j.credit AS REAL)<0 THEN CAST(j.credit AS REAL)-CAST(j.debit AS REAL) ELSE 0 END) outflow
+                    FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
+                    WHERE {' AND '.join(conditions)} GROUP BY month,e.currency,source ORDER BY month,e.currency,source""", parameters)
+                for row in rows:
+                    grouped[(row["month"], row["currency"], row["source"])] = {
+                        "inflow": float(row["inflow"] or 0), "outflow": float(row["outflow"] or 0)}
+        result = []
+        for (month, code, source), values in sorted(grouped.items()):
+            result.append({"month": month, "currency": code, "source": source,
+                           "category": categories.get(source, "Other Cash Movement"),
+                           "inflow": round(values["inflow"], 2), "outflow": round(values["outflow"], 2),
+                           "net": round(values["inflow"] - values["outflow"], 2)})
+        return result
+
     def balance_sheet_converted(self, to_date=None, currency="USD"):
         """Balances of classes 1-5 at to_date, every currency converted into one."""
         totals = {}
@@ -61,7 +111,7 @@ class ReportsStore:
             item["balance"] += value
         return sorted(totals.values(), key=lambda r: r["code"])
 
-    def profit_and_loss(self, from_date=None, to_date=None, currency=None):
+    def profit_and_loss(self, from_date=None, to_date=None, currency=None, department_id=None, project_id=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
         # The year-end closing brings 6 & 7 to zero; the P&L must show the year before closing.
         conditions = ["a.type IN ('income','expense')", "NOT (e.source_type='year_close' OR (e.voucher_type='05' AND e.description LIKE 'CLOSING 6&7 - %'))"]
@@ -72,6 +122,8 @@ class ReportsStore:
         if from_date: conditions.append(f"{normalized_date}>=?"); parameters.append(from_date)
         if to_date: conditions.append(f"{normalized_date}<=?"); parameters.append(to_date)
         if currency: conditions.append("e.currency=?"); parameters.append(currency)
+        if department_id is not None: conditions.append("e.department_id=?"); parameters.append(int(department_id))
+        if project_id is not None: conditions.append("e.project_id=?"); parameters.append(int(project_id))
         with self.connect() as db:
             rows = [dict(row) for row in db.execute(f"""SELECT e.currency,a.code,a.name_en,a.type,
                 DSUM(CAST(j.debit AS REAL)) debit,DSUM(CAST(j.credit AS REAL)) credit
@@ -203,6 +255,8 @@ class ReportsStore:
     def list_accounts(self):
         with self.connect() as db:
             return [dict(r) for r in db.execute("""SELECT a.code,a.name_en,a.name_ar,a.name_fr,a.type,
+                a.active is_active,
+                NOT EXISTS (SELECT 1 FROM accounts c WHERE c.parent_id=a.id) is_posting,
                 p.code parent_code FROM accounts a LEFT JOIN accounts p ON p.id=a.parent_id
                 ORDER BY CASE WHEN instr(a.code,'.')>0 THEN replace(a.code,'.','') ELSE a.code END""")]
 
@@ -227,6 +281,8 @@ class ReportsStore:
 
     def save_account(self,item,user_id):
         code=str(item.get("code") or "").strip(); name=str(item.get("name_en") or "").strip()
+        name_ar=str(item.get("name_ar") or "").strip()
+        name_fr=str(item.get("name_fr") or "").strip()
         account_type=str(item.get("type") or "expense").strip().lower(); parent=str(item.get("parent_code") or "").strip() or None
         if not name or account_type not in ("asset","liability","equity","income","expense"): raise ValueError("Enter a valid account name and type")
         with self.connect() as db:
@@ -249,9 +305,10 @@ class ReportsStore:
                     code=str(max(values,default=100000000)+1).zfill(9)
             if len(code)!=9 or not code.isdigit(): raise ValueError("Enter a 4-digit prefix for automatic numbering, a full 9-digit number, or leave it blank")
             if db.execute("SELECT 1 FROM accounts WHERE code=?",(code,)).fetchone(): raise ValueError(f"Account {code} already exists; duplicate accounts are not allowed")
-            db.execute("INSERT INTO accounts(code,name_en,type,parent_id) VALUES(?,?,?,?)",(code,name,account_type,parent_id))
+            db.execute("INSERT INTO accounts(code,name_en,name_ar,name_fr,type,parent_id) VALUES(?,?,?,?,?,?)",
+                       (code,name,name_ar or None,name_fr or None,account_type,parent_id))
             db.execute("INSERT INTO audit_log(user_id,action,entity,details,created_at) VALUES(?,?,?,?,?)",
-                (user_id,"save","account",json.dumps({"code":code,"name":name}),utcnow()))
+                (user_id,"save","account",json.dumps({"code":code,"name":name,"name_ar":name_ar,"name_fr":name_fr}),utcnow()))
         return {"code":code,"name_en":name,"type":account_type,"parent_code":parent}
 
     def rename_account(self,code,name,user_id,name_fr=None,name_ar=None,account_type=None):
@@ -318,7 +375,7 @@ class ReportsStore:
                      WHEN e.source_type='invoice' AND i.kind='sale' THEN 'Sales'
                      WHEN e.source_type='invoice' AND COALESCE(i.entry_type,i.kind)='expenses' THEN 'Expenses'
                      WHEN e.source_type='invoice' THEN 'Purchases' ELSE 'Other' END journal_category,
-                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,CAST(j.debit AS REAL) debit,CAST(j.credit AS REAL) credit,j.id line_id,
+                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,CAST(j.debit AS REAL) debit,CAST(j.credit AS REAL) credit,j.id line_id,
                 COALESCE(pr.code,'') project_code,COALESCE(dp.code,'') department_code
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id
                 JOIN accounts a ON a.id=j.account_id LEFT JOIN parties p ON p.id=j.party_id LEFT JOIN branches b ON b.id=e.branch_id

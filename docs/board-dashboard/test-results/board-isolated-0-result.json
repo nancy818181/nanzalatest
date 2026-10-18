@@ -1,0 +1,24 @@
+{
+  "modules": [
+    "tests.test_accounting_review_controls"
+  ],
+  "test_ids": [
+    "tests.test_accounting_review_controls.InvoiceReviewIntegrationTest.test_cost_payment_method_posts_and_requires_the_selected_cash_account",
+    "tests.test_accounting_review_controls.InvoiceReviewIntegrationTest.test_dual_cost_sources_and_balanced_posting",
+    "tests.test_accounting_review_controls.InvoiceReviewIntegrationTest.test_exemption_cannot_reference_a_purchase_or_missing_invoice",
+    "tests.test_accounting_review_controls.InvoiceReviewIntegrationTest.test_exemption_survives_edit_without_consuming_another_number",
+    "tests.test_accounting_review_controls.InvoiceReviewIntegrationTest.test_exemption_uses_one_sales_sequence_and_does_not_remove_vat",
+    "tests.test_accounting_review_controls.InvoiceReviewIntegrationTest.test_invalid_exemption_or_storage_failure_saves_no_invoice",
+    "tests.test_accounting_review_controls.PreparationControlTest.test_payroll_checks_each_record_so_errors_cannot_cancel",
+    "tests.test_accounting_review_controls.PreparationControlTest.test_photo_review_retains_original_pixel_detail",
+    "tests.test_accounting_review_controls.PreparationControlTest.test_vat_readiness_keeps_provisional_and_filtered_returns_distinct",
+    "tests.test_accounting_review_controls.PurchaseCurrencyTest.test_bad_rates_amounts_and_unknown_components_are_rejected",
+    "tests.test_accounting_review_controls.PurchaseCurrencyTest.test_dual_components_convert_once_and_preserve_sources",
+    "tests.test_accounting_review_controls.PurchaseCurrencyTest.test_post_in_lbp_and_round_component_after_adding_sources"
+  ],
+  "tests_run": 12,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

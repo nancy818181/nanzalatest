@@ -1,0 +1,7 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+  "terminal.integrated.env.windows": {
+    "PATH": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python311;C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python311\\Scripts;${env:PATH}"
+  },
+  "chat.disableAIFeatures": false
+}

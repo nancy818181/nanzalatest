@@ -1,0 +1,9 @@
+test_a_text_the_user_rewrote_is_kept (tests.test_financial_languages.FinancialLanguagesTest.test_a_text_the_user_rewrote_is_kept) ... ok
+test_excel_pack_in_french_and_arabic (tests.test_financial_languages.FinancialLanguagesTest.test_excel_pack_in_french_and_arabic) ... ok
+test_same_figures_in_every_language (tests.test_financial_languages.FinancialLanguagesTest.test_same_figures_in_every_language) ... ok
+test_texts_are_translated (tests.test_financial_languages.FinancialLanguagesTest.test_texts_are_translated) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 1.353s
+
+OK

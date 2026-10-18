@@ -1,0 +1,14 @@
+{
+  "modules": [
+    "tests.test_network_multiuser"
+  ],
+  "test_ids": [
+    "tests.test_network_multiuser.MultiUserHttpsTest.test_five_users_save_at_the_same_time",
+    "tests.test_network_multiuser.MultiUserNetworkTest.test_five_users_save_at_the_same_time"
+  ],
+  "tests_run": 2,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}

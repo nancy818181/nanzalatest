@@ -1,0 +1,17 @@
+{
+  "modules": [
+    "tests.test_help_pictures"
+  ],
+  "test_ids": [
+    "tests.test_help_pictures.HelpPicturesTest.test_every_main_screen_has_a_topic",
+    "tests.test_help_pictures.HelpPicturesTest.test_every_topic_has_its_picture_and_steps_in_both_languages",
+    "tests.test_help_pictures.HelpPicturesTest.test_help_is_shipped_with_the_program",
+    "tests.test_help_pictures.HelpPicturesTest.test_main_help_opens_illustrated_guide",
+    "tests.test_help_pictures.HelpPicturesTest.test_missing_picture_help_falls_back_to_text_guide"
+  ],
+  "tests_run": 5,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "success": true
+}
