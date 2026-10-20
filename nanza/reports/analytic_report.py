@@ -83,6 +83,35 @@ def build_report(study, filters=None):
         {"key": "actionable_insights", "heading": tr(language, "actionable_insights"), "headers": ["Severity", "Insight"],
          "rows": [[row["severity"], row["text"]] for row in study.get("insights", [])], "total_rows": []},
     ]
+    centers = study.get("cost_centers") or {}
+    arabic = str(language).lower().startswith("ar")
+    for key, data, heading, dimension_headers in (
+        ("cost_center_summary", centers.get("summaries", []),
+         "مراكز الكلفة وضريبة القيمة المضافة المرسملة" if arabic else "Cost centers and capitalized VAT",
+         ["مركز الكلفة", "الاسم"] if arabic else ["Cost center", "Name"]),
+        ("cost_center_cross_reference", centers.get("cross_references", []),
+         "تقاطع مراكز الكلفة والمشاريع والفروع والحسابات" if arabic else "Cost center × project × branch × account",
+         ["مركز الكلفة", "الاسم", "المشروع", "الفرع", "الحساب", "الشهر"] if arabic else
+         ["Cost center", "Name", "Project", "Branch", "Account", "Month"]),
+    ):
+        section_rows = []
+        for row in data:
+            identifiers = [row.get("department_code", ""), row.get("department_name", "")]
+            if key == "cost_center_cross_reference":
+                identifiers += [row.get("project_code") or row.get("project_name", ""),
+                                row.get("branch_name", ""), row.get("account_code", ""), row.get("month", "")]
+            components = row.get("vat_by_category") or {}
+            section_rows.append(identifiers + [row.get("currency", study.get("currency", "USD")),
+                row.get("revenue", 0), row.get("expense_excluding_identified_vat", 0),
+                *[components.get(c, 0) for c in ("EDL", "TEL", "CELL", "FUEL", "OTHER")],
+                row.get("expense_cost", 0), row.get("net_contribution", 0), row.get("vat_evidence_status", "unavailable")])
+        if data:
+            headers = (["العملة", "الإيرادات", "الكلفة دون الضريبة المحددة", "EDL", "TEL", "CELL", "FUEL", "أخرى",
+                        "الكلفة المسجّلة شاملة الضريبة", "صافي المساهمة", "دليل الضريبة"] if arabic else
+                       ["Currency", "Revenue", "Cost excluding identified VAT", "EDL VAT", "TEL VAT", "CELL VAT", "FUEL VAT", "Other VAT",
+                        "Posted cost including VAT", "Net contribution", "VAT evidence"])
+            sections.append({"key": key, "heading": heading, "headers": dimension_headers + headers,
+                             "rows": section_rows, "total_rows": []})
     warning = None
     if pnl_check and not pnl_check.get("matches", True):
         differences = pnl_check.get("totals") or {}
@@ -99,6 +128,8 @@ def build_report(study, filters=None):
         tr(language, "analytic_report_margin_note"),
     ]
     warnings = list(study.get("warnings") or [])
+    if centers.get("vat_note"):
+        meta.append(centers["vat_note"])
     meta.extend(warnings)
     if warning:
         meta.insert(0, warning)

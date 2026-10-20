@@ -451,6 +451,7 @@ class CustomReportWindow(WorkbenchWindow):
             if not k.startswith("date_"):
                 entry.bind("<KeyRelease>", lambda _e, field=k: self.search_choices(field))
             var.trace_add("write", self.changed)
+        self.ledger_controls()
         actions = tk.Frame(self, bg=LIGHT)
         actions.pack(fill="x", padx=8)
         button(actions, "Excel", lambda: self.export("xlsx"), "تصدير كل النتائج المطابقة — Ctrl+E")
@@ -482,6 +483,60 @@ class CustomReportWindow(WorkbenchWindow):
             self.status,
         )
         self.changed()
+
+    def ledger_controls(self):
+        from nanza_delivery.custom_report_builder import LEDGER_DIMENSIONS, LEDGER_MEASURES
+        panel = tk.Frame(self, bg=LIGHT)
+        panel.pack(fill="x", padx=8)
+        self.report_kind = tk.StringVar(value="sales")
+        self.reporting_currencies = tk.StringVar(value="native")
+        self.report_accounts = tk.StringVar()
+        for label, variable, choices in (
+            ("Layout / نوع التقرير", self.report_kind, ("sales", "pnl", "balance")),
+            ("Currencies / العملات (USD,LBP)", self.reporting_currencies, None),
+            ("9-digit accounts / الحسابات (comma separated)", self.report_accounts, None),
+        ):
+            frame = tk.Frame(panel, bg=LIGHT)
+            frame.pack(side="left", padx=4)
+            tk.Label(frame, text=label, bg=LIGHT).pack(anchor="w")
+            widget = ttk.Combobox(frame, textvariable=variable, values=choices, state="readonly", width=12) if choices else ttk.Entry(frame, textvariable=variable, width=22)
+            widget.pack(fill="x")
+            variable.trace_add("write", self.changed)
+        self.layout_boxes = {}
+        for field, values, label in (
+            ("group_by", LEDGER_DIMENSIONS, "Dimensions: select + drag / الأبعاد"),
+            ("columns", LEDGER_MEASURES, "Columns: select + drag / الأعمدة"),
+        ):
+            frame = tk.Frame(panel, bg=LIGHT)
+            frame.pack(side="left", padx=4)
+            tk.Label(frame, text=label, bg=LIGHT).pack(anchor="w")
+            box = tk.Listbox(frame, height=3, width=24, selectmode="extended", exportselection=False)
+            box.insert("end", *values)
+            box.selection_set(0 if field == "group_by" else len(values) - 1)
+            box.pack()
+            box.bind("<<ListboxSelect>>", self.changed)
+            box.bind("<ButtonPress-1>", lambda e, b=box: setattr(b, "_drag_index", b.nearest(e.y)), add="+")
+            box.bind("<ButtonRelease-1>", lambda e, b=box: self.drop_layout(e, b))
+            self.layout_boxes[field] = box
+
+    def drop_layout(self, event, box):
+        source = getattr(box, "_drag_index", None)
+        target = box.nearest(event.y)
+        if source is None or source == target:
+            return
+        selected = {box.get(i) for i in box.curselection()}
+        values = list(box.get(0, "end"))
+        values.insert(target, values.pop(source))
+        box.delete(0, "end")
+        box.insert("end", *values)
+        for i, value in enumerate(values):
+            if value in selected:
+                box.selection_set(i)
+        self.changed()
+
+    def report_rows(self, result):
+        start = len(result["headers"]) - len(result["definition"]["columns"]) if result.get("definition") else 6
+        return [[*row[:start], *(Decimal(str(v)) for v in row[start:])] for row in result["rows"]]
 
     def drop_filter(self, event):
         dragged = self.dragging
@@ -521,6 +576,17 @@ class CustomReportWindow(WorkbenchWindow):
         )
 
     def filters(self):
+        if self.report_kind.get() != "sales":
+            import json
+            from nanza_delivery.custom_report_builder import validate_definition
+            dates = {k: self.vars[k].get().strip() for k in ("date_from", "date_to")}
+            layout = {"version": 1, "kind": self.report_kind.get(), **dates,
+                      "currencies": [c.strip() for c in self.reporting_currencies.get().split(",") if c.strip()],
+                      "account_codes": [c.strip() for c in self.report_accounts.get().split(",") if c.strip()]}
+            for field, box in self.layout_boxes.items():
+                layout[field] = [box.get(i) for i in box.curselection()]
+            layout = validate_definition(layout)
+            return {**dates, "definition": json.dumps(layout, ensure_ascii=False)}
         filters = {}
         for k, var in self.vars.items():
             value = var.get().strip()
@@ -567,7 +633,11 @@ class CustomReportWindow(WorkbenchWindow):
 
     def loaded(self, result):
         self.result = result
-        result["rows"] = [[*r[:6], *(Decimal(str(v)) for v in r[6:])] for r in result["rows"]]
+        result["rows"] = self.report_rows(result)
+        self.tree.configure(columns=list(range(len(result["headers"]))))
+        for i, header in enumerate(result["headers"]):
+            self.tree.heading(i, text=header)
+            self.tree.column(i, width=125, minwidth=60)
         show_rows(self.tree, result["rows"])
         totals = "; ".join(f"{code}: {Decimal(str(value)):,.2f}" for code, value in result["totals"].items())
         self.status.configure(
@@ -588,7 +658,7 @@ class CustomReportWindow(WorkbenchWindow):
         self.status.configure(text="Preparing complete export / تحضير التصدير الكامل…")
 
         def done(result):
-            rows = [[*r[:6], *(Decimal(str(v)) for v in r[6:])] for r in result["rows"]]
+            rows = self.report_rows(result)
             export_current(self, result["title"], result["headers"], rows, extension)
             self.status.configure(text=f"Complete export: {len(rows)} lines / تصدير كامل")
 
@@ -617,6 +687,18 @@ class CustomReportWindow(WorkbenchWindow):
     def apply_template(self, _event=None):
         filters = getattr(self, "templates", {}).get(self.template.get(), {})
         self._applying = True
+        import json
+        layout = json.loads(filters["definition"]) if filters.get("definition") else None
+        self.report_kind.set(layout["kind"] if layout else "sales")
+        if layout:
+            self.reporting_currencies.set(",".join(layout["currencies"]))
+            self.report_accounts.set(",".join(layout.get("account_codes", [])))
+            for field, box in self.layout_boxes.items():
+                selected = layout[field]
+                values = [*selected, *(v for v in box.get(0, "end") if v not in selected)]
+                box.delete(0, "end")
+                box.insert("end", *values)
+                box.selection_set(0, len(selected) - 1)
         for k, var in self.vars.items():
             raw = str(filters.get(k, ""))
             var.set(next((label for label, value in self.matches.get(k, {}).items() if value == raw), raw))

@@ -41,10 +41,142 @@ def _dimension_summary(buckets, denominator):
     return sorted(result, key=lambda item: item["net_contribution"], reverse=True)
 
 
+def _with_vat_evidence(db, rows):
+    """Attach provenance to actual VAT cost lines, never estimate or add costs.
+
+    Legacy VAT reclassifications omit dimensions. Inherit the documented header
+    allocation only when there are no conflicting original expense-line dimensions.
+    Unlinked/manual/quarterly settlement entries remain unallocated.
+    """
+    from nanza.ai_accountant.classifier import _non_deductible_category
+    ids = list({r['entry_id'] for r in rows if r.get('source_type') in ('vat_reclass', 'journal_voucher')})
+    evidence = {}
+    if not ids:
+        return rows
+    with db.connect() as connection:
+        for offset in range(0, len(ids), 400):
+            batch = ids[offset:offset + 400]
+            records = connection.execute(f"""SELECT report.id,
+                COALESCE(i.source_file,x.category,'') category,COALESCE(v.name,'') vendor_name,
+                COALESCE(i.invoice_number,x.reference,'') reference,
+                COALESCE(i.expense_account,x.expense_account,'') expense_account,
+                COALESCE(i.department_id,x.department_id) department_id,
+                COALESCE(i.project_id,x.project_id) project_id,
+                COALESCE(x.description,i.source_file,'') description,
+                COALESCE(d.code,'') department_code,COALESCE(d.name,'') department_name,
+                COALESCE(p.code,'') project_code,COALESCE(p.name,'') project_name,
+                COALESCE(b.name,'') branch_name,
+                (SELECT COUNT(DISTINCT COALESCE(j.department_id,0)||':'||COALESCE(j.project_id,0))
+                 FROM journal_entries o JOIN journal_lines j ON j.entry_id=o.id
+                 JOIN accounts a ON a.id=j.account_id
+                 WHERE o.source_id=e.source_id AND a.type='expense'
+                 AND o.source_type=CASE WHEN i.id IS NOT NULL THEN 'invoice' ELSE 'expense' END
+                 AND (COALESCE(j.department_id,0)<>COALESCE(i.department_id,x.department_id,0)
+                      OR COALESCE(j.project_id,0)<>COALESCE(i.project_id,x.project_id,0))) conflicts
+                FROM journal_entries report JOIN journal_entries e
+                  ON e.id=CASE WHEN report.source_type='vat_reclass' THEN report.id ELSE report.reversal_of END
+                LEFT JOIN invoices i ON i.id=e.source_id AND e.entry_number='VATND-INV-'||i.id
+                LEFT JOIN expenses x ON x.id=e.source_id AND e.entry_number='VATND-EXP-'||x.id
+                LEFT JOIN parties v ON v.id=i.party_id
+                LEFT JOIN departments d ON d.id=COALESCE(i.department_id,x.department_id)
+                LEFT JOIN projects p ON p.id=COALESCE(i.project_id,x.project_id)
+                LEFT JOIN branches b ON b.id=i.branch_id
+                WHERE report.id IN ({','.join('?' for _ in batch)})
+                  AND e.source_type='vat_reclass' AND e.posting_status='posted' AND report.posting_status='posted'
+                  AND (i.id IS NOT NULL OR x.id IS NOT NULL)""", batch)
+            evidence.update({r['id']: dict(r) for r in records})
+    result = []
+    for original in rows:
+        row = dict(original)
+        source = evidence.get(row.get('entry_id'))
+        if source and row.get('account_type') == 'expense':
+            row['vat_component'] = True
+            row['vat_category'] = _non_deductible_category({
+                'description': ' '.join(str(source.get(k) or '') for k in
+                                        ('description', 'category', 'reference', 'vendor_name')) + ' ' + str(row.get('name_en') or ''),
+                'expense_category': source['category']}) or 'OTHER'
+            row['vat_provenance'] = 'posted_vat_reclass'
+            if not source['conflicts']:
+                for dimension in ('department', 'project'):
+                    if not row.get(dimension + '_code') and not row.get(dimension + '_name'):
+                        row[dimension + '_code'] = source[dimension + '_code']
+                        row[dimension + '_name'] = source[dimension + '_name']
+                if source['branch_name']:
+                    row['branch_name'] = source['branch_name']
+            row['vat_dimension_status'] = 'unallocated' if source['conflicts'] else 'document_header'
+        result.append(row)
+    return result
+
+
+def cost_center_analysis(rows, currency):
+    """Cross-reference department × project × branch × account × month.
+
+    Capitalized VAT is a signed subset of posted expense, not an extra charge.
+    Missing provenance is reported as unavailable rather than inferred from a rate.
+    """
+    from decimal import Decimal
+    dimensions = ('department_code', 'department_name', 'project_code', 'project_name',
+                  'branch_name', 'account_code', 'month')
+    cross = {}
+    summaries = {}
+    for row in rows:
+        kind = row.get('account_type') or row.get('type')
+        if kind not in ('expense', 'income'):
+            continue
+        value = (row.get('signed') or {}).get(currency)
+        if value is None:
+            raise ValueError(f'Missing {currency} ledger equivalent for cost-center analysis')
+        value = Decimal(str(value))
+        if not value.is_finite():
+            raise ValueError('Non-finite analytic ledger amount')
+        code = str(row.get('code') or row.get('account_code') or '')
+        keys = (str(row.get('department_code') or ''), str(row.get('department_name') or 'Unassigned'),
+                str(row.get('project_code') or ''), str(row.get('project_name') or 'Unassigned'),
+                str(row.get('branch_name') or 'Unassigned'), code,
+                _month(row.get('iso_date') or row.get('entry_date')))
+        key = keys
+        entry = cross.setdefault(key, dict(zip(dimensions, keys), currency=currency,
+            revenue=Decimal(0), expense_cost=Decimal(0), capitalized_vat=Decimal(0),
+            vat_by_category={c: Decimal(0) for c in ('EDL', 'TEL', 'CELL', 'FUEL', 'OTHER')},
+            unverified_expense_lines=0, ledger_line_ids=[]))
+        if kind == 'income':
+            entry['revenue'] -= value
+        else:
+            entry['expense_cost'] += value
+            if row.get('vat_component') is True and row.get('vat_provenance') == 'posted_vat_reclass':
+                entry['capitalized_vat'] += value
+                entry['vat_by_category'][row.get('vat_category') if row.get('vat_category') in entry['vat_by_category'] else 'OTHER'] += value
+            else:
+                entry['unverified_expense_lines'] += 1
+        if row.get('id') is not None:
+            entry['ledger_line_ids'].append(row['id'])
+    for key, entry in sorted(cross.items()):
+        center = summaries.setdefault(key[:2], dict(department_code=key[0], department_name=key[1],
+            currency=currency, revenue=Decimal(0), expense_cost=Decimal(0), capitalized_vat=Decimal(0),
+            vat_by_category={c: Decimal(0) for c in ('EDL', 'TEL', 'CELL', 'FUEL', 'OTHER')},
+            unverified_expense_lines=0))
+        for field in ('revenue', 'expense_cost', 'capitalized_vat', 'unverified_expense_lines'):
+            center[field] += entry[field]
+        for category, amount in entry['vat_by_category'].items():
+            center['vat_by_category'][category] += amount
+    for entry in [*cross.values(), *summaries.values()]:
+        entry['expense_excluding_identified_vat'] = entry['expense_cost'] - entry['capitalized_vat']
+        entry['net_contribution'] = entry['revenue'] - entry['expense_cost']
+        entry['vat_evidence_status'] = 'partial' if entry['unverified_expense_lines'] else 'identified'
+        for field, value in list(entry.items()):
+            if isinstance(value, Decimal):
+                entry[field] = float(value.quantize(Decimal('0.01')))
+        entry['vat_by_category'] = {k: float(v.quantize(Decimal('0.01'))) for k, v in entry['vat_by_category'].items()}
+    return {'dimensions': list(dimensions), 'summaries': list(summaries.values()),
+            'cross_references': [cross[k] for k in sorted(cross)],
+            'vat_note': 'VAT components identify posted reclassifications only; no rates or allocations are inferred. Other embedded VAT remains unavailable.'}
+
+
 def analyze_rows(rows, start_date=None, end_date=None, currency="USD", language="en", budgets=None):
     """Analyze rows from `ledger_reports._load_lines`; all amounts use the selected currency."""
     currency = str(currency or "USD").upper()
-    lines = _periods(rows, start_date, end_date)
+    lines = [row for row in _periods(rows, start_date, end_date)
+             if row.get("posting_status", "posted") == "posted"]
     category = defaultdict(lambda: {"revenue": 0.0, "cost": 0.0, "expense": 0.0})
     project = defaultdict(lambda: {"revenue": 0.0, "cost": 0.0, "expense": 0.0})
     vendor = defaultdict(lambda: {"revenue": 0.0, "cost": 0.0, "expense": 0.0})
@@ -159,6 +291,7 @@ def analyze_rows(rows, start_date=None, end_date=None, currency="USD", language=
             "totals": {"revenue": round(total_revenue, 2), "cost_of_sales": round(total_cost, 2),
                        "expenses": round(total_expense, 2), "gross_profit": round(total_revenue - total_cost, 2),
                        "net_profit": round(total_revenue - total_cost - total_expense, 2)},
+            "cost_centers": cost_center_analysis(lines, currency),
             "profitability": {"projects": projects, "vendors": vendors, "categories": categories},
             "expenses": {"top_10": top_expenses, "unusual_spending": spikes,
                          "vendor_dependency": {"vendor": largest_vendor[0], "share_percent": round(vendor_share, 1),
@@ -186,7 +319,7 @@ def build_study(db, from_date, to_date, currency="USD", language="en",
         options = {"first_column": currency, "second_column": "none", "posting_status": "posted",
                    "without_closing": True, "exclude_closing": True, "without_opening": True,
                    "date_from": source_start, "date_to": source_end}
-        rows.extend(_load_lines(source_db, options))
+        rows.extend(_with_vat_evidence(source_db, _load_lines(source_db, options)))
         if currency:
             for code, amount in source_db.budget_for_period(currency, source_start, source_end).items():
                 budgets[code] += float(amount)
