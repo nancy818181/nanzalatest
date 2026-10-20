@@ -125,6 +125,27 @@ def _read_chart(path: Path):
 
 
 def _load_chart():
+    # PyInstaller bundles Python modules as importable bytecode, not as source
+    # files that glob/ast discovery can reliably find.  The Lebanese chart is
+    # the application's authoritative built-in chart, so load it through the
+    # import system first.  Keep file discovery below for development charts.
+    try:
+        import lebanese_accounts
+        rows = lebanese_accounts.LEBANESE_ACCOUNTS
+        chart = {
+            str(row[0]).strip(): {
+                "name_en": str(row[1] or "").strip(),
+                "name_ar": str(row[2] or "").strip(),
+                "name_fr": str(row[3] or "").strip(),
+                "type": str(row[4] or "expense").strip().lower(),
+                "parent_code": str(row[5]).strip() if len(row) > 5 and row[5] else None,
+            }
+            for row in rows if len(row) >= 5 and str(row[0]).strip()
+        }
+        if chart and all(code in chart for code in ("6263.4", "6263.3", "6263.1", "6261.5", "4011", "4111")):
+            return Path(lebanese_accounts.__file__).resolve(), chart
+    except (ImportError, AttributeError, TypeError, ValueError):
+        pass
     last_error = None
     for path in _chart_candidates():
         try:

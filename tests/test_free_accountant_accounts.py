@@ -1,10 +1,12 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import tests_setup  # noqa: F401
 from database import Database
 from free_accounts import CHART_PATH, CHART_RECORDS, REAL_CHART, suggest_and_autocreate
+import free_accounts
 
 
 class FakeAccountClient:
@@ -36,6 +38,12 @@ class DatabaseAccountClient:
 
 
 class FreeAccountantChartTests(unittest.TestCase):
+    def test_builtin_chart_loads_without_source_file_discovery(self):
+        with patch.object(free_accounts, "_chart_candidates", return_value=()):
+            path, chart = free_accounts._load_chart()
+        self.assertTrue(path.is_file())
+        self.assertIn("6263.4", chart)
+
     def test_chart_is_discovered_and_contains_real_base_accounts(self):
         self.assertTrue(CHART_PATH.is_file())
         self.assertGreater(len(REAL_CHART), 300)

@@ -68,9 +68,10 @@ class BucketTest(unittest.TestCase):
         self.assertIsNone(suggest_category("fuel", accounts)["account_code"])
 
     def test_classifier_uses_actual_chart_and_ambiguity(self):
-        account = {"code": "X-EXP-19", "name_en": "Fuel", "type": "expense", "is_active": 1, "is_posting": 1}
-        self.assertEqual(suggest_category("fuel", [account])["account_code"], "X-EXP-19")
-        self.assertIsNone(suggest_category("fuel", [account, dict(account, code="X-EXP-20")])["account_code"])
+        account = {"code": "626340001", "name_en": "Fuel", "type": "expense", "is_active": 1, "is_posting": 1}
+        self.assertEqual(suggest_category("fuel", [account])["account_code"], "626340001")
+        self.assertIsNone(suggest_category("fuel", [account, dict(account, code="626340002")])["account_code"])
+        self.assertIsNone(suggest_category("fuel", [dict(account, code="X-EXP-19")])["account_code"])
 
     def test_sql_and_invalid_ranges_refused(self):
         for filters in (

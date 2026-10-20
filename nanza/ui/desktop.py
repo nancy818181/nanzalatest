@@ -69,8 +69,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             try: self.state("zoomed")
             except tk.TclError: pass
         self.configure(bg=LIGHT)
-        from i18n import saved_language
-        self.language = tk.StringVar(value=saved_language())
+        self.language = tk.StringVar(value="en")
         self.client = None
         self.current_user = None
         self.last_activity = time.monotonic()
@@ -417,7 +416,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def login_screen(self):
         self.clear()
         import arabic_ui
-        arabic_ui.switch(self, self.language.get())
+        arabic_ui.switch(self, "en")  # the sign-in screen starts in English; Arabic starts after signing in
         card = tk.Frame(self, bg="white", padx=42, pady=36)
         card.place(relx=.5, rely=.5, anchor="center")
         try:
@@ -450,8 +449,6 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             self.client.confirm_negative_stock=lambda text: messagebox.askyesno("Stock below zero | مخزون سالب",text,icon="warning")
             self.client.confirm_duplicate=lambda text: messagebox.askyesno("Already saved | مكرر",text,icon="warning",default="no")  # 2.9.103
             self.current_user=self.client.login(self.username.get(), self.password.get())
-            from i18n import save_language
-            save_language(self.language.get())
             import arabic_ui
             arabic_ui.switch(self, self.language.get())  # 2.9.118: Language = ar -> the screens in Arabic, right to left
             self.last_activity=time.monotonic(); self.bind_all("<Any-KeyPress>",self.record_activity); self.bind_all("<Any-Button>",self.record_activity); self.after(60000,self.check_auto_logout)
@@ -920,8 +917,6 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def switch_language(self,language):
         """2.9.118: the whole program in Arabic (right to left) or English, on the same company, year and screen."""
         import arabic_ui
-        from i18n import save_language
-        save_language(language)
         try:
             current=self.main_notebook.select(); attribute=self._page_attributes[[str(p) for p in self.main_tab_pages].index(str(current))]
         except (AttributeError,ValueError,IndexError,tk.TclError): attribute=None

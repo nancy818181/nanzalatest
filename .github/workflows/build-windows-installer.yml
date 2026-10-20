@@ -174,6 +174,20 @@ jobs:
             Write-Host "OK: $path"
           }
 
+      - name: Smoke-test packaged startup
+        shell: pwsh
+        run: |
+          $working = Join-Path $env:RUNNER_TEMP "Nanza startup path with spaces"
+          New-Item -ItemType Directory -Force -Path $working | Out-Null
+          $process = Start-Process -FilePath "$env:GITHUB_WORKSPACE\dist\NanzaAccounting\NanzaAccounting.exe" `
+            -WorkingDirectory $working -PassThru
+          Start-Sleep -Seconds 12
+          if ($process.HasExited) {
+            throw "Packaged Nanza exited during startup with code $($process.ExitCode)."
+          }
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Packaged startup remained healthy from a working directory containing spaces."
+
       # Must succeed: the installer's "daily backups" option runs this program.
       - name: Build background backup service
         run: |
