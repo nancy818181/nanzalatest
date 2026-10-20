@@ -56,3 +56,69 @@ def find_duplicates(database, today=None):
                         ],
                     })
     return duplicates
+
+
+def detect_anomalies(invoices):
+    """Return duplicate/high-VAT review flags, not allegations of fraud.
+
+    Accepts dict records with vendor/vendor_id, date/invoice_date, currency,
+    subtotal (tax-exclusive) or total (VAT-inclusive), vat, optional vat_rate and
+    country. Missing or invalid amounts are flagged rather than coerced to zero.
+    """
+    from decimal import Decimal, InvalidOperation
+    import re
+    import unicodedata
+
+    def money(value):
+        try:
+            amount = Decimal(str(value))
+            return amount if amount.is_finite() and amount >= 0 else None
+        except (InvalidOperation, ValueError, TypeError):
+            return None
+
+    def canonical(value):
+        return " ".join(unicodedata.normalize("NFKC", str(value or "")).casefold().split())
+
+    flags = []; seen = {}
+    for index, invoice in enumerate(invoices):
+        if not isinstance(invoice, dict):
+            raise ValueError("Invoices must be dictionaries")
+        identifier = invoice.get("id", index)
+        total = money(invoice.get("total")); vat = money(invoice.get("vat"))
+        if total is None or vat is None or vat > total:
+            flags.append({"type": "invalid_amount", "invoice_id": identifier, "requires_review": True})
+            continue
+        base = money(invoice.get("subtotal")) if invoice.get("subtotal") is not None else total-vat
+        if base is None:
+            flags.append({"type": "invalid_amount", "invoice_id": identifier, "requires_review": True})
+            continue
+        country = canonical(invoice.get("country")).upper()
+        standard = {"LB": Decimal(11), "LEBANON": Decimal(11),
+                    "SA": Decimal(15), "KSA": Decimal(15), "AE": Decimal(5), "UAE": Decimal(5)}.get(country)
+        declared = money(invoice.get("vat_rate"))
+        threshold = standard if standard is not None else declared if declared is not None else Decimal(15)
+        treatment = canonical(invoice.get("vat_treatment"))
+        if treatment in ("exempt", "zero_rated", "out_of_scope"):
+            threshold = Decimal(0)
+        expected = (base*threshold/100).quantize(Decimal("0.01"))
+        if vat > expected+Decimal("0.02"):
+            flags.append({"type": "high_vat", "invoice_id": identifier,
+                          "actual_vat": str(vat), "expected_max_vat": str(expected),
+                          "requires_review": True})
+        vendor = canonical(invoice.get("vendor_id") or invoice.get("vendor") or invoice.get("supplier"))
+        currency = canonical(invoice.get("currency")).upper()
+        number = canonical(invoice.get("invoice_number") or invoice.get("number"))
+        day = _iso_day(invoice.get("invoice_date") or invoice.get("date"))
+        if not vendor or not currency:
+            continue  # Unknown suppliers/currencies must not all be treated as duplicates.
+        kind = canonical(invoice.get("doc_subtype") or "invoice")
+        key = (vendor, currency, total, kind)
+        for previous in seen.get(key, []):
+            same_number = bool(number) and number == previous["number"]
+            near = day is not None and previous["day"] is not None and abs((day-previous["day"]).days) <= 7
+            if same_number or near:
+                flags.append({"type": "duplicate", "invoice_ids": [previous["id"], identifier],
+                              "reason": "same_vendor_reference_amount" if same_number else "same_vendor_amount_near_date",
+                              "requires_review": True})
+        seen.setdefault(key, []).append({"id": identifier, "number": number, "day": day})
+    return flags

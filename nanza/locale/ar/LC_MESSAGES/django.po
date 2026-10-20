@@ -1,0 +1,6321 @@
+msgid ""
+msgstr "Project-Id-Version: Nanza\nLanguage: ar\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
+
+msgid "   both accounts are customers / suppliers: the documents moved go to the customer / supplier of the To account (Move ALL: merge them)"
+msgstr "   الحسابان لعملاء / موردين: تنتقل المستندات إلى العميل / المورد للحساب الهدف (نقل الكل: دمجهما)"
+
+msgid "  Options  "
+msgstr "  الخيارات  "
+
+msgid "% (year to date, the company budget in the main currency)"
+msgstr "% (من بداية السنة، موازنة الشركة بالعملة الرئيسية)"
+
+msgid "% from past years"
+msgstr "% من السنوات السابقة"
+
+msgid "(DSO / DPO empty = taken from the books)"
+msgstr "(DSO / DPO فارغ = يؤخذ من الدفاتر)"
+
+msgid "(a key is kept: leave empty to keep it)"
+msgstr "(مفتاح محفوظ: اتركه فارغاً للإبقاء عليه)"
+
+msgid "(empty: 531 cash / 512 bank)"
+msgstr "(فارغ: 531 صندوق / 512 مصرف)"
+
+msgid "+ Purchase / Expense"
+msgstr "+ مشتريات / مصروف"
+
+msgid "+ Sales Invoice"
+msgstr "+ فاتورة مبيع"
+
+msgid "+30 days"
+msgstr "+30 يوماً"
+
+msgid "1 Journal Voucher per currency; result to 138 profit / 139 loss"
+msgstr "قيد يومية واحد لكل عملة؛ النتيجة إلى 138 ربح / 139 خسارة"
+
+msgid "1. Asset Accounts & Depreciation %"
+msgstr "1. حسابات الأصول ونسب الاستهلاك"
+
+msgid "13-Week Cash Forecast"
+msgstr "توقع التدفق النقدي لـ 13 أسبوعاً"
+
+msgid "13th Month"
+msgstr "الشهر الثالث عشر"
+
+msgid "13th Salary"
+msgstr "الراتب الثالث عشر"
+
+msgid "1st Column"
+msgstr "العمود الأول"
+
+msgid "2. Asset Data Entry"
+msgstr "2. إدخال بيانات الأصول"
+
+msgid "2nd Column"
+msgstr "العمود الثاني"
+
+msgid "3. Monthly Depreciation Table"
+msgstr "3. جدول الاستهلاك الشهري"
+
+msgid "3D Chart"
+msgstr "رسم ثلاثي الأبعاد"
+
+msgid "3D Charts"
+msgstr "رسوم ثلاثية الأبعاد"
+
+msgid "3D: rows"
+msgstr "ثلاثي الأبعاد: الأسطر"
+
+msgid "4-digit parent"
+msgstr "حساب أب من 4 أرقام"
+
+msgid "4-digit prefix or 9-digit account"
+msgstr "بادئة من 4 أرقام أو حساب من 9 أرقام"
+
+msgid "5-Year Cash Forecast"
+msgstr "توقعات النقد لخمس سنوات"
+
+msgid "5-Year Projection"
+msgstr "توقعات 5 سنوات"
+
+msgid "5-Year Projection to date (DD-MM-YYYY)"
+msgstr "توقعات 5 سنوات حتى تاريخ (DD-MM-YYYY)"
+
+msgid "6739 - Bank Commissions & Other Charges"
+msgstr "6739 - عمولات ومصاريف مصرفية أخرى"
+
+msgid "9-Digit Account"
+msgstr "حساب من 9 أرقام"
+
+msgid "< Options"
+msgstr "< خيارات"
+
+msgid "A credit note cannot itself be returned."
+msgstr "لا يمكن إرجاع إشعار دائن."
+
+msgid "A deleted invoice leaves a gap: cancel invoices instead of deleting them, or renumber (Settings > Numbering)"
+msgstr "الفاتورة المحذوفة تترك فجوة: ألغِ الفواتير بدل حذفها، أو أعد الترقيم (الإعدادات > الترقيم)"
+
+msgid "A line has an amount but no description. Add a description or delete that line before saving, so the saved total matches what you see."
+msgstr "في أحد الأسطر مبلغ بلا بيان. أضف البيان أو احذف السطر قبل الحفظ ليطابق المجموع المحفوظ ما تراه."
+
+msgid "A new Date From ends the previous period the day before. Leave Date To empty for 'until further notice'."
+msgstr "تاريخ البداية الجديد يُنهي الفترة السابقة في اليوم الذي قبله. اترك تاريخ النهاية فارغاً لـ«حتى إشعار آخر»."
+
+msgid "A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made."
+msgstr "التاريخ الماضي يعرض ما كان مفتوحاً في ذلك التاريخ (لا تُحتسب المقبوضات / المدفوعات بعده)؛ التاريخ المستقبلي يعرض التأخير المتوقع إذا لم يُدفع شيء آخر."
+
+msgid "A reversing entry is posted; the purchase stays in the list as Cancelled. Then enter it again correctly."
+msgstr "يُسجّل قيد عكسي؛ تبقى المشتريات في القائمة كملغاة. ثم أدخلها من جديد بشكل صحيح."
+
+msgid "ACCOUNTS & VAT"
+msgstr "الحسابات والضريبة"
+
+msgid "AI Accountant"
+msgstr "المحاسب الذكي"
+
+msgid "AI PDF preview"
+msgstr "معاينة PDF بالذكاء الاصطناعي"
+
+msgid "AI Suggest A/C"
+msgstr "اقتراح حساب بالذكاء الاصطناعي"
+
+msgid "AI account suggestion"
+msgstr "اقتراح حساب بالذكاء الاصطناعي"
+
+msgid "ALL previous invoices will be removed and replaced. A safety backup is made first. Continue?"
+msgstr "ستُحذف كل الفواتير السابقة وتُستبدل. تُعمل نسخة احتياطية أولاً. متابعة؟"
+
+msgid "AMOUNT IN WORDS"
+msgstr "المبلغ بالأحرف"
+
+msgid "AR | EN"
+msgstr "AR | EN — اللغة"
+
+msgid "Account"
+msgstr "الحساب"
+
+msgid "Account (4-digit prefix = automatic):"
+msgstr "الحساب (بادئة من 4 أرقام = تلقائي):"
+
+msgid "Account / Name From"
+msgstr "الحساب / الاسم من"
+
+msgid "Account Currency"
+msgstr "عملة الحساب"
+
+msgid "Account From"
+msgstr "من حساب"
+
+msgid "Account From:"
+msgstr "من حساب:"
+
+msgid "Account Name"
+msgstr "اسم الحساب"
+
+msgid "Account No. - Name"
+msgstr "رقم الحساب - الاسم"
+
+msgid "Account Number"
+msgstr "رقم الحساب"
+
+msgid "Account Search"
+msgstr "بحث عن حساب"
+
+msgid "Account To"
+msgstr "إلى حساب"
+
+msgid "Account mapping"
+msgstr "ربط الحسابات"
+
+msgid "Account name"
+msgstr "اسم الحساب"
+
+msgid "Account suggestion"
+msgstr "اقتراح حساب"
+
+msgid "Account to change"
+msgstr "الحساب المراد تغييره"
+
+msgid "Accountant"
+msgstr "محاسب"
+
+msgid "Accounting"
+msgstr "المحاسبة"
+
+msgid "Accounting Settings"
+msgstr "إعدادات المحاسبة"
+
+msgid "Accounts"
+msgstr "الحسابات"
+
+msgid "Accounts & Statements"
+msgstr "الحسابات والكشوف"
+
+msgid "Accounts and amounts"
+msgstr "الحسابات والمبالغ"
+
+msgid "Accounts without transactions"
+msgstr "حسابات بلا حركات"
+
+msgid "Accounts: click the number and type a replacement, or use Find. Tab moves to the next field."
+msgstr "الحسابات: انقر على الرقم واكتب البديل، أو استعمل البحث. Tab ينتقل إلى الحقل التالي."
+
+msgid "Accumulated"
+msgstr "المتراكم"
+
+msgid "Accumulated Account"
+msgstr "حساب الاستهلاك المتراكم"
+
+msgid "Accumulated account"
+msgstr "حساب الاستهلاك المتراكم"
+
+msgid "Accumulated depreciation account"
+msgstr "حساب الاستهلاك المتراكم"
+
+msgid "Acquisition cost"
+msgstr "كلفة الاقتناء"
+
+msgid "Action"
+msgstr "الإجراء"
+
+msgid "Actionable Insights"
+msgstr "الرؤى القابلة للتنفيذ"
+
+msgid "Active"
+msgstr "نشط"
+
+msgid "Actual report year"
+msgstr "سنة التقرير الفعلية"
+
+msgid "Add Account"
+msgstr "إضافة حساب"
+
+msgid "Add Adjustment"
+msgstr "إضافة تسوية"
+
+msgid "Add Category"
+msgstr "إضافة فئة"
+
+msgid "Add Company from File"
+msgstr "إضافة شركة من ملف"
+
+msgid "Add Company from File…"
+msgstr "إضافة شركة من ملف…"
+
+msgid "Add Cost on Purchase"
+msgstr "إضافة كلفة على المشتريات"
+
+msgid "Add Currency"
+msgstr "إضافة عملة"
+
+msgid "Add Customer Receipt"
+msgstr "سند قبض من زبون"
+
+msgid "Add Daily Rate"
+msgstr "إضافة سعر يومي"
+
+msgid "Add Invoice Row"
+msgstr "إضافة سطر فاتورة"
+
+msgid "Add Item"
+msgstr "إضافة صنف"
+
+msgid "Add Item Line"
+msgstr "إضافة سطر صنف"
+
+msgid "Add Item to Invoice"
+msgstr "إضافة صنف إلى الفاتورة"
+
+msgid "Add Leave"
+msgstr "إضافة إجازة"
+
+msgid "Add Line"
+msgstr "إضافة سطر"
+
+msgid "Add Material"
+msgstr "إضافة مادة"
+
+msgid "Add Period"
+msgstr "إضافة فترة"
+
+msgid "Add Subcategory"
+msgstr "إضافة فئة فرعية"
+
+msgid "Add Supplier Payment"
+msgstr "سند دفع لمورد"
+
+msgid "Add Unit"
+msgstr "إضافة وحدة"
+
+msgid "Add at least one invoice item"
+msgstr "أضف صنفاً واحداً على الأقل إلى الفاتورة"
+
+msgid "Add at least one item with a quantity"
+msgstr "أضف صنفاً واحداً على الأقل مع الكمية"
+
+msgid "Add at least one line with a description"
+msgstr "أضف سطراً واحداً على الأقل مع البيان"
+
+msgid "Add at least one material with a quantity"
+msgstr "أضف مادة واحدة على الأقل مع الكمية"
+
+msgid "Add child"
+msgstr "إضافة فرع"
+
+msgid "Add line"
+msgstr "إضافة سطر"
+
+msgid "Add the materials used (Materials from Recipe)"
+msgstr "أضف المواد المستعملة (المواد من الوصفة)"
+
+msgid "Additional cash benefits are taxable by default. Use the existing statutory categories for exemptions; changing an account does not change tax or NSSF."
+msgstr "الدفعات النقدية الإضافية خاضعة افتراضياً. استخدم الفئات القانونية للإعفاءات؛ تغيير الحساب لا يغيّر الضريبة أو الضمان."
+
+msgid "Additional payments"
+msgstr "دفعات إضافية"
+
+msgid "Address"
+msgstr "العنوان"
+
+msgid "Admin"
+msgstr "مدير النظام"
+
+msgid "Advanced Local OCR"
+msgstr "قراءة محلية متقدمة للنصوص"
+
+msgid "Advanced Local OCR (Arabic and English)"
+msgstr "قراءة محلية متقدمة للنصوص (العربية والإنكليزية)"
+
+msgid "Adviser confirmation..."
+msgstr "تأكيد المستشار..."
+
+msgid "Ageing Report"
+msgstr "تقرير أعمار الذمم"
+
+msgid "Ageing buckets"
+msgstr "فئات الأعمار"
+
+msgid "Ageing shows invoice due dates, days overdue, and expected amounts due by the selected date."
+msgstr "يعرض تقرير الأعمار تواريخ استحقاق الفواتير وأيام التأخير والمبالغ المتوقعة حتى التاريخ المختار."
+
+msgid "Aging Bucket"
+msgstr "فئة العمر"
+
+msgid "All"
+msgstr "الكل"
+
+msgid "All (no filter)"
+msgstr "الكل (بلا تصفية)"
+
+msgid "All Currencies"
+msgstr "كل العملات"
+
+msgid "All Payslips (PDF)"
+msgstr "كل قسائم الرواتب (PDF)"
+
+msgid "All accounts"
+msgstr "كل الحسابات"
+
+msgid "All currencies"
+msgstr "كل العملات"
+
+msgid "All files"
+msgstr "كل الملفات"
+
+msgid "All items by purchase value"
+msgstr "كل الأصناف حسب قيمة الشراء"
+
+msgid "All journal entries are balanced (total Debit = total Credit)."
+msgstr "كل قيود اليومية متوازنة (مجموع المدين = مجموع الدائن)."
+
+msgid "Allocate"
+msgstr "توزيع"
+
+msgid "Allocation"
+msgstr "التوزيع"
+
+msgid "Allocation - which invoices this payment settles"
+msgstr "التخصيص - الفواتير التي تسددها هذه الدفعة"
+
+msgid "Allocation - which invoices this receipt settles"
+msgstr "التخصيص - الفواتير التي يسددها هذا القبض"
+
+msgid "Allowance Children"
+msgstr "تعويض الأولاد"
+
+msgid "Allowance Maximum"
+msgstr "الحد الأقصى للتعويض"
+
+msgid "Allowance Spouse"
+msgstr "تعويض الزوج/الزوجة"
+
+msgid "Allowance per Child"
+msgstr "التعويض عن كل ولد"
+
+msgid "Already saved"
+msgstr "محفوظ سابقاً"
+
+msgid "Amount"
+msgstr "المبلغ"
+
+msgid "Amount (+/-)"
+msgstr "المبلغ (+/-)"
+
+msgid "Amount (Account Currency)"
+msgstr "المبلغ (بعملة الحساب)"
+
+msgid "Amount (LBP)"
+msgstr "المبلغ (ل.ل.)"
+
+msgid "Amount LBP"
+msgstr "المبلغ بالليرة"
+
+msgid "Amount Paid"
+msgstr "المبلغ المدفوع"
+
+msgid "Amount USD"
+msgstr "المبلغ بالدولار"
+
+msgid "Amount must be finite"
+msgstr "يجب أن يكون المبلغ رقماً صالحاً"
+
+msgid "Amount paid (LBP)"
+msgstr "المبلغ المدفوع (ليرة)"
+
+msgid "Amount paid must be between zero and Total"
+msgstr "يجب أن يكون المبلغ المدفوع بين الصفر والمجموع"
+
+msgid "Amounts are on the detail accounts"
+msgstr "المبالغ على الحسابات التفصيلية"
+
+msgid "Amounts cannot be negative"
+msgstr "لا يمكن أن تكون المبالغ سالبة"
+
+msgid "Amounts filled from the Excel file. Check them, select the purchase, then press 'Add Cost on Purchase'."
+msgstr "المبالغ معبأة من ملف Excel. راجعها، اختر المشتريات، ثم اضغط «إضافة كلفة على المشتريات»."
+
+msgid "Amounts in"
+msgstr "المبالغ بـ"
+
+msgid "An automatic backup of this company and year is made every day when you open it (the newest 30 automatic copies are kept; manual and safety copies are never deleted). Keep a copy outside the computer too: Save Backup As... (USB / Drive)."
+msgstr "تؤخذ نسخة احتياطية تلقائية لهذه الشركة والسنة كل يوم عند فتحها (تُحفظ أحدث 30 نسخة تلقائية، ولا تُحذف النسخ اليدوية ونسخ الأمان أبداً). احتفظ بنسخة خارج الكمبيوتر أيضاً: حفظ النسخة باسم... (USB / Drive)."
+
+msgid "An extra neural reader for difficult photos. One-time download; invoices stay on this computer. Slower than normal OCR; handwriting still needs review before Save."
+msgstr "قارئ عصبي إضافي للصور الصعبة. تنزيل لمرة واحدة؛ تبقى الفواتير على هذا الكمبيوتر. أبطأ من القراءة العادية؛ وتحتاج قراءة خط اليد إلى مراجعة قبل الحفظ."
+
+msgid "Analytic Study"
+msgstr "دراسة تحليلية"
+
+msgid "Analytic study requested."
+msgstr "طُلبت دراسة تحليلية."
+
+msgid "Angle"
+msgstr "الزاوية"
+
+msgid "Annual"
+msgstr "سنوي"
+
+msgid "Annual Rollforward"
+msgstr "الحركة السنوية"
+
+msgid "Annual Schooling Grant"
+msgstr "منحة التعليم السنوية"
+
+msgid "Annual grant, paid once for the school year. Check supporting documents and prior payments. Tax-exempt amount is a separate setting."
+msgstr "منحة سنوية تُدفع مرة واحدة عن السنة الدراسية. راجع المستندات والدفعات السابقة. المبلغ المعفى من الضريبة إعداد منفصل."
+
+msgid "Annual leave days / year (empty = 15)"
+msgstr "أيام الإجازة السنوية (فارغ = 15)"
+
+msgid "Annual rate % (review-required)"
+msgstr "النسبة السنوية % (تتطلب مراجعة)"
+
+msgid "Applies"
+msgstr "يُطبّق"
+
+msgid "Applies to the selected items, or to all of them when none is selected. You can change one item later in Inventory > Items."
+msgstr "يُطبّق على الأصناف المختارة، أو عليها كلها إذا لم يُختر شيء. يمكنك تعديل صنف لاحقاً من المخزون > الأصناف."
+
+msgid "Apply"
+msgstr "تطبيق"
+
+msgid "Apply Code"
+msgstr "تطبيق الرمز"
+
+msgid "Apply Count to Stock + Journal"
+msgstr "تطبيق الجرد على المخزون + اليومية"
+
+msgid "Apply VAT A/C to selected"
+msgstr "تطبيق حساب الضريبة على المختار"
+
+msgid "Apply VAT account"
+msgstr "تطبيق حساب الضريبة"
+
+msgid "Apply additional payments"
+msgstr "اعتماد الدفعات الإضافية"
+
+msgid "Apply the physical count?\n\n- The stock quantities become the counted quantities (adjustment + / - documents).\n- The difference is posted in the journal (JV): surplus Dr stock 37 / Cr stock variation, shortage the other way,\n  valued at the item cost on the count date."
+msgstr "هل تريد تطبيق الجرد الفعلي؟\n\n- تصبح كميات المخزون مساوية للكميات المجرودة (مستندات تسوية + / -).\n- يُرحّل الفرق بقيد يومية (JV): الزيادة مدين مخزون 37 / دائن تغيّر المخزون، والنقص بالعكس،\n  وفق كلفة الصنف بتاريخ الجرد."
+
+msgid "Apply to Selected"
+msgstr "تطبيق على المختار"
+
+msgid "Apply to all years"
+msgstr "تطبيق على كل السنوات"
+
+msgid "Apply to selected / all"
+msgstr "تطبيق على المختار / الكل"
+
+msgid "Approval (internal control) - for this company"
+msgstr "الموافقة (رقابة داخلية) - لهذه الشركة"
+
+msgid "Approvals"
+msgstr "الموافقات"
+
+msgid "Approve"
+msgstr "موافقة"
+
+msgid "Approve Selected"
+msgstr "موافقة على المختار"
+
+msgid "Approved by"
+msgstr "وافق عليه"
+
+msgid "Apr"
+msgstr "نيسان"
+
+msgid "Arabic"
+msgstr "العربية"
+
+msgid "Arabic Name"
+msgstr "الاسم بالعربية"
+
+msgid "Arrows ↑ ↓ choose, Enter selects (or double-click). If it does not exist, create it below."
+msgstr "الأسهم ↑ ↓ للاختيار، Enter للتأكيد (أو نقر مزدوج). إذا لم يكن موجوداً، أنشئه أدناه."
+
+msgid "Article / law"
+msgstr "المادة / القانون"
+
+msgid "As of"
+msgstr "بتاريخ"
+
+msgid "As of date must use DD-MM-YYYY"
+msgstr "يجب أن يكون التاريخ بصيغة DD-MM-YYYY"
+
+msgid "Ask about quarterly cashflow, budget versus actual, or an analytic study."
+msgstr "اسأل عن التدفق النقدي ربع السنوي أو مقارنة الموازنة أو دراسة تحليلية."
+
+msgid "Ask in English, French, or Arabic about a quarter, budget variance, or analytic study."
+msgstr "اسأل بالعربية أو الإنجليزية أو الفرنسية عن ربع سنة أو انحراف الموازنة أو دراسة تحليلية."
+
+msgid "Asset"
+msgstr "الأصل"
+
+msgid "Asset / Account"
+msgstr "الأصل / الحساب"
+
+msgid "Asset Account"
+msgstr "حساب الأصل"
+
+msgid "Asset PDF"
+msgstr "PDF الأصل"
+
+msgid "Asset account"
+msgstr "حساب الأصل"
+
+msgid "Asset account (category)"
+msgstr "حساب الأصل (الفئة)"
+
+msgid "Asset account (category) and its yearly depreciation %"
+msgstr "حساب الأصل (الفئة) ونسبة استهلاكه السنوية"
+
+msgid "Asset account No."
+msgstr "رقم حساب الأصل"
+
+msgid "Asset accounts"
+msgstr "حسابات الأصول"
+
+msgid "Asset code"
+msgstr "رمز الأصل"
+
+msgid "Asset life (years)"
+msgstr "عمر الأصل (سنوات)"
+
+msgid "Asset name"
+msgstr "اسم الأصل"
+
+msgid "Asset register - click a line to edit it"
+msgstr "سجل الأصول - انقر على سطر لتعديله"
+
+msgid "Asset register review is unavailable. The preview row was kept and no invoice was posted."
+msgstr "مراجعة سجل الأصول غير متاحة. بقي سطر المعاينة ولم تُقيّد أي فاتورة."
+
+msgid "Asset saved"
+msgstr "تم حفظ الأصل"
+
+msgid "Asset saved; PDF attachment failed"
+msgstr "تم حفظ الأصل؛ فشل إرفاق PDF"
+
+msgid "Asset saved; retry PDF attachment"
+msgstr "تم حفظ الأصل؛ أعد محاولة إرفاق PDF"
+
+msgid "Asset suppliers"
+msgstr "موردو الأصول"
+
+msgid "Assets"
+msgstr "الأصول"
+
+msgid "Assets & Depreciation"
+msgstr "الأصول والاستهلاك"
+
+msgid "Assumptions per year - double-click a cell. Growth in % against the year before; Cost of sales empty = follows revenue (same gross margin). Investments and Financing in the chosen currency (financing: + loans / capital received, - repayments)."
+msgstr "الافتراضات لكل سنة - انقر مرتين على الخانة. النمو بالنسبة المئوية مقارنة بالسنة السابقة؛ كلفة المبيعات فارغة = تتبع الإيرادات (نفس هامش الربح الإجمالي). الاستثمارات والتمويل بالعملة المختارة (التمويل: + قروض / رأس مال مقبوض، - تسديدات)."
+
+msgid "Assumptions saved for this company."
+msgstr "حُفظت الافتراضات لهذه الشركة."
+
+msgid "At DOE rate"
+msgstr "بسعر فروقات الصرف"
+
+msgid "At date"
+msgstr "بتاريخ"
+
+msgid "At the end of the quarter the VAT accounts are closed: Dr output VAT (4427) / Cr deductible VAT (442...), the VAT the partial deduction does not allow goes to an expense, the credit brought forward is used, and the rest is VAT payable (Cr 4425) or VAT to recover (Dr 4429). The return must be saved first. Posting again replaces the voucher."
+msgstr "في نهاية الربع تُقفل حسابات الضريبة: مدين ضريبة المبيعات (4427) / دائن الضريبة القابلة للحسم (442...)، وتُحمّل الضريبة غير المسموح بحسمها جزئياً على مصروف، ويُستخدم الرصيد الدائن المدوّر، ويكون الباقي ضريبة مستحقة (دائن 4425) أو قابلة للاسترداد (مدين 4429). يجب حفظ التصريح أولاً. إعادة الترحيل تستبدل السند."
+
+msgid "Attach / Replace File…"
+msgstr "إرفاق / استبدال ملف…"
+
+msgid "Attach / Retry PDF"
+msgstr "إرفاق / إعادة PDF"
+
+msgid "Attach / Retry affects only this saved asset's PDF documents; it never saves or posts the asset."
+msgstr "الإرفاق / الإعادة يخص ملفات PDF لهذا الأصل المحفوظ فقط؛ لا يحفظ الأصل ولا يقيّده."
+
+msgid "Attach Customs PDF"
+msgstr "إرفاق PDF الجمارك"
+
+msgid "Attach PDF / Image"
+msgstr "إرفاق PDF / صورة"
+
+msgid "Attachment"
+msgstr "مرفق"
+
+msgid "Attachments"
+msgstr "المرفقات"
+
+msgid "Audit Report"
+msgstr "تقرير التدقيق"
+
+msgid "Audit Report (Excel)"
+msgstr "تقرير التدقيق (Excel)"
+
+msgid "Audit Report (PDF)"
+msgstr "تقرير التدقيق (PDF)"
+
+msgid "Audit Trail"
+msgstr "سجل التدقيق"
+
+msgid "Audit trail intact"
+msgstr "سجل التدقيق سليم"
+
+msgid "Auditor logo"
+msgstr "شعار المدقق"
+
+msgid "Auditor logo: -"
+msgstr "شعار المدقق: -"
+
+msgid "Auditor logo: removed (saved with Save)"
+msgstr "شعار المدقق: محذوف (يُحفظ عند الحفظ)"
+
+msgid "Aug"
+msgstr "آب"
+
+msgid "Auto Allocate (oldest first)"
+msgstr "توزيع تلقائي (الأقدم أولاً)"
+
+msgid "Auto Calculate"
+msgstr "حساب تلقائي"
+
+msgid "Auto Calculate Totals"
+msgstr "حساب المجاميع تلقائياً"
+
+msgid "Auto Match"
+msgstr "مطابقة تلقائية"
+
+msgid "Auto-fill / Refresh"
+msgstr "تعبئة / تحديث تلقائي"
+
+msgid "Automatic DOE"
+msgstr "فروقات صرف تلقائية"
+
+msgid "Average Cost"
+msgstr "متوسط الكلفة"
+
+msgid "Azure"
+msgstr "أزور (Azure)"
+
+msgid "Azure Settings"
+msgstr "إعدادات Azure"
+
+msgid "Azure is off."
+msgstr "Azure متوقف."
+
+msgid "BILL TO"
+msgstr "فاتورة إلى"
+
+msgid "BLOCKED"
+msgstr "غير قابل للحفظ"
+
+msgid "Back"
+msgstr "رجوع"
+
+msgid "Back up now"
+msgstr "نسخ احتياطي الآن"
+
+msgid "Backup"
+msgstr "نسخة احتياطية"
+
+msgid "Backup & Restore"
+msgstr "النسخ الاحتياطي والاستعادة"
+
+msgid "Backup File"
+msgstr "ملف النسخة الاحتياطية"
+
+msgid "Backups"
+msgstr "النسخ الاحتياطية"
+
+msgid "Balance"
+msgstr "الرصيد"
+
+msgid "Balance Due"
+msgstr "الرصيد المستحق"
+
+msgid "Balance Sheet"
+msgstr "الميزانية العمومية"
+
+msgid "Balance Sheet (1-5)"
+msgstr "الميزانية العمومية (1-5)"
+
+msgid "Bank Commission"
+msgstr "العمولة المصرفية"
+
+msgid "Bank Reconciliation"
+msgstr "التسوية المصرفية"
+
+msgid "Bank Reconciliation (Payment & Receipt)"
+msgstr "التسوية المصرفية (الدفع والقبض)"
+
+msgid "Bank account"
+msgstr "الحساب المصرفي"
+
+msgid "Bank commission"
+msgstr "عمولة المصرف"
+
+msgid "Bank statement"
+msgstr "كشف المصرف"
+
+msgid "Barcode"
+msgstr "الباركود"
+
+msgid "Base"
+msgstr "الأساس"
+
+msgid "Base Salary"
+msgstr "الراتب الأساسي"
+
+msgid "Base currency"
+msgstr "العملة الأساسية"
+
+msgid "Base salary"
+msgstr "الراتب الأساسي"
+
+msgid "Base salary must be finite and cannot be negative"
+msgstr "يجب أن يكون الراتب الأساسي رقماً صالحاً وغير سالب"
+
+msgid "Base year"
+msgstr "سنة الأساس"
+
+msgid "Base year (actual)"
+msgstr "سنة الأساس (فعلية)"
+
+msgid "Based on published 2010 Q1-2 / Q11-2 specimen sections only. Not an official form; A-F are internal refs. Obtain issued forms from the VAT Directorate."
+msgstr "مبني على نماذج 2010 المنشورة Q1-2 / Q11-2 فقط. ليس نموذجاً رسمياً؛ A-F مراجع داخلية. احصل على النماذج الصادرة من مديرية الضريبة على القيمة المضافة."
+
+msgid "Before VAT"
+msgstr "قبل الضريبة"
+
+msgid "Before VAT Deductible"
+msgstr "قبل الضريبة - قابل للحسم"
+
+msgid "Before VAT Non-Deductible"
+msgstr "قبل الضريبة - غير قابل للحسم"
+
+msgid "Blank means unreadable, not zero.\nNo accounting entry is saved here."
+msgstr "الخانة الفارغة تعني أنها غير مقروءة، وليس صفراً.\nلا يُحفظ أي قيد محاسبي هنا."
+
+msgid "Bonus"
+msgstr "مكافأة"
+
+msgid "Book the asset purchase"
+msgstr "قيد شراء الأصل"
+
+msgid "Book to"
+msgstr "القيد إلى"
+
+msgid "Booked before Nanza up to"
+msgstr "مقيّد قبل نانزا حتى"
+
+msgid "Books (account movements)"
+msgstr "الدفاتر (حركة الحسابات)"
+
+msgid "Books Health Check"
+msgstr "فحص سلامة الدفاتر"
+
+msgid "Books are open: no period is locked."
+msgstr "الدفاتر مفتوحة: لا توجد فترة مقفلة."
+
+msgid "Branch"
+msgstr "الفرع"
+
+msgid "Branch Name"
+msgstr "اسم الفرع"
+
+msgid "Branch in the number"
+msgstr "الفرع في الرقم"
+
+msgid "Branch:"
+msgstr "الفرع:"
+
+msgid "Branches"
+msgstr "الفروع"
+
+msgid "Brand"
+msgstr "العلامة التجارية"
+
+msgid "Branded Invoice PDF"
+msgstr "فاتورة PDF بالشعار"
+
+msgid "Bring the old program in one Excel file: opening balances, customers & suppliers, open invoices and items. Everything is checked first; nothing is saved while a line is wrong."
+msgstr "انقل البرنامج القديم بملف Excel واحد: الأرصدة الافتتاحية، الزبائن والموردون، الفواتير المفتوحة والأصناف. يُفحص كل شيء أولاً؛ لا يُحفظ شيء إذا كان أي سطر خاطئاً."
+
+msgid "Broker Fees"
+msgstr "أتعاب المخلص"
+
+msgid "Browse..."
+msgstr "استعراض..."
+
+msgid "Budget"
+msgstr "الموازنة"
+
+msgid "Budget Detail"
+msgstr "تفاصيل الموازنة"
+
+msgid "Budget Forecast"
+msgstr "توقعات الموازنة"
+
+msgid "Budget Projection"
+msgstr "إسقاط الموازنة"
+
+msgid "Budget Variances"
+msgstr "انحرافات الموازنة"
+
+msgid "Budget from a year"
+msgstr "موازنة من سنة"
+
+msgid "Budget from a year + %"
+msgstr "موازنة من سنة + %"
+
+msgid "Budget lines"
+msgstr "أسطر الموازنة"
+
+msgid "Budget vs Actual"
+msgstr "الموازنة مقابل الفعلي"
+
+msgid "Budget-versus-actual report requested."
+msgstr "طُلب تقرير الموازنة مقابل الفعلي."
+
+msgid "Build"
+msgstr "إنشاء"
+
+msgid "Build 13-Week Forecast"
+msgstr "إنشاء توقع 13 أسبوعاً"
+
+msgid "Build Cash Budget"
+msgstr "إعداد موازنة نقدية"
+
+msgid "Build Management Pack"
+msgstr "إعداد ملف الإدارة"
+
+msgid "Build Study"
+msgstr "إنشاء الدراسة"
+
+msgid "Build from the books"
+msgstr "إعداد من الدفاتر"
+
+msgid "Build the cash budget first"
+msgstr "أعدّ الموازنة النقدية أولاً"
+
+msgid "Build the report first"
+msgstr "أنشئ التقرير أولاً"
+
+msgid "Building analytic study..."
+msgstr "جارٍ إنشاء الدراسة التحليلية..."
+
+msgid "Business Reports"
+msgstr "تقارير الأعمال"
+
+msgid "By Due Date"
+msgstr "حسب تاريخ الاستحقاق"
+
+msgid "C"
+msgstr "دائن"
+
+msgid "CNSS Annual Employee Declaration"
+msgstr "التصريح السنوي للضمان عن الأجراء"
+
+msgid "CNSS Annual Settlement Form"
+msgstr "نموذج التسوية السنوية للضمان"
+
+msgid "CNSS Contributions Form"
+msgstr "نموذج اشتراكات الضمان"
+
+msgid "CREDIT NOTE"
+msgstr "إشعار دائن"
+
+msgid "Calcul du taux récupérable (Art. 31): revenues taxable / exempt, recoverable and non-recoverable VAT, VAT payable."
+msgstr "احتساب نسبة الاسترداد (المادة 31): الإيرادات الخاضعة / المعفاة، الضريبة القابلة وغير القابلة للاسترداد، الضريبة المستحقة."
+
+msgid "Calculate"
+msgstr "احسب"
+
+msgid "Calculate All"
+msgstr "احسب الكل"
+
+msgid "Can approve"
+msgstr "يمكنه الموافقة"
+
+msgid "Can delete / cancel"
+msgstr "يمكنه الحذف / الإلغاء"
+
+msgid "Cancel"
+msgstr "إلغاء"
+
+msgid "Cancel Invoice"
+msgstr "إلغاء الفاتورة"
+
+msgid "Cancel Purchase"
+msgstr "إلغاء المشتريات"
+
+msgid "Cancel document"
+msgstr "إلغاء المستند"
+
+msgid "Cancellation reason:"
+msgstr "سبب الإلغاء:"
+
+msgid "Carrying"
+msgstr "القيمة الدفترية"
+
+msgid "Cash (expenses and payments)"
+msgstr "الصندوق (المصاريف والدفعات)"
+
+msgid "Cash -> 531, Bank Transfer / Cheque / Card -> 512 (change the account if needed); the amount paid follows the Total."
+msgstr "نقداً -> 531، تحويل / شيك / بطاقة -> 512 (غيّر الحساب عند الحاجة)؛ المبلغ المدفوع يتبع المجموع."
+
+msgid "Cash / Bank"
+msgstr "الصندوق / المصرف"
+
+msgid "Cash / Bank Account"
+msgstr "حساب الصندوق / المصرف"
+
+msgid "Cash / Bank Account (paid)"
+msgstr "حساب الصندوق / المصرف (المدفوع)"
+
+msgid "Cash / Bank account (paid invoices)"
+msgstr "حساب الصندوق / المصرف (الفواتير المدفوعة)"
+
+msgid "Cash Budget"
+msgstr "الموازنة النقدية"
+
+msgid "Cash Budget - from a year + %"
+msgstr "الموازنة النقدية - من سنة + %"
+
+msgid "Cash Flow"
+msgstr "التدفقات النقدية"
+
+msgid "Cash Flow Category"
+msgstr "فئة التدفق النقدي"
+
+msgid "Cash Flow Outlook"
+msgstr "نظرة على التدفقات النقدية"
+
+msgid "Cash budget year"
+msgstr "سنة الموازنة النقدية"
+
+msgid "Cash flow: calculated automatically (indirect method). To replace it, enter the three reviewed totals. Positive = inflow, negative = outflow.\nOCI is disclosure only; related asset/equity entries must already be posted."
+msgstr "التدفق النقدي: يُحتسب تلقائياً بالطريقة غير المباشرة. لاستبداله أدخل المجاميع الثلاثة المراجَعة. الموجب = تدفق داخل، والسالب = تدفق خارج.\nالدخل الشامل الآخر للإفصاح فقط؛ ويجب ترحيل قيود الأصول / حقوق الملكية المرتبطة مسبقاً."
+
+msgid "Cash in"
+msgstr "مقبوضات"
+
+msgid "Cash in %"
+msgstr "مقبوضات %"
+
+msgid "Cash out"
+msgstr "مدفوعات"
+
+msgid "Cash out %"
+msgstr "مدفوعات %"
+
+msgid "Cash shortage threshold"
+msgstr "حد العجز النقدي"
+
+msgid "Cashflow"
+msgstr "التدفق النقدي"
+
+msgid "Categories & Units"
+msgstr "الفئات والوحدات"
+
+msgid "Categories and subcategories"
+msgstr "الفئات والفئات الفرعية"
+
+msgid "Category"
+msgstr "الفئة"
+
+msgid "Chapters (class)"
+msgstr "الفصول (الصنف)"
+
+msgid "Chart"
+msgstr "الرسم البياني"
+
+msgid "Chart of Accounts"
+msgstr "دليل الحسابات"
+
+msgid "Chart of Accounts: create the account again, or correct the entries"
+msgstr "دليل الحسابات: أنشئ الحساب من جديد، أو صحّح القيود"
+
+msgid "Chart of accounts from Excel"
+msgstr "دليل الحسابات من Excel"
+
+msgid "Charts"
+msgstr "الرسوم البيانية"
+
+msgid "Check"
+msgstr "تحقق"
+
+msgid "Check & Import..."
+msgstr "فحص واستيراد..."
+
+msgid "Check Balance"
+msgstr "التحقق من التوازن"
+
+msgid "Check Sales Accounts"
+msgstr "التحقق من حسابات المبيعات"
+
+msgid "Check Sales Accounts..."
+msgstr "التحقق من حسابات المبيعات..."
+
+msgid "Check again"
+msgstr "فحص من جديد"
+
+msgid "Check the date and amounts"
+msgstr "تحقق من التاريخ والمبالغ"
+
+msgid "Check the date: an entry of another year belongs in that year's file"
+msgstr "تحقق من التاريخ: قيد سنة أخرى مكانه في ملف تلك السنة"
+
+msgid "Check the image and tick the confirmation first"
+msgstr "راجع الصورة ثم حدّد خانة التأكيد أولاً"
+
+msgid "Check the invoice reading"
+msgstr "مراجعة قراءة الفاتورة"
+
+msgid "Check with the Books"
+msgstr "تحقق مع الدفاتر"
+
+msgid "Checked"
+msgstr "تم التحقق"
+
+msgid "Child Allowance"
+msgstr "تعويض الولد"
+
+msgid "Children"
+msgstr "الأولاد"
+
+msgid "Children born:"
+msgstr "الأولاد المولودون:"
+
+msgid "Choose Excel File"
+msgstr "اختيار ملف Excel"
+
+msgid "Choose Excel file"
+msgstr "اختيار ملف إكسل"
+
+msgid "Choose PDF Invoice(s)"
+msgstr "اختيار فواتير PDF"
+
+msgid "Choose Purchases, Expenses, Assets or Sales"
+msgstr "اختر مشتريات أو مصاريف أو أصول أو مبيعات"
+
+msgid "Choose a class-2 asset account."
+msgstr "اختر حساب أصل من الصنف 2."
+
+msgid "Choose a currency from Settings"
+msgstr "اختر عملة من الإعدادات"
+
+msgid "Choose a form first."
+msgstr "اختر نموذجاً أولاً."
+
+msgid "Choose a report and period, then press Generate. Official figures use posted payroll, converted to LBP."
+msgstr "اختر تقريراً وفترة ثم اضغط إنشاء. الأرقام الرسمية من الرواتب المقيّدة محوّلة إلى الليرة."
+
+msgid "Choose a report and press Show."
+msgstr "اختر تقريراً واضغط عرض."
+
+msgid "Choose a smaller image (under 1.5 MB)"
+msgstr "اختر صورة أصغر (أقل من 1.5 ميغابايت)"
+
+msgid "Choose an Excel or PDF file first"
+msgstr "اختر ملف Excel أو PDF أولاً"
+
+msgid "Choose an item from the list before showing its stock card"
+msgstr "اختر صنفاً من القائمة قبل عرض بطاقة مخزونه"
+
+msgid "Choose any 3. Stock at To date; with Month, Project or Branch: net movement From / To."
+msgstr "اختر أي 3. المخزون في تاريخ النهاية؛ مع الشهر أو المشروع أو الفرع: صافي الحركة من / إلى."
+
+msgid "Choose both accounts"
+msgstr "اختر الحسابين"
+
+msgid "Choose different From and To warehouses."
+msgstr "اختر مستودعين مختلفين للمصدر والوجهة."
+
+msgid "Choose filters"
+msgstr "اختر المرشحات"
+
+msgid "Choose filters..."
+msgstr "اختر المرشحات..."
+
+msgid "Choose logo..."
+msgstr "اختيار الشعار..."
+
+msgid "Choose or type the customer"
+msgstr "اختر الزبون أو اكتبه"
+
+msgid "Choose the From account"
+msgstr "اختر حساب المصدر"
+
+msgid "Choose the bank account and press Show. Match each statement line (left) with its book line (right)."
+msgstr "اختر الحساب المصرفي واضغط عرض. طابق كل سطر من الكشف (يساراً) مع سطره في الدفاتر (يميناً)."
+
+msgid "Choose the customer / supplier to see the open invoices"
+msgstr "اختر الزبون / المورد لرؤية الفواتير المفتوحة"
+
+msgid "Choose the documents and the year, then press Preview."
+msgstr "اختر المستندات والسنة ثم اضغط معاينة."
+
+msgid "Choose the employee"
+msgstr "اختر الموظف"
+
+msgid "Choose the legal reason for the income-tax exemption"
+msgstr "اختر السبب القانوني للإعفاء من ضريبة الدخل"
+
+msgid "Choose the new account"
+msgstr "اختر الحساب الجديد"
+
+msgid "Choose the options and press Show. Each Show opens its own tab; double-click a line to open the transaction."
+msgstr "اختر الخيارات واضغط عرض. كل عرض يفتح تبويباً خاصاً؛ انقر مرتين على سطر لفتح العملية."
+
+msgid "Choose the product and the quantity: the materials come from its recipe. For a special order change the quantities or add / delete materials here - the recipe itself is not changed."
+msgstr "اختر المنتج والكمية: تأتي المواد من وصفته. لطلبية خاصة غيّر الكميات أو أضف / احذف مواد هنا - الوصفة نفسها لا تتغير."
+
+msgid "Choose the product first"
+msgstr "اختر المنتج أولاً"
+
+msgid "Choose the product made"
+msgstr "اختر المنتج المصنوع"
+
+msgid "Choose the product to make"
+msgstr "اختر المنتج المراد صنعه"
+
+msgid "Choose the product, then the materials for the quantity above (F2 in Item Code to search). A material can itself have a recipe."
+msgstr "اختر المنتج ثم المواد للكمية أعلاه (F2 في رمز الصنف للبحث). يمكن أن يكون للمادة وصفة أيضاً."
+
+msgid "Choose the year and quarter, then press Generate."
+msgstr "اختر السنة والفصل ثم اضغط إنشاء."
+
+msgid "Choose what this company uses and what you see. Hidden screens and reports leave the menu; nothing is deleted, and users' permissions (payroll, VAT, delete) still apply."
+msgstr "اختر ما تستعمله هذه الشركة وما تراه. الشاشات والتقارير المخفية تخرج من القائمة؛ لا يُحذف شيء، وتبقى صلاحيات المستخدمين (الرواتب، الضريبة، الحذف) سارية."
+
+msgid "Class 4/5 account"
+msgstr "حساب من الصنف 4/5"
+
+msgid "Class-2 asset account"
+msgstr "حساب أصل من الصنف 2"
+
+msgid "Clear"
+msgstr "مسح"
+
+msgid "Clear Allocation"
+msgstr "مسح التوزيع"
+
+msgid "Clear Selection"
+msgstr "مسح الاختيار"
+
+msgid "Clear search"
+msgstr "مسح البحث"
+
+msgid "Click a filter to tick one or several values. Filters apply to the General Ledger lines."
+msgstr "انقر على مرشح لاختيار قيمة أو أكثر. المرشحات تُطبّق على أسطر دفتر الأستاذ العام."
+
+msgid "Client Account"
+msgstr "حساب الزبون"
+
+msgid "Client Installation ID"
+msgstr "رقم تثبيت العميل"
+
+msgid "Client Items: Qty & Value"
+msgstr "أصناف الزبون: الكمية والقيمة"
+
+msgid "Clients"
+msgstr "العملاء"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Close (Esc)"
+msgstr "إغلاق (Esc)"
+
+msgid "Close Fiscal Year"
+msgstr "إقفال السنة المالية"
+
+msgid "Close Tab"
+msgstr "إغلاق التبويب"
+
+msgid "Close the VAT automatically when the quarterly return is saved"
+msgstr "أقفل الضريبة تلقائياً عند حفظ التصريح الفصلي"
+
+msgid "Close the books"
+msgstr "إقفال الدفاتر"
+
+msgid "Close the books (period lock)"
+msgstr "إقفال الدفاتر (قفل الفترة)"
+
+msgid "Close the file in Excel, then try again."
+msgstr "أغلق الملف في Excel ثم حاول مجدداً."
+
+msgid "Closing"
+msgstr "الإقفال"
+
+msgid "Closing 6&7"
+msgstr "إقفال الصنفين 6 و7"
+
+msgid "Closing cash"
+msgstr "النقد في آخر الفترة"
+
+msgid "Code"
+msgstr "الرمز"
+
+msgid "Code (3 letters)"
+msgstr "الرمز (3 أحرف)"
+
+msgid "Code (blank = automatic)"
+msgstr "الرمز (فارغ = تلقائي)"
+
+msgid "Columns"
+msgstr "الأعمدة"
+
+msgid "Commercial Register No."
+msgstr "رقم السجل التجاري"
+
+msgid "Commercial Register Place"
+msgstr "مكان السجل التجاري"
+
+msgid "Commercial document"
+msgstr "مستند تجاري"
+
+msgid "Commercial documents"
+msgstr "المستندات التجارية"
+
+msgid "Commission"
+msgstr "العمولة"
+
+msgid "Commission A/C"
+msgstr "حساب العمولة"
+
+msgid "Companies"
+msgstr "الشركات"
+
+msgid "Companies of this user"
+msgstr "شركات هذا المستخدم"
+
+msgid "Companies..."
+msgstr "الشركات..."
+
+msgid "Companies: all"
+msgstr "الشركات: الكل"
+
+msgid "Company"
+msgstr "الشركة"
+
+msgid "Company & Auditor"
+msgstr "الشركة والمدقق"
+
+msgid "Company Name"
+msgstr "اسم الشركة"
+
+msgid "Company Name *"
+msgstr "اسم الشركة *"
+
+msgid "Company file from another computer"
+msgstr "ملف شركة من حاسوب آخر"
+
+msgid "Company name"
+msgstr "اسم الشركة"
+
+msgid "Company overview"
+msgstr "نظرة عامة على الشركة"
+
+msgid "Company-wide actuals; trailing 3 complete months estimate the future."
+msgstr "أرقام فعلية للشركة كلها؛ آخر 3 أشهر كاملة تقدّر المستقبل."
+
+msgid "Comparative P&L"
+msgstr "الأرباح والخسائر المقارنة"
+
+msgid "Comparative Trial Balance"
+msgstr "ميزان مراجعة مقارن"
+
+msgid "Compare up to"
+msgstr "المقارنة حتى"
+
+msgid "Compare with Budget"
+msgstr "مقارنة مع الموازنة"
+
+msgid "Component"
+msgstr "المكوّن"
+
+msgid "Confirm"
+msgstr "تأكيد"
+
+msgid "Confirm Cancellation"
+msgstr "تأكيد الإلغاء"
+
+msgid "Confirm PDF types"
+msgstr "تأكيد أنواع PDF"
+
+msgid "Confirm a saved document before receiving or creating a draft invoice. Review and post invoices in Uploaded Data; record payments in Payments."
+msgstr "أكّد المستند المحفوظ قبل الاستلام أو إنشاء مسودة فاتورة. راجع الفواتير ورحّلها في البيانات المرفوعة؛ وسجّل الدفعات في الدفع والقبض."
+
+msgid "Confirm that you reviewed the accounts and annual rate."
+msgstr "أكّد أنك راجعت الحسابات والنسبة السنوية."
+
+msgid "Confirmed documents cannot be edited"
+msgstr "لا يمكن تعديل المستندات المؤكدة"
+
+msgid "Consignment Note"
+msgstr "سند بضاعة بالأمانة"
+
+msgid "Contact"
+msgstr "جهة الاتصال"
+
+msgid "Contact Number"
+msgstr "رقم الاتصال"
+
+msgid "Contains"
+msgstr "يحتوي على"
+
+msgid "Content hash"
+msgstr "بصمة المحتوى"
+
+msgid "Conversion factor"
+msgstr "معامل التحويل"
+
+msgid "Convert to"
+msgstr "تحويل إلى"
+
+msgid "Converted amount"
+msgstr "المبلغ المحوّل"
+
+msgid "Copy"
+msgstr "نسخ"
+
+msgid "Correct All"
+msgstr "تصحيح الكل"
+
+msgid "Correct Selected"
+msgstr "تصحيح المختار"
+
+msgid "Correct the errors first (red lines)."
+msgstr "صحّح الأخطاء أولاً (الأسطر الحمراء)."
+
+msgid "Correct the unbalanced entries above"
+msgstr "صحّح القيود غير المتوازنة أعلاه"
+
+msgid "Cost / Asset A/C"
+msgstr "حساب الكلفة / الأصل"
+
+msgid "Cost / Revenue A/C"
+msgstr "حساب الكلفة / الإيراد"
+
+msgid "Cost Account (linked)"
+msgstr "حساب الكلفة (مرتبط)"
+
+msgid "Cost Price (avg)"
+msgstr "سعر الكلفة (المتوسط)"
+
+msgid "Cost account (purchases, class 6)"
+msgstr "حساب الكلفة (المشتريات، الصنف 6)"
+
+msgid "Cost breakdown Excel"
+msgstr "تفصيل الكلفة Excel"
+
+msgid "Cost breakdown PDF"
+msgstr "تفصيل الكلفة PDF"
+
+msgid "Cost component"
+msgstr "نوع الكلفة"
+
+msgid "Cost of living / month"
+msgstr "غلاء المعيشة / شهر"
+
+msgid "Cost of sales %"
+msgstr "كلفة المبيعات %"
+
+msgid "Cost on Purchase"
+msgstr "الكلفة على المشتريات"
+
+msgid "Cost on Purchase (customs / freight / insurance) for the selected purchase"
+msgstr "الكلفة على المشتريات (جمارك / شحن / تأمين) للمشتريات المختارة"
+
+msgid "Cost on Purchase Accounts"
+msgstr "الكلفة في حسابات المشتريات"
+
+msgid "Cost price"
+msgstr "سعر الكلفة"
+
+msgid "Cost price (average of purchases): -"
+msgstr "سعر الكلفة (متوسط المشتريات): -"
+
+msgid "Costing"
+msgstr "احتساب الكلفة"
+
+msgid "Costing method"
+msgstr "طريقة احتساب الكلفة"
+
+msgid "Count"
+msgstr "الجرد"
+
+msgid "Count date"
+msgstr "تاريخ الجرد"
+
+msgid "Create & Select"
+msgstr "إنشاء واختيار"
+
+msgid "Create Account"
+msgstr "إنشاء حساب"
+
+msgid "Create Backup Now"
+msgstr "إنشاء نسخة احتياطية الآن"
+
+msgid "Create Company"
+msgstr "إنشاء الشركة"
+
+msgid "Create Excel…"
+msgstr "إنشاء Excel…"
+
+msgid "Create Missing Payment Entries"
+msgstr "إنشاء قيود الدفع الناقصة"
+
+msgid "Create Return (goods back)"
+msgstr "إنشاء مرتجع (إرجاع بضاعة)"
+
+msgid "Create Separate Year"
+msgstr "إنشاء سنة منفصلة"
+
+msgid "Create VAT Accounts"
+msgstr "إنشاء حسابات الضريبة"
+
+msgid "Create a new item with this name"
+msgstr "إنشاء صنف جديد بهذا الاسم"
+
+msgid "Create account here (number assigned automatically)"
+msgstr "أنشئ الحساب هنا (يُعطى الرقم تلقائياً)"
+
+msgid "Create currency"
+msgstr "إنشاء عملة"
+
+msgid "Create draft — do not post"
+msgstr "إنشاء مسودة دون ترحيل"
+
+msgid "Create invoice draft"
+msgstr "إنشاء مسودة فاتورة"
+
+msgid "Create register item"
+msgstr "إنشاء صنف في السجل"
+
+msgid "Create the payment entry (Dr cash or bank / Cr customer, or Dr supplier / Cr cash or bank) for every invoice marked as paid that does not have one yet?\n\nCash goes to 531 and other methods to 512, unless an account was chosen on the invoice (Edit Selected > Cash / Bank Account)."
+msgstr "هل تريد إنشاء قيد الدفع (مدين صندوق أو مصرف / دائن عميل، أو مدين مورد / دائن صندوق أو مصرف) لكل فاتورة معلّمة كمدفوعة ولا يوجد لها قيد؟\n\nيُسجّل النقد في 531 والطرق الأخرى في 512، إلا إذا اختير حساب في الفاتورة (تعديل المحدد > حساب الصندوق / المصرف)."
+
+msgid "Create this fiscal year as a separate open year? The previous year will remain open until you close it manually."
+msgstr "إنشاء هذه السنة المالية كسنة مفتوحة منفصلة؟ تبقى السنة السابقة مفتوحة حتى تقفلها يدوياً."
+
+msgid "Create two active warehouses under Warehouses & Settings first."
+msgstr "أنشئ مستودعين نشطين أولاً في المستودعات والإعدادات."
+
+msgid "Created"
+msgstr "أُنشئ"
+
+msgid "Credit"
+msgstr "دائن"
+
+msgid "Credit B/F"
+msgstr "دائن منقول"
+
+msgid "Credit B/F (LBP, optional)"
+msgstr "رصيد دائن مدوّر (ل.ل.، اختياري)"
+
+msgid "Credit C/F"
+msgstr "دائن مُرحّل"
+
+msgid "Ctrl+F  |  searches every column; amounts and dates work with or without , and -"
+msgstr "Ctrl+F  |  يبحث في كل الأعمدة؛ المبالغ والتواريخ تعمل مع أو بدون الفاصلة والشرطة"
+
+msgid "Cur."
+msgstr "العملة"
+
+msgid "Currencies"
+msgstr "العملات"
+
+msgid "Currencies and VAT (filled from the country - change them if needed)"
+msgstr "العملات والضريبة (تُعبّأ حسب البلد - غيّرها عند الحاجة)"
+
+msgid "Currencies to revalue"
+msgstr "العملات المراد إعادة تقييمها"
+
+msgid "Currency"
+msgstr "العملة"
+
+msgid "Currency: {currency}"
+msgstr "العملة: {currency}"
+
+msgid "Current Number"
+msgstr "الرقم الحالي"
+
+msgid "Current Period"
+msgstr "الفترة الحالية"
+
+msgid "Current password"
+msgstr "كلمة المرور الحالية"
+
+msgid "Custom Analytic"
+msgstr "تحليل مخصص"
+
+msgid "Custom report requested."
+msgstr "طُلب تقرير مخصص."
+
+msgid "Customer"
+msgstr "الزبون"
+
+msgid "Customer / Supplier"
+msgstr "الزبون / المورد"
+
+msgid "Customer / Supplier Ageing"
+msgstr "أعمار ذمم الزبائن / الموردين"
+
+msgid "Customer / Supplier Already Exists"
+msgstr "الزبون / المورد موجود سابقاً"
+
+msgid "Customer / Supplier File"
+msgstr "ملف الزبون / المورد"
+
+msgid "Customer / Supplier account"
+msgstr "حساب الزبون / المورد"
+
+msgid "Customer / supplier"
+msgstr "العميل / المورد"
+
+msgid "Customer Receipt (RV)"
+msgstr "سند قبض من عميل (RV)"
+
+msgid "Customer Type"
+msgstr "نوع الزبون"
+
+msgid "Customer days (DSO)"
+msgstr "أيام تحصيل الزبائن (DSO)"
+
+msgid "Customer receipts"
+msgstr "مقبوضات العملاء"
+
+msgid "Customer receipts (RV)"
+msgstr "سندات قبض الزبائن (RV)"
+
+msgid "Customers / Suppliers"
+msgstr "الزبائن / الموردون"
+
+msgid "Customers / Suppliers - F2"
+msgstr "العملاء / الموردون - F2"
+
+msgid "Customers / Suppliers - Search"
+msgstr "العملاء / الموردون - بحث"
+
+msgid "Customs"
+msgstr "الجمارك"
+
+msgid "Customs fees"
+msgstr "رسوم جمركية"
+
+msgid "Customs per item"
+msgstr "جمارك حسب الصنف"
+
+msgid "Customs per item: only the items marked 'Subject to customs' (Inventory > Items). Customs fees: all the items."
+msgstr "جمارك حسب الصنف: فقط الأصناف المؤشر عليها «خاضع للجمارك» (المخزون > الأصناف). رسوم جمركية: كل الأصناف."
+
+msgid "Cut"
+msgstr "قص"
+
+msgid "D"
+msgstr "مدين"
+
+msgid "D/C"
+msgstr "م/د"
+
+msgid "DD-MM-YYYY"
+msgstr "يوم-شهر-سنة"
+
+msgid "DEBIT NOTE"
+msgstr "إشعار مدين"
+
+msgid "DOE"
+msgstr "فروق الصرف (DOE)"
+
+msgid "DOE - Automatic Exchange Difference"
+msgstr "DOE - فرق الصرف التلقائي"
+
+msgid "DOE date rates:"
+msgstr "أسعار تاريخ فروقات الصرف:"
+
+msgid "DOE posting date"
+msgstr "تاريخ قيد فروقات الصرف"
+
+msgid "Daily Average"
+msgstr "المتوسط اليومي"
+
+msgid "Dashboard"
+msgstr "لوحة القيادة"
+
+msgid "Dashboard Exchange Rate"
+msgstr "سعر صرف لوحة القيادة"
+
+msgid "Database restored successfully. Refreshing all pages."
+msgstr "تمت استعادة قاعدة البيانات بنجاح. يجري تحديث كل الصفحات."
+
+msgid "Date"
+msgstr "التاريخ"
+
+msgid "Date (DD-MM-YYYY)"
+msgstr "التاريخ (DD-MM-YYYY)"
+
+msgid "Date / time (UTC)"
+msgstr "التاريخ / الوقت (UTC)"
+
+msgid "Date From"
+msgstr "من تاريخ"
+
+msgid "Date To"
+msgstr "إلى تاريخ"
+
+msgid "Date of Birth"
+msgstr "تاريخ الولادة"
+
+msgid "Date of birth"
+msgstr "تاريخ الولادة"
+
+msgid "Date of marriage"
+msgstr "تاريخ الزواج"
+
+msgid "Date of the check"
+msgstr "تاريخ التحقق"
+
+msgid "Dates as DD-MM-YYYY, rates like 3 or 3%, ceilings as numbers"
+msgstr "التواريخ بصيغة DD-MM-YYYY، النسب مثل 3 أو 3%، السقوف أرقام"
+
+msgid "Dates must use DD-MM-YYYY"
+msgstr "يجب أن تكون التواريخ بصيغة DD-MM-YYYY"
+
+msgid "Days"
+msgstr "الأيام"
+
+msgid "Days (empty = calendar days)"
+msgstr "الأيام (فارغ = أيام التقويم)"
+
+msgid "Days Left"
+msgstr "الأيام المتبقية"
+
+msgid "Days Overdue"
+msgstr "أيام التأخير"
+
+msgid "Debit"
+msgstr "مدين"
+
+msgid "Debit = credit in every journal entry"
+msgstr "المدين = الدائن في كل قيد"
+
+msgid "Debit: 0.00   Credit: 0.00"
+msgstr "مدين: 0.00   دائن: 0.00"
+
+msgid "Dec"
+msgstr "ك1"
+
+msgid "Declaration No."
+msgstr "رقم التصريح"
+
+msgid "Deductible"
+msgstr "قابل للحسم"
+
+msgid "Deductible VAT - expenses"
+msgstr "الضريبة القابلة للحسم - المصاريف"
+
+msgid "Deductible VAT - purchases"
+msgstr "الضريبة القابلة للحسم - المشتريات"
+
+msgid "Deductible, Non-Deductible, VAT, and Total must be valid numbers"
+msgstr "يجب أن تكون القيم القابلة وغير القابلة للحسم والضريبة والمجموع أرقاماً صحيحة"
+
+msgid "Deduction ratio"
+msgstr "نسبة الحسم"
+
+msgid "Deduction ratio (Art. 31)"
+msgstr "نسبة الحسم (المادة 31)"
+
+msgid "Default Transport Days"
+msgstr "أيام النقل الافتراضية"
+
+msgid "Default Type"
+msgstr "النوع الافتراضي"
+
+msgid "Default VAT"
+msgstr "الضريبة الافتراضية"
+
+msgid "Default accounts are filled in. Edit an account when this purchase needs a different posting."
+msgstr "الحسابات الافتراضية معبأة. عدّل الحساب عندما تحتاج هذه المشتريات قيداً مختلفاً."
+
+msgid "Default accounts saved. New documents use them from now on; documents already saved are not changed."
+msgstr "حُفظت الحسابات الافتراضية. المستندات الجديدة تستعملها من الآن؛ المستندات المحفوظة لا تتغير."
+
+msgid "Default currency"
+msgstr "العملة الافتراضية"
+
+msgid "Default posting accounts - used when a document does not name an account"
+msgstr "حسابات القيد الافتراضية - تُستعمل عندما لا يحدد المستند حساباً"
+
+msgid "Delete"
+msgstr "حذف"
+
+msgid "Delete All Listed"
+msgstr "حذف كل المعروض"
+
+msgid "Delete Closing & Reopen"
+msgstr "حذف الإقفال وإعادة الفتح"
+
+msgid "Delete Closing & Reopen Year"
+msgstr "حذف الإقفال وإعادة فتح السنة"
+
+msgid "Delete Document"
+msgstr "حذف المستند"
+
+msgid "Delete Fiscal Year"
+msgstr "حذف السنة المالية"
+
+msgid "Delete Invoice"
+msgstr "حذف الفاتورة"
+
+msgid "Delete Journal Voucher"
+msgstr "حذف قيد اليومية"
+
+msgid "Delete Journal Vouchers"
+msgstr "حذف قيود اليومية"
+
+msgid "Delete Line"
+msgstr "حذف سطر"
+
+msgid "Delete Opening Voucher"
+msgstr "حذف القيد الافتتاحي"
+
+msgid "Delete Order"
+msgstr "حذف الطلبية"
+
+msgid "Delete Period"
+msgstr "حذف الفترة"
+
+msgid "Delete Recipe"
+msgstr "حذف الوصفة"
+
+msgid "Delete Selected"
+msgstr "حذف المختار"
+
+msgid "Delete Selected Voucher"
+msgstr "حذف القيد المختار"
+
+msgid "Delete Statement Line"
+msgstr "حذف سطر الكشف"
+
+msgid "Delete Unused Accounts..."
+msgstr "حذف الحسابات غير المستعملة..."
+
+msgid "Delete the selected statement line?"
+msgstr "حذف سطر الكشف المختار؟"
+
+msgid "Delete this expense and its journal entry?"
+msgstr "حذف هذا المصروف وقيده؟"
+
+msgid "Delete this unposted asset from the register?"
+msgstr "حذف هذا الأصل غير المقيّد من السجل؟"
+
+msgid "Deleted or cancelled purchases cannot be edited"
+msgstr "لا يمكن تعديل المشتريات المحذوفة أو الملغاة"
+
+msgid "Dep."
+msgstr "القسم"
+
+msgid "Dep. / Project"
+msgstr "القسم / المشروع"
+
+msgid "Department"
+msgstr "القسم"
+
+msgid "Department Name"
+msgstr "اسم القسم"
+
+msgid "Departments"
+msgstr "الأقسام"
+
+msgid "Deprec. (month)"
+msgstr "الاستهلاك (شهري)"
+
+msgid "Depreciation"
+msgstr "الاستهلاك"
+
+msgid "Depreciation %"
+msgstr "نسبة الاستهلاك %"
+
+msgid "Depreciation % / year"
+msgstr "نسبة الاستهلاك % / سنة"
+
+msgid "Depreciation (filled from the asset account in tab 1 - change only if needed)"
+msgstr "الاستهلاك (معبأ من حساب الأصل في التبويب 1 - غيّره فقط عند الحاجة)"
+
+msgid "Depreciation expense account"
+msgstr "حساب مصروف الاستهلاك"
+
+msgid "Depreciation schedule of the selected asset"
+msgstr "جدول استهلاك الأصل المحدد"
+
+msgid "Depreciation start"
+msgstr "بداية الاستهلاك"
+
+msgid "Depth"
+msgstr "العمق"
+
+msgid "Description"
+msgstr "البيان"
+
+msgid "Detail"
+msgstr "التفصيل"
+
+msgid "Detailed Account (statement)"
+msgstr "حساب تفصيلي (كشف)"
+
+msgid "Details"
+msgstr "التفاصيل"
+
+msgid "Difference"
+msgstr "الفرق"
+
+msgid "Difference (expected zero)"
+msgstr "الفرق (المتوقع صفر)"
+
+msgid "Difference Value"
+msgstr "قيمة الفرق"
+
+msgid "Director Remuneration"
+msgstr "تعويضات المدير"
+
+msgid "Director Remuneration (not taxable)"
+msgstr "تعويض المدير (غير خاضع للضريبة)"
+
+msgid "Discount"
+msgstr "الحسم"
+
+msgid "Discount %"
+msgstr "الحسم %"
+
+msgid "Document"
+msgstr "المستند"
+
+msgid "Document Alerts"
+msgstr "تنبيهات المستندات"
+
+msgid "Document Type"
+msgstr "نوع المستند"
+
+msgid "Document line"
+msgstr "سطر المستند"
+
+msgid "Document lines"
+msgstr "أسطر المستند"
+
+msgid "Document type (verify)"
+msgstr "نوع المستند (تحقّق)"
+
+msgid "Documents"
+msgstr "المستندات"
+
+msgid "Documents blocking filing"
+msgstr "مستندات تمنع إتمام التصريح"
+
+msgid "Done"
+msgstr "تم"
+
+msgid "Double-click Line Detail to type · F2 = account list"
+msgstr "انقر مرتين على البيان للكتابة · F2 = قائمة الحسابات"
+
+msgid "Double-click a document to see it"
+msgstr "انقر مرتين على مستند لرؤيته"
+
+msgid "Double-click a line in the list to edit it."
+msgstr "انقر مرتين على سطر في القائمة لتعديله."
+
+msgid "Double-click a line to open its document."
+msgstr "انقر مرتين على سطر لفتح مستنده."
+
+msgid "Double-click a line to open the transaction (statement) or the statement of the account (trial balance)."
+msgstr "انقر مرتين على سطر لفتح العملية (الكشف) أو كشف الحساب (ميزان المراجعة)."
+
+msgid "Double-click a saved line to open it first"
+msgstr "انقر مرتين على سطر محفوظ لفتحه أولاً"
+
+msgid "Download File"
+msgstr "تنزيل الملف"
+
+msgid "Download PDF"
+msgstr "تنزيل PDF"
+
+msgid "Download selected"
+msgstr "تنزيل المختار"
+
+msgid "Due"
+msgstr "المستحق"
+
+msgid "Due Date"
+msgstr "تاريخ الاستحقاق"
+
+msgid "Due Date (DD-MM-YYYY)"
+msgstr "تاريخ الاستحقاق (DD-MM-YYYY)"
+
+msgid "Due Days"
+msgstr "أيام الاستحقاق"
+
+msgid "Due days from invoice"
+msgstr "أيام الاستحقاق من تاريخ الفاتورة"
+
+msgid "Duplicate"
+msgstr "نسخ"
+
+msgid "EDIT"
+msgstr "تعديل"
+
+msgid "EOS %"
+msgstr "نهاية الخدمة %"
+
+msgid "EOS Ceiling"
+msgstr "سقف نهاية الخدمة"
+
+msgid "ERROR"
+msgstr "خطأ"
+
+msgid "EUR rates look right"
+msgstr "أسعار اليورو صحيحة"
+
+msgid "Each asset account shows its assets, then one depreciation entry per account (Dr expense / Cr accumulated)."
+msgstr "كل حساب أصل يعرض أصوله، ثم قيد استهلاك واحد لكل حساب (مدين مصروف / دائن متراكم)."
+
+msgid "Each invoice entry carries the invoice total"
+msgstr "قيد كل فاتورة يحمل إجمالي الفاتورة"
+
+msgid "Each month of the base year x (1 + %) per year ahead; opening cash = class 5 at the end of the base year (+ the years in between)."
+msgstr "كل شهر من سنة الأساس × (1 + %) لكل سنة لاحقة؛ النقد الافتتاحي = الصنف 5 في آخر سنة الأساس (+ السنوات بينهما)."
+
+msgid "Each supplier's next invoice is filled the way you posted its last one (account, VAT, department, how it was paid). Only a suggestion: you check it before Save."
+msgstr "تُعبّأ فاتورة كل مورد التالية كما قيّدت فاتورته السابقة (الحساب، الضريبة، القسم، طريقة الدفع). مجرد اقتراح: تراجعه قبل الحفظ."
+
+msgid "Earlier-quarter errors"
+msgstr "أخطاء الأرباع السابقة"
+
+msgid "Edit Cost Accounts"
+msgstr "تعديل حسابات الكلفة"
+
+msgid "Edit Invoice"
+msgstr "تعديل الفاتورة"
+
+msgid "Edit Notes / Audit / Mapping"
+msgstr "تعديل الإيضاحات / التدقيق / الربط"
+
+msgid "Edit Selected"
+msgstr "تعديل المختار"
+
+msgid "Edit Selected Account"
+msgstr "تعديل الحساب المختار"
+
+msgid "Edit Selected Entry"
+msgstr "تعديل القيد المختار"
+
+msgid "Edit fiscal year"
+msgstr "تعديل السنة المالية"
+
+msgid "Edit selected"
+msgstr "تعديل المحدد"
+
+msgid "Edit the transcribed lines. Account/VAT suggestions are advisory; select final posting accounts in the entry screen."
+msgstr "عدّل الأسطر المنسوخة. اقتراحات الحساب / الضريبة استرشادية؛ اختر حسابات الترحيل النهائية في شاشة الإدخال."
+
+msgid "Edit this entry"
+msgstr "تعديل هذا القيد"
+
+msgid "Edit transcribed item"
+msgstr "تعديل الصنف المنسوخ"
+
+msgid "Edit..."
+msgstr "تعديل..."
+
+msgid "Effective from"
+msgstr "ساري من"
+
+msgid "Email"
+msgstr "البريد الإلكتروني"
+
+msgid "Emp. NSSF"
+msgstr "ضمان الموظف"
+
+msgid "Employee"
+msgstr "الموظف"
+
+msgid "Employee %"
+msgstr "الموظف %"
+
+msgid "Employee Ceiling"
+msgstr "سقف الموظف"
+
+msgid "Employee File"
+msgstr "ملف الموظف"
+
+msgid "Employee ID"
+msgstr "رقم الموظف"
+
+msgid "Employee ID / 4-digit prefix"
+msgstr "رقم الموظف / بادئة من 4 أرقام"
+
+msgid "Employee List / Edit"
+msgstr "قائمة الموظفين / تعديل"
+
+msgid "Employee NSSF"
+msgstr "ضمان الموظف"
+
+msgid "Employee NSSF Ceiling"
+msgstr "سقف ضمان الموظف"
+
+msgid "Employee NSSF Rate"
+msgstr "نسبة ضمان الموظف"
+
+msgid "Employee Name"
+msgstr "اسم الموظف"
+
+msgid "Employees"
+msgstr "الموظفون"
+
+msgid "Employer / company"
+msgstr "صاحب العمل / الشركة"
+
+msgid "Employer Medical Rate"
+msgstr "نسبة صاحب العمل للمرض والأمومة"
+
+msgid "Employer NSSF (expense)"
+msgstr "الضمان الاجتماعي على صاحب العمل (مصروف)"
+
+msgid "Employer Sick. %"
+msgstr "صاحب العمل مرض %"
+
+msgid "Employer address"
+msgstr "عنوان صاحب العمل"
+
+msgid "Employer phone"
+msgstr "هاتف صاحب العمل"
+
+msgid "Employment Declaration Worksheet"
+msgstr "ورقة تصريح الاستخدام"
+
+msgid "End"
+msgstr "النهاية"
+
+msgid "End Date"
+msgstr "تاريخ النهاية"
+
+msgid "End Service Ceiling"
+msgstr "سقف نهاية الخدمة"
+
+msgid "End Service Rate"
+msgstr "نسبة نهاية الخدمة"
+
+msgid "End of Service"
+msgstr "نهاية الخدمة"
+
+msgid "End of Service & Leave"
+msgstr "نهاية الخدمة والإجازات"
+
+msgid "End of service: last salary x years of service, less the end-of-service contributions paid (Nanza's posted payroll + 'contributions before Nanza' on the employee). Post Provision brings 1552.1 to that amount (Dr 6355 / Cr 1552.1, or Dr 1552.1 / Cr 7552.2 when it goes down). Annual leave: 15 days a year unless set on the employee; the value is the balance x monthly salary / 30."
+msgstr "تعويض نهاية الخدمة: آخر راتب x سنوات الخدمة، ناقص اشتراكات نهاية الخدمة المدفوعة (الرواتب المرحّلة في نانزا + 'الاشتراكات قبل نانزا' على الموظف). ترحيل المؤونة يوصل 1552.1 إلى هذا المبلغ (مدين 6355 / دائن 1552.1، أو مدين 1552.1 / دائن 7552.2 عند الانخفاض). الإجازة السنوية: 15 يوماً في السنة ما لم تحدد على الموظف؛ القيمة هي الرصيد x الراتب الشهري / 30."
+
+msgid "End-of-Service Provision"
+msgstr "مؤونة نهاية الخدمة"
+
+msgid "End-of-service contributions before Nanza (LBP)"
+msgstr "اشتراكات نهاية الخدمة قبل نانزا (ليرة)"
+
+msgid "Endpoint"
+msgstr "عنوان المورد (Endpoint)"
+
+msgid "English"
+msgstr "الإنكليزية"
+
+msgid "English name"
+msgstr "الاسم بالإنكليزية"
+
+msgid "English | الإنكليزية"
+msgstr "English"
+
+msgid "Enter 0 when nothing was filed or paid. Leave blank only when unknown; blank months keep the settlement incomplete."
+msgstr "أدخل 0 إذا لم يُصرّح أو يُدفع شيء. اترك فارغاً فقط إذا كان غير معروف؛ الأشهر الفارغة تبقي التسوية ناقصة."
+
+msgid "Enter 8 date digits: DDMMYYYY"
+msgstr "أدخل 8 أرقام للتاريخ: DDMMYYYY"
+
+msgid "Enter a cancellation reason"
+msgstr "أدخل سبب الإلغاء"
+
+msgid "Enter a description and valid amounts"
+msgstr "أدخل البيان ومبالغ صحيحة"
+
+msgid "Enter a more specific expense description and choose an account manually."
+msgstr "أدخل بياناً أدق للمصروف واختر الحساب يدوياً."
+
+msgid "Enter a number"
+msgstr "أدخل رقماً"
+
+msgid "Enter a number (for example 8 for +8%, -5 for -5%)"
+msgstr "أدخل رقماً (مثلاً 8 لـ +8%، -5 لـ -5%)"
+
+msgid "Enter a positive amount"
+msgstr "أدخل مبلغاً موجباً"
+
+msgid "Enter a positive number"
+msgstr "أدخل رقماً موجباً"
+
+msgid "Enter a question first"
+msgstr "أدخل سؤالاً أولاً"
+
+msgid "Enter a reason for rejection:"
+msgstr "أدخل سبب الرفض:"
+
+msgid "Enter actual quantities. Blank / zero skips a line. Invoice creation always produces a draft for review."
+msgstr "أدخل الكميات الفعلية. يُتجاوز السطر الفارغ / الصفري. تُنشأ الفاتورة دائماً كمسودة للمراجعة."
+
+msgid "Enter and independently verify an annual depreciation rate; it is review-required."
+msgstr "أدخل نسبة استهلاك سنوية وتحقق منها بنفسك؛ تتطلب مراجعة."
+
+msgid "Enter at least one physical count"
+msgstr "أدخل جرداً فعلياً واحداً على الأقل"
+
+msgid "Enter at least two lines with an account and an amount"
+msgstr "أدخل سطرين على الأقل مع حساب ومبلغ"
+
+msgid "Enter customer/supplier; Total must equal Before VAT plus VAT"
+msgstr "أدخل الزبون/المورد؛ يجب أن يساوي المجموع ما قبل الضريبة زائد الضريبة"
+
+msgid "Enter quantities to return. Value and VAT are calculated proportionally from the posted lines.\nThe goods go back into stock (or out to the supplier). No cash is refunded and no payment is allocated."
+msgstr "أدخل الكميات المرتجعة. تُحتسب القيمة والضريبة بالتناسب مع الأسطر المرحّلة.\nتعود البضاعة إلى المخزون (أو تُعاد إلى المورد). لا يُرد نقد ولا تُخصّص دفعة."
+
+msgid "Enter the Annual amount first"
+msgstr "أدخل المبلغ السنوي أولاً"
+
+msgid "Enter the amount first"
+msgstr "أدخل المبلغ أولاً"
+
+msgid "Enter the base year in \"Actual report year\", for example 2026"
+msgstr "أدخل سنة الأساس في «سنة التقرير الفعلية»، مثلاً 2026"
+
+msgid "Enter the base year in \"Report year\", for example 2026"
+msgstr "أدخل سنة الأساس في «سنة التقرير»، مثلاً 2026"
+
+msgid "Enter the budget year"
+msgstr "أدخل سنة الموازنة"
+
+msgid "Enter the counted quantity (0 or more)"
+msgstr "أدخل الكمية المجرودة (0 أو أكثر)"
+
+msgid "Enter the customs broker / payee name"
+msgstr "أدخل اسم المخلّص الجمركي / المستفيد"
+
+msgid "Enter the date as 8 digits: DDMMYYYY"
+msgstr "أدخل التاريخ بـ 8 أرقام: DDMMYYYY"
+
+msgid "Enter the date of birth (DD-MM-YYYY)"
+msgstr "أدخل تاريخ الولادة (DD-MM-YYYY)"
+
+msgid "Enter the description"
+msgstr "أدخل الوصف"
+
+msgid "Enter the last date to lock (for example the last day of the month or quarter you filed)"
+msgstr "أدخل آخر تاريخ للقفل (مثلاً آخر يوم من الشهر أو الفصل الذي صرّحت عنه)"
+
+msgid "Enter the month as MM-YYYY, for example 03-2026"
+msgstr "أدخل الشهر بصيغة MM-YYYY، مثلاً 03-2026"
+
+msgid "Enter the quantity to make"
+msgstr "أدخل الكمية المراد صنعها"
+
+msgid "Enter the reason"
+msgstr "أدخل السبب"
+
+msgid "Enter the revenue growth %, for example 10"
+msgstr "أدخل نسبة نمو الإيرادات %، مثلاً 10"
+
+msgid "Enter the reviewed exchange rate for these costs."
+msgstr "أدخل سعر الصرف المراجع لهذه الكلف."
+
+msgid "Enter the target date as DD-MM-YYYY, for example 31-12-2030"
+msgstr "أدخل التاريخ المستهدف بصيغة DD-MM-YYYY، مثلاً 31-12-2030"
+
+msgid "Enter the unit cost of every line"
+msgstr "أدخل كلفة الوحدة لكل سطر"
+
+msgid "Entered at"
+msgstr "أُدخل في"
+
+msgid "Entered by"
+msgstr "أدخله"
+
+msgid "Entries"
+msgstr "القيود"
+
+msgid "Entries inside the fiscal year"
+msgstr "القيود ضمن السنة المالية"
+
+msgid "Entries with amounts"
+msgstr "قيود فيها مبالغ"
+
+msgid "Entry"
+msgstr "القيد"
+
+msgid "Entry No."
+msgstr "رقم القيد"
+
+msgid "Error"
+msgstr "خطأ"
+
+msgid "Every chart keeps the same classes (1 equity ... 7 income), so the VAT return, the ledgers, the financial statements and payroll work with all of them. You can add accounts later, one by one or from Excel (Accounts & Statements > Chart of Accounts). The chart cannot be changed once the company is created."
+msgstr "تحافظ جميع الأدلة على الفئات نفسها (1 حقوق ملكية ... 7 إيرادات)، فتعمل معها تقارير الضريبة والدفاتر والقوائم المالية والرواتب. يمكنك إضافة الحسابات لاحقاً منفردة أو من إكسل (الحسابات والكشوف > دليل الحسابات). لا يمكن تغيير الدليل بعد إنشاء الشركة."
+
+msgid "Every customer / supplier has its VAT account, and every invoice's VAT is on its own party's account."
+msgstr "لكل زبون / مورد حساب ضريبة خاص، وضريبة كل فاتورة على حساب صاحبها."
+
+msgid "Every customer / supplier has its own VAT account (supplier 401100025 -> VAT 442100025)"
+msgstr "لكل زبون / مورد حساب ضريبة خاص (المورد 401100025 -> الضريبة 442100025)"
+
+msgid "Every document in the books"
+msgstr "كل مستند مقيّد في الدفاتر"
+
+msgid "Every entry balanced"
+msgstr "كل قيد متوازن"
+
+msgid "Every entry has amounts"
+msgstr "كل قيد فيه مبالغ"
+
+msgid "Every invoice, receipt / payment and expense entry has its document"
+msgstr "كل قيد فاتورة وسند ومصروف له مستنده"
+
+msgid "Every line is correct."
+msgstr "كل الأسطر صحيحة."
+
+msgid "Every line is on an account of the chart"
+msgstr "كل سطر على حساب من الدليل"
+
+msgid "Every posted invoice, receipt / payment, expense and payroll has its journal entry"
+msgstr "كل فاتورة وسند قبض / دفع ومصروف وراتب مرحّل له قيده"
+
+msgid "Every row is already in the books; nothing was saved again."
+msgstr "كل الأسطر موجودة في الدفاتر؛ لم يُحفظ شيء مرة أخرى."
+
+msgid "Every sale is on the right accounts: its customer, a class 7 revenue account and output VAT (4427)."
+msgstr "كل عملية بيع على الحسابات الصحيحة: زبونها، حساب إيراد من الصنف 7 والضريبة المحصلة (4427)."
+
+msgid "Every sales invoice and receipt / payment number is used once"
+msgstr "كل رقم فاتورة بيع وسند مستعمل مرة واحدة"
+
+msgid "Every sales line has the VAT of its rate"
+msgstr "كل سطر مبيع ضريبته حسب نسبته"
+
+msgid "Every sequence of sales invoice numbers is unbroken"
+msgstr "تسلسل أرقام فواتير البيع غير منقطع"
+
+msgid "Example"
+msgstr "مثال"
+
+msgid "Example: 2251 Passenger Vehicles 20% - expense 6512.5 - accumulated 2825 (681 is the book value of assets SOLD, not depreciation). Double-click a line to change it."
+msgstr "مثال: 2251 سيارات ركاب 20% - المصروف 6512.5 - المجمّع 2825 (681 هو القيمة الدفترية للأصول المباعة، وليس الاستهلاك). انقر مرتين على السطر لتعديله."
+
+msgid "Excel Count Sheet"
+msgstr "ورقة جرد Excel"
+
+msgid "Excel Template"
+msgstr "نموذج Excel"
+
+msgid "Excel files"
+msgstr "ملفات Excel"
+
+msgid "Excel forms: yellow cells are editable, totals are formulas. Check before filing."
+msgstr "نماذج Excel: الخلايا الصفراء قابلة للتعديل، والمجاميع معادلات. تحقق قبل التصريح."
+
+msgid "Excel workbook"
+msgstr "ملف Excel"
+
+msgid "Exchange Difference"
+msgstr "فرق الصرف"
+
+msgid "Exchange Difference (+ / -)"
+msgstr "فرق الصرف (+ / -)"
+
+msgid "Exchange Gain A/C"
+msgstr "حساب أرباح الصرف"
+
+msgid "Exchange Loss A/C"
+msgstr "حساب خسائر الصرف"
+
+msgid "Exchange Rates"
+msgstr "أسعار الصرف"
+
+msgid "Exchange gain"
+msgstr "ربح فرق الصرف"
+
+msgid "Exchange loss"
+msgstr "خسارة فرق الصرف"
+
+msgid "Excluded draft documents"
+msgstr "مستندات مسودة مستبعدة"
+
+msgid "Executive Financial Dashboard"
+msgstr "لوحة الإدارة المالية التنفيذية"
+
+msgid "Executive Summary"
+msgstr "الملخص التنفيذي"
+
+msgid "Executive dashboard"
+msgstr "لوحة الإدارة المالية"
+
+msgid "Exempt Amount"
+msgstr "المبلغ المعفى"
+
+msgid "Expense"
+msgstr "المصروف"
+
+msgid "Expense A/C"
+msgstr "حساب المصروف"
+
+msgid "Expense A/C (626-69)"
+msgstr "حساب المصروف (626-69)"
+
+msgid "Expense Account"
+msgstr "حساب المصروف"
+
+msgid "Expense Account (D - Debit)"
+msgstr "حساب المصروف (م - مدين)"
+
+msgid "Expense Categories"
+msgstr "فئات المصروفات"
+
+msgid "Expense account"
+msgstr "حساب المصروف"
+
+msgid "Expense without VAT"
+msgstr "مصروف بلا ضريبة"
+
+msgid "Expenses"
+msgstr "المصاريف"
+
+msgid "Expenses %"
+msgstr "المصاريف %"
+
+msgid "Expenses (EXP)"
+msgstr "المصاريف (EXP)"
+
+msgid "Expenses imported without an account"
+msgstr "مصاريف مستوردة بدون حساب"
+
+msgid "Expiry"
+msgstr "الانتهاء"
+
+msgid "Expiry Date"
+msgstr "تاريخ الانتهاء"
+
+msgid "Expiry date"
+msgstr "تاريخ الانتهاء"
+
+msgid "Export Excel"
+msgstr "تصدير Excel"
+
+msgid "Export PDF"
+msgstr "تصدير PDF"
+
+msgid "Extra cost (total)"
+msgstr "كلفة إضافية (المجموع)"
+
+msgid "Extra cost per unit (labour, energy...)"
+msgstr "كلفة إضافية للوحدة (يد عاملة، طاقة...)"
+
+msgid "Extra indemnity (phone) / month"
+msgstr "تعويض إضافي (هاتف) / شهر"
+
+msgid "Family %"
+msgstr "العائلي %"
+
+msgid "Family / Child"
+msgstr "عائلي / ولد"
+
+msgid "Family / Spouse"
+msgstr "عائلي / زوج"
+
+msgid "Family Allocation"
+msgstr "التعويض العائلي"
+
+msgid "Family Allocation (438)"
+msgstr "التعويضات العائلية (438)"
+
+msgid "Family Allocation (empty = NSSF account)"
+msgstr "التعويضات العائلية (فارغ = حساب الضمان)"
+
+msgid "Family Ceiling"
+msgstr "السقف العائلي"
+
+msgid "Family Maximum"
+msgstr "الحد الأقصى العائلي"
+
+msgid "Family Rate"
+msgstr "النسبة العائلية"
+
+msgid "Family alloc."
+msgstr "التعويض العائلي"
+
+msgid "Family allowance reference · 2024–2026 (monthly LBP)"
+msgstr "مرجع التعويض العائلي · 2024–2026 (شهرياً بالليرة)"
+
+msgid "Father's Name"
+msgstr "اسم الأب"
+
+msgid "Father's name"
+msgstr "اسم الأب"
+
+msgid "Feb"
+msgstr "شباط"
+
+msgid "Field"
+msgstr "الحقل"
+
+msgid "Figures use posted ledger records; unlinked margins are unavailable."
+msgstr "تعتمد الأرقام على دفتر الأستاذ المرحّل؛ الهوامش غير المرتبطة غير متاحة."
+
+msgid "File"
+msgstr "الملف"
+
+msgid "File attached successfully"
+msgstr "تم إرفاق الملف بنجاح"
+
+msgid "Filed NSSF Wages"
+msgstr "الأجور المصرّح عنها للضمان"
+
+msgid "Filing Worksheet"
+msgstr "ورقة التصريح"
+
+msgid "Filing Worksheet Excel"
+msgstr "ورقة التصريح Excel"
+
+msgid "Filing Worksheet PDF"
+msgstr "ورقة التصريح PDF"
+
+msgid "Fill from PDF"
+msgstr "تعبئة من PDF"
+
+msgid "Fill the Budget"
+msgstr "تعبئة الموازنة"
+
+msgid "Fill these once: they go automatically into the notes and the auditor's report of every year (a field left empty shows as [label] to complete)."
+msgstr "املأها مرة واحدة: تدخل تلقائياً في الإيضاحات وتقرير المدقق لكل سنة (الحقل الفارغ يظهر كـ [label] للإكمال)."
+
+msgid "Filters"
+msgstr "المرشحات"
+
+msgid "Financial Reports"
+msgstr "التقارير المالية"
+
+msgid "Financial Statements"
+msgstr "البيانات المالية"
+
+msgid "Financial Statements - notes, auditor's report and classification"
+msgstr "القوائم المالية - الإيضاحات وتقرير المدقق والتصنيف"
+
+msgid "Financial charges %"
+msgstr "الأعباء المالية %"
+
+msgid "Financial statements:"
+msgstr "البيانات المالية:"
+
+msgid "Financing"
+msgstr "التمويل"
+
+msgid "Find"
+msgstr "بحث"
+
+msgid "Find by number or name (English / Arabic / French):"
+msgstr "البحث بالرقم أو الاسم (إنكليزي / عربي / فرنسي):"
+
+msgid "Find expense (No., description, date)"
+msgstr "البحث عن مصروف (الرقم، البيان، التاريخ)"
+
+msgid "Find in details"
+msgstr "البحث في التفاصيل"
+
+msgid "Find invoice"
+msgstr "البحث عن فاتورة"
+
+msgid "Find or Create Account - F2"
+msgstr "بحث أو إنشاء حساب - F2"
+
+msgid "Find purchase (No., supplier, date)"
+msgstr "البحث عن مشتريات (الرقم، المورد، التاريخ)"
+
+msgid "Find voucher No."
+msgstr "البحث عن رقم قيد"
+
+msgid "First fiscal year, then create"
+msgstr "السنة المالية الأولى ثم الإنشاء"
+
+msgid "Fiscal Year"
+msgstr "السنة المالية"
+
+msgid "Fit image"
+msgstr "ملاءمة الصورة"
+
+msgid "Fixed Asset Rollforward"
+msgstr "حركة الأصول الثابتة"
+
+msgid "Fixed Assets (Purchases & Expenses)"
+msgstr "الأصول الثابتة (المشتريات والمصاريف)"
+
+msgid "Folder"
+msgstr "المجلد"
+
+msgid "Folder for the second copy of the backups"
+msgstr "مجلد النسخة الثانية من النسخ الاحتياطية"
+
+msgid "For handwritten or hard-to-read invoices: Microsoft Azure Document Intelligence, free tier F0 = 500 pages a month. Without it the free local reading is used, as before."
+msgstr "للفواتير المكتوبة بخط اليد أو الصعبة القراءة: Microsoft Azure Document Intelligence، الفئة المجانية F0 = 500 صفحة بالشهر. من دونه تُستعمل القراءة المحلية المجانية كما في السابق."
+
+msgid "For the auditor:"
+msgstr "للمدقق:"
+
+msgid "Forecast and 5-year projection"
+msgstr "التوقعات وإسقاط 5 سنوات"
+
+msgid "Form"
+msgstr "النموذج"
+
+msgid "Format"
+msgstr "الصيغة"
+
+msgid "Format Balance (Dr / Cr balance)"
+msgstr "صيغة الرصيد (رصيد مدين / دائن)"
+
+msgid "Found by"
+msgstr "وُجد بواسطة"
+
+msgid "Free PDF Read"
+msgstr "قراءة PDF مجانية"
+
+msgid "Free handwriting reader setup"
+msgstr "إعداد قارئ خط اليد المجاني"
+
+msgid "Freight"
+msgstr "الشحن"
+
+msgid "French"
+msgstr "الفرنسية"
+
+msgid "French name"
+msgstr "الاسم بالفرنسية"
+
+msgid "From"
+msgstr "من"
+
+msgid "From Date"
+msgstr "من تاريخ"
+
+msgid "From Date cannot be after To Date"
+msgstr "لا يمكن أن يكون تاريخ البداية بعد تاريخ النهاية"
+
+msgid "From Date:"
+msgstr "من تاريخ:"
+
+msgid "From account"
+msgstr "من حساب"
+
+msgid "From year"
+msgstr "من سنة"
+
+msgid "From:"
+msgstr "من:"
+
+msgid "Fuel filter not yet supported"
+msgstr "مرشح الوقود غير مدعوم بعد"
+
+msgid "Full Name"
+msgstr "الاسم الكامل"
+
+msgid "Full name"
+msgstr "الاسم الكامل"
+
+msgid "Gain / Loss A/C"
+msgstr "حساب الربح / الخسارة"
+
+msgid "General Journal"
+msgstr "دفتر اليومية العام"
+
+msgid "General Journal: check them with the documents; delete the entry if the document was deleted on purpose"
+msgstr "دفتر اليومية: طابقها مع المستندات؛ احذف القيد إذا حُذف المستند عن قصد"
+
+msgid "General Journal: complete or delete them"
+msgstr "دفتر اليومية: أكملها أو احذفها"
+
+msgid "General Journal: open each entry and correct it (Reports > Check Balance lists them)"
+msgstr "دفتر اليومية: افتح كل قيد وصحّحه (التقارير > فحص التوازن تعرضها)"
+
+msgid "General Ledger"
+msgstr "دفتر الأستاذ العام"
+
+msgid "General Settings"
+msgstr "الإعدادات العامة"
+
+msgid "General Voucher"
+msgstr "قيد عام"
+
+msgid "Generate"
+msgstr "إنشاء"
+
+msgid "Generate 'NSSF - Contributions table' for the period first"
+msgstr "أنشئ «الضمان - جدول الاشتراكات» للفترة أولاً"
+
+msgid "Generate the report first"
+msgstr "أنشئ التقرير أولاً"
+
+msgid "Generate the return first"
+msgstr "أنشئ التصريح أولاً"
+
+msgid "Generate the return: the VAT accounts of the quarter are compared with it here."
+msgstr "أنشئ التصريح: تُقارن هنا حسابات الضريبة للفصل معه."
+
+msgid "Generated"
+msgstr "أُنشئ في"
+
+msgid "Good to know:"
+msgstr "للعلم:"
+
+msgid "Grand Total"
+msgstr "المجموع العام"
+
+msgid "Gross"
+msgstr "الإجمالي"
+
+msgid "Gross profit"
+msgstr "إجمالي الربح"
+
+msgid "Group"
+msgstr "المجموعة"
+
+msgid "Grouping"
+msgstr "التجميع"
+
+msgid "Growth % per year"
+msgstr "النمو % سنوياً"
+
+msgid "Handwriting review"
+msgstr "مراجعة قراءة خط اليد"
+
+msgid "Handwritten invoices"
+msgstr "فواتير خط اليد"
+
+msgid "Handwritten invoices (experimental, offline)"
+msgstr "فواتير خط اليد (تجريبي، دون إنترنت)"
+
+msgid "Head Office"
+msgstr "المركز الرئيسي"
+
+msgid "Help"
+msgstr "مساعدة"
+
+msgid "Help / مساعدة"
+msgstr "مساعدة"
+
+msgid "Hire Date"
+msgstr "تاريخ التوظيف"
+
+msgid "History"
+msgstr "السجل"
+
+msgid "Home"
+msgstr "الرئيسية"
+
+msgid "I checked these fields against the image"
+msgstr "راجعت هذه الخانات مقارنةً بالصورة"
+
+msgid "I reviewed and verified the asset classification, all three accounts, and annual rate."
+msgstr "راجعت وتحققت من تصنيف الأصل والحسابات الثلاثة والنسبة السنوية."
+
+msgid "I see (only for me)"
+msgstr "أرى (لي فقط)"
+
+msgid "ID"
+msgstr "الرقم"
+
+msgid "Images"
+msgstr "الصور"
+
+msgid "Import"
+msgstr "استيراد"
+
+msgid "Import Chart of Accounts"
+msgstr "استيراد دليل الحسابات"
+
+msgid "Import Customs Excel"
+msgstr "استيراد Excel الجمارك"
+
+msgid "Import Excel"
+msgstr "استيراد Excel"
+
+msgid "Import Excel / PDF"
+msgstr "استيراد Excel / PDF"
+
+msgid "Import Expenses Excel"
+msgstr "استيراد Excel المصاريف"
+
+msgid "Import PDF"
+msgstr "استيراد PDF"
+
+msgid "Import Purchases"
+msgstr "استيراد المشتريات"
+
+msgid "Import Sales"
+msgstr "استيراد المبيعات"
+
+msgid "Import Statement (Excel / CSV / PDF)"
+msgstr "استيراد كشف (Excel / CSV / PDF)"
+
+msgid "Import VAT"
+msgstr "استيراد الضريبة"
+
+msgid "Import from Excel"
+msgstr "استيراد من Excel"
+
+msgid "Import now? A safety backup is made first."
+msgstr "الاستيراد الآن؟ تؤخذ نسخة أمان أولاً."
+
+msgid "Import to shared database"
+msgstr "استيراد إلى قاعدة البيانات المشتركة"
+
+msgid "Include Review"
+msgstr "تضمين قيد المراجعة"
+
+msgid "Include Review documents"
+msgstr "تضمين المستندات قيد المراجعة"
+
+msgid "Include draft payroll (preview only)"
+msgstr "تضمين الرواتب المسودة (معاينة فقط)"
+
+msgid "Include zero stock"
+msgstr "تضمين المخزون الصفري"
+
+msgid "Income exempt from income tax (legal reason required)"
+msgstr "إيراد معفى من ضريبة الدخل (يلزم سبب قانوني)"
+
+msgid "Income tax %"
+msgstr "ضريبة الدخل %"
+
+msgid "Inflow"
+msgstr "التدفق الداخل"
+
+msgid "Information, texts and mapping are saved once for every year. Cash flow / OCI amounts stay with their year."
+msgstr "المعلومات والنصوص والربط تُحفظ مرة لكل السنوات. مبالغ التدفقات النقدية / الدخل الشامل تبقى مع سنتها."
+
+msgid "Input VAT used for"
+msgstr "الضريبة على المشتريات مستعملة لـ"
+
+msgid "Insert Line"
+msgstr "إدراج سطر"
+
+msgid "Install / Repair Advanced Reader"
+msgstr "تثبيت / إصلاح القارئ المتقدم"
+
+msgid "Install / Repair Free Handwriting Reader"
+msgstr "تثبيت / إصلاح قارئ خط اليد المجاني"
+
+msgid "Installation ID"
+msgstr "رقم التثبيت"
+
+msgid "Insurance"
+msgstr "التأمين"
+
+msgid "Invalid base salary"
+msgstr "الراتب الأساسي غير صالح"
+
+msgid "Inventory"
+msgstr "المخزون"
+
+msgid "Inventory Reports"
+msgstr "تقارير المخزون"
+
+msgid "Inventory settings"
+msgstr "إعدادات المخزون"
+
+msgid "Inventory settings saved"
+msgstr "حُفظت إعدادات المخزون"
+
+msgid "Investments"
+msgstr "الاستثمارات"
+
+msgid "Investments are a positive amount"
+msgstr "الاستثمارات مبلغ موجب"
+
+msgid "Invoice"
+msgstr "فاتورة"
+
+msgid "Invoice Date"
+msgstr "تاريخ الفاتورة"
+
+msgid "Invoice Modification History"
+msgstr "سجل تعديلات الفاتورة"
+
+msgid "Invoice No."
+msgstr "رقم الفاتورة"
+
+msgid "Invoice Number"
+msgstr "رقم الفاتورة"
+
+msgid "Invoice PDF"
+msgstr "PDF الفاتورة"
+
+msgid "Invoice cancelled and reversing journal entry created"
+msgstr "أُلغيت الفاتورة وأُنشئ قيد عكسي"
+
+msgid "Invoice details"
+msgstr "تفاصيل الفاتورة"
+
+msgid "Invoice draft"
+msgstr "مسودة فاتورة"
+
+msgid "Invoice files"
+msgstr "ملفات الفواتير"
+
+msgid "Invoice is already cancelled"
+msgstr "الفاتورة ملغاة سابقاً"
+
+msgid "Invoice number"
+msgstr "رقم الفاتورة"
+
+msgid "Invoice number, date, and customer/supplier are required"
+msgstr "رقم الفاتورة والتاريخ والزبون/المورد مطلوبة"
+
+msgid "Invoice review"
+msgstr "مراجعة الفاتورة"
+
+msgid "Invoice row added successfully"
+msgstr "أُضيف سطر الفاتورة بنجاح"
+
+msgid "Invoice total"
+msgstr "مجموع الفاتورة"
+
+msgid "Invoiced"
+msgstr "مفوتر"
+
+msgid "Invoices"
+msgstr "الفواتير"
+
+msgid "Invoices equal their entries"
+msgstr "الفواتير مطابقة لقيودها"
+
+msgid "Invoices: lines = subtotal"
+msgstr "الفواتير: الأسطر = المجموع"
+
+msgid "Invoices: subtotal + VAT = total"
+msgstr "الفواتير: المجموع + الضريبة = الإجمالي"
+
+msgid "Is every number where it should be? Balanced entries, every document in the books, no gaps or duplicates, VAT returns unchanged. Nothing is changed."
+msgstr "هل كل رقم في مكانه؟ قيود متوازنة، كل مستند في الدفاتر، لا فجوات ولا أرقام مكررة، التصاريح الضريبية لم تتغير. لا يتم تعديل أي شيء."
+
+msgid "Issue"
+msgstr "إخراج"
+
+msgid "Issue Date"
+msgstr "تاريخ الإصدار"
+
+msgid "Issue date"
+msgstr "تاريخ الإصدار"
+
+msgid "Issues, adjustments - and transfers use the current average cost automatically"
+msgstr "الإخراج والتسويات والتحويلات تستعمل متوسط الكلفة الحالي تلقائياً"
+
+msgid "Item"
+msgstr "الصنف"
+
+msgid "Item Code"
+msgstr "رمز الصنف"
+
+msgid "Item Code (auto if blank)"
+msgstr "رمز الصنف (تلقائي إذا فارغ)"
+
+msgid "Item Code: type the code or press F2 in the cell. Issues and adjustments - use automatic cost; receipts and opening stock need a unit cost."
+msgstr "رمز الصنف: اكتب الرمز أو اضغط F2 في الخانة. الإخراج والتسويات - تستعمل الكلفة التلقائية؛ الإدخال ومخزون أول المدة يحتاجان كلفة الوحدة."
+
+msgid "Item Code: type the code or press F2 in the cell. Issues, adjustments - and transfers leave at the current cost; receipts and opening stock need a unit cost."
+msgstr "رمز الصنف: اكتب الرمز أو اضغط F2 في الخلية. الإخراج والتسويات والتحويلات بالكلفة الحالية؛ الإدخال والمخزون الافتتاحي يحتاجان كلفة الوحدة."
+
+msgid "Item From"
+msgstr "من صنف"
+
+msgid "Item Name"
+msgstr "اسم الصنف"
+
+msgid "Item To"
+msgstr "إلى صنف"
+
+msgid "Item added and invoice totals updated"
+msgstr "أُضيف الصنف وتحدّثت مجاميع الفاتورة"
+
+msgid "Item already on the count sheet"
+msgstr "الصنف موجود في ورقة الجرد"
+
+msgid "Item code (optional)"
+msgstr "رمز الصنف (اختياري)"
+
+msgid "Items"
+msgstr "الأصناف"
+
+msgid "Items - F2"
+msgstr "الأصناف - F2"
+
+msgid "Items subject to customs"
+msgstr "الأصناف الخاضعة للجمارك"
+
+msgid "Jan"
+msgstr "ك2"
+
+msgid "Job Title"
+msgstr "المسمى الوظيفي"
+
+msgid "Journal Voucher"
+msgstr "قيد يومية"
+
+msgid "Journal Voucher deleted"
+msgstr "حُذف قيد اليومية"
+
+msgid "Journal vouchers"
+msgstr "سندات القيد"
+
+msgid "Journal vouchers (JV)"
+msgstr "قيود اليومية (JV)"
+
+msgid "Jul"
+msgstr "تموز"
+
+msgid "Jun"
+msgstr "حزيران"
+
+msgid "Keep"
+msgstr "إبقاء"
+
+msgid "Keep the purchase"
+msgstr "إبقاء المشتريات"
+
+msgid "Key"
+msgstr "المفتاح"
+
+msgid "Key password"
+msgstr "كلمة مرور المفتاح"
+
+msgid "LBP Eq."
+msgstr "المعادل بالليرة"
+
+msgid "LBP Rate"
+msgstr "سعر الليرة"
+
+msgid "LBP amount"
+msgstr "المبلغ بالليرة"
+
+msgid "LBP per USD"
+msgstr "ليرة لبنانية لكل دولار"
+
+msgid "Language"
+msgstr "اللغة"
+
+msgid "Last"
+msgstr "الأخير"
+
+msgid "Late entries = entered more than"
+msgstr "القيود المتأخرة = أُدخلت بعد أكثر من"
+
+msgid "Later"
+msgstr "لاحقاً"
+
+msgid "Layers (3rd)"
+msgstr "الطبقات (الثالث)"
+
+msgid "Leave"
+msgstr "إجازة"
+
+msgid "Leave Balances"
+msgstr "أرصدة الإجازات"
+
+msgid "Leave Date"
+msgstr "تاريخ الترك"
+
+msgid "Leave days carried in"
+msgstr "أيام الإجازة المنقولة"
+
+msgid "Leave taken"
+msgstr "الإجازات المأخوذة"
+
+msgid "Leaving Date"
+msgstr "تاريخ الترك"
+
+msgid "Lebanese Chart of Accounts"
+msgstr "دليل الحسابات اللبناني"
+
+msgid "Lebanese Payroll Rules"
+msgstr "قواعد الرواتب اللبنانية"
+
+msgid "Lebanese VAT Report"
+msgstr "تقرير الضريبة اللبناني"
+
+msgid "Lebanese payroll rules loaded. Recalculate draft payroll to apply them."
+msgstr "حُمّلت قواعد الرواتب اللبنانية. أعد احتساب الرواتب المسودة لتطبيقها."
+
+msgid "Lebanese periodic method: purchases stay in 601 / 611. The Stock Variation voucher (type 06) cancels the stock in each item's stock account and books the counted closing stock: goods 37 against 6051 / 6052, raw materials 31 against 6151 / 6152, work in progress 33 against 7211, products 35 against 7255 (the Stock Account of the item). It is made automatically when you close the year, and the closing stock becomes the Opening Stock of the next year."
+msgstr "الطريقة اللبنانية الدورية: تبقى المشتريات في 601 / 611. سند تغيّر المخزون (النوع 06) يلغي المخزون في حساب مخزون كل صنف ويسجّل مخزون آخر المدة المجرود: البضائع 37 مقابل 6051 / 6052، المواد الأولية 31 مقابل 6151 / 6152، الإنتاج قيد التنفيذ 33 مقابل 7211، المنتجات 35 مقابل 7255 (حساب مخزون الصنف). يُنشأ تلقائياً عند إقفال السنة، ويصبح مخزون آخر المدة مخزون أول المدة للسنة التالية."
+
+msgid "Ledger"
+msgstr "الدفتر"
+
+msgid "Legal Document Alerts"
+msgstr "تنبيهات المستندات القانونية"
+
+msgid "Legal Documents"
+msgstr "المستندات القانونية"
+
+msgid "Level"
+msgstr "المستوى"
+
+msgid "Licence"
+msgstr "الترخيص"
+
+msgid "Licence / firm"
+msgstr "الترخيص / المكتب"
+
+msgid "Licence code"
+msgstr "رمز الترخيص"
+
+msgid "Licence code made and copied: send it to the client."
+msgstr "أُنشئ رمز الترخيص ونُسخ: أرسله إلى العميل."
+
+msgid "Line"
+msgstr "سطر"
+
+msgid "Line Detail"
+msgstr "بيان السطر"
+
+msgid "Lines"
+msgstr "الأسطر"
+
+msgid "Lines on existing accounts"
+msgstr "الأسطر على حسابات موجودة"
+
+msgid "Link: Goods for sale: purchases 6011, variation 6051 / 6052. Purchases: Cost Account (empty = purchase screen account). Year end: Dr 6051 / Cr 37, then Dr 37 / Cr 6052."
+msgstr "الربط: بضائع للبيع: المشتريات 6011، التغيّر 6051 / 6052. المشتريات: حساب الكلفة (فارغ = حساب شاشة الشراء). نهاية السنة: مدين 6051 / دائن 37، ثم مدين 37 / دائن 6052."
+
+msgid "Load"
+msgstr "تحميل"
+
+msgid "Load Lebanese Law 2024-2026"
+msgstr "تحميل القانون اللبناني 2024-2026"
+
+msgid "Load Settings"
+msgstr "تحميل الإعدادات"
+
+msgid "Load Stock on Hand"
+msgstr "تحميل المخزون الموجود"
+
+msgid "Load balances"
+msgstr "تحميل الأرصدة"
+
+msgid "Load balances after changing the date or the books"
+msgstr "حمّل الأرصدة بعد تغيير التاريخ أو الدفاتر"
+
+msgid "Load the stock on hand first"
+msgstr "حمّل المخزون الموجود أولاً"
+
+msgid "Local PDF assistance"
+msgstr "مساعدة PDF محلية"
+
+msgid "Location"
+msgstr "الموقع"
+
+msgid "Location (shelf)"
+msgstr "الموقع (الرف)"
+
+msgid "Lock"
+msgstr "قفل"
+
+msgid "Lock up to (DD-MM-YYYY)"
+msgstr "القفل حتى (DD-MM-YYYY)"
+
+msgid "Log"
+msgstr "السجل"
+
+msgid "Logo File Path"
+msgstr "مسار ملف الشعار"
+
+msgid "MOF / VAT Number"
+msgstr "رقم وزارة المالية / الضريبة"
+
+msgid "MOF / VAT number"
+msgstr "رقم وزارة المالية / الضريبة"
+
+msgid "MOF No."
+msgstr "الرقم المالي"
+
+msgid "MOF Number"
+msgstr "رقم وزارة المالية"
+
+msgid "MOF personal number"
+msgstr "الرقم الشخصي في وزارة المالية"
+
+msgid "Main"
+msgstr "الرئيسي"
+
+msgid "Main Currency 1 (base)"
+msgstr "العملة الرئيسية 1 (الأساسية)"
+
+msgid "Main Currency 2"
+msgstr "العملة الرئيسية 2"
+
+msgid "Make a licence (seller)..."
+msgstr "إنشاء ترخيص (للبائع)..."
+
+msgid "Make a licence code (seller)"
+msgstr "إنشاء رمز ترخيص (البائع)"
+
+msgid "Makes"
+msgstr "يصنع"
+
+msgid "Manage Company"
+msgstr "إدارة الشركة"
+
+msgid "Manage Selected"
+msgstr "إدارة المختار"
+
+msgid "Management Pack"
+msgstr "ملف الإدارة"
+
+msgid "Managers"
+msgstr "المدراء"
+
+msgid "Manual Adjustments"
+msgstr "تسويات يدوية"
+
+msgid "Manual Entry"
+msgstr "قيد يدوي"
+
+msgid "Mar"
+msgstr "آذار"
+
+msgid "Marital Status"
+msgstr "الوضع العائلي"
+
+msgid "Marital status"
+msgstr "الوضع العائلي"
+
+msgid "Match Selected"
+msgstr "مطابقة المختار"
+
+msgid "Matched"
+msgstr "مطابق"
+
+msgid "Matching report"
+msgstr "تقرير المطابقة"
+
+msgid "Material"
+msgstr "المادة"
+
+msgid "Materials"
+msgstr "المواد"
+
+msgid "Materials from"
+msgstr "المواد من"
+
+msgid "Materials from Recipe"
+msgstr "المواد من الوصفة"
+
+msgid "Max Children"
+msgstr "الحد الأقصى للأولاد"
+
+msgid "May"
+msgstr "أيار"
+
+msgid "Measure"
+msgstr "المقياس"
+
+msgid "Medical Ceiling"
+msgstr "السقف الطبي"
+
+msgid "Menu on the left, in groups (untick for the buttons above the pages)"
+msgstr "القائمة على الجانب في مجموعات (ألغِ الاختيار للأزرار فوق الصفحات)"
+
+msgid "Method"
+msgstr "الطريقة"
+
+msgid "Minimum Wage"
+msgstr "الحد الأدنى للأجور"
+
+msgid "Missing data and review notes"
+msgstr "بيانات ناقصة وملاحظات المراجعة"
+
+msgid "Mixed prorates input VAT by taxable / total use."
+msgstr "المختلط يوزّع الضريبة على المشتريات حسب الاستعمال الخاضع / الإجمالي."
+
+msgid "Month"
+msgstr "الشهر"
+
+msgid "Month (MM-YYYY)"
+msgstr "الشهر (MM-YYYY)"
+
+msgid "Month (any date of the month)"
+msgstr "الشهر (أي تاريخ من الشهر)"
+
+msgid "Month / quarter"
+msgstr "الشهر / الفصل"
+
+msgid "Monthly"
+msgstr "شهري"
+
+msgid "Monthly Payroll"
+msgstr "الرواتب الشهرية"
+
+msgid "Monthly Sales / Purchases"
+msgstr "المبيعات / المشتريات الشهرية"
+
+msgid "Monthly maximum"
+msgstr "الحد الأقصى الشهري"
+
+msgid "Monthly posting by account is in tab 3."
+msgstr "القيد الشهري حسب الحساب في التبويب 3."
+
+msgid "Months Total"
+msgstr "مجموع الأشهر"
+
+msgid "Months of the base year x (1 + %) per year up to the Year above. Review, then Save Budget."
+msgstr "أشهر سنة الأساس × (1 + %) لكل سنة حتى السنة أعلاه. راجع ثم احفظ الموازنة."
+
+msgid "More"
+msgstr "المزيد"
+
+msgid "Mother's Name"
+msgstr "اسم الأم"
+
+msgid "Mother's name"
+msgstr "اسم الأم"
+
+msgid "Move / Transfer"
+msgstr "نقل / تحويل"
+
+msgid "Move / Transfer between accounts"
+msgstr "نقل / تحويل بين الحسابات"
+
+msgid "Move / Transfer..."
+msgstr "نقل / تحويل..."
+
+msgid "Move ALL its transactions to the To account"
+msgstr "انقل كل عملياته إلى الحساب الجديد"
+
+msgid "Move the CHOSEN transactions below to the To account (the same entries, the account is replaced - no new voucher)"
+msgstr "انقل العمليات المختارة أدناه إلى الحساب الجديد (نفس القيود، يُستبدل الحساب - بلا قيد جديد)"
+
+msgid "Multiple accounts match. Enter the number to use:\n{choices}"
+msgstr "تطابق عدة حسابات. أدخل رقم الحساب المطلوب:\n{choices}"
+
+msgid "NANZA"
+msgstr "نانزا"
+
+msgid "NEW INVOICE"
+msgstr "فاتورة جديدة"
+
+msgid "NSSF"
+msgstr "الضمان الاجتماعي"
+
+msgid "NSSF & MOF Forms"
+msgstr "نماذج الضمان ووزارة المالية"
+
+msgid "NSSF & MOF Forms (Excel)"
+msgstr "نماذج الضمان ووزارة المالية (Excel)"
+
+msgid "NSSF Employer Number"
+msgstr "رقم صاحب العمل في الضمان"
+
+msgid "NSSF Filed Wages"
+msgstr "الأجور المصرّح عنها للضمان"
+
+msgid "NSSF Number"
+msgstr "رقم الضمان"
+
+msgid "NSSF Payable Account"
+msgstr "حساب الضمان المستحق"
+
+msgid "NSSF Payment"
+msgstr "دفع الضمان"
+
+msgid "NSSF ceilings, rates and family allowance by period - double-click to edit (LBP / month, rates in %)"
+msgstr "سقوف الضمان ونسبه والتعويض العائلي حسب الفترة - انقر مرتين للتعديل (ليرة / شهر، النسب %)"
+
+msgid "NSSF employee forms:"
+msgstr "نماذج الضمان للموظف:"
+
+msgid "NSSF employer number"
+msgstr "رقم صاحب العمل في الضمان"
+
+msgid "NSSF number"
+msgstr "رقم الضمان"
+
+msgid "NSSF periods"
+msgstr "فترات الضمان"
+
+msgid "NSSF receipt number"
+msgstr "رقم إيصال الضمان"
+
+msgid "Name"
+msgstr "الاسم"
+
+msgid "Name (category)"
+msgstr "الاسم (الفئة)"
+
+msgid "Nanza Accounting"
+msgstr "نانزا للمحاسبة"
+
+msgid "Nanza backup"
+msgstr "نسخة نانزا الاحتياطية"
+
+msgid "Nanza company file"
+msgstr "ملف شركة نانزا"
+
+msgid "National ID"
+msgstr "رقم الهوية"
+
+msgid "Nationality"
+msgstr "الجنسية"
+
+msgid "Need approval (users without 'Can approve' save them as drafts; another user with 'Can approve' posts them):"
+msgstr "تحتاج موافقة (المستخدمون بلا «يمكنه الموافقة» يحفظونها كمسودة؛ ومستخدم آخر لديه «يمكنه الموافقة» يقيّدها):"
+
+msgid "Needs attention"
+msgstr "يحتاج انتباه"
+
+msgid "Net"
+msgstr "الصافي"
+
+msgid "Net Cash Movement"
+msgstr "صافي الحركة النقدية"
+
+msgid "Net Salary"
+msgstr "صافي الراتب"
+
+msgid "Net Salary Payable"
+msgstr "صافي الرواتب المستحقة"
+
+msgid "Net VAT (LBP)"
+msgstr "صافي الضريبة (ل.ل.)"
+
+msgid "Net Value"
+msgstr "القيمة الصافية"
+
+msgid "Net before VAT"
+msgstr "الصافي قبل الضريبة"
+
+msgid "Net book value"
+msgstr "القيمة الدفترية الصافية"
+
+msgid "Net cash movement"
+msgstr "صافي الحركة النقدية"
+
+msgid "Net profit"
+msgstr "صافي الربح"
+
+msgid "Net value"
+msgstr "القيمة الصافية"
+
+msgid "Network Check"
+msgstr "فحص الشبكة"
+
+msgid "New"
+msgstr "جديد"
+
+msgid "New / Clear"
+msgstr "جديد / مسح"
+
+msgid "New Account"
+msgstr "حساب جديد"
+
+msgid "New Branch Name"
+msgstr "اسم الفرع الجديد"
+
+msgid "New Company"
+msgstr "شركة جديدة"
+
+msgid "New Employee"
+msgstr "موظف جديد"
+
+msgid "New Fiscal Year"
+msgstr "سنة مالية جديدة"
+
+msgid "New Journal Account"
+msgstr "حساب يومية جديد"
+
+msgid "New Number"
+msgstr "الرقم الجديد"
+
+msgid "New Warehouse Transfer"
+msgstr "تحويل جديد بين المستودعات"
+
+msgid "New account (number or F2)"
+msgstr "حساب جديد (الرقم أو F2)"
+
+msgid "New account name"
+msgstr "اسم الحساب الجديد"
+
+msgid "New category"
+msgstr "فئة جديدة"
+
+msgid "New child"
+msgstr "ولد جديد"
+
+msgid "New document — number assigned on Save"
+msgstr "مستند جديد — يمنح الرقم عند الحفظ"
+
+msgid "New document: fill in the fields and press Save (attaching a file is optional)."
+msgstr "مستند جديد: املأ الحقول واضغط حفظ (إرفاق ملف اختياري)."
+
+msgid "New expense"
+msgstr "مصروف جديد"
+
+msgid "New licence code"
+msgstr "رمز ترخيص جديد"
+
+msgid "New password (10+ characters)"
+msgstr "كلمة مرور جديدة (10 أحرف أو أكثر)"
+
+msgid "New password again"
+msgstr "كلمة المرور الجديدة مرة أخرى"
+
+msgid "New subcategory"
+msgstr "فئة فرعية جديدة"
+
+msgid "New voucher"
+msgstr "قيد جديد"
+
+msgid "Next"
+msgstr "التالي"
+
+msgid "Next Tab"
+msgstr "التبويب التالي"
+
+msgid "Next ▶"
+msgstr "التالي ▶"
+
+msgid "No EUR rate of 1 USD"
+msgstr "لا يوجد سعر يورو = 1 دولار"
+
+msgid "No PDF"
+msgstr "لا يوجد PDF"
+
+msgid "No VAT return saved yet"
+msgstr "لم يُحفظ أي تصريح ضريبي بعد"
+
+msgid "No activity for this currency yet."
+msgstr "لا حركة لهذه العملة بعد."
+
+msgid "No backup is selected. Create a new backup now and save a copy?"
+msgstr "لم تُختر نسخة احتياطية. إنشاء نسخة جديدة الآن وحفظ نسخة عنها؟"
+
+msgid "No complete actual month is available yet"
+msgstr "لا يوجد شهر فعلي كامل بعد"
+
+msgid "No data to draw for these choices"
+msgstr "لا بيانات للرسم لهذه الخيارات"
+
+msgid "No data to export"
+msgstr "لا بيانات للتصدير"
+
+msgid "No data yet"
+msgstr "لا بيانات بعد"
+
+msgid "No duplicate numbers"
+msgstr "لا أرقام مكررة"
+
+msgid "No entry without its document"
+msgstr "لا قيد بدون مستنده"
+
+msgid "No file is attached to this document yet. Use Attach File."
+msgstr "لا ملف مرفق بهذا المستند بعد. استعمل إرفاق ملف."
+
+msgid "No file selected. Excel: one invoice per row. PDF: each file becomes one invoice and is attached to it."
+msgstr "لم يُختر ملف. Excel: فاتورة في كل سطر. PDF: كل ملف يصبح فاتورة ويُرفق بها."
+
+msgid "No filters chosen (Choose filters... to add Branch, Project, Department, Customer / Supplier, Section)."
+msgstr "لم تُختر مرشحات (اختر المرشحات... لإضافة الفرع والمشروع والقسم والزبون / المورد والقسم)."
+
+msgid "No invoice data to export"
+msgstr "لا بيانات فواتير للتصدير"
+
+msgid "No journal data to export"
+msgstr "لا بيانات يومية للتصدير"
+
+msgid "No lines on heading accounts"
+msgstr "لا أسطر على الحسابات الرئيسية"
+
+msgid "No lines to export"
+msgstr "لا أسطر للتصدير"
+
+msgid "No positive budget line to save"
+msgstr "لا سطر موازنة موجب للحفظ"
+
+msgid "No posted income or expense actuals in the report year"
+msgstr "لا إيرادات أو مصاريف فعلية مقيّدة في سنة التقرير"
+
+msgid "No posted income or expense data to project"
+msgstr "لا بيانات إيرادات أو مصاريف مقيّدة للإسقاط"
+
+msgid "No readable item row was found. Enter the item name to create it in Inventory now, or Cancel to enter it manually later."
+msgstr "لم يوجد سطر صنف مقروء. أدخل اسم الصنف لإنشائه في المخزون الآن، أو ألغِ لإدخاله يدوياً لاحقاً."
+
+msgid "No report data to export"
+msgstr "لا بيانات تقرير للتصدير"
+
+msgid "No rows to project (check the base year and target date)"
+msgstr "لا أسطر للإسقاط (تحقق من سنة الأساس والتاريخ المستهدف)"
+
+msgid "No safe account suggestion was found. Choose an account manually."
+msgstr "لم يتم العثور على اقتراح حساب آمن. اختر الحساب يدويًا."
+
+msgid "No saved invoices to edit yet."
+msgstr "لا فواتير محفوظة للتعديل بعد."
+
+msgid "No second copy: backups stay only on this computer. Choose OneDrive or a USB / network folder."
+msgstr "لا توجد نسخة ثانية: النسخ الاحتياطية موجودة على هذا الكمبيوتر فقط. اختر OneDrive أو مجلد USB / شبكة."
+
+msgid "No supplier invoice entered twice"
+msgstr "لا فاتورة مورد مدخلة مرتين"
+
+msgid "No-VAT A/C"
+msgstr "حساب بلا ضريبة"
+
+msgid "No."
+msgstr "الرقم"
+
+msgid "Non-Deductible"
+msgstr "غير قابل للحسم"
+
+msgid "Non-deductible Expenses"
+msgstr "مصاريف غير مقبولة ضريبياً"
+
+msgid "Non-deductible Expenses Report"
+msgstr "تقرير المصاريف غير المقبولة ضريبياً"
+
+msgid "Non-deductible VAT expense (Art. 31)"
+msgstr "مصروف الضريبة غير القابلة للحسم (المادة 31)"
+
+msgid "Non-deductible VAT expense account"
+msgstr "حساب مصروف الضريبة غير القابلة للحسم"
+
+msgid "Non-deductible account"
+msgstr "الحساب غير القابل للحسم"
+
+msgid "Non-zero Balances only"
+msgstr "الأرصدة غير الصفرية فقط"
+
+msgid "None"
+msgstr "لا شيء"
+
+msgid "None of the selected entries is a Journal Voucher: system entries are changed from their own screen"
+msgstr "لا قيد يومية بين القيود المختارة: قيود النظام تُعدّل من شاشتها"
+
+msgid "Not cash"
+msgstr "غير نقدي"
+
+msgid "Not deductible for income tax"
+msgstr "غير قابل للتنزيل من ضريبة الدخل"
+
+msgid "Not registered in VAT"
+msgstr "غير مسجل في الضريبة على القيمة المضافة"
+
+msgid "Not saved"
+msgstr "لم يتم الحفظ"
+
+msgid "Not subject to NSSF:"
+msgstr "غير خاضع للضمان:"
+
+msgid "Not yet confirmed by a tax adviser"
+msgstr "لم يؤكده مستشار ضريبي بعد"
+
+msgid "Note"
+msgstr "ملاحظة"
+
+msgid "Notes"
+msgstr "ملاحظات"
+
+msgid "Nothing to print: apply the filters or the Find first"
+msgstr "لا شيء للطباعة: طبّق المرشحات أو البحث أولاً"
+
+msgid "Nothing was deleted"
+msgstr "لم يُحذف شيء"
+
+msgid "Nov"
+msgstr "ت2"
+
+msgid "Number"
+msgstr "الرقم"
+
+msgid "Numbering"
+msgstr "الترقيم"
+
+msgid "Numbering of new documents"
+msgstr "ترقيم المستندات الجديدة"
+
+msgid "OCI and Cash Flow"
+msgstr "الدخل الشامل والتدفقات النقدية"
+
+msgid "OK"
+msgstr "موافق"
+
+msgid "Oct"
+msgstr "ت1"
+
+msgid "Official Form Excel"
+msgstr "نموذج رسمي Excel"
+
+msgid "Official Form Q1-2 (PDF)"
+msgstr "النموذج الرسمي Q1-2 (PDF)"
+
+msgid "Official Forms (Excel)"
+msgstr "النماذج الرسمية (Excel)"
+
+msgid "Old Deprec."
+msgstr "الاستهلاك القديم"
+
+msgid "Old deprec."
+msgstr "الاستهلاك القديم"
+
+msgid "On Hand"
+msgstr "الموجود"
+
+msgid "One Account for Selected..."
+msgstr "حساب واحد للمختار..."
+
+msgid "One Account for the Selected Rows"
+msgstr "حساب واحد للأسطر المحددة"
+
+msgid "One-time download. You can stop it and use Install / Repair later to resume."
+msgstr "تنزيل لمرة واحدة. يمكنك إيقافه ثم استخدام التثبيت / الإصلاح لاحقاً لاستكماله."
+
+msgid "OneDrive was not found on this computer. Choose a USB or network folder with Browse..."
+msgstr "لم يوجد OneDrive على هذا الحاسوب. اختر مجلد USB أو شبكة عبر استعراض..."
+
+msgid "Only"
+msgstr "فقط"
+
+msgid "Only a posted invoice can be returned. Cancellation is a separate action."
+msgstr "يمكن إرجاع فاتورة مقيّدة فقط. الإلغاء إجراء منفصل."
+
+msgid "Only purchase and expense VAT can be marked non-deductible"
+msgstr "يمكن اعتبار ضريبة المشتريات والمصاريف فقط غير قابلة للحسم"
+
+msgid "Only that account changes, on the invoice and its journal lines; amounts and the other lines stay as they are."
+msgstr "يتغير هذا الحساب فقط في الفاتورة وأسطر قيدها؛ المبالغ والأسطر الأخرى تبقى كما هي."
+
+msgid "Open"
+msgstr "فتح"
+
+msgid "Open / Fill PDF"
+msgstr "فتح / تعبئة PDF"
+
+msgid "Open / Fill VAT PDF"
+msgstr "فتح / تعبئة PDF الضريبة"
+
+msgid "Open Backup Folder"
+msgstr "فتح مجلد النسخ الاحتياطية"
+
+msgid "Open Company"
+msgstr "فتح الشركة"
+
+msgid "Open Log Folder"
+msgstr "فتح مجلد السجل"
+
+msgid "Open PDF"
+msgstr "فتح PDF"
+
+msgid "Open a saved document first (Find)"
+msgstr "افتح مستنداً محفوظاً أولاً (بحث)"
+
+msgid "Open a saved invoice first"
+msgstr "افتح فاتورة محفوظة أولاً"
+
+msgid "Open a saved order first (Find)"
+msgstr "افتح طلبية محفوظة أولاً (بحث)"
+
+msgid "Open a saved voucher first"
+msgstr "افتح قيداً محفوظاً أولاً"
+
+msgid "Open a voucher to edit"
+msgstr "افتح سنداً لتعديله"
+
+msgid "Open count"
+msgstr "جرد مفتوح"
+
+msgid "Open each document and save it again (the entry is written again); if it should not count, delete or cancel it"
+msgstr "افتح كل مستند واحفظه من جديد (يُكتب القيد من جديد)؛ وإذا كان لا يجب احتسابه فاحذفه أو ألغِه"
+
+msgid "Open each invoice and save it again so the entry is written from the invoice"
+msgstr "افتح كل فاتورة واحفظها من جديد ليُكتب القيد منها"
+
+msgid "Open each invoice: a line or the discount was changed without the totals"
+msgstr "افتح كل فاتورة: تغيّر سطر أو الحسم دون المجاميع"
+
+msgid "Open for Editing"
+msgstr "فتح للتعديل"
+
+msgid "Open in Excel after saving"
+msgstr "فتح في Excel بعد الحفظ"
+
+msgid "Open in PDF reader"
+msgstr "فتح في قارئ PDF"
+
+msgid "Open invoices"
+msgstr "الفواتير المفتوحة"
+
+msgid "Open selected"
+msgstr "فتح المحدد"
+
+msgid "Open the invoice to duplicate first (Find No.)"
+msgstr "افتح الفاتورة المراد نسخها أولاً (البحث بالرقم)"
+
+msgid "Open the posted invoice first (Find), then press Return."
+msgstr "افتح الفاتورة المقيّدة أولاً (بحث) ثم اضغط مرتجع."
+
+msgid "Open the posted purchase invoice first (Find), then press Return."
+msgstr "افتح فاتورة الشراء المقيّدة أولاً (بحث) ثم اضغط مرتجع."
+
+msgid "Open this invoice? The lines you are typing now will be cleared."
+msgstr "فتح هذه الفاتورة؟ ستُمسح الأسطر التي تكتبها الآن."
+
+msgid "Open to edit"
+msgstr "فتح للتعديل"
+
+msgid "Opening Voucher"
+msgstr "قيد افتتاحي"
+
+msgid "Opening cash"
+msgstr "النقد في أول الفترة"
+
+msgid "Opening date (go-live)"
+msgstr "تاريخ الافتتاح (بدء العمل)"
+
+msgid "Opening voucher deleted"
+msgstr "حُذف القيد الافتتاحي"
+
+msgid "Operating exp. %"
+msgstr "مصاريف التشغيل %"
+
+msgid "Optional overrides: one account or prefix = category per line. Longest prefix wins.\nExample: 4031 = noncurrent_liabilities. Review classifications and maturity before issuing."
+msgstr "تعديلات اختيارية: حساب أو بادئة = فئة في كل سطر. تُعتمد البادئة الأطول.\nمثال: 4031 = noncurrent_liabilities. راجع التصنيفات والاستحقاق قبل الإصدار."
+
+msgid "Options"
+msgstr "خيارات"
+
+msgid "Order"
+msgstr "الطلبية"
+
+msgid "Order by Description"
+msgstr "ترتيب حسب البيان"
+
+msgid "Original"
+msgstr "الأصلية"
+
+msgid "Original amount"
+msgstr "المبلغ الأصلي"
+
+msgid "Other"
+msgstr "أخرى"
+
+msgid "Other income %"
+msgstr "إيرادات أخرى %"
+
+msgid "Other payables"
+msgstr "دائنون آخرون"
+
+msgid "Outflow"
+msgstr "التدفق الخارج"
+
+msgid "Output VAT (sales)"
+msgstr "الضريبة على المبيعات"
+
+msgid "Outstanding"
+msgstr "المتبقي"
+
+msgid "Overdue invoices"
+msgstr "الفواتير المتأخرة"
+
+msgid "Overdue…"
+msgstr "متأخر…"
+
+msgid "Overtime"
+msgstr "ساعات إضافية"
+
+msgid "Overview"
+msgstr "نظرة عامة"
+
+msgid "P&L Amount"
+msgstr "مبلغ الأرباح والخسائر"
+
+msgid "P&L tax basis (without non-deductible expenses)"
+msgstr "الأرباح والخسائر على الأساس الضريبي (بلا المصاريف غير المقبولة)"
+
+msgid "PAID"
+msgstr "مدفوعة"
+
+msgid "PARTIAL"
+msgstr "مدفوعة جزئياً"
+
+msgid "PDF Attachments"
+msgstr "مرفقات PDF"
+
+msgid "PDF asset invoice"
+msgstr "فاتورة أصل PDF"
+
+msgid "PDF document"
+msgstr "مستند PDF"
+
+msgid "PDF files"
+msgstr "ملفات PDF"
+
+msgid "PDF invoice"
+msgstr "فاتورة PDF"
+
+msgid "PDF invoices"
+msgstr "فواتير PDF"
+
+msgid "PDF preview"
+msgstr "معاينة PDF"
+
+msgid "PDF report"
+msgstr "تقرير PDF"
+
+msgid "PDF values are suggestions only. Verify the asset code, class-2 cost account, depreciation and accumulated accounts, and enter a rate you have independently verified. No Lebanese legal rate is assumed."
+msgstr "قيم PDF اقتراحات فقط. تحقّق من رمز الأصل وحساب كلفته ضمن الفئة 2 وحسابَي الاستهلاك والاستهلاك المتراكم، وأدخل نسبة تحقّقت منها بشكل مستقل. لا تُفترض أي نسبة قانونية لبنانية."
+
+msgid "PDF/photo readings require human review; use Review original document, then Review & Save Import"
+msgstr "تحتاج قراءة PDF/الصور إلى مراجعة بشرية؛ استخدم مراجعة المستند الأصلي ثم مراجعة وحفظ الاستيراد"
+
+msgid "PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves."
+msgstr "PDF: راجع نوع كل سطر (نقر مزدوج للاختيار). خلايا الحسابات: F2 / سهم للأسفل / نقر يمين يبحث في الدليل؛ Tab يحفظ."
+
+msgid "PREVIEW ONLY"
+msgstr "للمعاينة فقط"
+
+msgid "PROFESSIONAL ACCOUNTING"
+msgstr "محاسبة مهنية"
+
+msgid "PURCHASE INVOICE"
+msgstr "فاتورة شراء"
+
+msgid "Page"
+msgstr "صفحة"
+
+msgid "Pages a month (limit)"
+msgstr "صفحات بالشهر (الحد)"
+
+msgid "Paid"
+msgstr "مدفوع"
+
+msgid "Paid Amount"
+msgstr "المبلغ المدفوع"
+
+msgid "Paid from"
+msgstr "مدفوع من"
+
+msgid "Paid from (cash / bank account)"
+msgstr "مدفوع من (حساب صندوق / مصرف)"
+
+msgid "Paid into"
+msgstr "مدفوع إلى"
+
+msgid "Paid to"
+msgstr "مدفوع لـ"
+
+msgid "Parent"
+msgstr "الحساب الأب"
+
+msgid "Partial Match"
+msgstr "مطابقة جزئية"
+
+msgid "Party / Paid A/C"
+msgstr "حساب الطرف / الدفع"
+
+msgid "Password"
+msgstr "كلمة المرور"
+
+msgid "Past dates use the current invoice outstanding balance; future dates show the expected lateness if no further payment is made."
+msgstr "التواريخ الماضية تستعمل الرصيد الحالي للفاتورة؛ التواريخ المستقبلية تعرض التأخير المتوقع إذا لم يُدفع شيء آخر."
+
+msgid "Paste"
+msgstr "لصق"
+
+msgid "Payable"
+msgstr "دائن"
+
+msgid "Payable Account"
+msgstr "حساب الدائنين"
+
+msgid "Payables"
+msgstr "الذمم الدائنة"
+
+msgid "Payment"
+msgstr "دفع"
+
+msgid "Payment & Receipt"
+msgstr "القبض والدفع"
+
+msgid "Payment / delivery terms"
+msgstr "شروط الدفع / التسليم"
+
+msgid "Payment Method"
+msgstr "طريقة الدفع"
+
+msgid "Payment Mode"
+msgstr "طريقة الدفع"
+
+msgid "Payment date"
+msgstr "تاريخ الدفع"
+
+msgid "Payment details (optional - written on the form)"
+msgstr "تفاصيل الدفع (اختيارية - تُكتب على النموذج)"
+
+msgid "Payment entries"
+msgstr "قيود الدفع"
+
+msgid "Payroll"
+msgstr "الرواتب"
+
+msgid "Payroll & VAT"
+msgstr "الرواتب والضريبة"
+
+msgid "Payroll Entry"
+msgstr "إدخال الرواتب"
+
+msgid "Payroll Group"
+msgstr "مجموعة الرواتب"
+
+msgid "Payroll No."
+msgstr "رقم كشف الرواتب"
+
+msgid "Payroll Reports"
+msgstr "تقارير الرواتب"
+
+msgid "Payroll Reports & Worksheets (R5 / R6 / R10)"
+msgstr "تقارير الرواتب وأوراق العمل (R5 / R6 / R10)"
+
+msgid "Payroll Settings"
+msgstr "إعدادات الرواتب"
+
+msgid "Payroll Tax"
+msgstr "ضريبة الرواتب"
+
+msgid "Payroll Tax Account"
+msgstr "حساب ضريبة الرواتب"
+
+msgid "Payroll access"
+msgstr "صلاحية الرواتب"
+
+msgid "Payroll accounts (salaries 6311 / 6316, employer NSSF 6351, salary tax 4411, NSSF 4431) are set in Payroll > Tax & NSSF Settings > Standard Posting Accounts."
+msgstr "حسابات الرواتب (الرواتب 6311 / 6316، ضمان صاحب العمل 6351، ضريبة الرواتب 4411، الضمان 4431) تحدد في الرواتب > إعدادات الضريبة والضمان > حسابات الترحيل المعتمدة."
+
+msgid "Payroll control totals (original currency)"
+msgstr "مجاميع ضبط الرواتب (بالعملة الأصلية)"
+
+msgid "Payroll counts the spouse from the month of the marriage and each child from the month of birth (salary-tax deductions and NSSF family allowance). Adding a child raises Children by one."
+msgstr "تحتسب الرواتب الزوج / الزوجة من شهر الزواج وكل طفل من شهر الولادة (تنزيلات ضريبة الرواتب والتعويض العائلي للضمان). تزداد خانة الأطفال واحداً عند إضافة طفل."
+
+msgid "Payroll entries come from the payroll: posted payroll is changed by a new payroll or a journal voucher."
+msgstr "قيود الرواتب تأتي من الرواتب: الرواتب المقيّدة تُعدّل برواتب جديدة أو بقيد يومية."
+
+msgid "Payroll exceptions to resolve"
+msgstr "فروقات الرواتب المطلوب تصحيحها"
+
+msgid "Payroll preparation controls"
+msgstr "ضوابط إعداد الرواتب"
+
+msgid "Payroll sheet"
+msgstr "كشف الرواتب"
+
+msgid "Payslips"
+msgstr "قسائم الرواتب"
+
+msgid "Payslips of month (MM-YYYY)"
+msgstr "قسائم رواتب الشهر (MM-YYYY)"
+
+msgid "Pending approvals"
+msgstr "الموافقات المعلّقة"
+
+msgid "Per child (up to 5)"
+msgstr "لكل ولد (حتى 5)"
+
+msgid "Per-year % (e.g. 2027=10, 2028=5)"
+msgstr "النسبة لكل سنة (مثلاً 2027=10، 2028=5)"
+
+msgid "Period"
+msgstr "الفترة"
+
+msgid "Period Date"
+msgstr "تاريخ الفترة"
+
+msgid "Period dashboard summary"
+msgstr "ملخص لوحة الفترة"
+
+msgid "Period end"
+msgstr "نهاية الفترة"
+
+msgid "Period summary"
+msgstr "ملخص الفترة"
+
+msgid "Period: compare with the same period last year"
+msgstr "الفترة: مقارنة مع الفترة نفسها من السنة الماضية"
+
+msgid "Period: {start} to {end}"
+msgstr "الفترة: من {start} إلى {end}"
+
+msgid "Personnel %"
+msgstr "الموظفون %"
+
+msgid "Phone"
+msgstr "الهاتف"
+
+msgid "Phone 2"
+msgstr "الهاتف 2"
+
+msgid "Physical Count"
+msgstr "الجرد الفعلي"
+
+msgid "Physical Inventory"
+msgstr "الجرد الفعلي"
+
+msgid "Pick the invoice you want to edit:"
+msgstr "اختر الفاتورة التي تريد تعديلها:"
+
+msgid "Place of Birth"
+msgstr "محل الولادة"
+
+msgid "Place of birth"
+msgstr "محل الولادة"
+
+msgid "Post"
+msgstr "تقييد"
+
+msgid "Post All"
+msgstr "تقييد الكل"
+
+msgid "Post All Accounts"
+msgstr "تقييد كل الحسابات"
+
+msgid "Post DOE"
+msgstr "تقييد فروقات الصرف"
+
+msgid "Post DOE vouchers"
+msgstr "تقييد قيود فروقات الصرف"
+
+msgid "Post Entry for Selected Account"
+msgstr "تقييد قيد للحساب المختار"
+
+msgid "Post Line"
+msgstr "تقييد السطر"
+
+msgid "Post Monthly Variation"
+msgstr "تقييد التغير الشهري"
+
+msgid "Post Payroll"
+msgstr "تقييد الرواتب"
+
+msgid "Post Provision"
+msgstr "تقييد المؤونة"
+
+msgid "Post Return / Credit Note"
+msgstr "تقييد مرتجع / إشعار دائن"
+
+msgid "Post Selected to Accounting"
+msgstr "تقييد المختار في المحاسبة"
+
+msgid "Post Settlement Voucher"
+msgstr "تقييد قيد التسوية"
+
+msgid "Post selected period"
+msgstr "تقييد الفترة المختارة"
+
+msgid "Post the payroll before recording its payment"
+msgstr "رحّل الراتب قبل تسجيل دفعته"
+
+msgid "Post this payroll to the General Journal? Posted payroll cannot be edited."
+msgstr "تقييد هذه الرواتب في دفتر اليومية العام؟ لا يمكن تعديل الرواتب المقيّدة."
+
+msgid "Posted"
+msgstr "مرحل"
+
+msgid "Posted depreciation is shown separately from the unposted schedule; amounts remain in each asset's currency."
+msgstr "الاستهلاك المقيّد يظهر منفصلاً عن الجدول غير المقيّد؛ المبالغ تبقى بعملة كل أصل."
+
+msgid "Posted purchase costs"
+msgstr "كلف الشراء المقيّدة"
+
+msgid "Posted-ledger analysis; unsupported or unlinked margins are shown as unavailable."
+msgstr "تحليل دفتر الأستاذ المرحّل؛ الهوامش غير المدعومة أو غير المرتبطة تظهر كغير متاحة."
+
+msgid "Posting Rules"
+msgstr "قواعد القيد"
+
+msgid "Posting accounts"
+msgstr "حسابات القيد"
+
+msgid "Posting currency"
+msgstr "عملة القيد"
+
+msgid "Posting rules (learned from your invoices)"
+msgstr "قواعد القيد (متعلَّمة من فواتيرك)"
+
+msgid "Prefix"
+msgstr "البادئة"
+
+msgid "Preparation status"
+msgstr "حالة الإعداد"
+
+msgid "Prepared by"
+msgstr "أعدّه"
+
+msgid "Preparing the download..."
+msgstr "جارٍ تحضير التنزيل..."
+
+msgid "Press Build from the books."
+msgstr "اضغط إعداد من الدفاتر."
+
+msgid "Press New first: the reading fills a new expense."
+msgstr "اضغط جديد أولاً: القراءة تعبّئ مصروفاً جديداً."
+
+msgid "Preview"
+msgstr "معاينة"
+
+msgid "Preview Closing 6&7"
+msgstr "معاينة إقفال الصنفين 6 و7"
+
+msgid "Preview again after changing a rate"
+msgstr "عاين مجدداً بعد تغيير السعر"
+
+msgid "Preview again after changing the date or the books"
+msgstr "عاين مجدداً بعد تغيير التاريخ أو الدفاتر"
+
+msgid "Preview the vouchers first"
+msgstr "عاين القيود أولاً"
+
+msgid "Previous Tab"
+msgstr "التبويب السابق"
+
+msgid "Previous-year transactions are read-only"
+msgstr "عمليات السنة السابقة للقراءة فقط"
+
+msgid "Print"
+msgstr "طباعة"
+
+msgid "Print / PDF"
+msgstr "طباعة / PDF"
+
+msgid "Print Date"
+msgstr "تاريخ الطباعة"
+
+msgid "Print Preview"
+msgstr "معاينة الطباعة"
+
+msgid "Print Settings"
+msgstr "إعدادات الطباعة"
+
+msgid "Print last saved file"
+msgstr "طباعة آخر ملف محفوظ"
+
+msgid "Printing from this tab is supported only on Windows."
+msgstr "الطباعة من هذا التبويب متاحة على Windows فقط."
+
+msgid "Prior Year"
+msgstr "السنة السابقة"
+
+msgid "Private School / Child"
+msgstr "مدرسة خاصة / ولد"
+
+msgid "Private School Cap"
+msgstr "سقف المدرسة الخاصة"
+
+msgid "Private school / university children"
+msgstr "أولاد في مدارس / جامعات خاصة"
+
+msgid "Product"
+msgstr "المنتج"
+
+msgid "Product into"
+msgstr "المنتج إلى"
+
+msgid "Product made"
+msgstr "المنتج المصنوع"
+
+msgid "Production"
+msgstr "الإنتاج"
+
+msgid "Production (Inventory)"
+msgstr "الإنتاج (المخزون)"
+
+msgid "Production Orders"
+msgstr "أوامر الإنتاج"
+
+msgid "Production Report"
+msgstr "تقرير الإنتاج"
+
+msgid "Profession"
+msgstr "المهنة"
+
+msgid "Profit & Loss"
+msgstr "الأرباح والخسائر"
+
+msgid "Profit & Loss (6-7)"
+msgstr "الأرباح والخسائر (6-7)"
+
+msgid "Profitability"
+msgstr "الربحية"
+
+msgid "Program Defaults"
+msgstr "إعدادات البرنامج الافتراضية"
+
+msgid "Project"
+msgstr "المشروع"
+
+msgid "Project Name"
+msgstr "اسم المشروع"
+
+msgid "Project Profitability"
+msgstr "ربحية المشاريع"
+
+msgid "Project ahead"
+msgstr "الإسقاط لاحقاً"
+
+msgid "Project from Actual"
+msgstr "إسقاط من الفعلي"
+
+msgid "Projected values use the last 3 complete months."
+msgstr "القيم المتوقعة تستعمل آخر 3 أشهر كاملة."
+
+msgid "Projection"
+msgstr "الإسقاط"
+
+msgid "Projection & Budget (3D)"
+msgstr "الإسقاط والموازنة (3D)"
+
+msgid "Projects"
+msgstr "المشاريع"
+
+msgid "Provisional %"
+msgstr "النسبة المؤقتة %"
+
+msgid "Public / free school or Lebanese University children"
+msgstr "أولاد في مدارس رسمية / مجانية أو الجامعة اللبنانية"
+
+msgid "Public School / Child"
+msgstr "مدرسة رسمية / ولد"
+
+msgid "Public School Cap"
+msgstr "سقف المدرسة الرسمية"
+
+msgid "Purchase Date"
+msgstr "تاريخ الشراء"
+
+msgid "Purchase Invoice"
+msgstr "فاتورة شراء"
+
+msgid "Purchase Invoice Items · F2 to find an item · double-click a cell to edit"
+msgstr "أصناف فاتورة الشراء · F2 للبحث عن صنف · نقر مزدوج على خلية للتعديل"
+
+msgid "Purchase Order"
+msgstr "أمر شراء"
+
+msgid "Purchase PDF"
+msgstr "PDF المشتريات"
+
+msgid "Purchase PDF item"
+msgstr "صنف PDF المشتريات"
+
+msgid "Purchase date"
+msgstr "تاريخ الشراء"
+
+msgid "Purchase invoice No./ID"
+msgstr "رقم / معرّف فاتورة الشراء"
+
+msgid "Purchase invoice number"
+msgstr "رقم فاتورة الشراء"
+
+msgid "Purchase invoices"
+msgstr "فواتير الشراء"
+
+msgid "Purchase invoices (PUR)"
+msgstr "فواتير الشراء (PUR)"
+
+msgid "Purchase totals"
+msgstr "مجاميع المشتريات"
+
+msgid "Purchase value"
+msgstr "قيمة الشراء"
+
+msgid "Purchases"
+msgstr "المشتريات"
+
+msgid "Purchases & Cash"
+msgstr "المشتريات والنقد"
+
+msgid "Purchases & Expenses"
+msgstr "المشتريات والمصاريف"
+
+msgid "Purchases - when no account is chosen"
+msgstr "المشتريات - عند عدم اختيار حساب"
+
+msgid "Purchases / Expense / Sales account"
+msgstr "حساب المشتريات / المصروف / المبيعات"
+
+msgid "Purchases without VAT"
+msgstr "مشتريات بدون ضريبة"
+
+msgid "Put back the program's default accounts?"
+msgstr "إعادة الحسابات الافتراضية للبرنامج؟"
+
+msgid "Puts the numbers back in date order after a document was entered with a wrong date. Only the program's own numbers change (RV-2026-000012); numbers typed by hand or imported are kept. Documents in locked books, a closed year or a quarter whose VAT return is saved keep their numbers. A safety backup is made first and the Audit Trail keeps every old -> new number."
+msgstr "يعيد ترتيب الأرقام حسب التاريخ بعد إدخال مستند بتاريخ خاطئ. تتغير فقط الأرقام التي يعطيها البرنامج (RV-2026-000012)؛ الأرقام المكتوبة يدوياً أو المستوردة تبقى. المستندات في دفاتر مقفلة أو سنة مقفلة أو فصل حُفظ تصريحه الضريبي تحتفظ بأرقامها. تؤخذ نسخة أمان أولاً ويحفظ سجل التدقيق كل رقم قديم -> جديد."
+
+msgid "Qty"
+msgstr "الكمية"
+
+msgid "Qty Used"
+msgstr "الكمية المستعملة"
+
+msgid "Quantity"
+msgstr "الكمية"
+
+msgid "Quantity and cost come from the stock documents. Double-click an item to edit it."
+msgstr "الكمية والكلفة من مستندات المخزون. انقر مرتين على صنف لتعديله."
+
+msgid "Quantity must be greater than zero"
+msgstr "يجب أن تكون الكمية أكبر من صفر"
+
+msgid "Quarter"
+msgstr "الفصل"
+
+msgid "Quarter budgets sum saved monthly amounts; annual-only budgets are divided by four."
+msgstr "تجمع الموازنة الربع سنوية المبالغ الشهرية المحفوظة؛ وتُقسم الموازنات السنوية فقط على أربعة."
+
+msgid "Quarter totals aggregate monthly cash movements; opening cash is the class 51/53 balance before the selected range."
+msgstr "تجمع المجاميع الربع سنوية الحركات النقدية الشهرية؛ والنقد الافتتاحي هو رصيد الفئة 51/53 قبل الفترة المحددة."
+
+msgid "Quarterly"
+msgstr "ربع سنوي"
+
+msgid "Quarterly Budget vs Actual"
+msgstr "الموازنة مقابل الفعلي ربع السنوي"
+
+msgid "Quarterly Cash Flow"
+msgstr "التدفق النقدي ربع السنوي"
+
+msgid "Quarterly Cashflow"
+msgstr "التدفق النقدي ربع السنوي"
+
+msgid "Quarterly VAT"
+msgstr "الضريبة الفصلية"
+
+msgid "Quarterly VAT: compare, then file an amended return or put the documents back"
+msgstr "الضريبة الفصلية: قارن، ثم قدّم تصريحاً معدّلاً أو أعد المستندات كما كانت"
+
+msgid "Quarterly VAT: open the quarter (an exchange rate may be missing)"
+msgstr "الضريبة الفصلية: افتح الفصل (قد يكون سعر صرف ناقصاً)"
+
+msgid "Quarterly cashflow requested for Q{quarter} {year}."
+msgstr "طُلب التدفق النقدي للربع {quarter} من {year}."
+
+msgid "Quick actions"
+msgstr "اختصارات سريعة"
+
+msgid "Quotation"
+msgstr "عرض سعر"
+
+msgid "Quotations / Purchase Orders / Consignment"
+msgstr "عروض الأسعار / أوامر الشراء / الأمانة"
+
+msgid "Quotes / Orders / Consignment"
+msgstr "العروض والطلبات والأمانة"
+
+msgid "R3 Registration"
+msgstr "تسجيل R3"
+
+msgid "RETURN NOTE"
+msgstr "إشعار مرتجع"
+
+msgid "REVIEW REQUIRED"
+msgstr "تلزم المراجعة"
+
+msgid "Rate % / year"
+msgstr "النسبة % / سنة"
+
+msgid "Rate LBP"
+msgstr "السعر بالليرة"
+
+msgid "Rate USD"
+msgstr "السعر بالدولار"
+
+msgid "Rate added. The daily rate is the average of all entered rates for this date and currency pair."
+msgstr "أُضيف السعر. السعر اليومي هو متوسط كل الأسعار المدخلة لهذا التاريخ وزوج العملات."
+
+msgid "Read invoices with Azure"
+msgstr "قراءة الفواتير بـ Azure"
+
+msgid "Read invoices with Azure (optional, your own free key)"
+msgstr "قراءة الفواتير بـ Azure (اختياري، بمفتاحك المجاني الخاص)"
+
+msgid "Read with Azure"
+msgstr "قراءة بـ Azure"
+
+msgid "Reading checks / item rows"
+msgstr "فحص القراءة / أسطر الأصناف"
+
+msgid "Reading the PDF..."
+msgstr "جارٍ قراءة PDF..."
+
+msgid "Reason"
+msgstr "السبب"
+
+msgid "Receipt / document no."
+msgstr "رقم الإيصال / المستند"
+
+msgid "Receipt reference"
+msgstr "مرجع الاستلام"
+
+msgid "Receipts and payments"
+msgstr "المقبوضات والمدفوعات"
+
+msgid "Receivables"
+msgstr "الذمم المدينة"
+
+msgid "Receivables Ageing (customers)"
+msgstr "أعمار الذمم المدينة (الزبائن)"
+
+msgid "Receive goods"
+msgstr "استلام بضاعة"
+
+msgid "Receive partial"
+msgstr "استلام جزئي"
+
+msgid "Received"
+msgstr "مستلم"
+
+msgid "Received by"
+msgstr "استلمه"
+
+msgid "Recipe Qty"
+msgstr "كمية الوصفة"
+
+msgid "Recipes"
+msgstr "الوصفات"
+
+msgid "Recipes (materials per product)"
+msgstr "الوصفات (المواد لكل منتج)"
+
+msgid "Recipes saved"
+msgstr "حُفظت الوصفات"
+
+msgid "Record"
+msgstr "السجل"
+
+msgid "Record Asset Purchase"
+msgstr "تسجيل شراء أصل"
+
+msgid "Record NSSF Payment"
+msgstr "تسجيل دفع الضمان"
+
+msgid "Record salary payment"
+msgstr "تسجيل دفعة راتب"
+
+msgid "Ref. / Cheque"
+msgstr "المرجع / الشيك"
+
+msgid "Reference"
+msgstr "المرجع"
+
+msgid "Reference (invoice / PO)"
+msgstr "المرجع (فاتورة / طلب شراء)"
+
+msgid "Reference / client order"
+msgstr "المرجع / طلبية الزبون"
+
+msgid "Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. 2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831."
+msgstr "مبالغ مرجعية فقط. اضغط تحميل القانون اللبناني لتطبيقها على هذه الشركة والسنة؛ عدّل جدول الفترات أعلاه للتخصيص. 2024: المرسومان 12599/12772 · 2025: المرسوم 422 / مذكرة الضمان 793 · 2026: المرسوم 2923 / مذكرة الضمان 831."
+
+msgid "Refresh"
+msgstr "تحديث"
+
+msgid "Refresh Opening"
+msgstr "تحديث الافتتاحي"
+
+msgid "Refresh Projection"
+msgstr "تحديث الإسقاط"
+
+msgid "Refresh the employee list and select an employee"
+msgstr "حدّث قائمة الموظفين واختر موظفاً"
+
+msgid "Refresh the selected period before exporting"
+msgstr "حدّث الفترة المحددة قبل التصدير"
+
+msgid "Refund requested (LBP, Art. 30)"
+msgstr "الاسترداد المطلوب (ل.ل.، المادة 30)"
+
+msgid "Reg. No."
+msgstr "رقم التسجيل"
+
+msgid "Registered in VAT"
+msgstr "مسجل في الضريبة"
+
+msgid "Registered in VAT since"
+msgstr "مسجل في الضريبة على القيمة المضافة منذ"
+
+msgid "Reject Selected"
+msgstr "رفض المحدد"
+
+msgid "Reject documents"
+msgstr "رفض المستندات"
+
+msgid "Rejected"
+msgstr "مرفوض"
+
+msgid "Remove"
+msgstr "إزالة"
+
+msgid "Remove Key"
+msgstr "إزالة المفتاح"
+
+msgid "Remove Row"
+msgstr "إزالة السطر"
+
+msgid "Remove logo"
+msgstr "إزالة الشعار"
+
+msgid "Remove selected"
+msgstr "إزالة المحدد"
+
+msgid "Renew 1 Year"
+msgstr "تجديد سنة"
+
+msgid "Renew these documents and upload the new copy from Customers / Suppliers > Legal Documents."
+msgstr "جدّد هذه المستندات وحمّل النسخة الجديدة من الزبائن / الموردين > المستندات القانونية."
+
+msgid "Renumber"
+msgstr "إعادة الترقيم"
+
+msgid "Renumber Documents"
+msgstr "إعادة ترقيم المستندات"
+
+msgid "Renumber by date"
+msgstr "إعادة الترقيم حسب التاريخ"
+
+msgid "Reopen Fiscal Year"
+msgstr "إعادة فتح السنة المالية"
+
+msgid "Reopen Saved Return"
+msgstr "إعادة فتح التصريح المحفوظ"
+
+msgid "Reopen VAT Return"
+msgstr "إعادة فتح تصريح الضريبة"
+
+msgid "Reorder Level"
+msgstr "حد إعادة الطلب"
+
+msgid "Replace ALL Tax & NSSF periods with the configured Lebanese payroll rules from 01-01-2024?\n\n- Budget Law 2024 brackets and family deductions\n- Transport exempt 450,000 LBP/day, schooling 6M/year\n- Tax rounded up to 10,000 LBP from 25-11-2024\n- NSSF sickness & maternity ceiling: 45M -> 90M (04-2024) -> 120M (08-2025); family 12M -> 18M (07-2025) -> 28M (05-2026)\n- Family benefits: 600k/330k from 01-2024, 1.2M/660k from 07-2025, 2.1M/1.155M from 05-2026 (spouse/child)\n\nRates, employee eligibility, and any part-month minimum-wage treatment must be confirmed with CNSS / your accountant. These reports are preparation worksheets, not official filings. Posting accounts are kept. Already saved payroll is NOT recalculated."
+msgstr "هل تريد استبدال جميع فترات الضريبة والضمان بالقواعد اللبنانية المضبوطة من 01-01-2024؟\n\n- شرائح وتنزيلات الأسرة وفق موازنة 2024\n- النقل المعفى 450,000 ل.ل./يوم، والتعليم 6M/سنة\n- تقريب الضريبة إلى الأعلى لأقرب 10,000 ل.ل. من 25-11-2024\n- سقف المرض والأمومة: 45M -> 90M (04-2024) -> 120M (08-2025)؛ العائلي 12M -> 18M (07-2025) -> 28M (05-2026)\n- التعويضات العائلية: 600k/330k من 01-2024، و1.2M/660k من 07-2025، و2.1M/1.155M من 05-2026 (الزوج/الطفل)\n\nيجب تأكيد النسب وأهلية الموظف ومعالجة الحد الأدنى للأجر للشهر الجزئي مع الضمان / محاسبك. هذه التقارير أوراق تحضير وليست تصريحات رسمية. تُحفظ حسابات الترحيل. ولا تُعاد حسابات الرواتب المحفوظة."
+
+msgid "Replace ALL previous invoices (a safety backup is made first)"
+msgstr "استبدال كل الفواتير السابقة (تُعمل نسخة احتياطية أولاً)"
+
+msgid "Replace ALL previous invoices cannot be used with PDF expense rows. Uncheck Replace to import paid expenses"
+msgstr "لا يمكن استبدال كل الفواتير السابقة مع أسطر مصاريف PDF. ألغِ الاستبدال لاستيراد المصاريف المدفوعة"
+
+msgid "Replace previous data"
+msgstr "استبدال البيانات السابقة"
+
+msgid "Replace the current draft budget rows with the projection? Nothing is saved until you press Save Budget."
+msgstr "استبدال أسطر الموازنة المسودة بالإسقاط؟ لا يُحفظ شيء حتى تضغط حفظ الموازنة."
+
+msgid "Replace the current purchase item lines with the suggested lines?"
+msgstr "استبدال أسطر أصناف المشتريات الحالية بالأسطر المقترحة؟"
+
+msgid "Replace the lines on the screen? Nothing is saved until you press Save Budget."
+msgstr "استبدال الأسطر على الشاشة؟ لا يُحفظ شيء حتى تضغط حفظ الموازنة."
+
+msgid "Replace the materials of this order with the recipe quantities?"
+msgstr "استبدال مواد هذه الطلبية بكميات الوصفة؟"
+
+msgid "Report"
+msgstr "التقرير"
+
+msgid "Report detail"
+msgstr "تفاصيل التقرير"
+
+msgid "Report year"
+msgstr "سنة التقرير"
+
+msgid "Reports"
+msgstr "التقارير"
+
+msgid "Representation not taxable / month"
+msgstr "تعويض تمثيل غير خاضع / شهر"
+
+msgid "Representation taxable / month"
+msgstr "تعويض تمثيل خاضع / شهر"
+
+msgid "Residual value"
+msgstr "القيمة المتبقية"
+
+msgid "Restore"
+msgstr "استعادة"
+
+msgid "Restore ALL Currencies 2024-Today"
+msgstr "استعادة كل العملات 2024 حتى اليوم"
+
+msgid "Restore Database"
+msgstr "استعادة قاعدة البيانات"
+
+msgid "Restore EUR Rates 2024-Today"
+msgstr "استعادة أسعار اليورو 2024 حتى اليوم"
+
+msgid "Restore Selected"
+msgstr "استعادة المختار"
+
+msgid "Restore a backup from before the change, and find out who opened the data file outside Nanza"
+msgstr "استرجع نسخة احتياطية من قبل التغيير، وابحث عمّن فتح ملف البيانات خارج نانزا"
+
+msgid "Restore daily EUR to USD and EUR to LBP rates from 01-01-2024 until today?"
+msgstr "استعادة الأسعار اليومية لليورو مقابل الدولار والليرة من 01-01-2024 حتى اليوم؟"
+
+msgid "Restore defaults"
+msgstr "استعادة الإعدادات الافتراضية"
+
+msgid "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept."
+msgstr "هل تريد استعادة الأسعار اليومية لجميع عملات الإعدادات، من 01-01-2024 حتى اليوم؟\n\nتأتي أسعار EUR وGBP وCHF وCAD ... من البنك المركزي الأوروبي (يتطلب الإنترنت)؛ وتستخدم AED وSAR وQAR وBHD وOMR وJOD أسعار ربطها الثابتة بالدولار الأميركي؛ ويبقى LBP عند 89,500. تُحفظ الأسعار التي أدخلتها يدوياً."
+
+msgid "Restore this backup? A safety backup of current data will be created first."
+msgstr "استعادة هذه النسخة؟ تُعمل نسخة أمان من البيانات الحالية أولاً."
+
+msgid "Result"
+msgstr "النتيجة"
+
+msgid "Retro From"
+msgstr "بأثر رجعي من"
+
+msgid "Retro Salary"
+msgstr "راتب بمفعول رجعي"
+
+msgid "Retro To"
+msgstr "بأثر رجعي إلى"
+
+msgid "Retroactive Salary"
+msgstr "راتب بأثر رجعي"
+
+msgid "Return"
+msgstr "مرتجع"
+
+msgid "Return (goods back)"
+msgstr "مرتجع (إرجاع بضاعة)"
+
+msgid "Return / Credit Note"
+msgstr "مرتجع / إشعار دائن"
+
+msgid "Return date (DD-MM-YYYY)"
+msgstr "تاريخ المرتجع (DD-MM-YYYY)"
+
+msgid "Revalue in"
+msgstr "إعادة التقييم بـ"
+
+msgid "Revenue"
+msgstr "الإيرادات"
+
+msgid "Revenue %"
+msgstr "الإيرادات %"
+
+msgid "Revenue Account"
+msgstr "حساب الإيراد"
+
+msgid "Reversal date (DD-MM-YYYY)"
+msgstr "تاريخ عكس الدفعة (يوم-شهر-سنة)"
+
+msgid "Reverse"
+msgstr "عكس الدفعة"
+
+msgid "Reverse charge"
+msgstr "الاحتساب العكسي"
+
+msgid "Reverse salary payment"
+msgstr "عكس دفعة الراتب"
+
+msgid "Review & Save Import"
+msgstr "مراجعة وحفظ الاستيراد"
+
+msgid "Review PDF fixed asset"
+msgstr "مراجعة أصل ثابت من PDF"
+
+msgid "Review PDF type"
+msgstr "مراجعة نوع PDF"
+
+msgid "Review asset PDF"
+msgstr "مراجعة PDF الأصل"
+
+msgid "Review asset details before creating the register item"
+msgstr "راجع تفاصيل الأصل قبل إنشاء سجله"
+
+msgid "Review invoice lines"
+msgstr "مراجعة أسطر الفاتورة"
+
+msgid "Review original document"
+msgstr "مراجعة المستند الأصلي"
+
+msgid "Review required"
+msgstr "تتطلب مراجعة"
+
+msgid "Role"
+msgstr "الدور"
+
+msgid "Roles: Admin = everything; Accountant = enter and post; Viewer = read only. New non-admin users are valid for 1 year; leave 'Valid until' empty for no expiry. Payroll and VAT access can be removed per user. 'Can delete / cancel' allows deleting or cancelling posted documents (new users: off)."
+msgstr "الأدوار: مدير النظام = كل شيء؛ محاسب = إدخال وترحيل؛ مشاهد = قراءة فقط. المستخدمون الجدد من غير المدراء صالحون لسنة واحدة؛ اترك 'صالح حتى' فارغاً لعدم الانتهاء. يمكن سحب صلاحية الرواتب والضريبة لكل مستخدم. 'يمكنه الحذف / الإلغاء' يسمح بحذف أو إلغاء المستندات المرحّلة (المستخدمون الجدد: معطّل)."
+
+msgid "Rotate image"
+msgstr "تدوير الصورة"
+
+msgid "Round Tax Up To"
+msgstr "تقريب الضريبة حتى"
+
+msgid "Rows"
+msgstr "الأسطر"
+
+msgid "Rules (Excel)"
+msgstr "القواعد (Excel)"
+
+msgid "Rules for the Adviser (PDF)"
+msgstr "القواعد للمستشار (PDF)"
+
+msgid "Rules for the Tax Adviser"
+msgstr "القواعد للمستشار الضريبي"
+
+msgid "Run"
+msgstr "تشغيل"
+
+msgid "Run Analysis"
+msgstr "تشغيل التحليل"
+
+msgid "Run Books Health Check"
+msgstr "تشغيل فحص سلامة الدفاتر"
+
+msgid "Run Year-End Check"
+msgstr "تشغيل فحص نهاية السنة"
+
+msgid "Run the check on the computer that runs the data service"
+msgstr "شغّل الفحص على الكمبيوتر الذي يشغّل خدمة البيانات"
+
+msgid "SABER FOR AUDIT"
+msgstr "سابر للتدقيق"
+
+msgid "SALES INVOICE"
+msgstr "فاتورة مبيع"
+
+msgid "Salary"
+msgstr "الراتب"
+
+msgid "Salary Expense Account"
+msgstr "حساب مصروف الرواتب"
+
+msgid "Salary Payable Account"
+msgstr "حساب الرواتب المستحقة"
+
+msgid "Salary month"
+msgstr "شهر استحقاق الراتب"
+
+msgid "Salary-tax policy used here: no spouse deduction when the spouse works; half the child deduction. Confirm this dependent split with your accountant. Tax applies only above the taxable threshold."
+msgstr "سياسة ضريبة الرواتب المعتمدة هنا: لا تنزيل عن الزوج/الزوجة إذا كان يعمل؛ نصف التنزيل عن الأولاد. أكّد هذا التوزيع مع محاسبك. تطبّق الضريبة فقط فوق الحد الخاضع."
+
+msgid "Sale type (Law 379/2001)"
+msgstr "نوع البيع (القانون 379/2001)"
+
+msgid "Sales"
+msgstr "المبيعات"
+
+msgid "Sales / purchase invoices"
+msgstr "فواتير البيع / الشراء"
+
+msgid "Sales / services - when no account is chosen"
+msgstr "المبيعات / الخدمات - عند عدم اختيار حساب"
+
+msgid "Sales Invoice"
+msgstr "فاتورة مبيع"
+
+msgid "Sales Price"
+msgstr "سعر البيع"
+
+msgid "Sales Type"
+msgstr "نوع البيع"
+
+msgid "Sales VAT = rate x amount"
+msgstr "ضريبة المبيعات = النسبة × المبلغ"
+
+msgid "Sales account (sales, class 7)"
+msgstr "حساب المبيعات (المبيعات، الصنف 7)"
+
+msgid "Sales invoices"
+msgstr "فواتير البيع"
+
+msgid "Sales invoices (SAL)"
+msgstr "فواتير المبيع (SAL)"
+
+msgid "Sales invoices numbered without gaps"
+msgstr "تسلسل فواتير البيع بلا فجوات"
+
+msgid "Sales of goods (items from stock)"
+msgstr "مبيعات البضائع (أصناف من المخزون)"
+
+msgid "Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)"
+msgstr "المبيعات: إيراد غير خاضع لضريبة الدخل (خاضع سابقاً / معفى بالقانون، مع السبب القانوني)"
+
+msgid "Same as From  >"
+msgstr "نفس البداية  >"
+
+msgid "Same revenue % for every year"
+msgstr "نفس نسبة الإيرادات لكل سنة"
+
+msgid "Save"
+msgstr "حفظ"
+
+msgid "Save %"
+msgstr "حفظ %"
+
+msgid "Save (information and texts apply to every year)"
+msgstr "حفظ (المعلومات والنصوص لكل السنوات)"
+
+msgid "Save 12 Months"
+msgstr "حفظ 12 شهراً"
+
+msgid "Save Account"
+msgstr "حفظ الحساب"
+
+msgid "Save All (draft)"
+msgstr "حفظ الكل (مسودة)"
+
+msgid "Save Backup As"
+msgstr "حفظ النسخة الاحتياطية باسم"
+
+msgid "Save Backup As... (USB / Drive)"
+msgstr "حفظ النسخة الاحتياطية باسم... (USB / قرص)"
+
+msgid "Save Branch"
+msgstr "حفظ الفرع"
+
+msgid "Save Budget"
+msgstr "حفظ الموازنة"
+
+msgid "Save Company"
+msgstr "حفظ الشركة"
+
+msgid "Save Count"
+msgstr "حفظ الجرد"
+
+msgid "Save Data"
+msgstr "حفظ البيانات"
+
+msgid "Save Default Accounts"
+msgstr "حفظ الحسابات الافتراضية"
+
+msgid "Save Employee"
+msgstr "حفظ الموظف"
+
+msgid "Save Excel"
+msgstr "حفظ Excel"
+
+msgid "Save Expense"
+msgstr "حفظ المصروف"
+
+msgid "Save Invoice"
+msgstr "حفظ الفاتورة"
+
+msgid "Save Numbering"
+msgstr "حفظ الترقيم"
+
+msgid "Save PDF"
+msgstr "حفظ PDF"
+
+msgid "Save Payment"
+msgstr "حفظ الدفع"
+
+msgid "Save Payroll"
+msgstr "حفظ الرواتب"
+
+msgid "Save Periods"
+msgstr "حفظ الفترات"
+
+msgid "Save Production"
+msgstr "حفظ الإنتاج"
+
+msgid "Save Purchase"
+msgstr "حفظ المشتريات"
+
+msgid "Save Recipe"
+msgstr "حفظ الوصفة"
+
+msgid "Save Return (lock quarter)"
+msgstr "حفظ التصريح (قفل الفصل)"
+
+msgid "Save Settings"
+msgstr "حفظ الإعدادات"
+
+msgid "Save Update"
+msgstr "حفظ التحديث"
+
+msgid "Save User"
+msgstr "حفظ المستخدم"
+
+msgid "Save VAT Return"
+msgstr "حفظ تصريح الضريبة"
+
+msgid "Save Warehouse"
+msgstr "حفظ المستودع"
+
+msgid "Save a filled form first."
+msgstr "احفظ نموذجاً معبأً أولاً."
+
+msgid "Save as Budget"
+msgstr "حفظ كموازنة"
+
+msgid "Save as budget for year"
+msgstr "حفظ كموازنة للسنة"
+
+msgid "Save assumptions"
+msgstr "حفظ الافتراضات"
+
+msgid "Save automatically after reading"
+msgstr "حفظ تلقائي بعد القراءة"
+
+msgid "Save automatically after upload"
+msgstr "حفظ تلقائي بعد التحميل"
+
+msgid "Save draft"
+msgstr "حفظ مسودة"
+
+msgid "Save for Me"
+msgstr "حفظ لي"
+
+msgid "Save for the Company"
+msgstr "حفظ للشركة"
+
+msgid "Save receipt"
+msgstr "حفظ الاستلام"
+
+msgid "Save the filled form"
+msgstr "حفظ النموذج المعبأ"
+
+msgid "Save the sheet first; only saved (draft) payrolls are posted."
+msgstr "احفظ الكشف أولاً؛ تُقيّد الرواتب المحفوظة (المسودة) فقط."
+
+msgid "Saved"
+msgstr "محفوظ"
+
+msgid "Saved Returns"
+msgstr "التصاريح المحفوظة"
+
+msgid "Saved VAT returns unchanged"
+msgstr "التصاريح الضريبية المحفوظة لم تتغير"
+
+msgid "Saved at"
+msgstr "حُفظ في"
+
+msgid "Saved by"
+msgstr "حفظه"
+
+msgid "Saved documents — double-click to open"
+msgstr "المستندات المحفوظة — انقر مرتين للفتح"
+
+msgid "Saved on this computer. 'Read with Azure' is on the Purchases and Expenses screens."
+msgstr "حُفظ على هذا الكمبيوتر. زر 'قراءة بـ Azure' موجود على شاشتي المشتريات والمصاريف."
+
+msgid "Saved."
+msgstr "تم الحفظ."
+
+msgid "Saved. Make a backup now to check the second copy?"
+msgstr "تم الحفظ. إنشاء نسخة احتياطية الآن للتحقق من النسخة الثانية؟"
+
+msgid "Saved. New documents use these numbers from now on."
+msgstr "تم الحفظ. المستندات الجديدة تستعمل هذه الأرقام من الآن."
+
+msgid "Saved. Re-open the screens now to see the new menu?\n(Unsaved work on other screens would be lost.)"
+msgstr "تم الحفظ. هل تريد إعادة فتح الشاشات الآن لعرض القائمة الجديدة؟\n(سيُفقد العمل غير المحفوظ في الشاشات الأخرى.)"
+
+msgid "Saved. The Dashboard uses it from now on."
+msgstr "تم الحفظ. لوحة القيادة تستعمله من الآن."
+
+msgid "Saved. The rules now show as confirmed by the tax adviser (Rules PDF and Settings PDF)."
+msgstr "تم الحفظ. القواعد تظهر الآن مؤكدة من المستشار الضريبي (PDF القواعد وPDF الإعدادات)."
+
+msgid "Scanned pages are read with OCR (a few seconds each). You can keep this window open and wait."
+msgstr "الصفحات الممسوحة تُقرأ بالتعرف الضوئي (بضع ثوانٍ لكل صفحة). يمكنك إبقاء هذه النافذة مفتوحة والانتظار."
+
+msgid "Scenario"
+msgstr "السيناريو"
+
+msgid "Scenario spread (± points)"
+msgstr "مدى السيناريو (± نقاط)"
+
+msgid "Schedule of this asset"
+msgstr "جدول هذا الأصل"
+
+msgid "Schooling"
+msgstr "المنح المدرسية"
+
+msgid "Schooling Children"
+msgstr "أولاد المنح المدرسية"
+
+msgid "Schooling Law"
+msgstr "قانون المنح المدرسية"
+
+msgid "Schooling Tax Exempt / Year"
+msgstr "المعفى من المنح المدرسية / سنة"
+
+msgid "Screen"
+msgstr "الشاشة"
+
+msgid "Screen layout"
+msgstr "تخطيط الشاشة"
+
+msgid "Screen layout (this computer)"
+msgstr "تخطيط الشاشة (هذا الحاسوب)"
+
+msgid "Search"
+msgstr "بحث"
+
+msgid "Search (number, date, description, amount)"
+msgstr "بحث (الرقم، التاريخ، البيان، المبلغ)"
+
+msgid "Search accounts…  (F2)"
+msgstr "بحث في الحسابات…  (F2)"
+
+msgid "Search customers / suppliers…"
+msgstr "بحث في الزبائن / الموردين…"
+
+msgid "Search items…"
+msgstr "بحث في الأصناف…"
+
+msgid "Search:"
+msgstr "بحث:"
+
+msgid "Search…"
+msgstr "بحث…"
+
+msgid "Second copy of every backup (OneDrive / USB / network folder)"
+msgstr "نسخة ثانية من كل نسخة احتياطية (OneDrive / USB / مجلد شبكة)"
+
+msgid "Security / Backup / Rates"
+msgstr "الأمان / النسخ / العملات"
+
+msgid "Select All"
+msgstr "اختيار الكل"
+
+msgid "Select Company & Fiscal Year"
+msgstr "اختيار الشركة والسنة المالية"
+
+msgid "Select a Journal Voucher line first"
+msgstr "اختر سطر قيد يومية أولاً"
+
+msgid "Select a company and fiscal year"
+msgstr "اختر شركة وسنة مالية"
+
+msgid "Select a customer or supplier first"
+msgstr "اختر زبوناً أو مورداً أولاً"
+
+msgid "Select a date in the list first"
+msgstr "اختر تاريخاً من القائمة أولاً"
+
+msgid "Select a fixed asset first"
+msgstr "اختر أصلاً ثابتاً أولاً"
+
+msgid "Select a line first"
+msgstr "اختر سطراً أولاً"
+
+msgid "Select a line of the entry you want to edit"
+msgstr "اختر سطراً من القيد الذي تريد تعديله"
+
+msgid "Select a line to read it in full."
+msgstr "اختر سطراً لقراءته كاملاً."
+
+msgid "Select a line to read its details in full."
+msgstr "اختر سطراً لقراءة تفاصيله كاملة."
+
+msgid "Select a line to see every document it found."
+msgstr "اختر سطراً لترى كل المستندات التي وجدها."
+
+msgid "Select a matched statement line"
+msgstr "اختر سطر كشف مطابقاً"
+
+msgid "Select a payroll record first"
+msgstr "اختر سجل رواتب أولاً"
+
+msgid "Select a period first"
+msgstr "اختر فترة أولاً"
+
+msgid "Select a posted payroll record first"
+msgstr "اختر راتباً مرحّلاً أولاً"
+
+msgid "Select a purchase first"
+msgstr "اختر مشتريات أولاً"
+
+msgid "Select a purchase or expense row first"
+msgstr "اختر سطر مشتريات أو مصروف أولاً"
+
+msgid "Select a row to read its full Check note here."
+msgstr "اختر سطراً لقراءة ملاحظة التحقق كاملة هنا."
+
+msgid "Select a user to renew"
+msgstr "اختر مستخدماً للتجديد"
+
+msgid "Select all"
+msgstr "اختيار الكل"
+
+msgid "Select an account first"
+msgstr "اختر حساباً أولاً"
+
+msgid "Select an account first (click it), then Edit"
+msgstr "اختر حساباً أولاً (انقر عليه) ثم تعديل"
+
+msgid "Select an account line (grey) or choose the account, or nothing is left to post"
+msgstr "اختر سطر حساب (رمادي) أو اختر الحساب، أو لا يبقى شيء للتقييد"
+
+msgid "Select an adjustment first"
+msgstr "اختر تسوية أولاً"
+
+msgid "Select an asset and an amortisation period"
+msgstr "اختر أصلاً وفترة إطفاء"
+
+msgid "Select an asset first"
+msgstr "اختر أصلاً أولاً"
+
+msgid "Select an asset in the register first"
+msgstr "اختر أصلاً من السجل أولاً"
+
+msgid "Select an attachment first"
+msgstr "اختر مرفقاً أولاً"
+
+msgid "Select an employee first"
+msgstr "اختر موظفاً أولاً"
+
+msgid "Select an expense first"
+msgstr "اختر مصروفاً أولاً"
+
+msgid "Select an imported PDF/photo row"
+msgstr "حدّد سطراً مستورداً من PDF/صورة"
+
+msgid "Select an invoice first"
+msgstr "اختر فاتورة أولاً"
+
+msgid "Select an item first"
+msgstr "اختر صنفاً أولاً"
+
+msgid "Select an item in the list, then click its cost to see how it is calculated (Stock Card)."
+msgstr "اختر صنفاً من القائمة ثم انقر على كلفته لترى كيف تُحتسب (بطاقة المخزون)."
+
+msgid "Select lines (Ctrl / Shift for several), pick the values and press Apply; with no line selected, Apply sets all of them. Type a value that is not in the list to create it."
+msgstr "حدّد الأسطر (Ctrl / Shift لعدة أسطر)، واختر القيم واضغط تطبيق؛ وعند عدم تحديد أسطر تُطبّق القيم على الجميع. اكتب قيمة غير موجودة لإنشائها."
+
+msgid "Select one backup"
+msgstr "اختر نسخة احتياطية واحدة"
+
+msgid "Select one invoice row"
+msgstr "اختر سطر فاتورة واحداً"
+
+msgid "Select one invoice row first"
+msgstr "اختر سطر فاتورة واحداً أولاً"
+
+msgid "Select one invoice row to edit"
+msgstr "اختر سطر فاتورة واحداً للتعديل"
+
+msgid "Select one statement line (left) and one book line (right)"
+msgstr "اختر سطر كشف واحداً (يساراً) وسطراً من الدفاتر (يميناً)"
+
+msgid "Select one statement line and one or more book lines"
+msgstr "حدّد سطراً واحداً من كشف المصرف وسطر دفتر واحداً أو أكثر"
+
+msgid "Select preview rows with Ctrl / Shift (Ctrl+A or Select All = every row), choose a VAT A/C below, then apply it to the selection."
+msgstr "اختر أسطر المعاينة مع Ctrl / Shift (Ctrl+A أو اختيار الكل = كل الأسطر)، اختر حساب الضريبة أدناه، ثم طبّقه على المختار."
+
+msgid "Select the accounts first (Ctrl / Shift or drag the mouse for several)"
+msgstr "اختر الحسابات أولاً (Ctrl / Shift أو اسحب الفأرة لعدة حسابات)"
+
+msgid "Select the accounts to post"
+msgstr "اختر الحسابات المراد تقييدها"
+
+msgid "Select the documents to approve"
+msgstr "اختر المستندات للموافقة"
+
+msgid "Select the documents to reject"
+msgstr "حدّد المستندات المطلوب رفضها"
+
+msgid "Select the draft invoices to approve"
+msgstr "اختر الفواتير المسودة للموافقة"
+
+msgid "Select the invoice rows first (Ctrl / Shift or drag the mouse for several)"
+msgstr "اختر أسطر الفواتير أولاً (Ctrl / Shift أو اسحب الفأرة لعدة أسطر)"
+
+msgid "Select the preview rows to change (Ctrl / Shift for multiple rows)"
+msgstr "اختر أسطر المعاينة المراد تغييرها (Ctrl / Shift لعدة أسطر)"
+
+msgid "Select the purchase in the list first"
+msgstr "اختر المشتريات من القائمة أولاً"
+
+msgid "Select the purchase invoice first"
+msgstr "اختر فاتورة الشراء أولاً"
+
+msgid "Select the purchase invoice in the list first"
+msgstr "اختر فاتورة الشراء من القائمة أولاً"
+
+msgid "Select the rule(s) to delete"
+msgstr "اختر القاعدة (القواعد) للحذف"
+
+msgid "Select the sales to correct"
+msgstr "اختر المبيعات المراد تصحيحها"
+
+msgid "Select the statement line to book (bank charges, interest...)"
+msgstr "اختر سطر الكشف للتقييد (عمولات مصرفية، فوائد...)"
+
+msgid "Selected entry was not found"
+msgstr "لم يوجد القيد المختار"
+
+msgid "Seller key"
+msgstr "مفتاح البائع"
+
+msgid "Seller key file"
+msgstr "ملف مفتاح البائع"
+
+msgid "Seller key password"
+msgstr "كلمة مرور مفتاح البائع"
+
+msgid "Send the Installation ID to Saber for Audit to receive a licence code, then paste it here and press Apply Code."
+msgstr "أرسل رقم التثبيت إلى Saber for Audit لتحصل على رمز الترخيص، ثم الصقه هنا واضغط تطبيق الرمز."
+
+msgid "Sep"
+msgstr "أيلول"
+
+msgid "Server address"
+msgstr "عنوان الخادم"
+
+msgid "Service from abroad - reverse charge (Art. 40)"
+msgstr "خدمة من الخارج - احتساب عكسي (المادة 40)"
+
+msgid "Services"
+msgstr "خدمات"
+
+msgid "Set a rate before using it in another currency's report."
+msgstr "حدد سعراً قبل استعماله في تقرير بعملة أخرى."
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Settings > Exchange Rates > Restore EUR Rates 2024-Today (online), then open and save again the EUR documents of those days"
+msgstr "الإعدادات > أسعار الصرف > استرجاع أسعار اليورو 2024 حتى اليوم (مع الإنترنت)، ثم افتح واحفظ من جديد مستندات اليورو في تلك الأيام"
+
+msgid "Settings > Numbering > Renumber, or correct the document"
+msgstr "الإعدادات > الترقيم > إعادة الترقيم، أو صحّح المستند"
+
+msgid "Settings PDF"
+msgstr "PDF الإعدادات"
+
+msgid "Settings saved successfully"
+msgstr "حُفظت الإعدادات بنجاح"
+
+msgid "Sex (for official forms)"
+msgstr "الجنس (للنماذج الرسمية)"
+
+msgid "Show"
+msgstr "عرض"
+
+msgid "Show Department / Project"
+msgstr "إظهار القسم / المشروع"
+
+msgid "Show Department in all sheets"
+msgstr "إظهار القسم في كل الأوراق"
+
+msgid "Show Posting Rules"
+msgstr "عرض قواعد القيد"
+
+msgid "Show Project in all sheets"
+msgstr "إظهار المشروع في كل الأوراق"
+
+msgid "Show Rates"
+msgstr "عرض الأسعار"
+
+msgid "Show Transactions"
+msgstr "عرض العمليات"
+
+msgid "Show currency"
+msgstr "إظهار العملة"
+
+msgid "Show the End-of-Service Provision or the Leave Balances first"
+msgstr "اعرض مؤونة نهاية الخدمة أو أرصدة الإجازات أولاً"
+
+msgid "Show the accounts off budget (costs above / revenue below) by more than"
+msgstr "اعرض الحسابات الخارجة عن الموازنة (الكلفة أعلى / الإيرادات أدنى) بأكثر من"
+
+msgid "Show the transactions and choose the ones to move"
+msgstr "اعرض العمليات واختر ما تريد نقله"
+
+msgid "Show:"
+msgstr "إظهار:"
+
+msgid "Sickness Ceiling"
+msgstr "سقف المرض"
+
+msgid "Sign in"
+msgstr "تسجيل الدخول"
+
+msgid "Signed out automatically after 30 minutes of inactivity"
+msgstr "تم تسجيل الخروج تلقائياً بعد 30 دقيقة من عدم النشاط"
+
+msgid "Similar Customer / Supplier Name"
+msgstr "اسم زبون / مورد مشابه"
+
+msgid "Single Allowance"
+msgstr "تعويض العازب"
+
+msgid "Size"
+msgstr "الحجم"
+
+msgid "Slow-moving days"
+msgstr "أيام بطء الحركة"
+
+msgid "Sort By:"
+msgstr "ترتيب حسب:"
+
+msgid "Source"
+msgstr "المصدر"
+
+msgid "Source Row"
+msgstr "سطر المصدر"
+
+msgid "Source currency"
+msgstr "العملة الأصلية"
+
+msgid "Split by Department"
+msgstr "توزيع حسب القسم"
+
+msgid "Split by Project"
+msgstr "توزيع حسب المشروع"
+
+msgid "Spouse"
+msgstr "الزوج/الزوجة"
+
+msgid "Spouse Allowance"
+msgstr "تعويض الزوج/الزوجة"
+
+msgid "Spouse Works"
+msgstr "الزوج/الزوجة يعمل"
+
+msgid "Spread Annual over 12 Months"
+msgstr "توزيع السنوي على 12 شهراً"
+
+msgid "Standard Posting Accounts"
+msgstr "حسابات القيد المعتمدة"
+
+msgid "Start"
+msgstr "البداية"
+
+msgid "Start Date"
+msgstr "تاريخ البداية"
+
+msgid "Start a new invoice? Lines that are not saved will be cleared."
+msgstr "بدء فاتورة جديدة؟ ستُمسح الأسطر غير المحفوظة."
+
+msgid "Start a new voucher? Lines that are not saved will be cleared."
+msgstr "بدء قيد جديد؟ ستُمسح الأسطر غير المحفوظة."
+
+msgid "Start date"
+msgstr "تاريخ البداية"
+
+msgid "Start from (>)"
+msgstr "البدء من (>)"
+
+msgid "Start with Nanza"
+msgstr "ابدأ مع نانزا"
+
+msgid "Start with Nanza (opening balances)"
+msgstr "ابدأ مع نانزا (الأرصدة الافتتاحية)"
+
+msgid "Starting Date"
+msgstr "تاريخ المباشرة"
+
+msgid "Statement ending balance"
+msgstr "الرصيد الختامي للكشف"
+
+msgid "Statement of Account"
+msgstr "كشف الحساب"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Stock Account"
+msgstr "حساب المخزون"
+
+msgid "Stock Card"
+msgstr "بطاقة المخزون"
+
+msgid "Stock Documents"
+msgstr "مستندات المخزون"
+
+msgid "Stock In / Out"
+msgstr "إدخال / إخراج المخزون"
+
+msgid "Stock In / Stock Out"
+msgstr "إدخال / إخراج مخزون"
+
+msgid "Stock In: cost = average cost unless you type another. Stock Out: leaves at the average cost. Quantities and costs update at once."
+msgstr "الإدخال: الكلفة = متوسط الكلفة إلا إذا كتبت غيرها. الإخراج: بمتوسط الكلفة. الكميات والكلفة تتحدث فوراً."
+
+msgid "Stock Value"
+msgstr "قيمة المخزون"
+
+msgid "Stock Variation"
+msgstr "تغير المخزون"
+
+msgid "Stock on Hand"
+msgstr "المخزون الموجود"
+
+msgid "Stock out leaves at the average cost"
+msgstr "الإخراج بمتوسط الكلفة"
+
+msgid "Stock valued in"
+msgstr "المخزون مقيّم بـ"
+
+msgid "Stop (keep what is read)"
+msgstr "توقف (احتفظ بما قُرئ)"
+
+msgid "Stop download"
+msgstr "إيقاف التنزيل"
+
+msgid "Sub-chapters"
+msgstr "الفصول الفرعية"
+
+msgid "Subcategory"
+msgstr "الفئة الفرعية"
+
+msgid "Subtotal"
+msgstr "المجموع الفرعي"
+
+msgid "Suggest A/C"
+msgstr "اقتراح حساب"
+
+msgid "Summary (Resume)"
+msgstr "الملخص"
+
+msgid "Summary digits"
+msgstr "أرقام الملخص"
+
+msgid "Supplier"
+msgstr "المورد"
+
+msgid "Supplier / customer"
+msgstr "المورّد / الزبون"
+
+msgid "Supplier Account (C - Credit)"
+msgstr "حساب المورد (د - دائن)"
+
+msgid "Supplier Invoice No."
+msgstr "رقم فاتورة المورد"
+
+msgid "Supplier Payment (PV)"
+msgstr "دفعة لمورد (PV)"
+
+msgid "Supplier Type"
+msgstr "نوع المورد"
+
+msgid "Supplier days (DPO)"
+msgstr "أيام الدفع للموردين (DPO)"
+
+msgid "Supplier invoice no. (purchases)"
+msgstr "رقم فاتورة المورد (المشتريات)"
+
+msgid "Supplier invoices entered once"
+msgstr "فواتير الموردين مدخلة مرة واحدة"
+
+msgid "Supplier payments"
+msgstr "دفعات الموردين"
+
+msgid "Supplier payments (PV)"
+msgstr "سندات دفع الموردين (PV)"
+
+msgid "Supplier tax ID"
+msgstr "رقم المورد الضريبي"
+
+msgid "Suppliers"
+msgstr "الموردون"
+
+msgid "Supporting Documents"
+msgstr "المستندات الثبوتية"
+
+msgid "Switch Company / Year"
+msgstr "تبديل الشركة / السنة"
+
+msgid "TOTAL"
+msgstr "المجموع"
+
+msgid "TOTAL TTC"
+msgstr "المجموع مع الضريبة"
+
+msgid "TOTAL TTC: 0.00"
+msgstr "المجموع مع الضريبة: 0.00"
+
+msgid "Taux Récupérable (PDF)"
+msgstr "نسبة الاسترداد (PDF)"
+
+msgid "Taux Récupérable Excel"
+msgstr "نسبة الاسترداد Excel"
+
+msgid "Tax"
+msgstr "الضريبة"
+
+msgid "Tax & NSSF Settings"
+msgstr "إعدادات الضريبة والضمان"
+
+msgid "Tax / VAT (MOF) Number"
+msgstr "رقم وزارة المالية / الضريبة"
+
+msgid "Tax Brackets JSON (annual LBP): [[ceiling,rate], ... [null,rate]]   Rates as decimals: 3% = 0.03   Dates: DD-MM-YYYY"
+msgstr "شطور الضريبة JSON (سنوياً بالليرة): [[السقف،النسبة]، ... [null،النسبة]]   النسب عشرية: 3% = 0.03   التواريخ: DD-MM-YYYY"
+
+msgid "Tax Deduction Children"
+msgstr "تنزيل الأولاد الضريبي"
+
+msgid "Tax Number"
+msgstr "الرقم الضريبي"
+
+msgid "Tax adviser (name)"
+msgstr "المستشار الضريبي (الاسم)"
+
+msgid "Tax adviser confirmation"
+msgstr "تأكيد المستشار الضريبي"
+
+msgid "Tax and NSSF settings saved. The previous period now ends the day before the new Date From."
+msgstr "حُفظت إعدادات الضريبة والضمان. الفترة السابقة تنتهي الآن في اليوم السابق لتاريخ البداية الجديد."
+
+msgid "Taxable Amount"
+msgstr "المبلغ الخاضع"
+
+msgid "Template"
+msgstr "قالب"
+
+msgid "Termination Declaration Worksheet"
+msgstr "ورقة تصريح ترك العمل"
+
+msgid "Testing VAT Accounts"
+msgstr "اختبار حسابات الضريبة"
+
+msgid "The Excel file needs an 'Item Code' column and a 'Physical Count' column"
+msgstr "يحتاج ملف Excel عمود «رمز الصنف» وعمود «الجرد الفعلي»"
+
+msgid "The Invoices sheet is empty. Fill its rows and try again."
+msgstr "ورقة الفواتير فارغة. املأ أسطرها وحاول مجدداً."
+
+msgid "The PDF number could not be read. Enter the invoice number as printed, or leave it for later."
+msgstr "تعذرت قراءة رقم PDF. أدخل رقم الفاتورة كما هو مطبوع، أو اتركه لاحقاً."
+
+msgid "The VAT of each invoice goes to its customer / supplier's own VAT account. At the quarter end each one is closed into the Closing account of its ledger, then the settlement closes those into VAT payable (4425) / VAT to recover (4429)."
+msgstr "تُسجّل ضريبة كل فاتورة في حساب ضريبة العميل / المورد الخاص بها. في نهاية الربع يُقفل كل حساب في حساب إقفال دفتره، ثم تُقفل هذه الحسابات بالتسوية في ضريبة مستحقة (4425) / ضريبة قابلة للاسترداد (4429)."
+
+msgid "The allocation is more than the amount"
+msgstr "التوزيع أكبر من المبلغ"
+
+msgid "The audit firm, partner, licence, address, city and logo are saved ONCE for every company you audit; the company fields (legal form, register number ...) are saved for this company."
+msgstr "تُحفظ بيانات مكتب التدقيق والشريك والترخيص والعنوان والمدينة والشعار مرة واحدة لجميع الشركات المدققة؛ وتُحفظ حقول الشركة (الشكل القانوني ورقم السجل...) لهذه الشركة."
+
+msgid "The books are consistent"
+msgstr "الدفاتر سليمة ومتطابقة"
+
+msgid "The date of birth must be DD-MM-YYYY"
+msgstr "يجب أن يكون تاريخ الولادة DD-MM-YYYY"
+
+msgid "The dates, currency or account range changed since these figures were loaded. Refresh the reports, then export."
+msgstr "تغيّرت التواريخ أو العملة أو نطاق الحسابات منذ تحميل هذه الأرقام. حدّث التقارير ثم صدّرها."
+
+msgid "The file could not be saved. Close it if it is open in Excel or a PDF viewer, then try again."
+msgstr "تعذر حفظ الملف. أغلقه إذا كان مفتوحاً في Excel أو قارئ PDF ثم حاول مجدداً."
+
+msgid "The invoice is sent from this computer to YOUR Azure resource (Microsoft) only when you press Read with Azure. The key stays on this computer. Nanza receives nothing."
+msgstr "تُرسَل الفاتورة من هذا الكمبيوتر إلى مورد Azure الخاص بك (Microsoft) فقط عند الضغط على قراءة بـ Azure. يبقى المفتاح على هذا الكمبيوتر. Nanza لا تستلم شيئاً."
+
+msgid "The key is removed from this computer. Azure is off."
+msgstr "أُزيل المفتاح من هذا الكمبيوتر. Azure متوقف."
+
+msgid "The lines add up to the subtotal"
+msgstr "مجموع الأسطر يساوي المجموع"
+
+msgid "The materials below make"
+msgstr "المواد أدناه تصنع"
+
+msgid "The month and the year to date against the budget and last year, the balance sheet, cash, ageing, the VAT of the quarter and the key ratios - every currency converted into the one chosen."
+msgstr "الشهر ومن بداية السنة مقارنة بالموازنة والسنة الماضية، الميزانية، النقد، أعمار الديون، ضريبة الفصل والنسب الرئيسية - كل العملات محوّلة إلى العملة المختارة."
+
+msgid "The points an auditor checks before the books are closed. It runs again by itself when you close the year (Profit & Loss)."
+msgstr "النقاط التي يتحقق منها المدقق قبل إقفال الدفاتر. يعمل تلقائياً عند إقفال السنة (الأرباح والخسائر)."
+
+msgid "The prefix of each kind of document, and the branch in the number where it helps (each branch then counts on its own). Numbers already given are not changed."
+msgstr "بادئة كل نوع من المستندات، والفرع في الرقم حيث يفيد (كل فرع يعدّ وحده). الأرقام المعطاة سابقاً لا تتغير."
+
+msgid "The provision booked already equals the provision needed."
+msgstr "المؤونة المقيّدة تساوي المؤونة المطلوبة."
+
+msgid "The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm."
+msgstr "قد يخطئ القارئ في المبالغ والتواريخ. قارن بالصورة وصحّح الخانات ثم أكّد المراجعة."
+
+msgid "The reports are still loading: export when they are shown"
+msgstr "ما زالت التقارير قيد التحميل؛ صدّرها بعد ظهورها"
+
+msgid "The selected invoice could not be found"
+msgstr "تعذر إيجاد الفاتورة المختارة"
+
+msgid "The source PDF will be saved as an attachment to this register item. Creating this register item does not post a journal entry or stock movement."
+msgstr "يُحفظ PDF المصدر كمرفق لهذا الأصل. إنشاء السجل لا يقيّد قيداً ولا حركة مخزون."
+
+msgid "The tax adviser checked the payroll and VAT rules of this company against Lebanese law."
+msgstr "تحقق المستشار الضريبي من قواعد الرواتب والضريبة لهذه الشركة وفق القانون اللبناني."
+
+msgid "The two VAT return currencies must be different"
+msgstr "يجب أن تكون عملتا تصريح الضريبة مختلفتين"
+
+msgid "The two main currencies must be different"
+msgstr "يجب أن تكون العملتان الرئيسيتان مختلفتين"
+
+msgid "The two new passwords are not the same"
+msgstr "كلمتا المرور الجديدتان غير متطابقتين"
+
+msgid "There are no chartable rows for this period."
+msgstr "لا توجد أسطر قابلة للرسم لهذه الفترة."
+
+msgid "There are no saved vouchers yet"
+msgstr "لا قيود محفوظة بعد"
+
+msgid "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself."
+msgstr "لا توجد سنة سابقة بإيرادات في نانزا لقياس النمو. اكتب النسبة بنفسك."
+
+msgid "This Assets row will create one fixed-asset register item after review. It will NOT create a supplier invoice, journal posting, stock movement, or PDF attachment. Process this row now?"
+msgstr "سينشئ سطر الأصول هذا أصلاً ثابتاً واحداً في السجل بعد المراجعة. ولن ينشئ فاتورة مورد أو قيداً محاسبياً أو حركة مخزون أو مرفق PDF. هل تريد معالجة السطر الآن؟"
+
+msgid "This company is inactive"
+msgstr "هذه الشركة غير نشطة"
+
+msgid "This company uses (administrator)"
+msgstr "هذه الشركة تستعمل (المدير)"
+
+msgid "This date is already in the list"
+msgstr "هذا التاريخ موجود في القائمة"
+
+msgid "This entry is made automatically (opening, closing, depreciation or stock variation) and has no editing screen. Correct it with a Journal Voucher."
+msgstr "هذا القيد آلي (افتتاحي، إقفال، استهلاك أو تغير مخزون) وليس له شاشة تعديل. صححه بقيد يومية."
+
+msgid "This invoice has no item lines, so a quantity-reviewed return cannot be safely created."
+msgstr "لا أسطر أصناف في هذه الفاتورة، لذا لا يمكن إنشاء مرتجع بالكميات بأمان."
+
+msgid "This line is money IN (interest, transfer...). Book it to 773 Interests & Similar Revenues Earned?\n(Choose No and type another account in 'Book to' for a transfer or a receipt.)"
+msgstr "هذا السطر تدفق نقدي داخل (فائدة، تحويل...). هل يُسجّل في 773 فوائد وإيرادات مشابهة محققة؟\n(اختر لا وأدخل حساباً آخر في خانة حساب القيد للتحويل أو القبض.)"
+
+msgid "This payroll is posted and cannot be changed."
+msgstr "هذه الرواتب مقيّدة ولا يمكن تغييرها."
+
+msgid "This row has no original document"
+msgstr "لا يوجد مستند أصلي لهذا السطر"
+
+msgid "This screen is hidden for this company or for you (Settings > Accounting Settings)."
+msgstr "هذه الشاشة مخفية لهذه الشركة أو لك (الإعدادات > إعدادات المحاسبة)."
+
+msgid "This system entry must be cancelled or reversed from its original module"
+msgstr "يجب إلغاء قيد النظام هذا أو عكسه من شاشته الأصلية"
+
+msgid "This year"
+msgstr "هذه السنة"
+
+msgid "Through"
+msgstr "حتى"
+
+msgid "Tick all"
+msgstr "اختيار الكل"
+
+msgid "Tick only what you use; the others disappear from items, stock documents and report filters. Save Settings to keep the choice."
+msgstr "اختر فقط ما تستعمله؛ الباقي يختفي من الأصناف ومستندات المخزون ومرشحات التقارير. احفظ الإعدادات للاحتفاظ بالاختيار."
+
+msgid "Tick the companies this user may open. None ticked = every company."
+msgstr "اختر الشركات التي يحق لهذا المستخدم فتحها. لا شيء محدد = كل الشركات."
+
+msgid "Tick the filters you want to see above the financial reports:"
+msgstr "اختر المرشحات التي تريد رؤيتها فوق التقارير المالية:"
+
+msgid "Times"
+msgstr "عدد المرات"
+
+msgid "To"
+msgstr "إلى"
+
+msgid "To Date"
+msgstr "إلى تاريخ"
+
+msgid "To Date / As of"
+msgstr "إلى تاريخ / بتاريخ"
+
+msgid "To Date:"
+msgstr "إلى تاريخ:"
+
+msgid "To account"
+msgstr "إلى حساب"
+
+msgid "To correct before importing:"
+msgstr "للتصحيح قبل الاستيراد:"
+
+msgid "To:"
+msgstr "إلى:"
+
+msgid "Today"
+msgstr "اليوم"
+
+msgid "Top"
+msgstr "الأعلى"
+
+msgid "Total"
+msgstr "المجموع"
+
+msgid "Total Amount"
+msgstr "المبلغ الإجمالي"
+
+msgid "Total Deprec."
+msgstr "مجموع الاستهلاك"
+
+msgid "Total HT"
+msgstr "المجموع قبل الضريبة"
+
+msgid "Total HT (before VAT)"
+msgstr "المجموع قبل الضريبة"
+
+msgid "Total HT: 0.00"
+msgstr "المجموع قبل الضريبة: 0.00"
+
+msgid "Total before discount"
+msgstr "المجموع قبل الحسم"
+
+msgid "Total deprec."
+msgstr "مجموع الاستهلاك"
+
+msgid "Total must equal Before VAT plus VAT"
+msgstr "يجب أن يساوي المجموع ما قبل الضريبة زائد الضريبة"
+
+msgid "Total: 0.00"
+msgstr "المجموع: 0.00"
+
+msgid "Totals"
+msgstr "المجاميع"
+
+msgid "Transaction"
+msgstr "العملية"
+
+msgid "Transactions of the From account - choose with Ctrl / Shift or drag the mouse"
+msgstr "عمليات الحساب المصدر - اختر بـ Ctrl / Shift أو اسحب الفأرة"
+
+msgid "Transfer Between Warehouses"
+msgstr "تحويل بين المستودعات"
+
+msgid "Transfer only its BALANCE on"
+msgstr "حوّل رصيده فقط في"
+
+msgid "Transport"
+msgstr "النقل"
+
+msgid "Transport Days"
+msgstr "أيام النقل"
+
+msgid "Transport Exempt / Day"
+msgstr "المعفى من النقل / يوم"
+
+msgid "Transportation"
+msgstr "النقل"
+
+msgid "Trial Balance"
+msgstr "ميزان المراجعة"
+
+msgid "Trial balance in each currency"
+msgstr "ميزان المراجعة بكل عملة"
+
+msgid "Two independent readers (4B + 2B): optional download of about 4.5 GB; allow 5 GB of disk space and about 6 GB of free RAM. They run one after another and can take a few minutes. Photos stay on this computer: no account, API key or per-invoice fee. Disputed fields stay empty. Both readers can still agree on a wrong value: check the image before Save."
+msgstr "قارئان مستقلان (4B + 2B): تنزيل اختياري بحجم نحو 4.5 غيغابايت، مع 5 غيغابايت من مساحة القرص ونحو 6 غيغابايت من الذاكرة المتاحة. يعملان بالتتابع وقد تستغرق القراءة بضع دقائق. تبقى الصور على هذا الكمبيوتر دون حساب أو مفتاح API أو رسم لكل فاتورة. تبقى الخانات المختلف عليها فارغة. قد يتفق القارئان على قيمة خاطئة؛ راجع الصورة قبل الحفظ."
+
+msgid "Two periods start on the same date"
+msgstr "فترتان تبدآن في التاريخ نفسه"
+
+msgid "Type"
+msgstr "النوع"
+
+msgid "Type (review)"
+msgstr "النوع (مراجعة)"
+
+msgid "Type D for Debit or C for Credit"
+msgstr "اكتب D للمدين أو C للدائن"
+
+msgid "Type a number or name, or choose from the list."
+msgstr "اكتب رقماً أو اسماً، أو اختر من القائمة."
+
+msgid "Type an account number (F2 to search), then either an Annual amount or the monthly amounts. An annual budget alone is spread evenly over the year. Leave Department and Project as (none) for the company budget."
+msgstr "اكتب رقم الحساب (F2 للبحث)، ثم إما المبلغ السنوي أو المبالغ الشهرية. الموازنة السنوية وحدها توزّع بالتساوي على السنة. اترك القسم والمشروع (none) لموازنة الشركة."
+
+msgid "Type the first 4 digits (4111 client, 4011 supplier) - the full number fills in automatically"
+msgstr "اكتب أول 4 أرقام (4111 زبون، 4011 مورد) - يُعبّأ الرقم الكامل تلقائياً"
+
+msgid "Type:"
+msgstr "النوع:"
+
+msgid "UNRECONCILED - Difference: {difference:,.2f}"
+msgstr "غير مطابق - الفرق: {difference:,.2f}"
+
+msgid "USD Eq."
+msgstr "المعادل بالدولار"
+
+msgid "USD amount"
+msgstr "المبلغ بالدولار"
+
+msgid "Unbalanced Journal Voucher"
+msgstr "قيد يومية غير متوازن"
+
+msgid "Unit"
+msgstr "الوحدة"
+
+msgid "Unit Cost"
+msgstr "كلفة الوحدة"
+
+msgid "Unit Cost (average)"
+msgstr "كلفة الوحدة (المتوسط)"
+
+msgid "Unit Price"
+msgstr "سعر الوحدة"
+
+msgid "Units"
+msgstr "الوحدات"
+
+msgid "Unlock"
+msgstr "فك القفل"
+
+msgid "Unlock all periods? Closed months can then be changed again. A safety backup is made first."
+msgstr "فك قفل كل الفترات؟ يمكن عندها تعديل الأشهر المقفلة. تُعمل نسخة أمان أولاً."
+
+msgid "Unmatch"
+msgstr "إلغاء المطابقة"
+
+msgid "Unsupported language"
+msgstr "اللغة غير مدعومة"
+
+msgid "Untick what the company does not use."
+msgstr "أزل علامة ما لا تستعمله الشركة."
+
+msgid "Untick what you do not need; the company's choice comes first."
+msgstr "أزل علامة ما لا تحتاجه؛ خيار الشركة له الأولوية."
+
+msgid "Unverified invoice reading"
+msgstr "قراءة فاتورة غير مؤكدة"
+
+msgid "Up to"
+msgstr "حتى"
+
+msgid "Update"
+msgstr "تحديث"
+
+msgid "Upload Counts (Excel)"
+msgstr "تحميل الجرد (Excel)"
+
+msgid "Upload PDF"
+msgstr "تحميل PDF"
+
+msgid "Uploaded"
+msgstr "محمّل"
+
+msgid "Uploaded Data"
+msgstr "البيانات المرفوعة"
+
+msgid "Uploaded Data: check whether the same supplier invoice was entered twice"
+msgstr "البيانات المرفوعة: تحقق إذا أُدخلت فاتورة المورد نفسها مرتين"
+
+msgid "Uploaded Data: open each invoice and correct the amounts"
+msgstr "البيانات المرفوعة: افتح كل فاتورة وصحّح المبالغ"
+
+msgid "Use Amount in Payroll"
+msgstr "استعمال المبلغ في الرواتب"
+
+msgid "Use OneDrive"
+msgstr "استعمال OneDrive"
+
+msgid "Use account"
+msgstr "استخدام الحساب"
+
+msgid "Use advanced reader for photos / scans"
+msgstr "استخدام القارئ المتقدم للصور / المستندات الممسوحة"
+
+msgid "Use checked fields"
+msgstr "استخدام الخانات المراجَعة"
+
+msgid "Use corrected line"
+msgstr "استخدام السطر المصحّح"
+
+msgid "Use for photos and single-page scans (slower)"
+msgstr "استخدامه للصور والمسح من صفحة واحدة (أبطأ)"
+
+msgid "Use line"
+msgstr "اعتماد السطر"
+
+msgid "Use {code} - {name}? Verify it before saving."
+msgstr "استخدام {code} - {name}؟ تحقق من الحساب قبل الحفظ."
+
+msgid "Useful Life"
+msgstr "العمر الإنتاجي"
+
+msgid "Useful life (months)"
+msgstr "العمر الإنتاجي (أشهر)"
+
+msgid "User"
+msgstr "المستخدم"
+
+msgid "Username"
+msgstr "اسم المستخدم"
+
+msgid "Users"
+msgstr "المستخدمون"
+
+msgid "Users & Permissions"
+msgstr "المستخدمون والصلاحيات"
+
+msgid "Uses \"Report year\" above as the base year; compounds the growth % each year ahead."
+msgstr "يستعمل «سنة التقرير» أعلاه كسنة أساس؛ يراكم نسبة النمو كل سنة."
+
+msgid "Uses the Actual report year above as the base year; a saved budget for a future year wins over the growth %."
+msgstr "يستعمل سنة التقرير الفعلية أعلاه كسنة أساس؛ الموازنة المحفوظة لسنة مستقبلية تتقدم على نسبة النمو."
+
+msgid "Uses unpaid invoices and bills, posted payroll due, and outstanding statutory liabilities."
+msgstr "يعتمد على فواتير البيع والشراء غير المدفوعة والرواتب المستحقة المرحّلة والالتزامات القانونية المتبقية."
+
+msgid "Uses up to 24 complete monthly periods for trend and seasonality; keeps currency rows separate."
+msgstr "يستخدم حتى 24 شهراً مكتملاً لتحليل الاتجاه والموسمية؛ مع فصل أسطر العملات."
+
+msgid "Usually fine when the heading is the account you use; otherwise move the amounts to the sub-accounts (Journal Voucher)"
+msgstr "غالباً لا مشكلة إذا كان الحساب الرئيسي هو الذي تستعمله؛ وإلا انقل المبالغ إلى الحسابات الفرعية (سند قيد)"
+
+msgid "VAT"
+msgstr "ضريبة القيمة المضافة"
+
+msgid "VAT %"
+msgstr "الضريبة %"
+
+msgid "VAT (LBP)"
+msgstr "الضريبة (ل.ل.)"
+
+msgid "VAT 11%"
+msgstr "الضريبة 11%"
+
+msgid "VAT A/C"
+msgstr "حساب الضريبة"
+
+msgid "VAT Account"
+msgstr "حساب الضريبة"
+
+msgid "VAT Account (D - Debit)"
+msgstr "حساب الضريبة (م - مدين)"
+
+msgid "VAT Adjustment"
+msgstr "تسوية الضريبة"
+
+msgid "VAT Amount"
+msgstr "مبلغ الضريبة"
+
+msgid "VAT Deductibility"
+msgstr "قابلية حسم الضريبة"
+
+msgid "VAT Deductible"
+msgstr "ضريبة قابلة للحسم"
+
+msgid "VAT Deductible / Non-Deductible"
+msgstr "ضريبة قابلة / غير قابلة للحسم"
+
+msgid "VAT No."
+msgstr "رقم التسجيل الضريبي"
+
+msgid "VAT Rate %"
+msgstr "نسبة الضريبة %"
+
+msgid "VAT Registration Date"
+msgstr "تاريخ التسجيل في الضريبة"
+
+msgid "VAT Return"
+msgstr "تصريح الضريبة"
+
+msgid "VAT Return Currency 1 / 2"
+msgstr "عملة تصريح الضريبة 1 / 2"
+
+msgid "VAT Settlement"
+msgstr "تسوية الضريبة"
+
+msgid "VAT Settlement Entry..."
+msgstr "قيد تسوية الضريبة..."
+
+msgid "VAT Treatment"
+msgstr "المعالجة الضريبية"
+
+msgid "VAT access"
+msgstr "صلاحية الضريبة"
+
+msgid "VAT account"
+msgstr "حساب الضريبة"
+
+msgid "VAT by customer / supplier"
+msgstr "الضريبة حسب الزبون / المورد"
+
+msgid "VAT by customer / supplier (VAT 140)"
+msgstr "الضريبة حسب الزبون / المورد (VAT 140)"
+
+msgid "VAT cannot be negative"
+msgstr "لا يمكن أن تكون ضريبة القيمة المضافة سالبة"
+
+msgid "VAT credit / to recover (settlement)"
+msgstr "ضريبة دائنة / للاسترداد (التسوية)"
+
+msgid "VAT credit / to recover account"
+msgstr "حساب الضريبة الدائنة / المستردة"
+
+msgid "VAT not deductible"
+msgstr "ضريبة غير قابلة للحسم"
+
+msgid "VAT payable (settlement)"
+msgstr "ضريبة مستحقة (التسوية)"
+
+msgid "VAT payable account"
+msgstr "حساب الضريبة المستحقة"
+
+msgid "VAT preparation controls"
+msgstr "ضوابط إعداد تصريح القيمة المضافة"
+
+msgid "VAT return, excluded from item cost"
+msgstr "للتصريح الضريبي، خارج كلفة الأصناف"
+
+msgid "VAT settlement voucher"
+msgstr "سند تسوية الضريبة"
+
+msgid "VAT use"
+msgstr "استعمال الضريبة"
+
+msgid "VAT used for"
+msgstr "الضريبة مستعملة لـ"
+
+msgid "Valid Until"
+msgstr "صالح حتى"
+
+msgid "Valid until"
+msgstr "صالح حتى"
+
+msgid "Valid until (DD-MM-YYYY)"
+msgstr "صالح حتى (DD-MM-YYYY)"
+
+msgid "Valid until (optional)"
+msgstr "صالح حتى (اختياري)"
+
+msgid "Value"
+msgstr "القيمة"
+
+msgid "Variance"
+msgstr "الانحراف"
+
+msgid "Vendor Spend and Dependency"
+msgstr "إنفاق الموردين والاعتماد عليهم"
+
+msgid "Verify Audit Trail"
+msgstr "التحقق من سجل التدقيق"
+
+msgid "View"
+msgstr "عرض"
+
+msgid "View Year"
+msgstr "عرض السنة"
+
+msgid "View Year:"
+msgstr "عرض السنة:"
+
+msgid "Viewer"
+msgstr "مشاهد"
+
+msgid "Voucher"
+msgstr "القيد"
+
+msgid "Voucher Cur."
+msgstr "عملة السند"
+
+msgid "WARNING"
+msgstr "تنبيه"
+
+msgid "Warehouse"
+msgstr "المستودع"
+
+msgid "Warehouse Transfer"
+msgstr "تحويل مستودع"
+
+msgid "Warehouses"
+msgstr "المستودعات"
+
+msgid "Warehouses & Settings"
+msgstr "المستودعات والإعدادات"
+
+msgid "Warning - same item?"
+msgstr "تنبيه - هل هو الصنف نفسه؟"
+
+msgid "Website"
+msgstr "الموقع الإلكتروني"
+
+msgid "What is corrected"
+msgstr "ما يُصحح"
+
+msgid "What the form will be filled with - double-click a value to correct it before Create Excel"
+msgstr "ما سيُعبّأ به النموذج - انقر مرتين على قيمة لتصحيحها قبل إنشاء Excel"
+
+msgid "What the program learned from the invoices you saved. Delete a rule to stop it (it is learned again from the next invoice saved)."
+msgstr "ما تعلّمه البرنامج من الفواتير التي حفظتها. احذف قاعدة لإيقافها (يتعلّمها من جديد من الفاتورة التالية المحفوظة)."
+
+msgid "What to do"
+msgstr "ما يجب فعله"
+
+msgid "When a purchase creates new items, a table opens to choose their category / brand. Save Settings to keep the choice."
+msgstr "عندما تنشئ المشتريات أصنافاً جديدة، يُفتح جدول لاختيار فئتها / علامتها. احفظ الإعدادات للاحتفاظ بالاختيار."
+
+msgid "Where does it work, and which chart of accounts?"
+msgstr "أين تعمل، وأي دليل حسابات؟"
+
+msgid "Who is the company?"
+msgstr "من هي الشركة؟"
+
+msgid "With Branch"
+msgstr "مع الفرع"
+
+msgid "With Carry Forward (opening)"
+msgstr "مع المنقول (الافتتاحي)"
+
+msgid "With VAT (before VAT)"
+msgstr "مع ضريبة (قبل الضريبة)"
+
+msgid "With the auditor's report"
+msgstr "مع تقرير مدقق الحسابات"
+
+msgid "Without Closing entries"
+msgstr "بلا قيود الإقفال"
+
+msgid "Without Opening entries"
+msgstr "بلا القيود الافتتاحية"
+
+msgid "Without VAT"
+msgstr "بلا ضريبة"
+
+msgid "Without VAT (non-deductible)"
+msgstr "بلا ضريبة (غير قابلة للحسم)"
+
+msgid "Year"
+msgstr "السنة"
+
+msgid "Year & Future Forecast"
+msgstr "السنة والتوقعات المستقبلية"
+
+msgid "Year-End Check"
+msgstr "فحص نهاية السنة"
+
+msgid "Years"
+msgstr "السنوات"
+
+msgid "Years ahead (1-5)"
+msgstr "سنوات لاحقة (1-5)"
+
+msgid "Years: 2024,2025 or 2025"
+msgstr "السنوات: 2024،2025 أو 2025"
+
+msgid "You do not have access to this company. Ask the administrator (Settings > Users > Companies)."
+msgstr "لا يحق لك فتح هذه الشركة. اطلب من المسؤول (الإعدادات > المستخدمون > الشركات)."
+
+msgid "Your session has ended or your account is no longer active. Please sign in again."
+msgstr "انتهت جلستك أو لم يعد حسابك نشطاً. سجّل الدخول مجدداً."
+
+msgid "Zero-rated: exports and like transactions (Art. 19-21), deductible input VAT.\nExempt: Art. 16-17 activities and goods, reduces the deduction ratio."
+msgstr "نسبة صفر: الصادرات وما يماثلها (المواد 19-21)، الضريبة على المشتريات قابلة للحسم.\nمعفى: نشاطات وسلع المادتين 16-17، يخفض نسبة الحسم."
+
+msgid "Zoom +"
+msgstr "تكبير +"
+
+msgid "Zoom -"
+msgstr "تصغير -"
+
+msgid "both accounts are customers / suppliers: the documents moved go to the customer / supplier of the To account (Move ALL: merge them)"
+msgstr "الحسابان زبائن / موردون: المستندات المنقولة تذهب إلى زبون / مورد الحساب الجديد (نقل الكل: دمجهما)"
+
+msgid "columns"
+msgstr "أعمدة"
+
+msgid "days after their date"
+msgstr "يوماً بعد تاريخها"
+
+msgid "expense VAT"
+msgstr "ضريبة المصاريف"
+
+msgid "expenses read from Excel / PDF"
+msgstr "المصاريف المقروءة من Excel / PDF"
+
+msgid "expenses, receipts and payments"
+msgstr "المصاريف والمقبوضات والمدفوعات"
+
+msgid "fills the accounts, the depreciation % and the useful life"
+msgstr "يعبّئ الحسابات ونسبة الاستهلاك والعمر الإنتاجي"
+
+msgid "from A/C"
+msgstr "من حساب"
+
+msgid "in"
+msgstr "في"
+
+msgid "measure"
+msgstr "المقياس"
+
+msgid "on A/C"
+msgstr "على الحساب"
+
+msgid "or amount"
+msgstr "أو المبلغ"
+
+msgid "purchase VAT"
+msgstr "ضريبة المشتريات"
+
+msgid "purchase invoices, imports"
+msgstr "فواتير الشراء، الاستيراد"
+
+msgid "receipts and payments"
+msgstr "المقبوضات والمدفوعات"
+
+msgid "receipts, payments, DOE"
+msgstr "المقبوضات، المدفوعات، فروقات الصرف"
+
+msgid "rows imported"
+msgstr "أسطر مستوردة"
+
+msgid "rows ready"
+msgstr "أسطر جاهزة"
+
+msgid "sales VAT"
+msgstr "ضريبة المبيعات"
+
+msgid "sales invoices with items"
+msgstr "فواتير البيع مع أصناف"
+
+msgid "sales invoices, imports"
+msgstr "فواتير البيع، الاستيراد"
+
+msgid "the part of a purchase without VAT"
+msgstr "الجزء من الشراء بدون ضريبة"
+
+msgid "to"
+msgstr "إلى"
+
+msgid "unit(s)"
+msgstr "وحدة"
+
+msgid "with a journal voucher (history stays). Details"
+msgstr "بقيد يومية (يبقى السجل). التفاصيل"
+
+msgid "{from_date} to {to_date} | {currency}"
+msgstr "{from_date} إلى {to_date} | {currency}"
+
+msgid "◀ Previous"
+msgstr "◀ السابق"
+
+msgid "📊 Board Dashboard"
+msgstr "📊 لوحة الإدارة"
+

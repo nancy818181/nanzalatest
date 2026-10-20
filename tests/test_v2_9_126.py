@@ -199,9 +199,11 @@ class ComparativeTrialBalanceTest(unittest.TestCase):
             db.save_journal_voucher({"entry_date": "10-06-2026", "description": "Date check", "currency": "USD"},
                 [{"account_code": "531", "debit": "10"}, {"account_code": "101", "credit": "10"}], user, defer_posting=True)
             for bad in ("31-02-2026", "2026-02-31", "not a date", "2026-13-01"):
-                with db.connect() as c: c.execute("UPDATE journal_entries SET entry_date=?", (bad,))
-                with self.assertRaisesRegex(ValueError, "Invalid date for entry"):
-                    db.comparative_trial_balance("01-06-2026", "30-06-2026", "USD")
+                with db.connect() as c:
+                    c.execute("UPDATE journal_entries SET entry_date=?,posting_status='posted'", (bad,))
+                    with self.assertRaisesRegex(ValueError, "Invalid date for entry"):
+                        db.comparative_trial_balance("01-06-2026", "30-06-2026", "USD")
+                    c.rollback()  # restore the draft fixture before the next corrupt posted-date case
             with db.connect() as c: c.execute("UPDATE journal_entries SET entry_date='2026-07-01'")
             self.assertEqual(db.comparative_trial_balance("01-06-2026", "30-06-2026", "USD")["items"], [])
             with self.assertRaisesRegex(ValueError, "From Date"):

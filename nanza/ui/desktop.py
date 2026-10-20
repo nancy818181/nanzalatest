@@ -69,7 +69,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             try: self.state("zoomed")
             except tk.TclError: pass
         self.configure(bg=LIGHT)
-        self.language = tk.StringVar(value="en")
+        from i18n import saved_language
+        self.language = tk.StringVar(value=saved_language())
         self.client = None
         self.current_user = None
         self.last_activity = time.monotonic()
@@ -416,7 +417,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def login_screen(self):
         self.clear()
         import arabic_ui
-        arabic_ui.switch(self, "en")  # 2.9.118: the sign-in screen is in English; Arabic starts after signing in
+        arabic_ui.switch(self, self.language.get())
         card = tk.Frame(self, bg="white", padx=42, pady=36)
         card.place(relx=.5, rely=.5, anchor="center")
         try:
@@ -434,7 +435,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self.password = tk.StringVar()
         fields = [("server", self.server, False), ("username", self.username, False), ("password", self.password, True)]
         for row,(key,var,secret) in enumerate(fields, 2):
-            tk.Label(card, text=tr("en",key), bg="white", anchor="w").grid(row=row,column=0,sticky="w",pady=7,padx=(0,14))
+            tk.Label(card, text=tr(self.language.get(),key), bg="white", anchor="w").grid(row=row,column=0,sticky="w",pady=7,padx=(0,14))
             entry=tk.Entry(card,textvariable=var,width=34,show="*" if secret else "")
             entry.grid(row=row,column=1,pady=7)
             if secret:
@@ -449,6 +450,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             self.client.confirm_negative_stock=lambda text: messagebox.askyesno("Stock below zero | مخزون سالب",text,icon="warning")
             self.client.confirm_duplicate=lambda text: messagebox.askyesno("Already saved | مكرر",text,icon="warning",default="no")  # 2.9.103
             self.current_user=self.client.login(self.username.get(), self.password.get())
+            from i18n import save_language
+            save_language(self.language.get())
             import arabic_ui
             arabic_ui.switch(self, self.language.get())  # 2.9.118: Language = ar -> the screens in Arabic, right to left
             self.last_activity=time.monotonic(); self.bind_all("<Any-KeyPress>",self.record_activity); self.bind_all("<Any-Button>",self.record_activity); self.after(60000,self.check_auto_logout)
@@ -595,10 +598,9 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         tk.Label(top,text="11% VAT  |  " + " · ".join(self.currency_codes[:5]),bg=NAVY,fg=GOLD,font=("Segoe UI",10,"bold")).pack(side="right",padx=28)
         tk.Button(top,text="Help / مساعدة",command=self.open_user_guide,bg=NAVY,fg="white",activebackground=GOLD,border=0,padx=10).pack(side="right",padx=4)
         # 2.9.118: one click turns every screen to Arabic (right to left) or back to English
-        language_button=tk.Button(top,text="English" if lang=="ar" else "عربي",command=lambda:self.switch_language("en" if lang=="ar" else "ar"),
+        language_button=tk.Button(top,text="AR | EN",command=lambda:self.switch_language("en" if lang=="ar" else "ar"),
                                   bg=NAVY,fg=GOLD,activebackground=GOLD,border=1,padx=10,cursor="hand2",font=("Segoe UI",9,"bold"))
         language_button.pack(side="right",padx=4)
-        if lang=="ar": language_button.configure(text="English | الإنكليزية")
         self.bind_all("<F1>",lambda _e: self.open_user_guide())  # 2.9.106: F1 opens the guide (tabs like the menu, with a search box)
         self.update_notice_bar=top; self.start_update_check()
         tk.Button(top,text="Switch Company / Year",command=self.company_selection_screen,bg=GOLD,fg=NAVY,border=0,padx=10,pady=5).pack(side="right",padx=5)
@@ -918,6 +920,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def switch_language(self,language):
         """2.9.118: the whole program in Arabic (right to left) or English, on the same company, year and screen."""
         import arabic_ui
+        from i18n import save_language
+        save_language(language)
         try:
             current=self.main_notebook.select(); attribute=self._page_attributes[[str(p) for p in self.main_tab_pages].index(str(current))]
         except (AttributeError,ValueError,IndexError,tk.TclError): attribute=None

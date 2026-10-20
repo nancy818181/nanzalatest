@@ -139,8 +139,8 @@ jobs:
             $modules = @(Get-ChildItem -Path nanza -Recurse -Filter *.py -File) + @(Get-Item nanza_paths.py) | ForEach-Object { '--hidden-import'; $_.BaseName }
             Write-Host "Program modules included: $(($modules | Where-Object { $_ -ne '--hidden-import' }) -join ', ')"
             pyinstaller --noconfirm --clean --onedir --windowed --noupx --icon Assets/nanza.ico @folders @modules `
-            --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/help;assets/help" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
-            --hidden-import commercial_documents --hidden-import executive_dashboard `
+            --add-data "nanza/translations.json;nanza" --add-data "nanza/locale;nanza/locale" --add-data "Assets/saber.ico;assets" --add-data "Assets/nanza.ico;assets" --add-data "Assets/nanza_logo.png;assets" --add-data "Assets/nanza_icon.png;assets" --add-data "Assets/Saber_for_Audit_logo.png;assets" --add-data "Assets/user_guide.html;assets" --add-data "Assets/help;assets/help" --add-data "Assets/fonts;assets/fonts" --add-data "Assets/ocr;ocr" `
+            --hidden-import nanza.ocr --hidden-import nanza.ocr.engine --hidden-import nanza.ocr.arabic --hidden-import nanza.ocr.handwriting --hidden-import nanza.ai_accountant.chat --hidden-import commercial_documents --hidden-import executive_dashboard `
             --hidden-import nanza_delivery.complete_board_dashboard --collect-all customtkinter --collect-all matplotlib `
             --hidden-import desktop_workbench --hidden-import nanza_delivery.ageing_report --hidden-import nanza_delivery.whatsapp_daily_summary --hidden-import nanza_delivery.custom_report_builder --hidden-import nanza_delivery.ai_accountant `
             --hidden-import desktop_commercial --hidden-import desktop_executive `

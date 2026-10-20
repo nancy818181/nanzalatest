@@ -1,0 +1,8 @@
+{% load nanza_i18n %}
+<form method="post" action="{% url 'nanza_set_language' %}" aria-label="Language / اللغة">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <button type="submit" name="language" value="ar" lang="ar">AR</button>
+  <span aria-hidden="true">|</span>
+  <button type="submit" name="language" value="en" lang="en">EN</button>
+</form>

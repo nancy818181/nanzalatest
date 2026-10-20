@@ -111,6 +111,9 @@ class PayrollStore:
         elif len(number)!=9: raise ValueError("Employee number must contain 9 digits (or enter a 4-digit prefix)")
         currency=str(item.get("currency") or "LBP").upper()
         if currency not in self.currency_codes(): raise ValueError("Invalid employee currency")
+        try: base_salary = Decimal(str(item.get("base_salary") or 0))
+        except (InvalidOperation, ValueError, TypeError) as exc: raise ValueError("Invalid base salary") from exc
+        if not base_salary.is_finite() or base_salary < 0: raise ValueError("Base salary must be finite and cannot be negative")
         children=max(0,int(item.get("children") or 0)); spouse_works=1 if item.get("spouse_works",False) else 0; active=1 if item.get("active",True) else 0
         employee_group=str(item.get("employee_group") or "employee").lower()
         if employee_group not in ("employee","manager"): raise ValueError("Employee group must be Employee or Manager")
@@ -125,7 +128,7 @@ class PayrollStore:
             str(item.get("marital_status") or "single").lower(),spouse_works,children,employee_group,
             hire_date,leave_date,
             str(item.get("job_title") or "").strip(),int(item["branch_id"]) if item.get("branch_id") else None,currency,
-            str(Decimal(str(item.get("base_salary") or 0))),str(item.get("salary_account") or "").split(" - ",1)[0].strip() or None,  # 2.9.80: empty = the Standard Posting Accounts (6311 / 6316)
+            str(base_salary),str(item.get("salary_account") or "").split(" - ",1)[0].strip() or None,  # 2.9.80: empty = the Standard Posting Accounts (6311 / 6316)
             item.get("payable_account") or "421100001",active)
         with self.connect() as db:
             if employee_id:

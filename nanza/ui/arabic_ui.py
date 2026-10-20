@@ -31,6 +31,7 @@ _UPPER = {}
 def _add_i18n():
     try:
         import i18n
+        AR.update(i18n.CATALOG.get("ar", {}))
         english, arabic = i18n.TRANSLATIONS["en"], i18n.TRANSLATIONS["ar"]
         for key, text in english.items():
             if key in arabic and text not in AR: AR[text] = arabic[key]

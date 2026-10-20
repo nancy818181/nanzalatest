@@ -106,3 +106,86 @@ def suggest_account(description, accounts=(), account_type="expense"):
     else:
         result["label"] = "No suggestion"
     return result
+
+
+class ExpenseClassifier:
+    """Local, review-first Arabic/English classifier with auditable learning.
+
+    Optional SQLite storage persists labels rather than unsafe pickle models.
+    Use a separate company scope; learning never changes accounting records.
+    """
+    def __init__(self, storage_path=None, *, company_id="local"):
+        self.storage_path = storage_path
+        self.company_id = str(company_id)
+        self._learned = {}
+        self._model = None
+        if storage_path is not None:
+            import sqlite3
+            with sqlite3.connect(str(storage_path)) as connection:
+                connection.execute("""CREATE TABLE IF NOT EXISTS expense_training_labels (
+                    company_scope TEXT NOT NULL, description TEXT NOT NULL,
+                    category TEXT NOT NULL, PRIMARY KEY(company_scope,description))""")
+                self._learned = dict(connection.execute(
+                    "SELECT description,category FROM expense_training_labels WHERE company_scope=?",
+                    (self.company_id,)))
+        self._fit()
+
+    @staticmethod
+    def _text(description):
+        import unicodedata
+        text = unicodedata.normalize("NFKC", str(description or "")).casefold().strip()
+        text = re.sub(r"[\u064b-\u065f\u0670ـ]", "", text)
+        return " ".join(text.split())
+
+    def _fit(self):
+        from sklearn.pipeline import make_pipeline
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.linear_model import LogisticRegression
+        samples = {self._text(word): category
+                   for category, words in RULES.items() for word in words}
+        samples.update(self._learned)
+        if len(set(samples.values())) < 2:
+            self._model = None
+            return
+        self._model = make_pipeline(
+            TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), max_features=30000),
+            LogisticRegression(max_iter=500, random_state=42))
+        self._model.fit(list(samples), list(samples.values()))
+
+    def learn(self, description, category):
+        text = self._text(description)
+        category = str(category or "").strip()
+        if not text or len(text) > 2000 or not category or len(category) > 100:
+            raise ValueError("A description (1-2000 chars) and category (1-100 chars) are required")
+        if self.storage_path is not None:
+            import sqlite3
+            with sqlite3.connect(str(self.storage_path)) as connection:
+                connection.execute("""INSERT INTO expense_training_labels VALUES(?,?,?)
+                    ON CONFLICT(company_scope,description) DO UPDATE SET category=excluded.category""",
+                    (self.company_id, text, category))
+        self._learned[text] = category
+        self._fit()
+        return {"learned": True, "category": category, "requires_review": True}
+
+    def categorize(self, description):
+        text = self._text(description)
+        if not text or len(text) > 2000:
+            return {"category": None, "confidence": 0.0, "requires_review": True, "source": "abstain"}
+        if text in self._learned:
+            return {"category": self._learned[text], "confidence": None,
+                    "requires_review": True, "source": "reviewed_example"}
+        tokens = _tokens(text)
+        matches = {category for category, words in RULES.items()
+                   if any(_tokens(self._text(word)) <= tokens for word in words)}
+        if len(matches) == 1:
+            return {"category": matches.pop(), "confidence": None,
+                    "requires_review": True, "source": "keyword_rule"}
+        if len(matches) > 1 or self._model is None:
+            return {"category": None, "confidence": 0.0,
+                    "requires_review": True, "source": "ambiguous"}
+        scores = self._model.predict_proba([text])[0]
+        ranking = sorted(zip(scores, self._model.classes_), reverse=True)
+        score, category = ranking[0]
+        margin = score-ranking[1][0] if len(ranking) > 1 else score
+        return {"category": str(category) if score >= .65 and margin >= .20 else None,
+                "confidence": float(score), "requires_review": True, "source": "sklearn_uncalibrated"}

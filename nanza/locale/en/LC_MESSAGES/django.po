@@ -1,0 +1,6321 @@
+msgid ""
+msgstr "Project-Id-Version: Nanza\nLanguage: en\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "   both accounts are customers / suppliers: the documents moved go to the customer / supplier of the To account (Move ALL: merge them)"
+msgstr "   both accounts are customers / suppliers: the documents moved go to the customer / supplier of the To account (Move ALL: merge them)"
+
+msgid "  Options  "
+msgstr "  Options  "
+
+msgid "% (year to date, the company budget in the main currency)"
+msgstr "% (year to date, the company budget in the main currency)"
+
+msgid "% from past years"
+msgstr "% from past years"
+
+msgid "(DSO / DPO empty = taken from the books)"
+msgstr "(DSO / DPO empty = taken from the books)"
+
+msgid "(a key is kept: leave empty to keep it)"
+msgstr "(a key is kept: leave empty to keep it)"
+
+msgid "(empty: 531 cash / 512 bank)"
+msgstr "(empty: 531 cash / 512 bank)"
+
+msgid "+ Purchase / Expense"
+msgstr "+ Purchase / Expense"
+
+msgid "+ Sales Invoice"
+msgstr "+ Sales Invoice"
+
+msgid "+30 days"
+msgstr "+30 days"
+
+msgid "1 Journal Voucher per currency; result to 138 profit / 139 loss"
+msgstr "1 Journal Voucher per currency; result to 138 profit / 139 loss"
+
+msgid "1. Asset Accounts & Depreciation %"
+msgstr "1. Asset Accounts & Depreciation %"
+
+msgid "13-Week Cash Forecast"
+msgstr "13-Week Cash Forecast"
+
+msgid "13th Month"
+msgstr "13th Month"
+
+msgid "13th Salary"
+msgstr "13th Salary"
+
+msgid "1st Column"
+msgstr "1st Column"
+
+msgid "2. Asset Data Entry"
+msgstr "2. Asset Data Entry"
+
+msgid "2nd Column"
+msgstr "2nd Column"
+
+msgid "3. Monthly Depreciation Table"
+msgstr "3. Monthly Depreciation Table"
+
+msgid "3D Chart"
+msgstr "3D Chart"
+
+msgid "3D Charts"
+msgstr "3D Charts"
+
+msgid "3D: rows"
+msgstr "3D: rows"
+
+msgid "4-digit parent"
+msgstr "4-digit parent"
+
+msgid "4-digit prefix or 9-digit account"
+msgstr "4-digit prefix or 9-digit account"
+
+msgid "5-Year Cash Forecast"
+msgstr "5-Year Cash Forecast"
+
+msgid "5-Year Projection"
+msgstr "5-Year Projection"
+
+msgid "5-Year Projection to date (DD-MM-YYYY)"
+msgstr "5-Year Projection to date (DD-MM-YYYY)"
+
+msgid "6739 - Bank Commissions & Other Charges"
+msgstr "6739 - Bank Commissions & Other Charges"
+
+msgid "9-Digit Account"
+msgstr "9-Digit Account"
+
+msgid "< Options"
+msgstr "< Options"
+
+msgid "A credit note cannot itself be returned."
+msgstr "A credit note cannot itself be returned."
+
+msgid "A deleted invoice leaves a gap: cancel invoices instead of deleting them, or renumber (Settings > Numbering)"
+msgstr "A deleted invoice leaves a gap: cancel invoices instead of deleting them, or renumber (Settings > Numbering)"
+
+msgid "A line has an amount but no description. Add a description or delete that line before saving, so the saved total matches what you see."
+msgstr "A line has an amount but no description. Add a description or delete that line before saving, so the saved total matches what you see."
+
+msgid "A new Date From ends the previous period the day before. Leave Date To empty for 'until further notice'."
+msgstr "A new Date From ends the previous period the day before. Leave Date To empty for 'until further notice'."
+
+msgid "A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made."
+msgstr "A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made."
+
+msgid "A reversing entry is posted; the purchase stays in the list as Cancelled. Then enter it again correctly."
+msgstr "A reversing entry is posted; the purchase stays in the list as Cancelled. Then enter it again correctly."
+
+msgid "ACCOUNTS & VAT"
+msgstr "ACCOUNTS & VAT"
+
+msgid "AI Accountant"
+msgstr "AI Accountant"
+
+msgid "AI PDF preview"
+msgstr "AI PDF preview"
+
+msgid "AI Suggest A/C"
+msgstr "AI Suggest A/C"
+
+msgid "AI account suggestion"
+msgstr "AI account suggestion"
+
+msgid "ALL previous invoices will be removed and replaced. A safety backup is made first. Continue?"
+msgstr "ALL previous invoices will be removed and replaced. A safety backup is made first. Continue?"
+
+msgid "AMOUNT IN WORDS"
+msgstr "AMOUNT IN WORDS"
+
+msgid "AR | EN"
+msgstr "AR | EN"
+
+msgid "Account"
+msgstr "Account"
+
+msgid "Account (4-digit prefix = automatic):"
+msgstr "Account (4-digit prefix = automatic):"
+
+msgid "Account / Name From"
+msgstr "Account / Name From"
+
+msgid "Account Currency"
+msgstr "Account Currency"
+
+msgid "Account From"
+msgstr "Account From"
+
+msgid "Account From:"
+msgstr "Account From:"
+
+msgid "Account Name"
+msgstr "Account Name"
+
+msgid "Account No. - Name"
+msgstr "Account No. - Name"
+
+msgid "Account Number"
+msgstr "Account Number"
+
+msgid "Account Search"
+msgstr "Account Search"
+
+msgid "Account To"
+msgstr "Account To"
+
+msgid "Account mapping"
+msgstr "Account mapping"
+
+msgid "Account name"
+msgstr "Account name"
+
+msgid "Account suggestion"
+msgstr "Account suggestion"
+
+msgid "Account to change"
+msgstr "Account to change"
+
+msgid "Accountant"
+msgstr "Accountant"
+
+msgid "Accounting"
+msgstr "Accounting"
+
+msgid "Accounting Settings"
+msgstr "Accounting Settings"
+
+msgid "Accounts"
+msgstr "Accounts"
+
+msgid "Accounts & Statements"
+msgstr "Accounts & Statements"
+
+msgid "Accounts and amounts"
+msgstr "Accounts and amounts"
+
+msgid "Accounts without transactions"
+msgstr "Accounts without transactions"
+
+msgid "Accounts: click the number and type a replacement, or use Find. Tab moves to the next field."
+msgstr "Accounts: click the number and type a replacement, or use Find. Tab moves to the next field."
+
+msgid "Accumulated"
+msgstr "Accumulated"
+
+msgid "Accumulated Account"
+msgstr "Accumulated Account"
+
+msgid "Accumulated account"
+msgstr "Accumulated account"
+
+msgid "Accumulated depreciation account"
+msgstr "Accumulated depreciation account"
+
+msgid "Acquisition cost"
+msgstr "Acquisition cost"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "Actionable Insights"
+msgstr "Actionable Insights"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Actual report year"
+msgstr "Actual report year"
+
+msgid "Add Account"
+msgstr "Add Account"
+
+msgid "Add Adjustment"
+msgstr "Add Adjustment"
+
+msgid "Add Category"
+msgstr "Add Category"
+
+msgid "Add Company from File"
+msgstr "Add Company from File"
+
+msgid "Add Company from File…"
+msgstr "Add Company from File…"
+
+msgid "Add Cost on Purchase"
+msgstr "Add Cost on Purchase"
+
+msgid "Add Currency"
+msgstr "Add Currency"
+
+msgid "Add Customer Receipt"
+msgstr "Add Customer Receipt"
+
+msgid "Add Daily Rate"
+msgstr "Add Daily Rate"
+
+msgid "Add Invoice Row"
+msgstr "Add Invoice Row"
+
+msgid "Add Item"
+msgstr "Add Item"
+
+msgid "Add Item Line"
+msgstr "Add Item Line"
+
+msgid "Add Item to Invoice"
+msgstr "Add Item to Invoice"
+
+msgid "Add Leave"
+msgstr "Add Leave"
+
+msgid "Add Line"
+msgstr "Add Line"
+
+msgid "Add Material"
+msgstr "Add Material"
+
+msgid "Add Period"
+msgstr "Add Period"
+
+msgid "Add Subcategory"
+msgstr "Add Subcategory"
+
+msgid "Add Supplier Payment"
+msgstr "Add Supplier Payment"
+
+msgid "Add Unit"
+msgstr "Add Unit"
+
+msgid "Add at least one invoice item"
+msgstr "Add at least one invoice item"
+
+msgid "Add at least one item with a quantity"
+msgstr "Add at least one item with a quantity"
+
+msgid "Add at least one line with a description"
+msgstr "Add at least one line with a description"
+
+msgid "Add at least one material with a quantity"
+msgstr "Add at least one material with a quantity"
+
+msgid "Add child"
+msgstr "Add child"
+
+msgid "Add line"
+msgstr "Add line"
+
+msgid "Add the materials used (Materials from Recipe)"
+msgstr "Add the materials used (Materials from Recipe)"
+
+msgid "Additional cash benefits are taxable by default. Use the existing statutory categories for exemptions; changing an account does not change tax or NSSF."
+msgstr "Additional cash benefits are taxable by default. Use the existing statutory categories for exemptions; changing an account does not change tax or NSSF."
+
+msgid "Additional payments"
+msgstr "Additional payments"
+
+msgid "Address"
+msgstr "Address"
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "Advanced Local OCR"
+msgstr "Advanced Local OCR"
+
+msgid "Advanced Local OCR (Arabic and English)"
+msgstr "Advanced Local OCR (Arabic and English)"
+
+msgid "Adviser confirmation..."
+msgstr "Adviser confirmation..."
+
+msgid "Ageing Report"
+msgstr "Ageing Report"
+
+msgid "Ageing buckets"
+msgstr "Ageing buckets"
+
+msgid "Ageing shows invoice due dates, days overdue, and expected amounts due by the selected date."
+msgstr "Ageing shows invoice due dates, days overdue, and expected amounts due by the selected date."
+
+msgid "Aging Bucket"
+msgstr "Aging Bucket"
+
+msgid "All"
+msgstr "All"
+
+msgid "All (no filter)"
+msgstr "All (no filter)"
+
+msgid "All Currencies"
+msgstr "All Currencies"
+
+msgid "All Payslips (PDF)"
+msgstr "All Payslips (PDF)"
+
+msgid "All accounts"
+msgstr "All accounts"
+
+msgid "All currencies"
+msgstr "All currencies"
+
+msgid "All files"
+msgstr "All files"
+
+msgid "All items by purchase value"
+msgstr "All items by purchase value"
+
+msgid "All journal entries are balanced (total Debit = total Credit)."
+msgstr "All journal entries are balanced (total Debit = total Credit)."
+
+msgid "Allocate"
+msgstr "Allocate"
+
+msgid "Allocation"
+msgstr "Allocation"
+
+msgid "Allocation - which invoices this payment settles"
+msgstr "Allocation - which invoices this payment settles"
+
+msgid "Allocation - which invoices this receipt settles"
+msgstr "Allocation - which invoices this receipt settles"
+
+msgid "Allowance Children"
+msgstr "Allowance Children"
+
+msgid "Allowance Maximum"
+msgstr "Allowance Maximum"
+
+msgid "Allowance Spouse"
+msgstr "Allowance Spouse"
+
+msgid "Allowance per Child"
+msgstr "Allowance per Child"
+
+msgid "Already saved"
+msgstr "Already saved"
+
+msgid "Amount"
+msgstr "Amount"
+
+msgid "Amount (+/-)"
+msgstr "Amount (+/-)"
+
+msgid "Amount (Account Currency)"
+msgstr "Amount (Account Currency)"
+
+msgid "Amount (LBP)"
+msgstr "Amount (LBP)"
+
+msgid "Amount LBP"
+msgstr "Amount LBP"
+
+msgid "Amount Paid"
+msgstr "Amount Paid"
+
+msgid "Amount USD"
+msgstr "Amount USD"
+
+msgid "Amount must be finite"
+msgstr "Amount must be finite"
+
+msgid "Amount paid (LBP)"
+msgstr "Amount paid (LBP)"
+
+msgid "Amount paid must be between zero and Total"
+msgstr "Amount paid must be between zero and Total"
+
+msgid "Amounts are on the detail accounts"
+msgstr "Amounts are on the detail accounts"
+
+msgid "Amounts cannot be negative"
+msgstr "Amounts cannot be negative"
+
+msgid "Amounts filled from the Excel file. Check them, select the purchase, then press 'Add Cost on Purchase'."
+msgstr "Amounts filled from the Excel file. Check them, select the purchase, then press 'Add Cost on Purchase'."
+
+msgid "Amounts in"
+msgstr "Amounts in"
+
+msgid "An automatic backup of this company and year is made every day when you open it (the newest 30 automatic copies are kept; manual and safety copies are never deleted). Keep a copy outside the computer too: Save Backup As... (USB / Drive)."
+msgstr "An automatic backup of this company and year is made every day when you open it (the newest 30 automatic copies are kept; manual and safety copies are never deleted). Keep a copy outside the computer too: Save Backup As... (USB / Drive)."
+
+msgid "An extra neural reader for difficult photos. One-time download; invoices stay on this computer. Slower than normal OCR; handwriting still needs review before Save."
+msgstr "An extra neural reader for difficult photos. One-time download; invoices stay on this computer. Slower than normal OCR; handwriting still needs review before Save."
+
+msgid "Analytic Study"
+msgstr "Analytic Study"
+
+msgid "Analytic study requested."
+msgstr "Analytic study requested."
+
+msgid "Angle"
+msgstr "Angle"
+
+msgid "Annual"
+msgstr "Annual"
+
+msgid "Annual Rollforward"
+msgstr "Annual Rollforward"
+
+msgid "Annual Schooling Grant"
+msgstr "Annual Schooling Grant"
+
+msgid "Annual grant, paid once for the school year. Check supporting documents and prior payments. Tax-exempt amount is a separate setting."
+msgstr "Annual grant, paid once for the school year. Check supporting documents and prior payments. Tax-exempt amount is a separate setting."
+
+msgid "Annual leave days / year (empty = 15)"
+msgstr "Annual leave days / year (empty = 15)"
+
+msgid "Annual rate % (review-required)"
+msgstr "Annual rate % (review-required)"
+
+msgid "Applies"
+msgstr "Applies"
+
+msgid "Applies to the selected items, or to all of them when none is selected. You can change one item later in Inventory > Items."
+msgstr "Applies to the selected items, or to all of them when none is selected. You can change one item later in Inventory > Items."
+
+msgid "Apply"
+msgstr "Apply"
+
+msgid "Apply Code"
+msgstr "Apply Code"
+
+msgid "Apply Count to Stock + Journal"
+msgstr "Apply Count to Stock + Journal"
+
+msgid "Apply VAT A/C to selected"
+msgstr "Apply VAT A/C to selected"
+
+msgid "Apply VAT account"
+msgstr "Apply VAT account"
+
+msgid "Apply additional payments"
+msgstr "Apply additional payments"
+
+msgid "Apply the physical count?\n\n- The stock quantities become the counted quantities (adjustment + / - documents).\n- The difference is posted in the journal (JV): surplus Dr stock 37 / Cr stock variation, shortage the other way,\n  valued at the item cost on the count date."
+msgstr "Apply the physical count?\n\n- The stock quantities become the counted quantities (adjustment + / - documents).\n- The difference is posted in the journal (JV): surplus Dr stock 37 / Cr stock variation, shortage the other way,\n  valued at the item cost on the count date."
+
+msgid "Apply to Selected"
+msgstr "Apply to Selected"
+
+msgid "Apply to all years"
+msgstr "Apply to all years"
+
+msgid "Apply to selected / all"
+msgstr "Apply to selected / all"
+
+msgid "Approval (internal control) - for this company"
+msgstr "Approval (internal control) - for this company"
+
+msgid "Approvals"
+msgstr "Approvals"
+
+msgid "Approve"
+msgstr "Approve"
+
+msgid "Approve Selected"
+msgstr "Approve Selected"
+
+msgid "Approved by"
+msgstr "Approved by"
+
+msgid "Apr"
+msgstr "Apr"
+
+msgid "Arabic"
+msgstr "Arabic"
+
+msgid "Arabic Name"
+msgstr "Arabic Name"
+
+msgid "Arrows ↑ ↓ choose, Enter selects (or double-click). If it does not exist, create it below."
+msgstr "Arrows ↑ ↓ choose, Enter selects (or double-click). If it does not exist, create it below."
+
+msgid "Article / law"
+msgstr "Article / law"
+
+msgid "As of"
+msgstr "As of"
+
+msgid "As of date must use DD-MM-YYYY"
+msgstr "As of date must use DD-MM-YYYY"
+
+msgid "Ask about quarterly cashflow, budget versus actual, or an analytic study."
+msgstr "Ask about quarterly cashflow, budget versus actual, or an analytic study."
+
+msgid "Ask in English, French, or Arabic about a quarter, budget variance, or analytic study."
+msgstr "Ask in English, French, or Arabic about a quarter, budget variance, or analytic study."
+
+msgid "Asset"
+msgstr "Asset"
+
+msgid "Asset / Account"
+msgstr "Asset / Account"
+
+msgid "Asset Account"
+msgstr "Asset Account"
+
+msgid "Asset PDF"
+msgstr "Asset PDF"
+
+msgid "Asset account"
+msgstr "Asset account"
+
+msgid "Asset account (category)"
+msgstr "Asset account (category)"
+
+msgid "Asset account (category) and its yearly depreciation %"
+msgstr "Asset account (category) and its yearly depreciation %"
+
+msgid "Asset account No."
+msgstr "Asset account No."
+
+msgid "Asset accounts"
+msgstr "Asset accounts"
+
+msgid "Asset code"
+msgstr "Asset code"
+
+msgid "Asset life (years)"
+msgstr "Asset life (years)"
+
+msgid "Asset name"
+msgstr "Asset name"
+
+msgid "Asset register - click a line to edit it"
+msgstr "Asset register - click a line to edit it"
+
+msgid "Asset register review is unavailable. The preview row was kept and no invoice was posted."
+msgstr "Asset register review is unavailable. The preview row was kept and no invoice was posted."
+
+msgid "Asset saved"
+msgstr "Asset saved"
+
+msgid "Asset saved; PDF attachment failed"
+msgstr "Asset saved; PDF attachment failed"
+
+msgid "Asset saved; retry PDF attachment"
+msgstr "Asset saved; retry PDF attachment"
+
+msgid "Asset suppliers"
+msgstr "Asset suppliers"
+
+msgid "Assets"
+msgstr "Assets"
+
+msgid "Assets & Depreciation"
+msgstr "Assets & Depreciation"
+
+msgid "Assumptions per year - double-click a cell. Growth in % against the year before; Cost of sales empty = follows revenue (same gross margin). Investments and Financing in the chosen currency (financing: + loans / capital received, - repayments)."
+msgstr "Assumptions per year - double-click a cell. Growth in % against the year before; Cost of sales empty = follows revenue (same gross margin). Investments and Financing in the chosen currency (financing: + loans / capital received, - repayments)."
+
+msgid "Assumptions saved for this company."
+msgstr "Assumptions saved for this company."
+
+msgid "At DOE rate"
+msgstr "At DOE rate"
+
+msgid "At date"
+msgstr "At date"
+
+msgid "At the end of the quarter the VAT accounts are closed: Dr output VAT (4427) / Cr deductible VAT (442...), the VAT the partial deduction does not allow goes to an expense, the credit brought forward is used, and the rest is VAT payable (Cr 4425) or VAT to recover (Dr 4429). The return must be saved first. Posting again replaces the voucher."
+msgstr "At the end of the quarter the VAT accounts are closed: Dr output VAT (4427) / Cr deductible VAT (442...), the VAT the partial deduction does not allow goes to an expense, the credit brought forward is used, and the rest is VAT payable (Cr 4425) or VAT to recover (Dr 4429). The return must be saved first. Posting again replaces the voucher."
+
+msgid "Attach / Replace File…"
+msgstr "Attach / Replace File…"
+
+msgid "Attach / Retry PDF"
+msgstr "Attach / Retry PDF"
+
+msgid "Attach / Retry affects only this saved asset's PDF documents; it never saves or posts the asset."
+msgstr "Attach / Retry affects only this saved asset's PDF documents; it never saves or posts the asset."
+
+msgid "Attach Customs PDF"
+msgstr "Attach Customs PDF"
+
+msgid "Attach PDF / Image"
+msgstr "Attach PDF / Image"
+
+msgid "Attachment"
+msgstr "Attachment"
+
+msgid "Attachments"
+msgstr "Attachments"
+
+msgid "Audit Report"
+msgstr "Audit Report"
+
+msgid "Audit Report (Excel)"
+msgstr "Audit Report (Excel)"
+
+msgid "Audit Report (PDF)"
+msgstr "Audit Report (PDF)"
+
+msgid "Audit Trail"
+msgstr "Audit Trail"
+
+msgid "Audit trail intact"
+msgstr "Audit trail intact"
+
+msgid "Auditor logo"
+msgstr "Auditor logo"
+
+msgid "Auditor logo: -"
+msgstr "Auditor logo: -"
+
+msgid "Auditor logo: removed (saved with Save)"
+msgstr "Auditor logo: removed (saved with Save)"
+
+msgid "Aug"
+msgstr "Aug"
+
+msgid "Auto Allocate (oldest first)"
+msgstr "Auto Allocate (oldest first)"
+
+msgid "Auto Calculate"
+msgstr "Auto Calculate"
+
+msgid "Auto Calculate Totals"
+msgstr "Auto Calculate Totals"
+
+msgid "Auto Match"
+msgstr "Auto Match"
+
+msgid "Auto-fill / Refresh"
+msgstr "Auto-fill / Refresh"
+
+msgid "Automatic DOE"
+msgstr "Automatic DOE"
+
+msgid "Average Cost"
+msgstr "Average Cost"
+
+msgid "Azure"
+msgstr "Azure"
+
+msgid "Azure Settings"
+msgstr "Azure Settings"
+
+msgid "Azure is off."
+msgstr "Azure is off."
+
+msgid "BILL TO"
+msgstr "BILL TO"
+
+msgid "BLOCKED"
+msgstr "BLOCKED"
+
+msgid "Back"
+msgstr "Back"
+
+msgid "Back up now"
+msgstr "Back up now"
+
+msgid "Backup"
+msgstr "Backup"
+
+msgid "Backup & Restore"
+msgstr "Backup & Restore"
+
+msgid "Backup File"
+msgstr "Backup File"
+
+msgid "Backups"
+msgstr "Backups"
+
+msgid "Balance"
+msgstr "Balance"
+
+msgid "Balance Due"
+msgstr "Balance Due"
+
+msgid "Balance Sheet"
+msgstr "Balance Sheet"
+
+msgid "Balance Sheet (1-5)"
+msgstr "Balance Sheet (1-5)"
+
+msgid "Bank Commission"
+msgstr "Bank Commission"
+
+msgid "Bank Reconciliation"
+msgstr "Bank Reconciliation"
+
+msgid "Bank Reconciliation (Payment & Receipt)"
+msgstr "Bank Reconciliation (Payment & Receipt)"
+
+msgid "Bank account"
+msgstr "Bank account"
+
+msgid "Bank commission"
+msgstr "Bank commission"
+
+msgid "Bank statement"
+msgstr "Bank statement"
+
+msgid "Barcode"
+msgstr "Barcode"
+
+msgid "Base"
+msgstr "Base"
+
+msgid "Base Salary"
+msgstr "Base Salary"
+
+msgid "Base currency"
+msgstr "Base currency"
+
+msgid "Base salary"
+msgstr "Base salary"
+
+msgid "Base salary must be finite and cannot be negative"
+msgstr "Base salary must be finite and cannot be negative"
+
+msgid "Base year"
+msgstr "Base year"
+
+msgid "Base year (actual)"
+msgstr "Base year (actual)"
+
+msgid "Based on published 2010 Q1-2 / Q11-2 specimen sections only. Not an official form; A-F are internal refs. Obtain issued forms from the VAT Directorate."
+msgstr "Based on published 2010 Q1-2 / Q11-2 specimen sections only. Not an official form; A-F are internal refs. Obtain issued forms from the VAT Directorate."
+
+msgid "Before VAT"
+msgstr "Before VAT"
+
+msgid "Before VAT Deductible"
+msgstr "Before VAT Deductible"
+
+msgid "Before VAT Non-Deductible"
+msgstr "Before VAT Non-Deductible"
+
+msgid "Blank means unreadable, not zero.\nNo accounting entry is saved here."
+msgstr "Blank means unreadable, not zero.\nNo accounting entry is saved here."
+
+msgid "Bonus"
+msgstr "Bonus"
+
+msgid "Book the asset purchase"
+msgstr "Book the asset purchase"
+
+msgid "Book to"
+msgstr "Book to"
+
+msgid "Booked before Nanza up to"
+msgstr "Booked before Nanza up to"
+
+msgid "Books (account movements)"
+msgstr "Books (account movements)"
+
+msgid "Books Health Check"
+msgstr "Books Health Check"
+
+msgid "Books are open: no period is locked."
+msgstr "Books are open: no period is locked."
+
+msgid "Branch"
+msgstr "Branch"
+
+msgid "Branch Name"
+msgstr "Branch Name"
+
+msgid "Branch in the number"
+msgstr "Branch in the number"
+
+msgid "Branch:"
+msgstr "Branch:"
+
+msgid "Branches"
+msgstr "Branches"
+
+msgid "Brand"
+msgstr "Brand"
+
+msgid "Branded Invoice PDF"
+msgstr "Branded Invoice PDF"
+
+msgid "Bring the old program in one Excel file: opening balances, customers & suppliers, open invoices and items. Everything is checked first; nothing is saved while a line is wrong."
+msgstr "Bring the old program in one Excel file: opening balances, customers & suppliers, open invoices and items. Everything is checked first; nothing is saved while a line is wrong."
+
+msgid "Broker Fees"
+msgstr "Broker Fees"
+
+msgid "Browse..."
+msgstr "Browse..."
+
+msgid "Budget"
+msgstr "Budget"
+
+msgid "Budget Detail"
+msgstr "Budget Detail"
+
+msgid "Budget Forecast"
+msgstr "Budget Forecast"
+
+msgid "Budget Projection"
+msgstr "Budget Projection"
+
+msgid "Budget Variances"
+msgstr "Budget Variances"
+
+msgid "Budget from a year"
+msgstr "Budget from a year"
+
+msgid "Budget from a year + %"
+msgstr "Budget from a year + %"
+
+msgid "Budget lines"
+msgstr "Budget lines"
+
+msgid "Budget vs Actual"
+msgstr "Budget vs Actual"
+
+msgid "Budget-versus-actual report requested."
+msgstr "Budget-versus-actual report requested."
+
+msgid "Build"
+msgstr "Build"
+
+msgid "Build 13-Week Forecast"
+msgstr "Build 13-Week Forecast"
+
+msgid "Build Cash Budget"
+msgstr "Build Cash Budget"
+
+msgid "Build Management Pack"
+msgstr "Build Management Pack"
+
+msgid "Build Study"
+msgstr "Build Study"
+
+msgid "Build from the books"
+msgstr "Build from the books"
+
+msgid "Build the cash budget first"
+msgstr "Build the cash budget first"
+
+msgid "Build the report first"
+msgstr "Build the report first"
+
+msgid "Building analytic study..."
+msgstr "Building analytic study..."
+
+msgid "Business Reports"
+msgstr "Business Reports"
+
+msgid "By Due Date"
+msgstr "By Due Date"
+
+msgid "C"
+msgstr "C"
+
+msgid "CNSS Annual Employee Declaration"
+msgstr "CNSS Annual Employee Declaration"
+
+msgid "CNSS Annual Settlement Form"
+msgstr "CNSS Annual Settlement Form"
+
+msgid "CNSS Contributions Form"
+msgstr "CNSS Contributions Form"
+
+msgid "CREDIT NOTE"
+msgstr "CREDIT NOTE"
+
+msgid "Calcul du taux récupérable (Art. 31): revenues taxable / exempt, recoverable and non-recoverable VAT, VAT payable."
+msgstr "Calcul du taux récupérable (Art. 31): revenues taxable / exempt, recoverable and non-recoverable VAT, VAT payable."
+
+msgid "Calculate"
+msgstr "Calculate"
+
+msgid "Calculate All"
+msgstr "Calculate All"
+
+msgid "Can approve"
+msgstr "Can approve"
+
+msgid "Can delete / cancel"
+msgstr "Can delete / cancel"
+
+msgid "Cancel"
+msgstr "Cancel"
+
+msgid "Cancel Invoice"
+msgstr "Cancel Invoice"
+
+msgid "Cancel Purchase"
+msgstr "Cancel Purchase"
+
+msgid "Cancel document"
+msgstr "Cancel document"
+
+msgid "Cancellation reason:"
+msgstr "Cancellation reason:"
+
+msgid "Carrying"
+msgstr "Carrying"
+
+msgid "Cash (expenses and payments)"
+msgstr "Cash (expenses and payments)"
+
+msgid "Cash -> 531, Bank Transfer / Cheque / Card -> 512 (change the account if needed); the amount paid follows the Total."
+msgstr "Cash -> 531, Bank Transfer / Cheque / Card -> 512 (change the account if needed); the amount paid follows the Total."
+
+msgid "Cash / Bank"
+msgstr "Cash / Bank"
+
+msgid "Cash / Bank Account"
+msgstr "Cash / Bank Account"
+
+msgid "Cash / Bank Account (paid)"
+msgstr "Cash / Bank Account (paid)"
+
+msgid "Cash / Bank account (paid invoices)"
+msgstr "Cash / Bank account (paid invoices)"
+
+msgid "Cash Budget"
+msgstr "Cash Budget"
+
+msgid "Cash Budget - from a year + %"
+msgstr "Cash Budget - from a year + %"
+
+msgid "Cash Flow"
+msgstr "Cash Flow"
+
+msgid "Cash Flow Category"
+msgstr "Cash Flow Category"
+
+msgid "Cash Flow Outlook"
+msgstr "Cash Flow Outlook"
+
+msgid "Cash budget year"
+msgstr "Cash budget year"
+
+msgid "Cash flow: calculated automatically (indirect method). To replace it, enter the three reviewed totals. Positive = inflow, negative = outflow.\nOCI is disclosure only; related asset/equity entries must already be posted."
+msgstr "Cash flow: calculated automatically (indirect method). To replace it, enter the three reviewed totals. Positive = inflow, negative = outflow.\nOCI is disclosure only; related asset/equity entries must already be posted."
+
+msgid "Cash in"
+msgstr "Cash in"
+
+msgid "Cash in %"
+msgstr "Cash in %"
+
+msgid "Cash out"
+msgstr "Cash out"
+
+msgid "Cash out %"
+msgstr "Cash out %"
+
+msgid "Cash shortage threshold"
+msgstr "Cash shortage threshold"
+
+msgid "Cashflow"
+msgstr "Cashflow"
+
+msgid "Categories & Units"
+msgstr "Categories & Units"
+
+msgid "Categories and subcategories"
+msgstr "Categories and subcategories"
+
+msgid "Category"
+msgstr "Category"
+
+msgid "Chapters (class)"
+msgstr "Chapters (class)"
+
+msgid "Chart"
+msgstr "Chart"
+
+msgid "Chart of Accounts"
+msgstr "Chart of Accounts"
+
+msgid "Chart of Accounts: create the account again, or correct the entries"
+msgstr "Chart of Accounts: create the account again, or correct the entries"
+
+msgid "Chart of accounts from Excel"
+msgstr "Chart of accounts from Excel"
+
+msgid "Charts"
+msgstr "Charts"
+
+msgid "Check"
+msgstr "Check"
+
+msgid "Check & Import..."
+msgstr "Check & Import..."
+
+msgid "Check Balance"
+msgstr "Check Balance"
+
+msgid "Check Sales Accounts"
+msgstr "Check Sales Accounts"
+
+msgid "Check Sales Accounts..."
+msgstr "Check Sales Accounts..."
+
+msgid "Check again"
+msgstr "Check again"
+
+msgid "Check the date and amounts"
+msgstr "Check the date and amounts"
+
+msgid "Check the date: an entry of another year belongs in that year's file"
+msgstr "Check the date: an entry of another year belongs in that year's file"
+
+msgid "Check the image and tick the confirmation first"
+msgstr "Check the image and tick the confirmation first"
+
+msgid "Check the invoice reading"
+msgstr "Check the invoice reading"
+
+msgid "Check with the Books"
+msgstr "Check with the Books"
+
+msgid "Checked"
+msgstr "Checked"
+
+msgid "Child Allowance"
+msgstr "Child Allowance"
+
+msgid "Children"
+msgstr "Children"
+
+msgid "Children born:"
+msgstr "Children born:"
+
+msgid "Choose Excel File"
+msgstr "Choose Excel File"
+
+msgid "Choose Excel file"
+msgstr "Choose Excel file"
+
+msgid "Choose PDF Invoice(s)"
+msgstr "Choose PDF Invoice(s)"
+
+msgid "Choose Purchases, Expenses, Assets or Sales"
+msgstr "Choose Purchases, Expenses, Assets or Sales"
+
+msgid "Choose a class-2 asset account."
+msgstr "Choose a class-2 asset account."
+
+msgid "Choose a currency from Settings"
+msgstr "Choose a currency from Settings"
+
+msgid "Choose a form first."
+msgstr "Choose a form first."
+
+msgid "Choose a report and period, then press Generate. Official figures use posted payroll, converted to LBP."
+msgstr "Choose a report and period, then press Generate. Official figures use posted payroll, converted to LBP."
+
+msgid "Choose a report and press Show."
+msgstr "Choose a report and press Show."
+
+msgid "Choose a smaller image (under 1.5 MB)"
+msgstr "Choose a smaller image (under 1.5 MB)"
+
+msgid "Choose an Excel or PDF file first"
+msgstr "Choose an Excel or PDF file first"
+
+msgid "Choose an item from the list before showing its stock card"
+msgstr "Choose an item from the list before showing its stock card"
+
+msgid "Choose any 3. Stock at To date; with Month, Project or Branch: net movement From / To."
+msgstr "Choose any 3. Stock at To date; with Month, Project or Branch: net movement From / To."
+
+msgid "Choose both accounts"
+msgstr "Choose both accounts"
+
+msgid "Choose different From and To warehouses."
+msgstr "Choose different From and To warehouses."
+
+msgid "Choose filters"
+msgstr "Choose filters"
+
+msgid "Choose filters..."
+msgstr "Choose filters..."
+
+msgid "Choose logo..."
+msgstr "Choose logo..."
+
+msgid "Choose or type the customer"
+msgstr "Choose or type the customer"
+
+msgid "Choose the From account"
+msgstr "Choose the From account"
+
+msgid "Choose the bank account and press Show. Match each statement line (left) with its book line (right)."
+msgstr "Choose the bank account and press Show. Match each statement line (left) with its book line (right)."
+
+msgid "Choose the customer / supplier to see the open invoices"
+msgstr "Choose the customer / supplier to see the open invoices"
+
+msgid "Choose the documents and the year, then press Preview."
+msgstr "Choose the documents and the year, then press Preview."
+
+msgid "Choose the employee"
+msgstr "Choose the employee"
+
+msgid "Choose the legal reason for the income-tax exemption"
+msgstr "Choose the legal reason for the income-tax exemption"
+
+msgid "Choose the new account"
+msgstr "Choose the new account"
+
+msgid "Choose the options and press Show. Each Show opens its own tab; double-click a line to open the transaction."
+msgstr "Choose the options and press Show. Each Show opens its own tab; double-click a line to open the transaction."
+
+msgid "Choose the product and the quantity: the materials come from its recipe. For a special order change the quantities or add / delete materials here - the recipe itself is not changed."
+msgstr "Choose the product and the quantity: the materials come from its recipe. For a special order change the quantities or add / delete materials here - the recipe itself is not changed."
+
+msgid "Choose the product first"
+msgstr "Choose the product first"
+
+msgid "Choose the product made"
+msgstr "Choose the product made"
+
+msgid "Choose the product to make"
+msgstr "Choose the product to make"
+
+msgid "Choose the product, then the materials for the quantity above (F2 in Item Code to search). A material can itself have a recipe."
+msgstr "Choose the product, then the materials for the quantity above (F2 in Item Code to search). A material can itself have a recipe."
+
+msgid "Choose the year and quarter, then press Generate."
+msgstr "Choose the year and quarter, then press Generate."
+
+msgid "Choose what this company uses and what you see. Hidden screens and reports leave the menu; nothing is deleted, and users' permissions (payroll, VAT, delete) still apply."
+msgstr "Choose what this company uses and what you see. Hidden screens and reports leave the menu; nothing is deleted, and users' permissions (payroll, VAT, delete) still apply."
+
+msgid "Class 4/5 account"
+msgstr "Class 4/5 account"
+
+msgid "Class-2 asset account"
+msgstr "Class-2 asset account"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "Clear Allocation"
+msgstr "Clear Allocation"
+
+msgid "Clear Selection"
+msgstr "Clear Selection"
+
+msgid "Clear search"
+msgstr "Clear search"
+
+msgid "Click a filter to tick one or several values. Filters apply to the General Ledger lines."
+msgstr "Click a filter to tick one or several values. Filters apply to the General Ledger lines."
+
+msgid "Client Account"
+msgstr "Client Account"
+
+msgid "Client Installation ID"
+msgstr "Client Installation ID"
+
+msgid "Client Items: Qty & Value"
+msgstr "Client Items: Qty & Value"
+
+msgid "Clients"
+msgstr "Clients"
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Close (Esc)"
+msgstr "Close (Esc)"
+
+msgid "Close Fiscal Year"
+msgstr "Close Fiscal Year"
+
+msgid "Close Tab"
+msgstr "Close Tab"
+
+msgid "Close the VAT automatically when the quarterly return is saved"
+msgstr "Close the VAT automatically when the quarterly return is saved"
+
+msgid "Close the books"
+msgstr "Close the books"
+
+msgid "Close the books (period lock)"
+msgstr "Close the books (period lock)"
+
+msgid "Close the file in Excel, then try again."
+msgstr "Close the file in Excel, then try again."
+
+msgid "Closing"
+msgstr "Closing"
+
+msgid "Closing 6&7"
+msgstr "Closing 6&7"
+
+msgid "Closing cash"
+msgstr "Closing cash"
+
+msgid "Code"
+msgstr "Code"
+
+msgid "Code (3 letters)"
+msgstr "Code (3 letters)"
+
+msgid "Code (blank = automatic)"
+msgstr "Code (blank = automatic)"
+
+msgid "Columns"
+msgstr "Columns"
+
+msgid "Commercial Register No."
+msgstr "Commercial Register No."
+
+msgid "Commercial Register Place"
+msgstr "Commercial Register Place"
+
+msgid "Commercial document"
+msgstr "Commercial document"
+
+msgid "Commercial documents"
+msgstr "Commercial documents"
+
+msgid "Commission"
+msgstr "Commission"
+
+msgid "Commission A/C"
+msgstr "Commission A/C"
+
+msgid "Companies"
+msgstr "Companies"
+
+msgid "Companies of this user"
+msgstr "Companies of this user"
+
+msgid "Companies..."
+msgstr "Companies..."
+
+msgid "Companies: all"
+msgstr "Companies: all"
+
+msgid "Company"
+msgstr "Company"
+
+msgid "Company & Auditor"
+msgstr "Company & Auditor"
+
+msgid "Company Name"
+msgstr "Company Name"
+
+msgid "Company Name *"
+msgstr "Company Name *"
+
+msgid "Company file from another computer"
+msgstr "Company file from another computer"
+
+msgid "Company name"
+msgstr "Company name"
+
+msgid "Company overview"
+msgstr "Company overview"
+
+msgid "Company-wide actuals; trailing 3 complete months estimate the future."
+msgstr "Company-wide actuals; trailing 3 complete months estimate the future."
+
+msgid "Comparative P&L"
+msgstr "Comparative P&L"
+
+msgid "Comparative Trial Balance"
+msgstr "Comparative Trial Balance"
+
+msgid "Compare up to"
+msgstr "Compare up to"
+
+msgid "Compare with Budget"
+msgstr "Compare with Budget"
+
+msgid "Component"
+msgstr "Component"
+
+msgid "Confirm"
+msgstr "Confirm"
+
+msgid "Confirm Cancellation"
+msgstr "Confirm Cancellation"
+
+msgid "Confirm PDF types"
+msgstr "Confirm PDF types"
+
+msgid "Confirm a saved document before receiving or creating a draft invoice. Review and post invoices in Uploaded Data; record payments in Payments."
+msgstr "Confirm a saved document before receiving or creating a draft invoice. Review and post invoices in Uploaded Data; record payments in Payments."
+
+msgid "Confirm that you reviewed the accounts and annual rate."
+msgstr "Confirm that you reviewed the accounts and annual rate."
+
+msgid "Confirmed documents cannot be edited"
+msgstr "Confirmed documents cannot be edited"
+
+msgid "Consignment Note"
+msgstr "Consignment Note"
+
+msgid "Contact"
+msgstr "Contact"
+
+msgid "Contact Number"
+msgstr "Contact Number"
+
+msgid "Contains"
+msgstr "Contains"
+
+msgid "Content hash"
+msgstr "Content hash"
+
+msgid "Conversion factor"
+msgstr "Conversion factor"
+
+msgid "Convert to"
+msgstr "Convert to"
+
+msgid "Converted amount"
+msgstr "Converted amount"
+
+msgid "Copy"
+msgstr "Copy"
+
+msgid "Correct All"
+msgstr "Correct All"
+
+msgid "Correct Selected"
+msgstr "Correct Selected"
+
+msgid "Correct the errors first (red lines)."
+msgstr "Correct the errors first (red lines)."
+
+msgid "Correct the unbalanced entries above"
+msgstr "Correct the unbalanced entries above"
+
+msgid "Cost / Asset A/C"
+msgstr "Cost / Asset A/C"
+
+msgid "Cost / Revenue A/C"
+msgstr "Cost / Revenue A/C"
+
+msgid "Cost Account (linked)"
+msgstr "Cost Account (linked)"
+
+msgid "Cost Price (avg)"
+msgstr "Cost Price (avg)"
+
+msgid "Cost account (purchases, class 6)"
+msgstr "Cost account (purchases, class 6)"
+
+msgid "Cost breakdown Excel"
+msgstr "Cost breakdown Excel"
+
+msgid "Cost breakdown PDF"
+msgstr "Cost breakdown PDF"
+
+msgid "Cost component"
+msgstr "Cost component"
+
+msgid "Cost of living / month"
+msgstr "Cost of living / month"
+
+msgid "Cost of sales %"
+msgstr "Cost of sales %"
+
+msgid "Cost on Purchase"
+msgstr "Cost on Purchase"
+
+msgid "Cost on Purchase (customs / freight / insurance) for the selected purchase"
+msgstr "Cost on Purchase (customs / freight / insurance) for the selected purchase"
+
+msgid "Cost on Purchase Accounts"
+msgstr "Cost on Purchase Accounts"
+
+msgid "Cost price"
+msgstr "Cost price"
+
+msgid "Cost price (average of purchases): -"
+msgstr "Cost price (average of purchases): -"
+
+msgid "Costing"
+msgstr "Costing"
+
+msgid "Costing method"
+msgstr "Costing method"
+
+msgid "Count"
+msgstr "Count"
+
+msgid "Count date"
+msgstr "Count date"
+
+msgid "Create & Select"
+msgstr "Create & Select"
+
+msgid "Create Account"
+msgstr "Create Account"
+
+msgid "Create Backup Now"
+msgstr "Create Backup Now"
+
+msgid "Create Company"
+msgstr "Create Company"
+
+msgid "Create Excel…"
+msgstr "Create Excel…"
+
+msgid "Create Missing Payment Entries"
+msgstr "Create Missing Payment Entries"
+
+msgid "Create Return (goods back)"
+msgstr "Create Return (goods back)"
+
+msgid "Create Separate Year"
+msgstr "Create Separate Year"
+
+msgid "Create VAT Accounts"
+msgstr "Create VAT Accounts"
+
+msgid "Create a new item with this name"
+msgstr "Create a new item with this name"
+
+msgid "Create account here (number assigned automatically)"
+msgstr "Create account here (number assigned automatically)"
+
+msgid "Create currency"
+msgstr "Create currency"
+
+msgid "Create draft — do not post"
+msgstr "Create draft — do not post"
+
+msgid "Create invoice draft"
+msgstr "Create invoice draft"
+
+msgid "Create register item"
+msgstr "Create register item"
+
+msgid "Create the payment entry (Dr cash or bank / Cr customer, or Dr supplier / Cr cash or bank) for every invoice marked as paid that does not have one yet?\n\nCash goes to 531 and other methods to 512, unless an account was chosen on the invoice (Edit Selected > Cash / Bank Account)."
+msgstr "Create the payment entry (Dr cash or bank / Cr customer, or Dr supplier / Cr cash or bank) for every invoice marked as paid that does not have one yet?\n\nCash goes to 531 and other methods to 512, unless an account was chosen on the invoice (Edit Selected > Cash / Bank Account)."
+
+msgid "Create this fiscal year as a separate open year? The previous year will remain open until you close it manually."
+msgstr "Create this fiscal year as a separate open year? The previous year will remain open until you close it manually."
+
+msgid "Create two active warehouses under Warehouses & Settings first."
+msgstr "Create two active warehouses under Warehouses & Settings first."
+
+msgid "Created"
+msgstr "Created"
+
+msgid "Credit"
+msgstr "Credit"
+
+msgid "Credit B/F"
+msgstr "Credit B/F"
+
+msgid "Credit B/F (LBP, optional)"
+msgstr "Credit B/F (LBP, optional)"
+
+msgid "Credit C/F"
+msgstr "Credit C/F"
+
+msgid "Ctrl+F  |  searches every column; amounts and dates work with or without , and -"
+msgstr "Ctrl+F  |  searches every column; amounts and dates work with or without , and -"
+
+msgid "Cur."
+msgstr "Cur."
+
+msgid "Currencies"
+msgstr "Currencies"
+
+msgid "Currencies and VAT (filled from the country - change them if needed)"
+msgstr "Currencies and VAT (filled from the country - change them if needed)"
+
+msgid "Currencies to revalue"
+msgstr "Currencies to revalue"
+
+msgid "Currency"
+msgstr "Currency"
+
+msgid "Currency: {currency}"
+msgstr "Currency: {currency}"
+
+msgid "Current Number"
+msgstr "Current Number"
+
+msgid "Current Period"
+msgstr "Current Period"
+
+msgid "Current password"
+msgstr "Current password"
+
+msgid "Custom Analytic"
+msgstr "Custom Analytic"
+
+msgid "Custom report requested."
+msgstr "Custom report requested."
+
+msgid "Customer"
+msgstr "Customer"
+
+msgid "Customer / Supplier"
+msgstr "Customer / Supplier"
+
+msgid "Customer / Supplier Ageing"
+msgstr "Customer / Supplier Ageing"
+
+msgid "Customer / Supplier Already Exists"
+msgstr "Customer / Supplier Already Exists"
+
+msgid "Customer / Supplier File"
+msgstr "Customer / Supplier File"
+
+msgid "Customer / Supplier account"
+msgstr "Customer / Supplier account"
+
+msgid "Customer / supplier"
+msgstr "Customer / supplier"
+
+msgid "Customer Receipt (RV)"
+msgstr "Customer Receipt (RV)"
+
+msgid "Customer Type"
+msgstr "Customer Type"
+
+msgid "Customer days (DSO)"
+msgstr "Customer days (DSO)"
+
+msgid "Customer receipts"
+msgstr "Customer receipts"
+
+msgid "Customer receipts (RV)"
+msgstr "Customer receipts (RV)"
+
+msgid "Customers / Suppliers"
+msgstr "Customers / Suppliers"
+
+msgid "Customers / Suppliers - F2"
+msgstr "Customers / Suppliers - F2"
+
+msgid "Customers / Suppliers - Search"
+msgstr "Customers / Suppliers - Search"
+
+msgid "Customs"
+msgstr "Customs"
+
+msgid "Customs fees"
+msgstr "Customs fees"
+
+msgid "Customs per item"
+msgstr "Customs per item"
+
+msgid "Customs per item: only the items marked 'Subject to customs' (Inventory > Items). Customs fees: all the items."
+msgstr "Customs per item: only the items marked 'Subject to customs' (Inventory > Items). Customs fees: all the items."
+
+msgid "Cut"
+msgstr "Cut"
+
+msgid "D"
+msgstr "D"
+
+msgid "D/C"
+msgstr "D/C"
+
+msgid "DD-MM-YYYY"
+msgstr "DD-MM-YYYY"
+
+msgid "DEBIT NOTE"
+msgstr "DEBIT NOTE"
+
+msgid "DOE"
+msgstr "DOE"
+
+msgid "DOE - Automatic Exchange Difference"
+msgstr "DOE - Automatic Exchange Difference"
+
+msgid "DOE date rates:"
+msgstr "DOE date rates:"
+
+msgid "DOE posting date"
+msgstr "DOE posting date"
+
+msgid "Daily Average"
+msgstr "Daily Average"
+
+msgid "Dashboard"
+msgstr "Dashboard"
+
+msgid "Dashboard Exchange Rate"
+msgstr "Dashboard Exchange Rate"
+
+msgid "Database restored successfully. Refreshing all pages."
+msgstr "Database restored successfully. Refreshing all pages."
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Date (DD-MM-YYYY)"
+msgstr "Date (DD-MM-YYYY)"
+
+msgid "Date / time (UTC)"
+msgstr "Date / time (UTC)"
+
+msgid "Date From"
+msgstr "Date From"
+
+msgid "Date To"
+msgstr "Date To"
+
+msgid "Date of Birth"
+msgstr "Date of Birth"
+
+msgid "Date of birth"
+msgstr "Date of birth"
+
+msgid "Date of marriage"
+msgstr "Date of marriage"
+
+msgid "Date of the check"
+msgstr "Date of the check"
+
+msgid "Dates as DD-MM-YYYY, rates like 3 or 3%, ceilings as numbers"
+msgstr "Dates as DD-MM-YYYY, rates like 3 or 3%, ceilings as numbers"
+
+msgid "Dates must use DD-MM-YYYY"
+msgstr "Dates must use DD-MM-YYYY"
+
+msgid "Days"
+msgstr "Days"
+
+msgid "Days (empty = calendar days)"
+msgstr "Days (empty = calendar days)"
+
+msgid "Days Left"
+msgstr "Days Left"
+
+msgid "Days Overdue"
+msgstr "Days Overdue"
+
+msgid "Debit"
+msgstr "Debit"
+
+msgid "Debit = credit in every journal entry"
+msgstr "Debit = credit in every journal entry"
+
+msgid "Debit: 0.00   Credit: 0.00"
+msgstr "Debit: 0.00   Credit: 0.00"
+
+msgid "Dec"
+msgstr "Dec"
+
+msgid "Declaration No."
+msgstr "Declaration No."
+
+msgid "Deductible"
+msgstr "Deductible"
+
+msgid "Deductible VAT - expenses"
+msgstr "Deductible VAT - expenses"
+
+msgid "Deductible VAT - purchases"
+msgstr "Deductible VAT - purchases"
+
+msgid "Deductible, Non-Deductible, VAT, and Total must be valid numbers"
+msgstr "Deductible, Non-Deductible, VAT, and Total must be valid numbers"
+
+msgid "Deduction ratio"
+msgstr "Deduction ratio"
+
+msgid "Deduction ratio (Art. 31)"
+msgstr "Deduction ratio (Art. 31)"
+
+msgid "Default Transport Days"
+msgstr "Default Transport Days"
+
+msgid "Default Type"
+msgstr "Default Type"
+
+msgid "Default VAT"
+msgstr "Default VAT"
+
+msgid "Default accounts are filled in. Edit an account when this purchase needs a different posting."
+msgstr "Default accounts are filled in. Edit an account when this purchase needs a different posting."
+
+msgid "Default accounts saved. New documents use them from now on; documents already saved are not changed."
+msgstr "Default accounts saved. New documents use them from now on; documents already saved are not changed."
+
+msgid "Default currency"
+msgstr "Default currency"
+
+msgid "Default posting accounts - used when a document does not name an account"
+msgstr "Default posting accounts - used when a document does not name an account"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Delete All Listed"
+msgstr "Delete All Listed"
+
+msgid "Delete Closing & Reopen"
+msgstr "Delete Closing & Reopen"
+
+msgid "Delete Closing & Reopen Year"
+msgstr "Delete Closing & Reopen Year"
+
+msgid "Delete Document"
+msgstr "Delete Document"
+
+msgid "Delete Fiscal Year"
+msgstr "Delete Fiscal Year"
+
+msgid "Delete Invoice"
+msgstr "Delete Invoice"
+
+msgid "Delete Journal Voucher"
+msgstr "Delete Journal Voucher"
+
+msgid "Delete Journal Vouchers"
+msgstr "Delete Journal Vouchers"
+
+msgid "Delete Line"
+msgstr "Delete Line"
+
+msgid "Delete Opening Voucher"
+msgstr "Delete Opening Voucher"
+
+msgid "Delete Order"
+msgstr "Delete Order"
+
+msgid "Delete Period"
+msgstr "Delete Period"
+
+msgid "Delete Recipe"
+msgstr "Delete Recipe"
+
+msgid "Delete Selected"
+msgstr "Delete Selected"
+
+msgid "Delete Selected Voucher"
+msgstr "Delete Selected Voucher"
+
+msgid "Delete Statement Line"
+msgstr "Delete Statement Line"
+
+msgid "Delete Unused Accounts..."
+msgstr "Delete Unused Accounts..."
+
+msgid "Delete the selected statement line?"
+msgstr "Delete the selected statement line?"
+
+msgid "Delete this expense and its journal entry?"
+msgstr "Delete this expense and its journal entry?"
+
+msgid "Delete this unposted asset from the register?"
+msgstr "Delete this unposted asset from the register?"
+
+msgid "Deleted or cancelled purchases cannot be edited"
+msgstr "Deleted or cancelled purchases cannot be edited"
+
+msgid "Dep."
+msgstr "Dep."
+
+msgid "Dep. / Project"
+msgstr "Dep. / Project"
+
+msgid "Department"
+msgstr "Department"
+
+msgid "Department Name"
+msgstr "Department Name"
+
+msgid "Departments"
+msgstr "Departments"
+
+msgid "Deprec. (month)"
+msgstr "Deprec. (month)"
+
+msgid "Depreciation"
+msgstr "Depreciation"
+
+msgid "Depreciation %"
+msgstr "Depreciation %"
+
+msgid "Depreciation % / year"
+msgstr "Depreciation % / year"
+
+msgid "Depreciation (filled from the asset account in tab 1 - change only if needed)"
+msgstr "Depreciation (filled from the asset account in tab 1 - change only if needed)"
+
+msgid "Depreciation expense account"
+msgstr "Depreciation expense account"
+
+msgid "Depreciation schedule of the selected asset"
+msgstr "Depreciation schedule of the selected asset"
+
+msgid "Depreciation start"
+msgstr "Depreciation start"
+
+msgid "Depth"
+msgstr "Depth"
+
+msgid "Description"
+msgstr "Description"
+
+msgid "Detail"
+msgstr "Detail"
+
+msgid "Detailed Account (statement)"
+msgstr "Detailed Account (statement)"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "Difference"
+msgstr "Difference"
+
+msgid "Difference (expected zero)"
+msgstr "Difference (expected zero)"
+
+msgid "Difference Value"
+msgstr "Difference Value"
+
+msgid "Director Remuneration"
+msgstr "Director Remuneration"
+
+msgid "Director Remuneration (not taxable)"
+msgstr "Director Remuneration (not taxable)"
+
+msgid "Discount"
+msgstr "Discount"
+
+msgid "Discount %"
+msgstr "Discount %"
+
+msgid "Document"
+msgstr "Document"
+
+msgid "Document Alerts"
+msgstr "Document Alerts"
+
+msgid "Document Type"
+msgstr "Document Type"
+
+msgid "Document line"
+msgstr "Document line"
+
+msgid "Document lines"
+msgstr "Document lines"
+
+msgid "Document type (verify)"
+msgstr "Document type (verify)"
+
+msgid "Documents"
+msgstr "Documents"
+
+msgid "Documents blocking filing"
+msgstr "Documents blocking filing"
+
+msgid "Done"
+msgstr "Done"
+
+msgid "Double-click Line Detail to type · F2 = account list"
+msgstr "Double-click Line Detail to type · F2 = account list"
+
+msgid "Double-click a document to see it"
+msgstr "Double-click a document to see it"
+
+msgid "Double-click a line in the list to edit it."
+msgstr "Double-click a line in the list to edit it."
+
+msgid "Double-click a line to open its document."
+msgstr "Double-click a line to open its document."
+
+msgid "Double-click a line to open the transaction (statement) or the statement of the account (trial balance)."
+msgstr "Double-click a line to open the transaction (statement) or the statement of the account (trial balance)."
+
+msgid "Double-click a saved line to open it first"
+msgstr "Double-click a saved line to open it first"
+
+msgid "Download File"
+msgstr "Download File"
+
+msgid "Download PDF"
+msgstr "Download PDF"
+
+msgid "Download selected"
+msgstr "Download selected"
+
+msgid "Due"
+msgstr "Due"
+
+msgid "Due Date"
+msgstr "Due Date"
+
+msgid "Due Date (DD-MM-YYYY)"
+msgstr "Due Date (DD-MM-YYYY)"
+
+msgid "Due Days"
+msgstr "Due Days"
+
+msgid "Due days from invoice"
+msgstr "Due days from invoice"
+
+msgid "Duplicate"
+msgstr "Duplicate"
+
+msgid "EDIT"
+msgstr "EDIT"
+
+msgid "EOS %"
+msgstr "EOS %"
+
+msgid "EOS Ceiling"
+msgstr "EOS Ceiling"
+
+msgid "ERROR"
+msgstr "ERROR"
+
+msgid "EUR rates look right"
+msgstr "EUR rates look right"
+
+msgid "Each asset account shows its assets, then one depreciation entry per account (Dr expense / Cr accumulated)."
+msgstr "Each asset account shows its assets, then one depreciation entry per account (Dr expense / Cr accumulated)."
+
+msgid "Each invoice entry carries the invoice total"
+msgstr "Each invoice entry carries the invoice total"
+
+msgid "Each month of the base year x (1 + %) per year ahead; opening cash = class 5 at the end of the base year (+ the years in between)."
+msgstr "Each month of the base year x (1 + %) per year ahead; opening cash = class 5 at the end of the base year (+ the years in between)."
+
+msgid "Each supplier's next invoice is filled the way you posted its last one (account, VAT, department, how it was paid). Only a suggestion: you check it before Save."
+msgstr "Each supplier's next invoice is filled the way you posted its last one (account, VAT, department, how it was paid). Only a suggestion: you check it before Save."
+
+msgid "Earlier-quarter errors"
+msgstr "Earlier-quarter errors"
+
+msgid "Edit Cost Accounts"
+msgstr "Edit Cost Accounts"
+
+msgid "Edit Invoice"
+msgstr "Edit Invoice"
+
+msgid "Edit Notes / Audit / Mapping"
+msgstr "Edit Notes / Audit / Mapping"
+
+msgid "Edit Selected"
+msgstr "Edit Selected"
+
+msgid "Edit Selected Account"
+msgstr "Edit Selected Account"
+
+msgid "Edit Selected Entry"
+msgstr "Edit Selected Entry"
+
+msgid "Edit fiscal year"
+msgstr "Edit fiscal year"
+
+msgid "Edit selected"
+msgstr "Edit selected"
+
+msgid "Edit the transcribed lines. Account/VAT suggestions are advisory; select final posting accounts in the entry screen."
+msgstr "Edit the transcribed lines. Account/VAT suggestions are advisory; select final posting accounts in the entry screen."
+
+msgid "Edit this entry"
+msgstr "Edit this entry"
+
+msgid "Edit transcribed item"
+msgstr "Edit transcribed item"
+
+msgid "Edit..."
+msgstr "Edit..."
+
+msgid "Effective from"
+msgstr "Effective from"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Emp. NSSF"
+msgstr "Emp. NSSF"
+
+msgid "Employee"
+msgstr "Employee"
+
+msgid "Employee %"
+msgstr "Employee %"
+
+msgid "Employee Ceiling"
+msgstr "Employee Ceiling"
+
+msgid "Employee File"
+msgstr "Employee File"
+
+msgid "Employee ID"
+msgstr "Employee ID"
+
+msgid "Employee ID / 4-digit prefix"
+msgstr "Employee ID / 4-digit prefix"
+
+msgid "Employee List / Edit"
+msgstr "Employee List / Edit"
+
+msgid "Employee NSSF"
+msgstr "Employee NSSF"
+
+msgid "Employee NSSF Ceiling"
+msgstr "Employee NSSF Ceiling"
+
+msgid "Employee NSSF Rate"
+msgstr "Employee NSSF Rate"
+
+msgid "Employee Name"
+msgstr "Employee Name"
+
+msgid "Employees"
+msgstr "Employees"
+
+msgid "Employer / company"
+msgstr "Employer / company"
+
+msgid "Employer Medical Rate"
+msgstr "Employer Medical Rate"
+
+msgid "Employer NSSF (expense)"
+msgstr "Employer NSSF (expense)"
+
+msgid "Employer Sick. %"
+msgstr "Employer Sick. %"
+
+msgid "Employer address"
+msgstr "Employer address"
+
+msgid "Employer phone"
+msgstr "Employer phone"
+
+msgid "Employment Declaration Worksheet"
+msgstr "Employment Declaration Worksheet"
+
+msgid "End"
+msgstr "End"
+
+msgid "End Date"
+msgstr "End Date"
+
+msgid "End Service Ceiling"
+msgstr "End Service Ceiling"
+
+msgid "End Service Rate"
+msgstr "End Service Rate"
+
+msgid "End of Service"
+msgstr "End of Service"
+
+msgid "End of Service & Leave"
+msgstr "End of Service & Leave"
+
+msgid "End of service: last salary x years of service, less the end-of-service contributions paid (Nanza's posted payroll + 'contributions before Nanza' on the employee). Post Provision brings 1552.1 to that amount (Dr 6355 / Cr 1552.1, or Dr 1552.1 / Cr 7552.2 when it goes down). Annual leave: 15 days a year unless set on the employee; the value is the balance x monthly salary / 30."
+msgstr "End of service: last salary x years of service, less the end-of-service contributions paid (Nanza's posted payroll + 'contributions before Nanza' on the employee). Post Provision brings 1552.1 to that amount (Dr 6355 / Cr 1552.1, or Dr 1552.1 / Cr 7552.2 when it goes down). Annual leave: 15 days a year unless set on the employee; the value is the balance x monthly salary / 30."
+
+msgid "End-of-Service Provision"
+msgstr "End-of-Service Provision"
+
+msgid "End-of-service contributions before Nanza (LBP)"
+msgstr "End-of-service contributions before Nanza (LBP)"
+
+msgid "Endpoint"
+msgstr "Endpoint"
+
+msgid "English"
+msgstr "English"
+
+msgid "English name"
+msgstr "English name"
+
+msgid "English | الإنكليزية"
+msgstr "English | الإنكليزية"
+
+msgid "Enter 0 when nothing was filed or paid. Leave blank only when unknown; blank months keep the settlement incomplete."
+msgstr "Enter 0 when nothing was filed or paid. Leave blank only when unknown; blank months keep the settlement incomplete."
+
+msgid "Enter 8 date digits: DDMMYYYY"
+msgstr "Enter 8 date digits: DDMMYYYY"
+
+msgid "Enter a cancellation reason"
+msgstr "Enter a cancellation reason"
+
+msgid "Enter a description and valid amounts"
+msgstr "Enter a description and valid amounts"
+
+msgid "Enter a more specific expense description and choose an account manually."
+msgstr "Enter a more specific expense description and choose an account manually."
+
+msgid "Enter a number"
+msgstr "Enter a number"
+
+msgid "Enter a number (for example 8 for +8%, -5 for -5%)"
+msgstr "Enter a number (for example 8 for +8%, -5 for -5%)"
+
+msgid "Enter a positive amount"
+msgstr "Enter a positive amount"
+
+msgid "Enter a positive number"
+msgstr "Enter a positive number"
+
+msgid "Enter a question first"
+msgstr "Enter a question first"
+
+msgid "Enter a reason for rejection:"
+msgstr "Enter a reason for rejection:"
+
+msgid "Enter actual quantities. Blank / zero skips a line. Invoice creation always produces a draft for review."
+msgstr "Enter actual quantities. Blank / zero skips a line. Invoice creation always produces a draft for review."
+
+msgid "Enter and independently verify an annual depreciation rate; it is review-required."
+msgstr "Enter and independently verify an annual depreciation rate; it is review-required."
+
+msgid "Enter at least one physical count"
+msgstr "Enter at least one physical count"
+
+msgid "Enter at least two lines with an account and an amount"
+msgstr "Enter at least two lines with an account and an amount"
+
+msgid "Enter customer/supplier; Total must equal Before VAT plus VAT"
+msgstr "Enter customer/supplier; Total must equal Before VAT plus VAT"
+
+msgid "Enter quantities to return. Value and VAT are calculated proportionally from the posted lines.\nThe goods go back into stock (or out to the supplier). No cash is refunded and no payment is allocated."
+msgstr "Enter quantities to return. Value and VAT are calculated proportionally from the posted lines.\nThe goods go back into stock (or out to the supplier). No cash is refunded and no payment is allocated."
+
+msgid "Enter the Annual amount first"
+msgstr "Enter the Annual amount first"
+
+msgid "Enter the amount first"
+msgstr "Enter the amount first"
+
+msgid "Enter the base year in \"Actual report year\", for example 2026"
+msgstr "Enter the base year in \"Actual report year\", for example 2026"
+
+msgid "Enter the base year in \"Report year\", for example 2026"
+msgstr "Enter the base year in \"Report year\", for example 2026"
+
+msgid "Enter the budget year"
+msgstr "Enter the budget year"
+
+msgid "Enter the counted quantity (0 or more)"
+msgstr "Enter the counted quantity (0 or more)"
+
+msgid "Enter the customs broker / payee name"
+msgstr "Enter the customs broker / payee name"
+
+msgid "Enter the date as 8 digits: DDMMYYYY"
+msgstr "Enter the date as 8 digits: DDMMYYYY"
+
+msgid "Enter the date of birth (DD-MM-YYYY)"
+msgstr "Enter the date of birth (DD-MM-YYYY)"
+
+msgid "Enter the description"
+msgstr "Enter the description"
+
+msgid "Enter the last date to lock (for example the last day of the month or quarter you filed)"
+msgstr "Enter the last date to lock (for example the last day of the month or quarter you filed)"
+
+msgid "Enter the month as MM-YYYY, for example 03-2026"
+msgstr "Enter the month as MM-YYYY, for example 03-2026"
+
+msgid "Enter the quantity to make"
+msgstr "Enter the quantity to make"
+
+msgid "Enter the reason"
+msgstr "Enter the reason"
+
+msgid "Enter the revenue growth %, for example 10"
+msgstr "Enter the revenue growth %, for example 10"
+
+msgid "Enter the reviewed exchange rate for these costs."
+msgstr "Enter the reviewed exchange rate for these costs."
+
+msgid "Enter the target date as DD-MM-YYYY, for example 31-12-2030"
+msgstr "Enter the target date as DD-MM-YYYY, for example 31-12-2030"
+
+msgid "Enter the unit cost of every line"
+msgstr "Enter the unit cost of every line"
+
+msgid "Entered at"
+msgstr "Entered at"
+
+msgid "Entered by"
+msgstr "Entered by"
+
+msgid "Entries"
+msgstr "Entries"
+
+msgid "Entries inside the fiscal year"
+msgstr "Entries inside the fiscal year"
+
+msgid "Entries with amounts"
+msgstr "Entries with amounts"
+
+msgid "Entry"
+msgstr "Entry"
+
+msgid "Entry No."
+msgstr "Entry No."
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Every chart keeps the same classes (1 equity ... 7 income), so the VAT return, the ledgers, the financial statements and payroll work with all of them. You can add accounts later, one by one or from Excel (Accounts & Statements > Chart of Accounts). The chart cannot be changed once the company is created."
+msgstr "Every chart keeps the same classes (1 equity ... 7 income), so the VAT return, the ledgers, the financial statements and payroll work with all of them. You can add accounts later, one by one or from Excel (Accounts & Statements > Chart of Accounts). The chart cannot be changed once the company is created."
+
+msgid "Every customer / supplier has its VAT account, and every invoice's VAT is on its own party's account."
+msgstr "Every customer / supplier has its VAT account, and every invoice's VAT is on its own party's account."
+
+msgid "Every customer / supplier has its own VAT account (supplier 401100025 -> VAT 442100025)"
+msgstr "Every customer / supplier has its own VAT account (supplier 401100025 -> VAT 442100025)"
+
+msgid "Every document in the books"
+msgstr "Every document in the books"
+
+msgid "Every entry balanced"
+msgstr "Every entry balanced"
+
+msgid "Every entry has amounts"
+msgstr "Every entry has amounts"
+
+msgid "Every invoice, receipt / payment and expense entry has its document"
+msgstr "Every invoice, receipt / payment and expense entry has its document"
+
+msgid "Every line is correct."
+msgstr "Every line is correct."
+
+msgid "Every line is on an account of the chart"
+msgstr "Every line is on an account of the chart"
+
+msgid "Every posted invoice, receipt / payment, expense and payroll has its journal entry"
+msgstr "Every posted invoice, receipt / payment, expense and payroll has its journal entry"
+
+msgid "Every row is already in the books; nothing was saved again."
+msgstr "Every row is already in the books; nothing was saved again."
+
+msgid "Every sale is on the right accounts: its customer, a class 7 revenue account and output VAT (4427)."
+msgstr "Every sale is on the right accounts: its customer, a class 7 revenue account and output VAT (4427)."
+
+msgid "Every sales invoice and receipt / payment number is used once"
+msgstr "Every sales invoice and receipt / payment number is used once"
+
+msgid "Every sales line has the VAT of its rate"
+msgstr "Every sales line has the VAT of its rate"
+
+msgid "Every sequence of sales invoice numbers is unbroken"
+msgstr "Every sequence of sales invoice numbers is unbroken"
+
+msgid "Example"
+msgstr "Example"
+
+msgid "Example: 2251 Passenger Vehicles 20% - expense 6512.5 - accumulated 2825 (681 is the book value of assets SOLD, not depreciation). Double-click a line to change it."
+msgstr "Example: 2251 Passenger Vehicles 20% - expense 6512.5 - accumulated 2825 (681 is the book value of assets SOLD, not depreciation). Double-click a line to change it."
+
+msgid "Excel Count Sheet"
+msgstr "Excel Count Sheet"
+
+msgid "Excel Template"
+msgstr "Excel Template"
+
+msgid "Excel files"
+msgstr "Excel files"
+
+msgid "Excel forms: yellow cells are editable, totals are formulas. Check before filing."
+msgstr "Excel forms: yellow cells are editable, totals are formulas. Check before filing."
+
+msgid "Excel workbook"
+msgstr "Excel workbook"
+
+msgid "Exchange Difference"
+msgstr "Exchange Difference"
+
+msgid "Exchange Difference (+ / -)"
+msgstr "Exchange Difference (+ / -)"
+
+msgid "Exchange Gain A/C"
+msgstr "Exchange Gain A/C"
+
+msgid "Exchange Loss A/C"
+msgstr "Exchange Loss A/C"
+
+msgid "Exchange Rates"
+msgstr "Exchange Rates"
+
+msgid "Exchange gain"
+msgstr "Exchange gain"
+
+msgid "Exchange loss"
+msgstr "Exchange loss"
+
+msgid "Excluded draft documents"
+msgstr "Excluded draft documents"
+
+msgid "Executive Financial Dashboard"
+msgstr "Executive Financial Dashboard"
+
+msgid "Executive Summary"
+msgstr "Executive Summary"
+
+msgid "Executive dashboard"
+msgstr "Executive dashboard"
+
+msgid "Exempt Amount"
+msgstr "Exempt Amount"
+
+msgid "Expense"
+msgstr "Expense"
+
+msgid "Expense A/C"
+msgstr "Expense A/C"
+
+msgid "Expense A/C (626-69)"
+msgstr "Expense A/C (626-69)"
+
+msgid "Expense Account"
+msgstr "Expense Account"
+
+msgid "Expense Account (D - Debit)"
+msgstr "Expense Account (D - Debit)"
+
+msgid "Expense Categories"
+msgstr "Expense Categories"
+
+msgid "Expense account"
+msgstr "Expense account"
+
+msgid "Expense without VAT"
+msgstr "Expense without VAT"
+
+msgid "Expenses"
+msgstr "Expenses"
+
+msgid "Expenses %"
+msgstr "Expenses %"
+
+msgid "Expenses (EXP)"
+msgstr "Expenses (EXP)"
+
+msgid "Expenses imported without an account"
+msgstr "Expenses imported without an account"
+
+msgid "Expiry"
+msgstr "Expiry"
+
+msgid "Expiry Date"
+msgstr "Expiry Date"
+
+msgid "Expiry date"
+msgstr "Expiry date"
+
+msgid "Export Excel"
+msgstr "Export Excel"
+
+msgid "Export PDF"
+msgstr "Export PDF"
+
+msgid "Extra cost (total)"
+msgstr "Extra cost (total)"
+
+msgid "Extra cost per unit (labour, energy...)"
+msgstr "Extra cost per unit (labour, energy...)"
+
+msgid "Extra indemnity (phone) / month"
+msgstr "Extra indemnity (phone) / month"
+
+msgid "Family %"
+msgstr "Family %"
+
+msgid "Family / Child"
+msgstr "Family / Child"
+
+msgid "Family / Spouse"
+msgstr "Family / Spouse"
+
+msgid "Family Allocation"
+msgstr "Family Allocation"
+
+msgid "Family Allocation (438)"
+msgstr "Family Allocation (438)"
+
+msgid "Family Allocation (empty = NSSF account)"
+msgstr "Family Allocation (empty = NSSF account)"
+
+msgid "Family Ceiling"
+msgstr "Family Ceiling"
+
+msgid "Family Maximum"
+msgstr "Family Maximum"
+
+msgid "Family Rate"
+msgstr "Family Rate"
+
+msgid "Family alloc."
+msgstr "Family alloc."
+
+msgid "Family allowance reference · 2024–2026 (monthly LBP)"
+msgstr "Family allowance reference · 2024–2026 (monthly LBP)"
+
+msgid "Father's Name"
+msgstr "Father's Name"
+
+msgid "Father's name"
+msgstr "Father's name"
+
+msgid "Feb"
+msgstr "Feb"
+
+msgid "Field"
+msgstr "Field"
+
+msgid "Figures use posted ledger records; unlinked margins are unavailable."
+msgstr "Figures use posted ledger records; unlinked margins are unavailable."
+
+msgid "File"
+msgstr "File"
+
+msgid "File attached successfully"
+msgstr "File attached successfully"
+
+msgid "Filed NSSF Wages"
+msgstr "Filed NSSF Wages"
+
+msgid "Filing Worksheet"
+msgstr "Filing Worksheet"
+
+msgid "Filing Worksheet Excel"
+msgstr "Filing Worksheet Excel"
+
+msgid "Filing Worksheet PDF"
+msgstr "Filing Worksheet PDF"
+
+msgid "Fill from PDF"
+msgstr "Fill from PDF"
+
+msgid "Fill the Budget"
+msgstr "Fill the Budget"
+
+msgid "Fill these once: they go automatically into the notes and the auditor's report of every year (a field left empty shows as [label] to complete)."
+msgstr "Fill these once: they go automatically into the notes and the auditor's report of every year (a field left empty shows as [label] to complete)."
+
+msgid "Filters"
+msgstr "Filters"
+
+msgid "Financial Reports"
+msgstr "Financial Reports"
+
+msgid "Financial Statements"
+msgstr "Financial Statements"
+
+msgid "Financial Statements - notes, auditor's report and classification"
+msgstr "Financial Statements - notes, auditor's report and classification"
+
+msgid "Financial charges %"
+msgstr "Financial charges %"
+
+msgid "Financial statements:"
+msgstr "Financial statements:"
+
+msgid "Financing"
+msgstr "Financing"
+
+msgid "Find"
+msgstr "Find"
+
+msgid "Find by number or name (English / Arabic / French):"
+msgstr "Find by number or name (English / Arabic / French):"
+
+msgid "Find expense (No., description, date)"
+msgstr "Find expense (No., description, date)"
+
+msgid "Find in details"
+msgstr "Find in details"
+
+msgid "Find invoice"
+msgstr "Find invoice"
+
+msgid "Find or Create Account - F2"
+msgstr "Find or Create Account - F2"
+
+msgid "Find purchase (No., supplier, date)"
+msgstr "Find purchase (No., supplier, date)"
+
+msgid "Find voucher No."
+msgstr "Find voucher No."
+
+msgid "First fiscal year, then create"
+msgstr "First fiscal year, then create"
+
+msgid "Fiscal Year"
+msgstr "Fiscal Year"
+
+msgid "Fit image"
+msgstr "Fit image"
+
+msgid "Fixed Asset Rollforward"
+msgstr "Fixed Asset Rollforward"
+
+msgid "Fixed Assets (Purchases & Expenses)"
+msgstr "Fixed Assets (Purchases & Expenses)"
+
+msgid "Folder"
+msgstr "Folder"
+
+msgid "Folder for the second copy of the backups"
+msgstr "Folder for the second copy of the backups"
+
+msgid "For handwritten or hard-to-read invoices: Microsoft Azure Document Intelligence, free tier F0 = 500 pages a month. Without it the free local reading is used, as before."
+msgstr "For handwritten or hard-to-read invoices: Microsoft Azure Document Intelligence, free tier F0 = 500 pages a month. Without it the free local reading is used, as before."
+
+msgid "For the auditor:"
+msgstr "For the auditor:"
+
+msgid "Forecast and 5-year projection"
+msgstr "Forecast and 5-year projection"
+
+msgid "Form"
+msgstr "Form"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "Format Balance (Dr / Cr balance)"
+msgstr "Format Balance (Dr / Cr balance)"
+
+msgid "Found by"
+msgstr "Found by"
+
+msgid "Free PDF Read"
+msgstr "Free PDF Read"
+
+msgid "Free handwriting reader setup"
+msgstr "Free handwriting reader setup"
+
+msgid "Freight"
+msgstr "Freight"
+
+msgid "French"
+msgstr "French"
+
+msgid "French name"
+msgstr "French name"
+
+msgid "From"
+msgstr "From"
+
+msgid "From Date"
+msgstr "From Date"
+
+msgid "From Date cannot be after To Date"
+msgstr "From Date cannot be after To Date"
+
+msgid "From Date:"
+msgstr "From Date:"
+
+msgid "From account"
+msgstr "From account"
+
+msgid "From year"
+msgstr "From year"
+
+msgid "From:"
+msgstr "From:"
+
+msgid "Fuel filter not yet supported"
+msgstr "Fuel filter not yet supported"
+
+msgid "Full Name"
+msgstr "Full Name"
+
+msgid "Full name"
+msgstr "Full name"
+
+msgid "Gain / Loss A/C"
+msgstr "Gain / Loss A/C"
+
+msgid "General Journal"
+msgstr "General Journal"
+
+msgid "General Journal: check them with the documents; delete the entry if the document was deleted on purpose"
+msgstr "General Journal: check them with the documents; delete the entry if the document was deleted on purpose"
+
+msgid "General Journal: complete or delete them"
+msgstr "General Journal: complete or delete them"
+
+msgid "General Journal: open each entry and correct it (Reports > Check Balance lists them)"
+msgstr "General Journal: open each entry and correct it (Reports > Check Balance lists them)"
+
+msgid "General Ledger"
+msgstr "General Ledger"
+
+msgid "General Settings"
+msgstr "General Settings"
+
+msgid "General Voucher"
+msgstr "General Voucher"
+
+msgid "Generate"
+msgstr "Generate"
+
+msgid "Generate 'NSSF - Contributions table' for the period first"
+msgstr "Generate 'NSSF - Contributions table' for the period first"
+
+msgid "Generate the report first"
+msgstr "Generate the report first"
+
+msgid "Generate the return first"
+msgstr "Generate the return first"
+
+msgid "Generate the return: the VAT accounts of the quarter are compared with it here."
+msgstr "Generate the return: the VAT accounts of the quarter are compared with it here."
+
+msgid "Generated"
+msgstr "Generated"
+
+msgid "Good to know:"
+msgstr "Good to know:"
+
+msgid "Grand Total"
+msgstr "Grand Total"
+
+msgid "Gross"
+msgstr "Gross"
+
+msgid "Gross profit"
+msgstr "Gross profit"
+
+msgid "Group"
+msgstr "Group"
+
+msgid "Grouping"
+msgstr "Grouping"
+
+msgid "Growth % per year"
+msgstr "Growth % per year"
+
+msgid "Handwriting review"
+msgstr "Handwriting review"
+
+msgid "Handwritten invoices"
+msgstr "Handwritten invoices"
+
+msgid "Handwritten invoices (experimental, offline)"
+msgstr "Handwritten invoices (experimental, offline)"
+
+msgid "Head Office"
+msgstr "Head Office"
+
+msgid "Help"
+msgstr "Help"
+
+msgid "Help / مساعدة"
+msgstr "Help / مساعدة"
+
+msgid "Hire Date"
+msgstr "Hire Date"
+
+msgid "History"
+msgstr "History"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "I checked these fields against the image"
+msgstr "I checked these fields against the image"
+
+msgid "I reviewed and verified the asset classification, all three accounts, and annual rate."
+msgstr "I reviewed and verified the asset classification, all three accounts, and annual rate."
+
+msgid "I see (only for me)"
+msgstr "I see (only for me)"
+
+msgid "ID"
+msgstr "ID"
+
+msgid "Images"
+msgstr "Images"
+
+msgid "Import"
+msgstr "Import"
+
+msgid "Import Chart of Accounts"
+msgstr "Import Chart of Accounts"
+
+msgid "Import Customs Excel"
+msgstr "Import Customs Excel"
+
+msgid "Import Excel"
+msgstr "Import Excel"
+
+msgid "Import Excel / PDF"
+msgstr "Import Excel / PDF"
+
+msgid "Import Expenses Excel"
+msgstr "Import Expenses Excel"
+
+msgid "Import PDF"
+msgstr "Import PDF"
+
+msgid "Import Purchases"
+msgstr "Import Purchases"
+
+msgid "Import Sales"
+msgstr "Import Sales"
+
+msgid "Import Statement (Excel / CSV / PDF)"
+msgstr "Import Statement (Excel / CSV / PDF)"
+
+msgid "Import VAT"
+msgstr "Import VAT"
+
+msgid "Import from Excel"
+msgstr "Import from Excel"
+
+msgid "Import now? A safety backup is made first."
+msgstr "Import now? A safety backup is made first."
+
+msgid "Import to shared database"
+msgstr "Import to shared database"
+
+msgid "Include Review"
+msgstr "Include Review"
+
+msgid "Include Review documents"
+msgstr "Include Review documents"
+
+msgid "Include draft payroll (preview only)"
+msgstr "Include draft payroll (preview only)"
+
+msgid "Include zero stock"
+msgstr "Include zero stock"
+
+msgid "Income exempt from income tax (legal reason required)"
+msgstr "Income exempt from income tax (legal reason required)"
+
+msgid "Income tax %"
+msgstr "Income tax %"
+
+msgid "Inflow"
+msgstr "Inflow"
+
+msgid "Information, texts and mapping are saved once for every year. Cash flow / OCI amounts stay with their year."
+msgstr "Information, texts and mapping are saved once for every year. Cash flow / OCI amounts stay with their year."
+
+msgid "Input VAT used for"
+msgstr "Input VAT used for"
+
+msgid "Insert Line"
+msgstr "Insert Line"
+
+msgid "Install / Repair Advanced Reader"
+msgstr "Install / Repair Advanced Reader"
+
+msgid "Install / Repair Free Handwriting Reader"
+msgstr "Install / Repair Free Handwriting Reader"
+
+msgid "Installation ID"
+msgstr "Installation ID"
+
+msgid "Insurance"
+msgstr "Insurance"
+
+msgid "Invalid base salary"
+msgstr "Invalid base salary"
+
+msgid "Inventory"
+msgstr "Inventory"
+
+msgid "Inventory Reports"
+msgstr "Inventory Reports"
+
+msgid "Inventory settings"
+msgstr "Inventory settings"
+
+msgid "Inventory settings saved"
+msgstr "Inventory settings saved"
+
+msgid "Investments"
+msgstr "Investments"
+
+msgid "Investments are a positive amount"
+msgstr "Investments are a positive amount"
+
+msgid "Invoice"
+msgstr "Invoice"
+
+msgid "Invoice Date"
+msgstr "Invoice Date"
+
+msgid "Invoice Modification History"
+msgstr "Invoice Modification History"
+
+msgid "Invoice No."
+msgstr "Invoice No."
+
+msgid "Invoice Number"
+msgstr "Invoice Number"
+
+msgid "Invoice PDF"
+msgstr "Invoice PDF"
+
+msgid "Invoice cancelled and reversing journal entry created"
+msgstr "Invoice cancelled and reversing journal entry created"
+
+msgid "Invoice details"
+msgstr "Invoice details"
+
+msgid "Invoice draft"
+msgstr "Invoice draft"
+
+msgid "Invoice files"
+msgstr "Invoice files"
+
+msgid "Invoice is already cancelled"
+msgstr "Invoice is already cancelled"
+
+msgid "Invoice number"
+msgstr "Invoice number"
+
+msgid "Invoice number, date, and customer/supplier are required"
+msgstr "Invoice number, date, and customer/supplier are required"
+
+msgid "Invoice review"
+msgstr "Invoice review"
+
+msgid "Invoice row added successfully"
+msgstr "Invoice row added successfully"
+
+msgid "Invoice total"
+msgstr "Invoice total"
+
+msgid "Invoiced"
+msgstr "Invoiced"
+
+msgid "Invoices"
+msgstr "Invoices"
+
+msgid "Invoices equal their entries"
+msgstr "Invoices equal their entries"
+
+msgid "Invoices: lines = subtotal"
+msgstr "Invoices: lines = subtotal"
+
+msgid "Invoices: subtotal + VAT = total"
+msgstr "Invoices: subtotal + VAT = total"
+
+msgid "Is every number where it should be? Balanced entries, every document in the books, no gaps or duplicates, VAT returns unchanged. Nothing is changed."
+msgstr "Is every number where it should be? Balanced entries, every document in the books, no gaps or duplicates, VAT returns unchanged. Nothing is changed."
+
+msgid "Issue"
+msgstr "Issue"
+
+msgid "Issue Date"
+msgstr "Issue Date"
+
+msgid "Issue date"
+msgstr "Issue date"
+
+msgid "Issues, adjustments - and transfers use the current average cost automatically"
+msgstr "Issues, adjustments - and transfers use the current average cost automatically"
+
+msgid "Item"
+msgstr "Item"
+
+msgid "Item Code"
+msgstr "Item Code"
+
+msgid "Item Code (auto if blank)"
+msgstr "Item Code (auto if blank)"
+
+msgid "Item Code: type the code or press F2 in the cell. Issues and adjustments - use automatic cost; receipts and opening stock need a unit cost."
+msgstr "Item Code: type the code or press F2 in the cell. Issues and adjustments - use automatic cost; receipts and opening stock need a unit cost."
+
+msgid "Item Code: type the code or press F2 in the cell. Issues, adjustments - and transfers leave at the current cost; receipts and opening stock need a unit cost."
+msgstr "Item Code: type the code or press F2 in the cell. Issues, adjustments - and transfers leave at the current cost; receipts and opening stock need a unit cost."
+
+msgid "Item From"
+msgstr "Item From"
+
+msgid "Item Name"
+msgstr "Item Name"
+
+msgid "Item To"
+msgstr "Item To"
+
+msgid "Item added and invoice totals updated"
+msgstr "Item added and invoice totals updated"
+
+msgid "Item already on the count sheet"
+msgstr "Item already on the count sheet"
+
+msgid "Item code (optional)"
+msgstr "Item code (optional)"
+
+msgid "Items"
+msgstr "Items"
+
+msgid "Items - F2"
+msgstr "Items - F2"
+
+msgid "Items subject to customs"
+msgstr "Items subject to customs"
+
+msgid "Jan"
+msgstr "Jan"
+
+msgid "Job Title"
+msgstr "Job Title"
+
+msgid "Journal Voucher"
+msgstr "Journal Voucher"
+
+msgid "Journal Voucher deleted"
+msgstr "Journal Voucher deleted"
+
+msgid "Journal vouchers"
+msgstr "Journal vouchers"
+
+msgid "Journal vouchers (JV)"
+msgstr "Journal vouchers (JV)"
+
+msgid "Jul"
+msgstr "Jul"
+
+msgid "Jun"
+msgstr "Jun"
+
+msgid "Keep"
+msgstr "Keep"
+
+msgid "Keep the purchase"
+msgstr "Keep the purchase"
+
+msgid "Key"
+msgstr "Key"
+
+msgid "Key password"
+msgstr "Key password"
+
+msgid "LBP Eq."
+msgstr "LBP Eq."
+
+msgid "LBP Rate"
+msgstr "LBP Rate"
+
+msgid "LBP amount"
+msgstr "LBP amount"
+
+msgid "LBP per USD"
+msgstr "LBP per USD"
+
+msgid "Language"
+msgstr "Language"
+
+msgid "Last"
+msgstr "Last"
+
+msgid "Late entries = entered more than"
+msgstr "Late entries = entered more than"
+
+msgid "Later"
+msgstr "Later"
+
+msgid "Layers (3rd)"
+msgstr "Layers (3rd)"
+
+msgid "Leave"
+msgstr "Leave"
+
+msgid "Leave Balances"
+msgstr "Leave Balances"
+
+msgid "Leave Date"
+msgstr "Leave Date"
+
+msgid "Leave days carried in"
+msgstr "Leave days carried in"
+
+msgid "Leave taken"
+msgstr "Leave taken"
+
+msgid "Leaving Date"
+msgstr "Leaving Date"
+
+msgid "Lebanese Chart of Accounts"
+msgstr "Lebanese Chart of Accounts"
+
+msgid "Lebanese Payroll Rules"
+msgstr "Lebanese Payroll Rules"
+
+msgid "Lebanese VAT Report"
+msgstr "Lebanese VAT Report"
+
+msgid "Lebanese payroll rules loaded. Recalculate draft payroll to apply them."
+msgstr "Lebanese payroll rules loaded. Recalculate draft payroll to apply them."
+
+msgid "Lebanese periodic method: purchases stay in 601 / 611. The Stock Variation voucher (type 06) cancels the stock in each item's stock account and books the counted closing stock: goods 37 against 6051 / 6052, raw materials 31 against 6151 / 6152, work in progress 33 against 7211, products 35 against 7255 (the Stock Account of the item). It is made automatically when you close the year, and the closing stock becomes the Opening Stock of the next year."
+msgstr "Lebanese periodic method: purchases stay in 601 / 611. The Stock Variation voucher (type 06) cancels the stock in each item's stock account and books the counted closing stock: goods 37 against 6051 / 6052, raw materials 31 against 6151 / 6152, work in progress 33 against 7211, products 35 against 7255 (the Stock Account of the item). It is made automatically when you close the year, and the closing stock becomes the Opening Stock of the next year."
+
+msgid "Ledger"
+msgstr "Ledger"
+
+msgid "Legal Document Alerts"
+msgstr "Legal Document Alerts"
+
+msgid "Legal Documents"
+msgstr "Legal Documents"
+
+msgid "Level"
+msgstr "Level"
+
+msgid "Licence"
+msgstr "Licence"
+
+msgid "Licence / firm"
+msgstr "Licence / firm"
+
+msgid "Licence code"
+msgstr "Licence code"
+
+msgid "Licence code made and copied: send it to the client."
+msgstr "Licence code made and copied: send it to the client."
+
+msgid "Line"
+msgstr "Line"
+
+msgid "Line Detail"
+msgstr "Line Detail"
+
+msgid "Lines"
+msgstr "Lines"
+
+msgid "Lines on existing accounts"
+msgstr "Lines on existing accounts"
+
+msgid "Link: Goods for sale: purchases 6011, variation 6051 / 6052. Purchases: Cost Account (empty = purchase screen account). Year end: Dr 6051 / Cr 37, then Dr 37 / Cr 6052."
+msgstr "Link: Goods for sale: purchases 6011, variation 6051 / 6052. Purchases: Cost Account (empty = purchase screen account). Year end: Dr 6051 / Cr 37, then Dr 37 / Cr 6052."
+
+msgid "Load"
+msgstr "Load"
+
+msgid "Load Lebanese Law 2024-2026"
+msgstr "Load Lebanese Law 2024-2026"
+
+msgid "Load Settings"
+msgstr "Load Settings"
+
+msgid "Load Stock on Hand"
+msgstr "Load Stock on Hand"
+
+msgid "Load balances"
+msgstr "Load balances"
+
+msgid "Load balances after changing the date or the books"
+msgstr "Load balances after changing the date or the books"
+
+msgid "Load the stock on hand first"
+msgstr "Load the stock on hand first"
+
+msgid "Local PDF assistance"
+msgstr "Local PDF assistance"
+
+msgid "Location"
+msgstr "Location"
+
+msgid "Location (shelf)"
+msgstr "Location (shelf)"
+
+msgid "Lock"
+msgstr "Lock"
+
+msgid "Lock up to (DD-MM-YYYY)"
+msgstr "Lock up to (DD-MM-YYYY)"
+
+msgid "Log"
+msgstr "Log"
+
+msgid "Logo File Path"
+msgstr "Logo File Path"
+
+msgid "MOF / VAT Number"
+msgstr "MOF / VAT Number"
+
+msgid "MOF / VAT number"
+msgstr "MOF / VAT number"
+
+msgid "MOF No."
+msgstr "MOF No."
+
+msgid "MOF Number"
+msgstr "MOF Number"
+
+msgid "MOF personal number"
+msgstr "MOF personal number"
+
+msgid "Main"
+msgstr "Main"
+
+msgid "Main Currency 1 (base)"
+msgstr "Main Currency 1 (base)"
+
+msgid "Main Currency 2"
+msgstr "Main Currency 2"
+
+msgid "Make a licence (seller)..."
+msgstr "Make a licence (seller)..."
+
+msgid "Make a licence code (seller)"
+msgstr "Make a licence code (seller)"
+
+msgid "Makes"
+msgstr "Makes"
+
+msgid "Manage Company"
+msgstr "Manage Company"
+
+msgid "Manage Selected"
+msgstr "Manage Selected"
+
+msgid "Management Pack"
+msgstr "Management Pack"
+
+msgid "Managers"
+msgstr "Managers"
+
+msgid "Manual Adjustments"
+msgstr "Manual Adjustments"
+
+msgid "Manual Entry"
+msgstr "Manual Entry"
+
+msgid "Mar"
+msgstr "Mar"
+
+msgid "Marital Status"
+msgstr "Marital Status"
+
+msgid "Marital status"
+msgstr "Marital status"
+
+msgid "Match Selected"
+msgstr "Match Selected"
+
+msgid "Matched"
+msgstr "Matched"
+
+msgid "Matching report"
+msgstr "Matching report"
+
+msgid "Material"
+msgstr "Material"
+
+msgid "Materials"
+msgstr "Materials"
+
+msgid "Materials from"
+msgstr "Materials from"
+
+msgid "Materials from Recipe"
+msgstr "Materials from Recipe"
+
+msgid "Max Children"
+msgstr "Max Children"
+
+msgid "May"
+msgstr "May"
+
+msgid "Measure"
+msgstr "Measure"
+
+msgid "Medical Ceiling"
+msgstr "Medical Ceiling"
+
+msgid "Menu on the left, in groups (untick for the buttons above the pages)"
+msgstr "Menu on the left, in groups (untick for the buttons above the pages)"
+
+msgid "Method"
+msgstr "Method"
+
+msgid "Minimum Wage"
+msgstr "Minimum Wage"
+
+msgid "Missing data and review notes"
+msgstr "Missing data and review notes"
+
+msgid "Mixed prorates input VAT by taxable / total use."
+msgstr "Mixed prorates input VAT by taxable / total use."
+
+msgid "Month"
+msgstr "Month"
+
+msgid "Month (MM-YYYY)"
+msgstr "Month (MM-YYYY)"
+
+msgid "Month (any date of the month)"
+msgstr "Month (any date of the month)"
+
+msgid "Month / quarter"
+msgstr "Month / quarter"
+
+msgid "Monthly"
+msgstr "Monthly"
+
+msgid "Monthly Payroll"
+msgstr "Monthly Payroll"
+
+msgid "Monthly Sales / Purchases"
+msgstr "Monthly Sales / Purchases"
+
+msgid "Monthly maximum"
+msgstr "Monthly maximum"
+
+msgid "Monthly posting by account is in tab 3."
+msgstr "Monthly posting by account is in tab 3."
+
+msgid "Months Total"
+msgstr "Months Total"
+
+msgid "Months of the base year x (1 + %) per year up to the Year above. Review, then Save Budget."
+msgstr "Months of the base year x (1 + %) per year up to the Year above. Review, then Save Budget."
+
+msgid "More"
+msgstr "More"
+
+msgid "Mother's Name"
+msgstr "Mother's Name"
+
+msgid "Mother's name"
+msgstr "Mother's name"
+
+msgid "Move / Transfer"
+msgstr "Move / Transfer"
+
+msgid "Move / Transfer between accounts"
+msgstr "Move / Transfer between accounts"
+
+msgid "Move / Transfer..."
+msgstr "Move / Transfer..."
+
+msgid "Move ALL its transactions to the To account"
+msgstr "Move ALL its transactions to the To account"
+
+msgid "Move the CHOSEN transactions below to the To account (the same entries, the account is replaced - no new voucher)"
+msgstr "Move the CHOSEN transactions below to the To account (the same entries, the account is replaced - no new voucher)"
+
+msgid "Multiple accounts match. Enter the number to use:\n{choices}"
+msgstr "Multiple accounts match. Enter the number to use:\n{choices}"
+
+msgid "NANZA"
+msgstr "NANZA"
+
+msgid "NEW INVOICE"
+msgstr "NEW INVOICE"
+
+msgid "NSSF"
+msgstr "NSSF"
+
+msgid "NSSF & MOF Forms"
+msgstr "NSSF & MOF Forms"
+
+msgid "NSSF & MOF Forms (Excel)"
+msgstr "NSSF & MOF Forms (Excel)"
+
+msgid "NSSF Employer Number"
+msgstr "NSSF Employer Number"
+
+msgid "NSSF Filed Wages"
+msgstr "NSSF Filed Wages"
+
+msgid "NSSF Number"
+msgstr "NSSF Number"
+
+msgid "NSSF Payable Account"
+msgstr "NSSF Payable Account"
+
+msgid "NSSF Payment"
+msgstr "NSSF Payment"
+
+msgid "NSSF ceilings, rates and family allowance by period - double-click to edit (LBP / month, rates in %)"
+msgstr "NSSF ceilings, rates and family allowance by period - double-click to edit (LBP / month, rates in %)"
+
+msgid "NSSF employee forms:"
+msgstr "NSSF employee forms:"
+
+msgid "NSSF employer number"
+msgstr "NSSF employer number"
+
+msgid "NSSF number"
+msgstr "NSSF number"
+
+msgid "NSSF periods"
+msgstr "NSSF periods"
+
+msgid "NSSF receipt number"
+msgstr "NSSF receipt number"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Name (category)"
+msgstr "Name (category)"
+
+msgid "Nanza Accounting"
+msgstr "Nanza Accounting"
+
+msgid "Nanza backup"
+msgstr "Nanza backup"
+
+msgid "Nanza company file"
+msgstr "Nanza company file"
+
+msgid "National ID"
+msgstr "National ID"
+
+msgid "Nationality"
+msgstr "Nationality"
+
+msgid "Need approval (users without 'Can approve' save them as drafts; another user with 'Can approve' posts them):"
+msgstr "Need approval (users without 'Can approve' save them as drafts; another user with 'Can approve' posts them):"
+
+msgid "Needs attention"
+msgstr "Needs attention"
+
+msgid "Net"
+msgstr "Net"
+
+msgid "Net Cash Movement"
+msgstr "Net Cash Movement"
+
+msgid "Net Salary"
+msgstr "Net Salary"
+
+msgid "Net Salary Payable"
+msgstr "Net Salary Payable"
+
+msgid "Net VAT (LBP)"
+msgstr "Net VAT (LBP)"
+
+msgid "Net Value"
+msgstr "Net Value"
+
+msgid "Net before VAT"
+msgstr "Net before VAT"
+
+msgid "Net book value"
+msgstr "Net book value"
+
+msgid "Net cash movement"
+msgstr "Net cash movement"
+
+msgid "Net profit"
+msgstr "Net profit"
+
+msgid "Net value"
+msgstr "Net value"
+
+msgid "Network Check"
+msgstr "Network Check"
+
+msgid "New"
+msgstr "New"
+
+msgid "New / Clear"
+msgstr "New / Clear"
+
+msgid "New Account"
+msgstr "New Account"
+
+msgid "New Branch Name"
+msgstr "New Branch Name"
+
+msgid "New Company"
+msgstr "New Company"
+
+msgid "New Employee"
+msgstr "New Employee"
+
+msgid "New Fiscal Year"
+msgstr "New Fiscal Year"
+
+msgid "New Journal Account"
+msgstr "New Journal Account"
+
+msgid "New Number"
+msgstr "New Number"
+
+msgid "New Warehouse Transfer"
+msgstr "New Warehouse Transfer"
+
+msgid "New account (number or F2)"
+msgstr "New account (number or F2)"
+
+msgid "New account name"
+msgstr "New account name"
+
+msgid "New category"
+msgstr "New category"
+
+msgid "New child"
+msgstr "New child"
+
+msgid "New document — number assigned on Save"
+msgstr "New document — number assigned on Save"
+
+msgid "New document: fill in the fields and press Save (attaching a file is optional)."
+msgstr "New document: fill in the fields and press Save (attaching a file is optional)."
+
+msgid "New expense"
+msgstr "New expense"
+
+msgid "New licence code"
+msgstr "New licence code"
+
+msgid "New password (10+ characters)"
+msgstr "New password (10+ characters)"
+
+msgid "New password again"
+msgstr "New password again"
+
+msgid "New subcategory"
+msgstr "New subcategory"
+
+msgid "New voucher"
+msgstr "New voucher"
+
+msgid "Next"
+msgstr "Next"
+
+msgid "Next Tab"
+msgstr "Next Tab"
+
+msgid "Next ▶"
+msgstr "Next ▶"
+
+msgid "No EUR rate of 1 USD"
+msgstr "No EUR rate of 1 USD"
+
+msgid "No PDF"
+msgstr "No PDF"
+
+msgid "No VAT return saved yet"
+msgstr "No VAT return saved yet"
+
+msgid "No activity for this currency yet."
+msgstr "No activity for this currency yet."
+
+msgid "No backup is selected. Create a new backup now and save a copy?"
+msgstr "No backup is selected. Create a new backup now and save a copy?"
+
+msgid "No complete actual month is available yet"
+msgstr "No complete actual month is available yet"
+
+msgid "No data to draw for these choices"
+msgstr "No data to draw for these choices"
+
+msgid "No data to export"
+msgstr "No data to export"
+
+msgid "No data yet"
+msgstr "No data yet"
+
+msgid "No duplicate numbers"
+msgstr "No duplicate numbers"
+
+msgid "No entry without its document"
+msgstr "No entry without its document"
+
+msgid "No file is attached to this document yet. Use Attach File."
+msgstr "No file is attached to this document yet. Use Attach File."
+
+msgid "No file selected. Excel: one invoice per row. PDF: each file becomes one invoice and is attached to it."
+msgstr "No file selected. Excel: one invoice per row. PDF: each file becomes one invoice and is attached to it."
+
+msgid "No filters chosen (Choose filters... to add Branch, Project, Department, Customer / Supplier, Section)."
+msgstr "No filters chosen (Choose filters... to add Branch, Project, Department, Customer / Supplier, Section)."
+
+msgid "No invoice data to export"
+msgstr "No invoice data to export"
+
+msgid "No journal data to export"
+msgstr "No journal data to export"
+
+msgid "No lines on heading accounts"
+msgstr "No lines on heading accounts"
+
+msgid "No lines to export"
+msgstr "No lines to export"
+
+msgid "No positive budget line to save"
+msgstr "No positive budget line to save"
+
+msgid "No posted income or expense actuals in the report year"
+msgstr "No posted income or expense actuals in the report year"
+
+msgid "No posted income or expense data to project"
+msgstr "No posted income or expense data to project"
+
+msgid "No readable item row was found. Enter the item name to create it in Inventory now, or Cancel to enter it manually later."
+msgstr "No readable item row was found. Enter the item name to create it in Inventory now, or Cancel to enter it manually later."
+
+msgid "No report data to export"
+msgstr "No report data to export"
+
+msgid "No rows to project (check the base year and target date)"
+msgstr "No rows to project (check the base year and target date)"
+
+msgid "No safe account suggestion was found. Choose an account manually."
+msgstr "No safe account suggestion was found. Choose an account manually."
+
+msgid "No saved invoices to edit yet."
+msgstr "No saved invoices to edit yet."
+
+msgid "No second copy: backups stay only on this computer. Choose OneDrive or a USB / network folder."
+msgstr "No second copy: backups stay only on this computer. Choose OneDrive or a USB / network folder."
+
+msgid "No supplier invoice entered twice"
+msgstr "No supplier invoice entered twice"
+
+msgid "No-VAT A/C"
+msgstr "No-VAT A/C"
+
+msgid "No."
+msgstr "No."
+
+msgid "Non-Deductible"
+msgstr "Non-Deductible"
+
+msgid "Non-deductible Expenses"
+msgstr "Non-deductible Expenses"
+
+msgid "Non-deductible Expenses Report"
+msgstr "Non-deductible Expenses Report"
+
+msgid "Non-deductible VAT expense (Art. 31)"
+msgstr "Non-deductible VAT expense (Art. 31)"
+
+msgid "Non-deductible VAT expense account"
+msgstr "Non-deductible VAT expense account"
+
+msgid "Non-deductible account"
+msgstr "Non-deductible account"
+
+msgid "Non-zero Balances only"
+msgstr "Non-zero Balances only"
+
+msgid "None"
+msgstr "None"
+
+msgid "None of the selected entries is a Journal Voucher: system entries are changed from their own screen"
+msgstr "None of the selected entries is a Journal Voucher: system entries are changed from their own screen"
+
+msgid "Not cash"
+msgstr "Not cash"
+
+msgid "Not deductible for income tax"
+msgstr "Not deductible for income tax"
+
+msgid "Not registered in VAT"
+msgstr "Not registered in VAT"
+
+msgid "Not saved"
+msgstr "Not saved"
+
+msgid "Not subject to NSSF:"
+msgstr "Not subject to NSSF:"
+
+msgid "Not yet confirmed by a tax adviser"
+msgstr "Not yet confirmed by a tax adviser"
+
+msgid "Note"
+msgstr "Note"
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "Nothing to print: apply the filters or the Find first"
+msgstr "Nothing to print: apply the filters or the Find first"
+
+msgid "Nothing was deleted"
+msgstr "Nothing was deleted"
+
+msgid "Nov"
+msgstr "Nov"
+
+msgid "Number"
+msgstr "Number"
+
+msgid "Numbering"
+msgstr "Numbering"
+
+msgid "Numbering of new documents"
+msgstr "Numbering of new documents"
+
+msgid "OCI and Cash Flow"
+msgstr "OCI and Cash Flow"
+
+msgid "OK"
+msgstr "OK"
+
+msgid "Oct"
+msgstr "Oct"
+
+msgid "Official Form Excel"
+msgstr "Official Form Excel"
+
+msgid "Official Form Q1-2 (PDF)"
+msgstr "Official Form Q1-2 (PDF)"
+
+msgid "Official Forms (Excel)"
+msgstr "Official Forms (Excel)"
+
+msgid "Old Deprec."
+msgstr "Old Deprec."
+
+msgid "Old deprec."
+msgstr "Old deprec."
+
+msgid "On Hand"
+msgstr "On Hand"
+
+msgid "One Account for Selected..."
+msgstr "One Account for Selected..."
+
+msgid "One Account for the Selected Rows"
+msgstr "One Account for the Selected Rows"
+
+msgid "One-time download. You can stop it and use Install / Repair later to resume."
+msgstr "One-time download. You can stop it and use Install / Repair later to resume."
+
+msgid "OneDrive was not found on this computer. Choose a USB or network folder with Browse..."
+msgstr "OneDrive was not found on this computer. Choose a USB or network folder with Browse..."
+
+msgid "Only"
+msgstr "Only"
+
+msgid "Only a posted invoice can be returned. Cancellation is a separate action."
+msgstr "Only a posted invoice can be returned. Cancellation is a separate action."
+
+msgid "Only purchase and expense VAT can be marked non-deductible"
+msgstr "Only purchase and expense VAT can be marked non-deductible"
+
+msgid "Only that account changes, on the invoice and its journal lines; amounts and the other lines stay as they are."
+msgstr "Only that account changes, on the invoice and its journal lines; amounts and the other lines stay as they are."
+
+msgid "Open"
+msgstr "Open"
+
+msgid "Open / Fill PDF"
+msgstr "Open / Fill PDF"
+
+msgid "Open / Fill VAT PDF"
+msgstr "Open / Fill VAT PDF"
+
+msgid "Open Backup Folder"
+msgstr "Open Backup Folder"
+
+msgid "Open Company"
+msgstr "Open Company"
+
+msgid "Open Log Folder"
+msgstr "Open Log Folder"
+
+msgid "Open PDF"
+msgstr "Open PDF"
+
+msgid "Open a saved document first (Find)"
+msgstr "Open a saved document first (Find)"
+
+msgid "Open a saved invoice first"
+msgstr "Open a saved invoice first"
+
+msgid "Open a saved order first (Find)"
+msgstr "Open a saved order first (Find)"
+
+msgid "Open a saved voucher first"
+msgstr "Open a saved voucher first"
+
+msgid "Open a voucher to edit"
+msgstr "Open a voucher to edit"
+
+msgid "Open count"
+msgstr "Open count"
+
+msgid "Open each document and save it again (the entry is written again); if it should not count, delete or cancel it"
+msgstr "Open each document and save it again (the entry is written again); if it should not count, delete or cancel it"
+
+msgid "Open each invoice and save it again so the entry is written from the invoice"
+msgstr "Open each invoice and save it again so the entry is written from the invoice"
+
+msgid "Open each invoice: a line or the discount was changed without the totals"
+msgstr "Open each invoice: a line or the discount was changed without the totals"
+
+msgid "Open for Editing"
+msgstr "Open for Editing"
+
+msgid "Open in Excel after saving"
+msgstr "Open in Excel after saving"
+
+msgid "Open in PDF reader"
+msgstr "Open in PDF reader"
+
+msgid "Open invoices"
+msgstr "Open invoices"
+
+msgid "Open selected"
+msgstr "Open selected"
+
+msgid "Open the invoice to duplicate first (Find No.)"
+msgstr "Open the invoice to duplicate first (Find No.)"
+
+msgid "Open the posted invoice first (Find), then press Return."
+msgstr "Open the posted invoice first (Find), then press Return."
+
+msgid "Open the posted purchase invoice first (Find), then press Return."
+msgstr "Open the posted purchase invoice first (Find), then press Return."
+
+msgid "Open this invoice? The lines you are typing now will be cleared."
+msgstr "Open this invoice? The lines you are typing now will be cleared."
+
+msgid "Open to edit"
+msgstr "Open to edit"
+
+msgid "Opening Voucher"
+msgstr "Opening Voucher"
+
+msgid "Opening cash"
+msgstr "Opening cash"
+
+msgid "Opening date (go-live)"
+msgstr "Opening date (go-live)"
+
+msgid "Opening voucher deleted"
+msgstr "Opening voucher deleted"
+
+msgid "Operating exp. %"
+msgstr "Operating exp. %"
+
+msgid "Optional overrides: one account or prefix = category per line. Longest prefix wins.\nExample: 4031 = noncurrent_liabilities. Review classifications and maturity before issuing."
+msgstr "Optional overrides: one account or prefix = category per line. Longest prefix wins.\nExample: 4031 = noncurrent_liabilities. Review classifications and maturity before issuing."
+
+msgid "Options"
+msgstr "Options"
+
+msgid "Order"
+msgstr "Order"
+
+msgid "Order by Description"
+msgstr "Order by Description"
+
+msgid "Original"
+msgstr "Original"
+
+msgid "Original amount"
+msgstr "Original amount"
+
+msgid "Other"
+msgstr "Other"
+
+msgid "Other income %"
+msgstr "Other income %"
+
+msgid "Other payables"
+msgstr "Other payables"
+
+msgid "Outflow"
+msgstr "Outflow"
+
+msgid "Output VAT (sales)"
+msgstr "Output VAT (sales)"
+
+msgid "Outstanding"
+msgstr "Outstanding"
+
+msgid "Overdue invoices"
+msgstr "Overdue invoices"
+
+msgid "Overdue…"
+msgstr "Overdue…"
+
+msgid "Overtime"
+msgstr "Overtime"
+
+msgid "Overview"
+msgstr "Overview"
+
+msgid "P&L Amount"
+msgstr "P&L Amount"
+
+msgid "P&L tax basis (without non-deductible expenses)"
+msgstr "P&L tax basis (without non-deductible expenses)"
+
+msgid "PAID"
+msgstr "PAID"
+
+msgid "PARTIAL"
+msgstr "PARTIAL"
+
+msgid "PDF Attachments"
+msgstr "PDF Attachments"
+
+msgid "PDF asset invoice"
+msgstr "PDF asset invoice"
+
+msgid "PDF document"
+msgstr "PDF document"
+
+msgid "PDF files"
+msgstr "PDF files"
+
+msgid "PDF invoice"
+msgstr "PDF invoice"
+
+msgid "PDF invoices"
+msgstr "PDF invoices"
+
+msgid "PDF preview"
+msgstr "PDF preview"
+
+msgid "PDF report"
+msgstr "PDF report"
+
+msgid "PDF values are suggestions only. Verify the asset code, class-2 cost account, depreciation and accumulated accounts, and enter a rate you have independently verified. No Lebanese legal rate is assumed."
+msgstr "PDF values are suggestions only. Verify the asset code, class-2 cost account, depreciation and accumulated accounts, and enter a rate you have independently verified. No Lebanese legal rate is assumed."
+
+msgid "PDF/photo readings require human review; use Review original document, then Review & Save Import"
+msgstr "PDF/photo readings require human review; use Review original document, then Review & Save Import"
+
+msgid "PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves."
+msgstr "PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves."
+
+msgid "PREVIEW ONLY"
+msgstr "PREVIEW ONLY"
+
+msgid "PROFESSIONAL ACCOUNTING"
+msgstr "PROFESSIONAL ACCOUNTING"
+
+msgid "PURCHASE INVOICE"
+msgstr "PURCHASE INVOICE"
+
+msgid "Page"
+msgstr "Page"
+
+msgid "Pages a month (limit)"
+msgstr "Pages a month (limit)"
+
+msgid "Paid"
+msgstr "Paid"
+
+msgid "Paid Amount"
+msgstr "Paid Amount"
+
+msgid "Paid from"
+msgstr "Paid from"
+
+msgid "Paid from (cash / bank account)"
+msgstr "Paid from (cash / bank account)"
+
+msgid "Paid into"
+msgstr "Paid into"
+
+msgid "Paid to"
+msgstr "Paid to"
+
+msgid "Parent"
+msgstr "Parent"
+
+msgid "Partial Match"
+msgstr "Partial Match"
+
+msgid "Party / Paid A/C"
+msgstr "Party / Paid A/C"
+
+msgid "Password"
+msgstr "Password"
+
+msgid "Past dates use the current invoice outstanding balance; future dates show the expected lateness if no further payment is made."
+msgstr "Past dates use the current invoice outstanding balance; future dates show the expected lateness if no further payment is made."
+
+msgid "Paste"
+msgstr "Paste"
+
+msgid "Payable"
+msgstr "Payable"
+
+msgid "Payable Account"
+msgstr "Payable Account"
+
+msgid "Payables"
+msgstr "Payables"
+
+msgid "Payment"
+msgstr "Payment"
+
+msgid "Payment & Receipt"
+msgstr "Payment & Receipt"
+
+msgid "Payment / delivery terms"
+msgstr "Payment / delivery terms"
+
+msgid "Payment Method"
+msgstr "Payment Method"
+
+msgid "Payment Mode"
+msgstr "Payment Mode"
+
+msgid "Payment date"
+msgstr "Payment date"
+
+msgid "Payment details (optional - written on the form)"
+msgstr "Payment details (optional - written on the form)"
+
+msgid "Payment entries"
+msgstr "Payment entries"
+
+msgid "Payroll"
+msgstr "Payroll"
+
+msgid "Payroll & VAT"
+msgstr "Payroll & VAT"
+
+msgid "Payroll Entry"
+msgstr "Payroll Entry"
+
+msgid "Payroll Group"
+msgstr "Payroll Group"
+
+msgid "Payroll No."
+msgstr "Payroll No."
+
+msgid "Payroll Reports"
+msgstr "Payroll Reports"
+
+msgid "Payroll Reports & Worksheets (R5 / R6 / R10)"
+msgstr "Payroll Reports & Worksheets (R5 / R6 / R10)"
+
+msgid "Payroll Settings"
+msgstr "Payroll Settings"
+
+msgid "Payroll Tax"
+msgstr "Payroll Tax"
+
+msgid "Payroll Tax Account"
+msgstr "Payroll Tax Account"
+
+msgid "Payroll access"
+msgstr "Payroll access"
+
+msgid "Payroll accounts (salaries 6311 / 6316, employer NSSF 6351, salary tax 4411, NSSF 4431) are set in Payroll > Tax & NSSF Settings > Standard Posting Accounts."
+msgstr "Payroll accounts (salaries 6311 / 6316, employer NSSF 6351, salary tax 4411, NSSF 4431) are set in Payroll > Tax & NSSF Settings > Standard Posting Accounts."
+
+msgid "Payroll control totals (original currency)"
+msgstr "Payroll control totals (original currency)"
+
+msgid "Payroll counts the spouse from the month of the marriage and each child from the month of birth (salary-tax deductions and NSSF family allowance). Adding a child raises Children by one."
+msgstr "Payroll counts the spouse from the month of the marriage and each child from the month of birth (salary-tax deductions and NSSF family allowance). Adding a child raises Children by one."
+
+msgid "Payroll entries come from the payroll: posted payroll is changed by a new payroll or a journal voucher."
+msgstr "Payroll entries come from the payroll: posted payroll is changed by a new payroll or a journal voucher."
+
+msgid "Payroll exceptions to resolve"
+msgstr "Payroll exceptions to resolve"
+
+msgid "Payroll preparation controls"
+msgstr "Payroll preparation controls"
+
+msgid "Payroll sheet"
+msgstr "Payroll sheet"
+
+msgid "Payslips"
+msgstr "Payslips"
+
+msgid "Payslips of month (MM-YYYY)"
+msgstr "Payslips of month (MM-YYYY)"
+
+msgid "Pending approvals"
+msgstr "Pending approvals"
+
+msgid "Per child (up to 5)"
+msgstr "Per child (up to 5)"
+
+msgid "Per-year % (e.g. 2027=10, 2028=5)"
+msgstr "Per-year % (e.g. 2027=10, 2028=5)"
+
+msgid "Period"
+msgstr "Period"
+
+msgid "Period Date"
+msgstr "Period Date"
+
+msgid "Period dashboard summary"
+msgstr "Period dashboard summary"
+
+msgid "Period end"
+msgstr "Period end"
+
+msgid "Period summary"
+msgstr "Period summary"
+
+msgid "Period: compare with the same period last year"
+msgstr "Period: compare with the same period last year"
+
+msgid "Period: {start} to {end}"
+msgstr "Period: {start} to {end}"
+
+msgid "Personnel %"
+msgstr "Personnel %"
+
+msgid "Phone"
+msgstr "Phone"
+
+msgid "Phone 2"
+msgstr "Phone 2"
+
+msgid "Physical Count"
+msgstr "Physical Count"
+
+msgid "Physical Inventory"
+msgstr "Physical Inventory"
+
+msgid "Pick the invoice you want to edit:"
+msgstr "Pick the invoice you want to edit:"
+
+msgid "Place of Birth"
+msgstr "Place of Birth"
+
+msgid "Place of birth"
+msgstr "Place of birth"
+
+msgid "Post"
+msgstr "Post"
+
+msgid "Post All"
+msgstr "Post All"
+
+msgid "Post All Accounts"
+msgstr "Post All Accounts"
+
+msgid "Post DOE"
+msgstr "Post DOE"
+
+msgid "Post DOE vouchers"
+msgstr "Post DOE vouchers"
+
+msgid "Post Entry for Selected Account"
+msgstr "Post Entry for Selected Account"
+
+msgid "Post Line"
+msgstr "Post Line"
+
+msgid "Post Monthly Variation"
+msgstr "Post Monthly Variation"
+
+msgid "Post Payroll"
+msgstr "Post Payroll"
+
+msgid "Post Provision"
+msgstr "Post Provision"
+
+msgid "Post Return / Credit Note"
+msgstr "Post Return / Credit Note"
+
+msgid "Post Selected to Accounting"
+msgstr "Post Selected to Accounting"
+
+msgid "Post Settlement Voucher"
+msgstr "Post Settlement Voucher"
+
+msgid "Post selected period"
+msgstr "Post selected period"
+
+msgid "Post the payroll before recording its payment"
+msgstr "Post the payroll before recording its payment"
+
+msgid "Post this payroll to the General Journal? Posted payroll cannot be edited."
+msgstr "Post this payroll to the General Journal? Posted payroll cannot be edited."
+
+msgid "Posted"
+msgstr "Posted"
+
+msgid "Posted depreciation is shown separately from the unposted schedule; amounts remain in each asset's currency."
+msgstr "Posted depreciation is shown separately from the unposted schedule; amounts remain in each asset's currency."
+
+msgid "Posted purchase costs"
+msgstr "Posted purchase costs"
+
+msgid "Posted-ledger analysis; unsupported or unlinked margins are shown as unavailable."
+msgstr "Posted-ledger analysis; unsupported or unlinked margins are shown as unavailable."
+
+msgid "Posting Rules"
+msgstr "Posting Rules"
+
+msgid "Posting accounts"
+msgstr "Posting accounts"
+
+msgid "Posting currency"
+msgstr "Posting currency"
+
+msgid "Posting rules (learned from your invoices)"
+msgstr "Posting rules (learned from your invoices)"
+
+msgid "Prefix"
+msgstr "Prefix"
+
+msgid "Preparation status"
+msgstr "Preparation status"
+
+msgid "Prepared by"
+msgstr "Prepared by"
+
+msgid "Preparing the download..."
+msgstr "Preparing the download..."
+
+msgid "Press Build from the books."
+msgstr "Press Build from the books."
+
+msgid "Press New first: the reading fills a new expense."
+msgstr "Press New first: the reading fills a new expense."
+
+msgid "Preview"
+msgstr "Preview"
+
+msgid "Preview Closing 6&7"
+msgstr "Preview Closing 6&7"
+
+msgid "Preview again after changing a rate"
+msgstr "Preview again after changing a rate"
+
+msgid "Preview again after changing the date or the books"
+msgstr "Preview again after changing the date or the books"
+
+msgid "Preview the vouchers first"
+msgstr "Preview the vouchers first"
+
+msgid "Previous Tab"
+msgstr "Previous Tab"
+
+msgid "Previous-year transactions are read-only"
+msgstr "Previous-year transactions are read-only"
+
+msgid "Print"
+msgstr "Print"
+
+msgid "Print / PDF"
+msgstr "Print / PDF"
+
+msgid "Print Date"
+msgstr "Print Date"
+
+msgid "Print Preview"
+msgstr "Print Preview"
+
+msgid "Print Settings"
+msgstr "Print Settings"
+
+msgid "Print last saved file"
+msgstr "Print last saved file"
+
+msgid "Printing from this tab is supported only on Windows."
+msgstr "Printing from this tab is supported only on Windows."
+
+msgid "Prior Year"
+msgstr "Prior Year"
+
+msgid "Private School / Child"
+msgstr "Private School / Child"
+
+msgid "Private School Cap"
+msgstr "Private School Cap"
+
+msgid "Private school / university children"
+msgstr "Private school / university children"
+
+msgid "Product"
+msgstr "Product"
+
+msgid "Product into"
+msgstr "Product into"
+
+msgid "Product made"
+msgstr "Product made"
+
+msgid "Production"
+msgstr "Production"
+
+msgid "Production (Inventory)"
+msgstr "Production (Inventory)"
+
+msgid "Production Orders"
+msgstr "Production Orders"
+
+msgid "Production Report"
+msgstr "Production Report"
+
+msgid "Profession"
+msgstr "Profession"
+
+msgid "Profit & Loss"
+msgstr "Profit & Loss"
+
+msgid "Profit & Loss (6-7)"
+msgstr "Profit & Loss (6-7)"
+
+msgid "Profitability"
+msgstr "Profitability"
+
+msgid "Program Defaults"
+msgstr "Program Defaults"
+
+msgid "Project"
+msgstr "Project"
+
+msgid "Project Name"
+msgstr "Project Name"
+
+msgid "Project Profitability"
+msgstr "Project Profitability"
+
+msgid "Project ahead"
+msgstr "Project ahead"
+
+msgid "Project from Actual"
+msgstr "Project from Actual"
+
+msgid "Projected values use the last 3 complete months."
+msgstr "Projected values use the last 3 complete months."
+
+msgid "Projection"
+msgstr "Projection"
+
+msgid "Projection & Budget (3D)"
+msgstr "Projection & Budget (3D)"
+
+msgid "Projects"
+msgstr "Projects"
+
+msgid "Provisional %"
+msgstr "Provisional %"
+
+msgid "Public / free school or Lebanese University children"
+msgstr "Public / free school or Lebanese University children"
+
+msgid "Public School / Child"
+msgstr "Public School / Child"
+
+msgid "Public School Cap"
+msgstr "Public School Cap"
+
+msgid "Purchase Date"
+msgstr "Purchase Date"
+
+msgid "Purchase Invoice"
+msgstr "Purchase Invoice"
+
+msgid "Purchase Invoice Items · F2 to find an item · double-click a cell to edit"
+msgstr "Purchase Invoice Items · F2 to find an item · double-click a cell to edit"
+
+msgid "Purchase Order"
+msgstr "Purchase Order"
+
+msgid "Purchase PDF"
+msgstr "Purchase PDF"
+
+msgid "Purchase PDF item"
+msgstr "Purchase PDF item"
+
+msgid "Purchase date"
+msgstr "Purchase date"
+
+msgid "Purchase invoice No./ID"
+msgstr "Purchase invoice No./ID"
+
+msgid "Purchase invoice number"
+msgstr "Purchase invoice number"
+
+msgid "Purchase invoices"
+msgstr "Purchase invoices"
+
+msgid "Purchase invoices (PUR)"
+msgstr "Purchase invoices (PUR)"
+
+msgid "Purchase totals"
+msgstr "Purchase totals"
+
+msgid "Purchase value"
+msgstr "Purchase value"
+
+msgid "Purchases"
+msgstr "Purchases"
+
+msgid "Purchases & Cash"
+msgstr "Purchases & Cash"
+
+msgid "Purchases & Expenses"
+msgstr "Purchases & Expenses"
+
+msgid "Purchases - when no account is chosen"
+msgstr "Purchases - when no account is chosen"
+
+msgid "Purchases / Expense / Sales account"
+msgstr "Purchases / Expense / Sales account"
+
+msgid "Purchases without VAT"
+msgstr "Purchases without VAT"
+
+msgid "Put back the program's default accounts?"
+msgstr "Put back the program's default accounts?"
+
+msgid "Puts the numbers back in date order after a document was entered with a wrong date. Only the program's own numbers change (RV-2026-000012); numbers typed by hand or imported are kept. Documents in locked books, a closed year or a quarter whose VAT return is saved keep their numbers. A safety backup is made first and the Audit Trail keeps every old -> new number."
+msgstr "Puts the numbers back in date order after a document was entered with a wrong date. Only the program's own numbers change (RV-2026-000012); numbers typed by hand or imported are kept. Documents in locked books, a closed year or a quarter whose VAT return is saved keep their numbers. A safety backup is made first and the Audit Trail keeps every old -> new number."
+
+msgid "Qty"
+msgstr "Qty"
+
+msgid "Qty Used"
+msgstr "Qty Used"
+
+msgid "Quantity"
+msgstr "Quantity"
+
+msgid "Quantity and cost come from the stock documents. Double-click an item to edit it."
+msgstr "Quantity and cost come from the stock documents. Double-click an item to edit it."
+
+msgid "Quantity must be greater than zero"
+msgstr "Quantity must be greater than zero"
+
+msgid "Quarter"
+msgstr "Quarter"
+
+msgid "Quarter budgets sum saved monthly amounts; annual-only budgets are divided by four."
+msgstr "Quarter budgets sum saved monthly amounts; annual-only budgets are divided by four."
+
+msgid "Quarter totals aggregate monthly cash movements; opening cash is the class 51/53 balance before the selected range."
+msgstr "Quarter totals aggregate monthly cash movements; opening cash is the class 51/53 balance before the selected range."
+
+msgid "Quarterly"
+msgstr "Quarterly"
+
+msgid "Quarterly Budget vs Actual"
+msgstr "Quarterly Budget vs Actual"
+
+msgid "Quarterly Cash Flow"
+msgstr "Quarterly Cash Flow"
+
+msgid "Quarterly Cashflow"
+msgstr "Quarterly Cashflow"
+
+msgid "Quarterly VAT"
+msgstr "Quarterly VAT"
+
+msgid "Quarterly VAT: compare, then file an amended return or put the documents back"
+msgstr "Quarterly VAT: compare, then file an amended return or put the documents back"
+
+msgid "Quarterly VAT: open the quarter (an exchange rate may be missing)"
+msgstr "Quarterly VAT: open the quarter (an exchange rate may be missing)"
+
+msgid "Quarterly cashflow requested for Q{quarter} {year}."
+msgstr "Quarterly cashflow requested for Q{quarter} {year}."
+
+msgid "Quick actions"
+msgstr "Quick actions"
+
+msgid "Quotation"
+msgstr "Quotation"
+
+msgid "Quotations / Purchase Orders / Consignment"
+msgstr "Quotations / Purchase Orders / Consignment"
+
+msgid "Quotes / Orders / Consignment"
+msgstr "Quotes / Orders / Consignment"
+
+msgid "R3 Registration"
+msgstr "R3 Registration"
+
+msgid "RETURN NOTE"
+msgstr "RETURN NOTE"
+
+msgid "REVIEW REQUIRED"
+msgstr "REVIEW REQUIRED"
+
+msgid "Rate % / year"
+msgstr "Rate % / year"
+
+msgid "Rate LBP"
+msgstr "Rate LBP"
+
+msgid "Rate USD"
+msgstr "Rate USD"
+
+msgid "Rate added. The daily rate is the average of all entered rates for this date and currency pair."
+msgstr "Rate added. The daily rate is the average of all entered rates for this date and currency pair."
+
+msgid "Read invoices with Azure"
+msgstr "Read invoices with Azure"
+
+msgid "Read invoices with Azure (optional, your own free key)"
+msgstr "Read invoices with Azure (optional, your own free key)"
+
+msgid "Read with Azure"
+msgstr "Read with Azure"
+
+msgid "Reading checks / item rows"
+msgstr "Reading checks / item rows"
+
+msgid "Reading the PDF..."
+msgstr "Reading the PDF..."
+
+msgid "Reason"
+msgstr "Reason"
+
+msgid "Receipt / document no."
+msgstr "Receipt / document no."
+
+msgid "Receipt reference"
+msgstr "Receipt reference"
+
+msgid "Receipts and payments"
+msgstr "Receipts and payments"
+
+msgid "Receivables"
+msgstr "Receivables"
+
+msgid "Receivables Ageing (customers)"
+msgstr "Receivables Ageing (customers)"
+
+msgid "Receive goods"
+msgstr "Receive goods"
+
+msgid "Receive partial"
+msgstr "Receive partial"
+
+msgid "Received"
+msgstr "Received"
+
+msgid "Received by"
+msgstr "Received by"
+
+msgid "Recipe Qty"
+msgstr "Recipe Qty"
+
+msgid "Recipes"
+msgstr "Recipes"
+
+msgid "Recipes (materials per product)"
+msgstr "Recipes (materials per product)"
+
+msgid "Recipes saved"
+msgstr "Recipes saved"
+
+msgid "Record"
+msgstr "Record"
+
+msgid "Record Asset Purchase"
+msgstr "Record Asset Purchase"
+
+msgid "Record NSSF Payment"
+msgstr "Record NSSF Payment"
+
+msgid "Record salary payment"
+msgstr "Record salary payment"
+
+msgid "Ref. / Cheque"
+msgstr "Ref. / Cheque"
+
+msgid "Reference"
+msgstr "Reference"
+
+msgid "Reference (invoice / PO)"
+msgstr "Reference (invoice / PO)"
+
+msgid "Reference / client order"
+msgstr "Reference / client order"
+
+msgid "Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. 2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831."
+msgstr "Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. 2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831."
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Refresh Opening"
+msgstr "Refresh Opening"
+
+msgid "Refresh Projection"
+msgstr "Refresh Projection"
+
+msgid "Refresh the employee list and select an employee"
+msgstr "Refresh the employee list and select an employee"
+
+msgid "Refresh the selected period before exporting"
+msgstr "Refresh the selected period before exporting"
+
+msgid "Refund requested (LBP, Art. 30)"
+msgstr "Refund requested (LBP, Art. 30)"
+
+msgid "Reg. No."
+msgstr "Reg. No."
+
+msgid "Registered in VAT"
+msgstr "Registered in VAT"
+
+msgid "Registered in VAT since"
+msgstr "Registered in VAT since"
+
+msgid "Reject Selected"
+msgstr "Reject Selected"
+
+msgid "Reject documents"
+msgstr "Reject documents"
+
+msgid "Rejected"
+msgstr "Rejected"
+
+msgid "Remove"
+msgstr "Remove"
+
+msgid "Remove Key"
+msgstr "Remove Key"
+
+msgid "Remove Row"
+msgstr "Remove Row"
+
+msgid "Remove logo"
+msgstr "Remove logo"
+
+msgid "Remove selected"
+msgstr "Remove selected"
+
+msgid "Renew 1 Year"
+msgstr "Renew 1 Year"
+
+msgid "Renew these documents and upload the new copy from Customers / Suppliers > Legal Documents."
+msgstr "Renew these documents and upload the new copy from Customers / Suppliers > Legal Documents."
+
+msgid "Renumber"
+msgstr "Renumber"
+
+msgid "Renumber Documents"
+msgstr "Renumber Documents"
+
+msgid "Renumber by date"
+msgstr "Renumber by date"
+
+msgid "Reopen Fiscal Year"
+msgstr "Reopen Fiscal Year"
+
+msgid "Reopen Saved Return"
+msgstr "Reopen Saved Return"
+
+msgid "Reopen VAT Return"
+msgstr "Reopen VAT Return"
+
+msgid "Reorder Level"
+msgstr "Reorder Level"
+
+msgid "Replace ALL Tax & NSSF periods with the configured Lebanese payroll rules from 01-01-2024?\n\n- Budget Law 2024 brackets and family deductions\n- Transport exempt 450,000 LBP/day, schooling 6M/year\n- Tax rounded up to 10,000 LBP from 25-11-2024\n- NSSF sickness & maternity ceiling: 45M -> 90M (04-2024) -> 120M (08-2025); family 12M -> 18M (07-2025) -> 28M (05-2026)\n- Family benefits: 600k/330k from 01-2024, 1.2M/660k from 07-2025, 2.1M/1.155M from 05-2026 (spouse/child)\n\nRates, employee eligibility, and any part-month minimum-wage treatment must be confirmed with CNSS / your accountant. These reports are preparation worksheets, not official filings. Posting accounts are kept. Already saved payroll is NOT recalculated."
+msgstr "Replace ALL Tax & NSSF periods with the configured Lebanese payroll rules from 01-01-2024?\n\n- Budget Law 2024 brackets and family deductions\n- Transport exempt 450,000 LBP/day, schooling 6M/year\n- Tax rounded up to 10,000 LBP from 25-11-2024\n- NSSF sickness & maternity ceiling: 45M -> 90M (04-2024) -> 120M (08-2025); family 12M -> 18M (07-2025) -> 28M (05-2026)\n- Family benefits: 600k/330k from 01-2024, 1.2M/660k from 07-2025, 2.1M/1.155M from 05-2026 (spouse/child)\n\nRates, employee eligibility, and any part-month minimum-wage treatment must be confirmed with CNSS / your accountant. These reports are preparation worksheets, not official filings. Posting accounts are kept. Already saved payroll is NOT recalculated."
+
+msgid "Replace ALL previous invoices (a safety backup is made first)"
+msgstr "Replace ALL previous invoices (a safety backup is made first)"
+
+msgid "Replace ALL previous invoices cannot be used with PDF expense rows. Uncheck Replace to import paid expenses"
+msgstr "Replace ALL previous invoices cannot be used with PDF expense rows. Uncheck Replace to import paid expenses"
+
+msgid "Replace previous data"
+msgstr "Replace previous data"
+
+msgid "Replace the current draft budget rows with the projection? Nothing is saved until you press Save Budget."
+msgstr "Replace the current draft budget rows with the projection? Nothing is saved until you press Save Budget."
+
+msgid "Replace the current purchase item lines with the suggested lines?"
+msgstr "Replace the current purchase item lines with the suggested lines?"
+
+msgid "Replace the lines on the screen? Nothing is saved until you press Save Budget."
+msgstr "Replace the lines on the screen? Nothing is saved until you press Save Budget."
+
+msgid "Replace the materials of this order with the recipe quantities?"
+msgstr "Replace the materials of this order with the recipe quantities?"
+
+msgid "Report"
+msgstr "Report"
+
+msgid "Report detail"
+msgstr "Report detail"
+
+msgid "Report year"
+msgstr "Report year"
+
+msgid "Reports"
+msgstr "Reports"
+
+msgid "Representation not taxable / month"
+msgstr "Representation not taxable / month"
+
+msgid "Representation taxable / month"
+msgstr "Representation taxable / month"
+
+msgid "Residual value"
+msgstr "Residual value"
+
+msgid "Restore"
+msgstr "Restore"
+
+msgid "Restore ALL Currencies 2024-Today"
+msgstr "Restore ALL Currencies 2024-Today"
+
+msgid "Restore Database"
+msgstr "Restore Database"
+
+msgid "Restore EUR Rates 2024-Today"
+msgstr "Restore EUR Rates 2024-Today"
+
+msgid "Restore Selected"
+msgstr "Restore Selected"
+
+msgid "Restore a backup from before the change, and find out who opened the data file outside Nanza"
+msgstr "Restore a backup from before the change, and find out who opened the data file outside Nanza"
+
+msgid "Restore daily EUR to USD and EUR to LBP rates from 01-01-2024 until today?"
+msgstr "Restore daily EUR to USD and EUR to LBP rates from 01-01-2024 until today?"
+
+msgid "Restore defaults"
+msgstr "Restore defaults"
+
+msgid "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept."
+msgstr "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept."
+
+msgid "Restore this backup? A safety backup of current data will be created first."
+msgstr "Restore this backup? A safety backup of current data will be created first."
+
+msgid "Result"
+msgstr "Result"
+
+msgid "Retro From"
+msgstr "Retro From"
+
+msgid "Retro Salary"
+msgstr "Retro Salary"
+
+msgid "Retro To"
+msgstr "Retro To"
+
+msgid "Retroactive Salary"
+msgstr "Retroactive Salary"
+
+msgid "Return"
+msgstr "Return"
+
+msgid "Return (goods back)"
+msgstr "Return (goods back)"
+
+msgid "Return / Credit Note"
+msgstr "Return / Credit Note"
+
+msgid "Return date (DD-MM-YYYY)"
+msgstr "Return date (DD-MM-YYYY)"
+
+msgid "Revalue in"
+msgstr "Revalue in"
+
+msgid "Revenue"
+msgstr "Revenue"
+
+msgid "Revenue %"
+msgstr "Revenue %"
+
+msgid "Revenue Account"
+msgstr "Revenue Account"
+
+msgid "Reversal date (DD-MM-YYYY)"
+msgstr "Reversal date (DD-MM-YYYY)"
+
+msgid "Reverse"
+msgstr "Reverse"
+
+msgid "Reverse charge"
+msgstr "Reverse charge"
+
+msgid "Reverse salary payment"
+msgstr "Reverse salary payment"
+
+msgid "Review & Save Import"
+msgstr "Review & Save Import"
+
+msgid "Review PDF fixed asset"
+msgstr "Review PDF fixed asset"
+
+msgid "Review PDF type"
+msgstr "Review PDF type"
+
+msgid "Review asset PDF"
+msgstr "Review asset PDF"
+
+msgid "Review asset details before creating the register item"
+msgstr "Review asset details before creating the register item"
+
+msgid "Review invoice lines"
+msgstr "Review invoice lines"
+
+msgid "Review original document"
+msgstr "Review original document"
+
+msgid "Review required"
+msgstr "Review required"
+
+msgid "Role"
+msgstr "Role"
+
+msgid "Roles: Admin = everything; Accountant = enter and post; Viewer = read only. New non-admin users are valid for 1 year; leave 'Valid until' empty for no expiry. Payroll and VAT access can be removed per user. 'Can delete / cancel' allows deleting or cancelling posted documents (new users: off)."
+msgstr "Roles: Admin = everything; Accountant = enter and post; Viewer = read only. New non-admin users are valid for 1 year; leave 'Valid until' empty for no expiry. Payroll and VAT access can be removed per user. 'Can delete / cancel' allows deleting or cancelling posted documents (new users: off)."
+
+msgid "Rotate image"
+msgstr "Rotate image"
+
+msgid "Round Tax Up To"
+msgstr "Round Tax Up To"
+
+msgid "Rows"
+msgstr "Rows"
+
+msgid "Rules (Excel)"
+msgstr "Rules (Excel)"
+
+msgid "Rules for the Adviser (PDF)"
+msgstr "Rules for the Adviser (PDF)"
+
+msgid "Rules for the Tax Adviser"
+msgstr "Rules for the Tax Adviser"
+
+msgid "Run"
+msgstr "Run"
+
+msgid "Run Analysis"
+msgstr "Run Analysis"
+
+msgid "Run Books Health Check"
+msgstr "Run Books Health Check"
+
+msgid "Run Year-End Check"
+msgstr "Run Year-End Check"
+
+msgid "Run the check on the computer that runs the data service"
+msgstr "Run the check on the computer that runs the data service"
+
+msgid "SABER FOR AUDIT"
+msgstr "SABER FOR AUDIT"
+
+msgid "SALES INVOICE"
+msgstr "SALES INVOICE"
+
+msgid "Salary"
+msgstr "Salary"
+
+msgid "Salary Expense Account"
+msgstr "Salary Expense Account"
+
+msgid "Salary Payable Account"
+msgstr "Salary Payable Account"
+
+msgid "Salary month"
+msgstr "Salary month"
+
+msgid "Salary-tax policy used here: no spouse deduction when the spouse works; half the child deduction. Confirm this dependent split with your accountant. Tax applies only above the taxable threshold."
+msgstr "Salary-tax policy used here: no spouse deduction when the spouse works; half the child deduction. Confirm this dependent split with your accountant. Tax applies only above the taxable threshold."
+
+msgid "Sale type (Law 379/2001)"
+msgstr "Sale type (Law 379/2001)"
+
+msgid "Sales"
+msgstr "Sales"
+
+msgid "Sales / purchase invoices"
+msgstr "Sales / purchase invoices"
+
+msgid "Sales / services - when no account is chosen"
+msgstr "Sales / services - when no account is chosen"
+
+msgid "Sales Invoice"
+msgstr "Sales Invoice"
+
+msgid "Sales Price"
+msgstr "Sales Price"
+
+msgid "Sales Type"
+msgstr "Sales Type"
+
+msgid "Sales VAT = rate x amount"
+msgstr "Sales VAT = rate x amount"
+
+msgid "Sales account (sales, class 7)"
+msgstr "Sales account (sales, class 7)"
+
+msgid "Sales invoices"
+msgstr "Sales invoices"
+
+msgid "Sales invoices (SAL)"
+msgstr "Sales invoices (SAL)"
+
+msgid "Sales invoices numbered without gaps"
+msgstr "Sales invoices numbered without gaps"
+
+msgid "Sales of goods (items from stock)"
+msgstr "Sales of goods (items from stock)"
+
+msgid "Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)"
+msgstr "Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)"
+
+msgid "Same as From  >"
+msgstr "Same as From  >"
+
+msgid "Same revenue % for every year"
+msgstr "Same revenue % for every year"
+
+msgid "Save"
+msgstr "Save"
+
+msgid "Save %"
+msgstr "Save %"
+
+msgid "Save (information and texts apply to every year)"
+msgstr "Save (information and texts apply to every year)"
+
+msgid "Save 12 Months"
+msgstr "Save 12 Months"
+
+msgid "Save Account"
+msgstr "Save Account"
+
+msgid "Save All (draft)"
+msgstr "Save All (draft)"
+
+msgid "Save Backup As"
+msgstr "Save Backup As"
+
+msgid "Save Backup As... (USB / Drive)"
+msgstr "Save Backup As... (USB / Drive)"
+
+msgid "Save Branch"
+msgstr "Save Branch"
+
+msgid "Save Budget"
+msgstr "Save Budget"
+
+msgid "Save Company"
+msgstr "Save Company"
+
+msgid "Save Count"
+msgstr "Save Count"
+
+msgid "Save Data"
+msgstr "Save Data"
+
+msgid "Save Default Accounts"
+msgstr "Save Default Accounts"
+
+msgid "Save Employee"
+msgstr "Save Employee"
+
+msgid "Save Excel"
+msgstr "Save Excel"
+
+msgid "Save Expense"
+msgstr "Save Expense"
+
+msgid "Save Invoice"
+msgstr "Save Invoice"
+
+msgid "Save Numbering"
+msgstr "Save Numbering"
+
+msgid "Save PDF"
+msgstr "Save PDF"
+
+msgid "Save Payment"
+msgstr "Save Payment"
+
+msgid "Save Payroll"
+msgstr "Save Payroll"
+
+msgid "Save Periods"
+msgstr "Save Periods"
+
+msgid "Save Production"
+msgstr "Save Production"
+
+msgid "Save Purchase"
+msgstr "Save Purchase"
+
+msgid "Save Recipe"
+msgstr "Save Recipe"
+
+msgid "Save Return (lock quarter)"
+msgstr "Save Return (lock quarter)"
+
+msgid "Save Settings"
+msgstr "Save Settings"
+
+msgid "Save Update"
+msgstr "Save Update"
+
+msgid "Save User"
+msgstr "Save User"
+
+msgid "Save VAT Return"
+msgstr "Save VAT Return"
+
+msgid "Save Warehouse"
+msgstr "Save Warehouse"
+
+msgid "Save a filled form first."
+msgstr "Save a filled form first."
+
+msgid "Save as Budget"
+msgstr "Save as Budget"
+
+msgid "Save as budget for year"
+msgstr "Save as budget for year"
+
+msgid "Save assumptions"
+msgstr "Save assumptions"
+
+msgid "Save automatically after reading"
+msgstr "Save automatically after reading"
+
+msgid "Save automatically after upload"
+msgstr "Save automatically after upload"
+
+msgid "Save draft"
+msgstr "Save draft"
+
+msgid "Save for Me"
+msgstr "Save for Me"
+
+msgid "Save for the Company"
+msgstr "Save for the Company"
+
+msgid "Save receipt"
+msgstr "Save receipt"
+
+msgid "Save the filled form"
+msgstr "Save the filled form"
+
+msgid "Save the sheet first; only saved (draft) payrolls are posted."
+msgstr "Save the sheet first; only saved (draft) payrolls are posted."
+
+msgid "Saved"
+msgstr "Saved"
+
+msgid "Saved Returns"
+msgstr "Saved Returns"
+
+msgid "Saved VAT returns unchanged"
+msgstr "Saved VAT returns unchanged"
+
+msgid "Saved at"
+msgstr "Saved at"
+
+msgid "Saved by"
+msgstr "Saved by"
+
+msgid "Saved documents — double-click to open"
+msgstr "Saved documents — double-click to open"
+
+msgid "Saved on this computer. 'Read with Azure' is on the Purchases and Expenses screens."
+msgstr "Saved on this computer. 'Read with Azure' is on the Purchases and Expenses screens."
+
+msgid "Saved."
+msgstr "Saved."
+
+msgid "Saved. Make a backup now to check the second copy?"
+msgstr "Saved. Make a backup now to check the second copy?"
+
+msgid "Saved. New documents use these numbers from now on."
+msgstr "Saved. New documents use these numbers from now on."
+
+msgid "Saved. Re-open the screens now to see the new menu?\n(Unsaved work on other screens would be lost.)"
+msgstr "Saved. Re-open the screens now to see the new menu?\n(Unsaved work on other screens would be lost.)"
+
+msgid "Saved. The Dashboard uses it from now on."
+msgstr "Saved. The Dashboard uses it from now on."
+
+msgid "Saved. The rules now show as confirmed by the tax adviser (Rules PDF and Settings PDF)."
+msgstr "Saved. The rules now show as confirmed by the tax adviser (Rules PDF and Settings PDF)."
+
+msgid "Scanned pages are read with OCR (a few seconds each). You can keep this window open and wait."
+msgstr "Scanned pages are read with OCR (a few seconds each). You can keep this window open and wait."
+
+msgid "Scenario"
+msgstr "Scenario"
+
+msgid "Scenario spread (± points)"
+msgstr "Scenario spread (± points)"
+
+msgid "Schedule of this asset"
+msgstr "Schedule of this asset"
+
+msgid "Schooling"
+msgstr "Schooling"
+
+msgid "Schooling Children"
+msgstr "Schooling Children"
+
+msgid "Schooling Law"
+msgstr "Schooling Law"
+
+msgid "Schooling Tax Exempt / Year"
+msgstr "Schooling Tax Exempt / Year"
+
+msgid "Screen"
+msgstr "Screen"
+
+msgid "Screen layout"
+msgstr "Screen layout"
+
+msgid "Screen layout (this computer)"
+msgstr "Screen layout (this computer)"
+
+msgid "Search"
+msgstr "Search"
+
+msgid "Search (number, date, description, amount)"
+msgstr "Search (number, date, description, amount)"
+
+msgid "Search accounts…  (F2)"
+msgstr "Search accounts…  (F2)"
+
+msgid "Search customers / suppliers…"
+msgstr "Search customers / suppliers…"
+
+msgid "Search items…"
+msgstr "Search items…"
+
+msgid "Search:"
+msgstr "Search:"
+
+msgid "Search…"
+msgstr "Search…"
+
+msgid "Second copy of every backup (OneDrive / USB / network folder)"
+msgstr "Second copy of every backup (OneDrive / USB / network folder)"
+
+msgid "Security / Backup / Rates"
+msgstr "Security / Backup / Rates"
+
+msgid "Select All"
+msgstr "Select All"
+
+msgid "Select Company & Fiscal Year"
+msgstr "Select Company & Fiscal Year"
+
+msgid "Select a Journal Voucher line first"
+msgstr "Select a Journal Voucher line first"
+
+msgid "Select a company and fiscal year"
+msgstr "Select a company and fiscal year"
+
+msgid "Select a customer or supplier first"
+msgstr "Select a customer or supplier first"
+
+msgid "Select a date in the list first"
+msgstr "Select a date in the list first"
+
+msgid "Select a fixed asset first"
+msgstr "Select a fixed asset first"
+
+msgid "Select a line first"
+msgstr "Select a line first"
+
+msgid "Select a line of the entry you want to edit"
+msgstr "Select a line of the entry you want to edit"
+
+msgid "Select a line to read it in full."
+msgstr "Select a line to read it in full."
+
+msgid "Select a line to read its details in full."
+msgstr "Select a line to read its details in full."
+
+msgid "Select a line to see every document it found."
+msgstr "Select a line to see every document it found."
+
+msgid "Select a matched statement line"
+msgstr "Select a matched statement line"
+
+msgid "Select a payroll record first"
+msgstr "Select a payroll record first"
+
+msgid "Select a period first"
+msgstr "Select a period first"
+
+msgid "Select a posted payroll record first"
+msgstr "Select a posted payroll record first"
+
+msgid "Select a purchase first"
+msgstr "Select a purchase first"
+
+msgid "Select a purchase or expense row first"
+msgstr "Select a purchase or expense row first"
+
+msgid "Select a row to read its full Check note here."
+msgstr "Select a row to read its full Check note here."
+
+msgid "Select a user to renew"
+msgstr "Select a user to renew"
+
+msgid "Select all"
+msgstr "Select all"
+
+msgid "Select an account first"
+msgstr "Select an account first"
+
+msgid "Select an account first (click it), then Edit"
+msgstr "Select an account first (click it), then Edit"
+
+msgid "Select an account line (grey) or choose the account, or nothing is left to post"
+msgstr "Select an account line (grey) or choose the account, or nothing is left to post"
+
+msgid "Select an adjustment first"
+msgstr "Select an adjustment first"
+
+msgid "Select an asset and an amortisation period"
+msgstr "Select an asset and an amortisation period"
+
+msgid "Select an asset first"
+msgstr "Select an asset first"
+
+msgid "Select an asset in the register first"
+msgstr "Select an asset in the register first"
+
+msgid "Select an attachment first"
+msgstr "Select an attachment first"
+
+msgid "Select an employee first"
+msgstr "Select an employee first"
+
+msgid "Select an expense first"
+msgstr "Select an expense first"
+
+msgid "Select an imported PDF/photo row"
+msgstr "Select an imported PDF/photo row"
+
+msgid "Select an invoice first"
+msgstr "Select an invoice first"
+
+msgid "Select an item first"
+msgstr "Select an item first"
+
+msgid "Select an item in the list, then click its cost to see how it is calculated (Stock Card)."
+msgstr "Select an item in the list, then click its cost to see how it is calculated (Stock Card)."
+
+msgid "Select lines (Ctrl / Shift for several), pick the values and press Apply; with no line selected, Apply sets all of them. Type a value that is not in the list to create it."
+msgstr "Select lines (Ctrl / Shift for several), pick the values and press Apply; with no line selected, Apply sets all of them. Type a value that is not in the list to create it."
+
+msgid "Select one backup"
+msgstr "Select one backup"
+
+msgid "Select one invoice row"
+msgstr "Select one invoice row"
+
+msgid "Select one invoice row first"
+msgstr "Select one invoice row first"
+
+msgid "Select one invoice row to edit"
+msgstr "Select one invoice row to edit"
+
+msgid "Select one statement line (left) and one book line (right)"
+msgstr "Select one statement line (left) and one book line (right)"
+
+msgid "Select one statement line and one or more book lines"
+msgstr "Select one statement line and one or more book lines"
+
+msgid "Select preview rows with Ctrl / Shift (Ctrl+A or Select All = every row), choose a VAT A/C below, then apply it to the selection."
+msgstr "Select preview rows with Ctrl / Shift (Ctrl+A or Select All = every row), choose a VAT A/C below, then apply it to the selection."
+
+msgid "Select the accounts first (Ctrl / Shift or drag the mouse for several)"
+msgstr "Select the accounts first (Ctrl / Shift or drag the mouse for several)"
+
+msgid "Select the accounts to post"
+msgstr "Select the accounts to post"
+
+msgid "Select the documents to approve"
+msgstr "Select the documents to approve"
+
+msgid "Select the documents to reject"
+msgstr "Select the documents to reject"
+
+msgid "Select the draft invoices to approve"
+msgstr "Select the draft invoices to approve"
+
+msgid "Select the invoice rows first (Ctrl / Shift or drag the mouse for several)"
+msgstr "Select the invoice rows first (Ctrl / Shift or drag the mouse for several)"
+
+msgid "Select the preview rows to change (Ctrl / Shift for multiple rows)"
+msgstr "Select the preview rows to change (Ctrl / Shift for multiple rows)"
+
+msgid "Select the purchase in the list first"
+msgstr "Select the purchase in the list first"
+
+msgid "Select the purchase invoice first"
+msgstr "Select the purchase invoice first"
+
+msgid "Select the purchase invoice in the list first"
+msgstr "Select the purchase invoice in the list first"
+
+msgid "Select the rule(s) to delete"
+msgstr "Select the rule(s) to delete"
+
+msgid "Select the sales to correct"
+msgstr "Select the sales to correct"
+
+msgid "Select the statement line to book (bank charges, interest...)"
+msgstr "Select the statement line to book (bank charges, interest...)"
+
+msgid "Selected entry was not found"
+msgstr "Selected entry was not found"
+
+msgid "Seller key"
+msgstr "Seller key"
+
+msgid "Seller key file"
+msgstr "Seller key file"
+
+msgid "Seller key password"
+msgstr "Seller key password"
+
+msgid "Send the Installation ID to Saber for Audit to receive a licence code, then paste it here and press Apply Code."
+msgstr "Send the Installation ID to Saber for Audit to receive a licence code, then paste it here and press Apply Code."
+
+msgid "Sep"
+msgstr "Sep"
+
+msgid "Server address"
+msgstr "Server address"
+
+msgid "Service from abroad - reverse charge (Art. 40)"
+msgstr "Service from abroad - reverse charge (Art. 40)"
+
+msgid "Services"
+msgstr "Services"
+
+msgid "Set a rate before using it in another currency's report."
+msgstr "Set a rate before using it in another currency's report."
+
+msgid "Settings"
+msgstr "Settings"
+
+msgid "Settings > Exchange Rates > Restore EUR Rates 2024-Today (online), then open and save again the EUR documents of those days"
+msgstr "Settings > Exchange Rates > Restore EUR Rates 2024-Today (online), then open and save again the EUR documents of those days"
+
+msgid "Settings > Numbering > Renumber, or correct the document"
+msgstr "Settings > Numbering > Renumber, or correct the document"
+
+msgid "Settings PDF"
+msgstr "Settings PDF"
+
+msgid "Settings saved successfully"
+msgstr "Settings saved successfully"
+
+msgid "Sex (for official forms)"
+msgstr "Sex (for official forms)"
+
+msgid "Show"
+msgstr "Show"
+
+msgid "Show Department / Project"
+msgstr "Show Department / Project"
+
+msgid "Show Department in all sheets"
+msgstr "Show Department in all sheets"
+
+msgid "Show Posting Rules"
+msgstr "Show Posting Rules"
+
+msgid "Show Project in all sheets"
+msgstr "Show Project in all sheets"
+
+msgid "Show Rates"
+msgstr "Show Rates"
+
+msgid "Show Transactions"
+msgstr "Show Transactions"
+
+msgid "Show currency"
+msgstr "Show currency"
+
+msgid "Show the End-of-Service Provision or the Leave Balances first"
+msgstr "Show the End-of-Service Provision or the Leave Balances first"
+
+msgid "Show the accounts off budget (costs above / revenue below) by more than"
+msgstr "Show the accounts off budget (costs above / revenue below) by more than"
+
+msgid "Show the transactions and choose the ones to move"
+msgstr "Show the transactions and choose the ones to move"
+
+msgid "Show:"
+msgstr "Show:"
+
+msgid "Sickness Ceiling"
+msgstr "Sickness Ceiling"
+
+msgid "Sign in"
+msgstr "Sign in"
+
+msgid "Signed out automatically after 30 minutes of inactivity"
+msgstr "Signed out automatically after 30 minutes of inactivity"
+
+msgid "Similar Customer / Supplier Name"
+msgstr "Similar Customer / Supplier Name"
+
+msgid "Single Allowance"
+msgstr "Single Allowance"
+
+msgid "Size"
+msgstr "Size"
+
+msgid "Slow-moving days"
+msgstr "Slow-moving days"
+
+msgid "Sort By:"
+msgstr "Sort By:"
+
+msgid "Source"
+msgstr "Source"
+
+msgid "Source Row"
+msgstr "Source Row"
+
+msgid "Source currency"
+msgstr "Source currency"
+
+msgid "Split by Department"
+msgstr "Split by Department"
+
+msgid "Split by Project"
+msgstr "Split by Project"
+
+msgid "Spouse"
+msgstr "Spouse"
+
+msgid "Spouse Allowance"
+msgstr "Spouse Allowance"
+
+msgid "Spouse Works"
+msgstr "Spouse Works"
+
+msgid "Spread Annual over 12 Months"
+msgstr "Spread Annual over 12 Months"
+
+msgid "Standard Posting Accounts"
+msgstr "Standard Posting Accounts"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Start Date"
+msgstr "Start Date"
+
+msgid "Start a new invoice? Lines that are not saved will be cleared."
+msgstr "Start a new invoice? Lines that are not saved will be cleared."
+
+msgid "Start a new voucher? Lines that are not saved will be cleared."
+msgstr "Start a new voucher? Lines that are not saved will be cleared."
+
+msgid "Start date"
+msgstr "Start date"
+
+msgid "Start from (>)"
+msgstr "Start from (>)"
+
+msgid "Start with Nanza"
+msgstr "Start with Nanza"
+
+msgid "Start with Nanza (opening balances)"
+msgstr "Start with Nanza (opening balances)"
+
+msgid "Starting Date"
+msgstr "Starting Date"
+
+msgid "Statement ending balance"
+msgstr "Statement ending balance"
+
+msgid "Statement of Account"
+msgstr "Statement of Account"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Stock Account"
+msgstr "Stock Account"
+
+msgid "Stock Card"
+msgstr "Stock Card"
+
+msgid "Stock Documents"
+msgstr "Stock Documents"
+
+msgid "Stock In / Out"
+msgstr "Stock In / Out"
+
+msgid "Stock In / Stock Out"
+msgstr "Stock In / Stock Out"
+
+msgid "Stock In: cost = average cost unless you type another. Stock Out: leaves at the average cost. Quantities and costs update at once."
+msgstr "Stock In: cost = average cost unless you type another. Stock Out: leaves at the average cost. Quantities and costs update at once."
+
+msgid "Stock Value"
+msgstr "Stock Value"
+
+msgid "Stock Variation"
+msgstr "Stock Variation"
+
+msgid "Stock on Hand"
+msgstr "Stock on Hand"
+
+msgid "Stock out leaves at the average cost"
+msgstr "Stock out leaves at the average cost"
+
+msgid "Stock valued in"
+msgstr "Stock valued in"
+
+msgid "Stop (keep what is read)"
+msgstr "Stop (keep what is read)"
+
+msgid "Stop download"
+msgstr "Stop download"
+
+msgid "Sub-chapters"
+msgstr "Sub-chapters"
+
+msgid "Subcategory"
+msgstr "Subcategory"
+
+msgid "Subtotal"
+msgstr "Subtotal"
+
+msgid "Suggest A/C"
+msgstr "Suggest A/C"
+
+msgid "Summary (Resume)"
+msgstr "Summary (Resume)"
+
+msgid "Summary digits"
+msgstr "Summary digits"
+
+msgid "Supplier"
+msgstr "Supplier"
+
+msgid "Supplier / customer"
+msgstr "Supplier / customer"
+
+msgid "Supplier Account (C - Credit)"
+msgstr "Supplier Account (C - Credit)"
+
+msgid "Supplier Invoice No."
+msgstr "Supplier Invoice No."
+
+msgid "Supplier Payment (PV)"
+msgstr "Supplier Payment (PV)"
+
+msgid "Supplier Type"
+msgstr "Supplier Type"
+
+msgid "Supplier days (DPO)"
+msgstr "Supplier days (DPO)"
+
+msgid "Supplier invoice no. (purchases)"
+msgstr "Supplier invoice no. (purchases)"
+
+msgid "Supplier invoices entered once"
+msgstr "Supplier invoices entered once"
+
+msgid "Supplier payments"
+msgstr "Supplier payments"
+
+msgid "Supplier payments (PV)"
+msgstr "Supplier payments (PV)"
+
+msgid "Supplier tax ID"
+msgstr "Supplier tax ID"
+
+msgid "Suppliers"
+msgstr "Suppliers"
+
+msgid "Supporting Documents"
+msgstr "Supporting Documents"
+
+msgid "Switch Company / Year"
+msgstr "Switch Company / Year"
+
+msgid "TOTAL"
+msgstr "TOTAL"
+
+msgid "TOTAL TTC"
+msgstr "TOTAL TTC"
+
+msgid "TOTAL TTC: 0.00"
+msgstr "TOTAL TTC: 0.00"
+
+msgid "Taux Récupérable (PDF)"
+msgstr "Taux Récupérable (PDF)"
+
+msgid "Taux Récupérable Excel"
+msgstr "Taux Récupérable Excel"
+
+msgid "Tax"
+msgstr "Tax"
+
+msgid "Tax & NSSF Settings"
+msgstr "Tax & NSSF Settings"
+
+msgid "Tax / VAT (MOF) Number"
+msgstr "Tax / VAT (MOF) Number"
+
+msgid "Tax Brackets JSON (annual LBP): [[ceiling,rate], ... [null,rate]]   Rates as decimals: 3% = 0.03   Dates: DD-MM-YYYY"
+msgstr "Tax Brackets JSON (annual LBP): [[ceiling,rate], ... [null,rate]]   Rates as decimals: 3% = 0.03   Dates: DD-MM-YYYY"
+
+msgid "Tax Deduction Children"
+msgstr "Tax Deduction Children"
+
+msgid "Tax Number"
+msgstr "Tax Number"
+
+msgid "Tax adviser (name)"
+msgstr "Tax adviser (name)"
+
+msgid "Tax adviser confirmation"
+msgstr "Tax adviser confirmation"
+
+msgid "Tax and NSSF settings saved. The previous period now ends the day before the new Date From."
+msgstr "Tax and NSSF settings saved. The previous period now ends the day before the new Date From."
+
+msgid "Taxable Amount"
+msgstr "Taxable Amount"
+
+msgid "Template"
+msgstr "Template"
+
+msgid "Termination Declaration Worksheet"
+msgstr "Termination Declaration Worksheet"
+
+msgid "Testing VAT Accounts"
+msgstr "Testing VAT Accounts"
+
+msgid "The Excel file needs an 'Item Code' column and a 'Physical Count' column"
+msgstr "The Excel file needs an 'Item Code' column and a 'Physical Count' column"
+
+msgid "The Invoices sheet is empty. Fill its rows and try again."
+msgstr "The Invoices sheet is empty. Fill its rows and try again."
+
+msgid "The PDF number could not be read. Enter the invoice number as printed, or leave it for later."
+msgstr "The PDF number could not be read. Enter the invoice number as printed, or leave it for later."
+
+msgid "The VAT of each invoice goes to its customer / supplier's own VAT account. At the quarter end each one is closed into the Closing account of its ledger, then the settlement closes those into VAT payable (4425) / VAT to recover (4429)."
+msgstr "The VAT of each invoice goes to its customer / supplier's own VAT account. At the quarter end each one is closed into the Closing account of its ledger, then the settlement closes those into VAT payable (4425) / VAT to recover (4429)."
+
+msgid "The allocation is more than the amount"
+msgstr "The allocation is more than the amount"
+
+msgid "The audit firm, partner, licence, address, city and logo are saved ONCE for every company you audit; the company fields (legal form, register number ...) are saved for this company."
+msgstr "The audit firm, partner, licence, address, city and logo are saved ONCE for every company you audit; the company fields (legal form, register number ...) are saved for this company."
+
+msgid "The books are consistent"
+msgstr "The books are consistent"
+
+msgid "The date of birth must be DD-MM-YYYY"
+msgstr "The date of birth must be DD-MM-YYYY"
+
+msgid "The dates, currency or account range changed since these figures were loaded. Refresh the reports, then export."
+msgstr "The dates, currency or account range changed since these figures were loaded. Refresh the reports, then export."
+
+msgid "The file could not be saved. Close it if it is open in Excel or a PDF viewer, then try again."
+msgstr "The file could not be saved. Close it if it is open in Excel or a PDF viewer, then try again."
+
+msgid "The invoice is sent from this computer to YOUR Azure resource (Microsoft) only when you press Read with Azure. The key stays on this computer. Nanza receives nothing."
+msgstr "The invoice is sent from this computer to YOUR Azure resource (Microsoft) only when you press Read with Azure. The key stays on this computer. Nanza receives nothing."
+
+msgid "The key is removed from this computer. Azure is off."
+msgstr "The key is removed from this computer. Azure is off."
+
+msgid "The lines add up to the subtotal"
+msgstr "The lines add up to the subtotal"
+
+msgid "The materials below make"
+msgstr "The materials below make"
+
+msgid "The month and the year to date against the budget and last year, the balance sheet, cash, ageing, the VAT of the quarter and the key ratios - every currency converted into the one chosen."
+msgstr "The month and the year to date against the budget and last year, the balance sheet, cash, ageing, the VAT of the quarter and the key ratios - every currency converted into the one chosen."
+
+msgid "The points an auditor checks before the books are closed. It runs again by itself when you close the year (Profit & Loss)."
+msgstr "The points an auditor checks before the books are closed. It runs again by itself when you close the year (Profit & Loss)."
+
+msgid "The prefix of each kind of document, and the branch in the number where it helps (each branch then counts on its own). Numbers already given are not changed."
+msgstr "The prefix of each kind of document, and the branch in the number where it helps (each branch then counts on its own). Numbers already given are not changed."
+
+msgid "The provision booked already equals the provision needed."
+msgstr "The provision booked already equals the provision needed."
+
+msgid "The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm."
+msgstr "The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm."
+
+msgid "The reports are still loading: export when they are shown"
+msgstr "The reports are still loading: export when they are shown"
+
+msgid "The selected invoice could not be found"
+msgstr "The selected invoice could not be found"
+
+msgid "The source PDF will be saved as an attachment to this register item. Creating this register item does not post a journal entry or stock movement."
+msgstr "The source PDF will be saved as an attachment to this register item. Creating this register item does not post a journal entry or stock movement."
+
+msgid "The tax adviser checked the payroll and VAT rules of this company against Lebanese law."
+msgstr "The tax adviser checked the payroll and VAT rules of this company against Lebanese law."
+
+msgid "The two VAT return currencies must be different"
+msgstr "The two VAT return currencies must be different"
+
+msgid "The two main currencies must be different"
+msgstr "The two main currencies must be different"
+
+msgid "The two new passwords are not the same"
+msgstr "The two new passwords are not the same"
+
+msgid "There are no chartable rows for this period."
+msgstr "There are no chartable rows for this period."
+
+msgid "There are no saved vouchers yet"
+msgstr "There are no saved vouchers yet"
+
+msgid "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself."
+msgstr "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself."
+
+msgid "This Assets row will create one fixed-asset register item after review. It will NOT create a supplier invoice, journal posting, stock movement, or PDF attachment. Process this row now?"
+msgstr "This Assets row will create one fixed-asset register item after review. It will NOT create a supplier invoice, journal posting, stock movement, or PDF attachment. Process this row now?"
+
+msgid "This company is inactive"
+msgstr "This company is inactive"
+
+msgid "This company uses (administrator)"
+msgstr "This company uses (administrator)"
+
+msgid "This date is already in the list"
+msgstr "This date is already in the list"
+
+msgid "This entry is made automatically (opening, closing, depreciation or stock variation) and has no editing screen. Correct it with a Journal Voucher."
+msgstr "This entry is made automatically (opening, closing, depreciation or stock variation) and has no editing screen. Correct it with a Journal Voucher."
+
+msgid "This invoice has no item lines, so a quantity-reviewed return cannot be safely created."
+msgstr "This invoice has no item lines, so a quantity-reviewed return cannot be safely created."
+
+msgid "This line is money IN (interest, transfer...). Book it to 773 Interests & Similar Revenues Earned?\n(Choose No and type another account in 'Book to' for a transfer or a receipt.)"
+msgstr "This line is money IN (interest, transfer...). Book it to 773 Interests & Similar Revenues Earned?\n(Choose No and type another account in 'Book to' for a transfer or a receipt.)"
+
+msgid "This payroll is posted and cannot be changed."
+msgstr "This payroll is posted and cannot be changed."
+
+msgid "This row has no original document"
+msgstr "This row has no original document"
+
+msgid "This screen is hidden for this company or for you (Settings > Accounting Settings)."
+msgstr "This screen is hidden for this company or for you (Settings > Accounting Settings)."
+
+msgid "This system entry must be cancelled or reversed from its original module"
+msgstr "This system entry must be cancelled or reversed from its original module"
+
+msgid "This year"
+msgstr "This year"
+
+msgid "Through"
+msgstr "Through"
+
+msgid "Tick all"
+msgstr "Tick all"
+
+msgid "Tick only what you use; the others disappear from items, stock documents and report filters. Save Settings to keep the choice."
+msgstr "Tick only what you use; the others disappear from items, stock documents and report filters. Save Settings to keep the choice."
+
+msgid "Tick the companies this user may open. None ticked = every company."
+msgstr "Tick the companies this user may open. None ticked = every company."
+
+msgid "Tick the filters you want to see above the financial reports:"
+msgstr "Tick the filters you want to see above the financial reports:"
+
+msgid "Times"
+msgstr "Times"
+
+msgid "To"
+msgstr "To"
+
+msgid "To Date"
+msgstr "To Date"
+
+msgid "To Date / As of"
+msgstr "To Date / As of"
+
+msgid "To Date:"
+msgstr "To Date:"
+
+msgid "To account"
+msgstr "To account"
+
+msgid "To correct before importing:"
+msgstr "To correct before importing:"
+
+msgid "To:"
+msgstr "To:"
+
+msgid "Today"
+msgstr "Today"
+
+msgid "Top"
+msgstr "Top"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Total Amount"
+msgstr "Total Amount"
+
+msgid "Total Deprec."
+msgstr "Total Deprec."
+
+msgid "Total HT"
+msgstr "Total HT"
+
+msgid "Total HT (before VAT)"
+msgstr "Total HT (before VAT)"
+
+msgid "Total HT: 0.00"
+msgstr "Total HT: 0.00"
+
+msgid "Total before discount"
+msgstr "Total before discount"
+
+msgid "Total deprec."
+msgstr "Total deprec."
+
+msgid "Total must equal Before VAT plus VAT"
+msgstr "Total must equal Before VAT plus VAT"
+
+msgid "Total: 0.00"
+msgstr "Total: 0.00"
+
+msgid "Totals"
+msgstr "Totals"
+
+msgid "Transaction"
+msgstr "Transaction"
+
+msgid "Transactions of the From account - choose with Ctrl / Shift or drag the mouse"
+msgstr "Transactions of the From account - choose with Ctrl / Shift or drag the mouse"
+
+msgid "Transfer Between Warehouses"
+msgstr "Transfer Between Warehouses"
+
+msgid "Transfer only its BALANCE on"
+msgstr "Transfer only its BALANCE on"
+
+msgid "Transport"
+msgstr "Transport"
+
+msgid "Transport Days"
+msgstr "Transport Days"
+
+msgid "Transport Exempt / Day"
+msgstr "Transport Exempt / Day"
+
+msgid "Transportation"
+msgstr "Transportation"
+
+msgid "Trial Balance"
+msgstr "Trial Balance"
+
+msgid "Trial balance in each currency"
+msgstr "Trial balance in each currency"
+
+msgid "Two independent readers (4B + 2B): optional download of about 4.5 GB; allow 5 GB of disk space and about 6 GB of free RAM. They run one after another and can take a few minutes. Photos stay on this computer: no account, API key or per-invoice fee. Disputed fields stay empty. Both readers can still agree on a wrong value: check the image before Save."
+msgstr "Two independent readers (4B + 2B): optional download of about 4.5 GB; allow 5 GB of disk space and about 6 GB of free RAM. They run one after another and can take a few minutes. Photos stay on this computer: no account, API key or per-invoice fee. Disputed fields stay empty. Both readers can still agree on a wrong value: check the image before Save."
+
+msgid "Two periods start on the same date"
+msgstr "Two periods start on the same date"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Type (review)"
+msgstr "Type (review)"
+
+msgid "Type D for Debit or C for Credit"
+msgstr "Type D for Debit or C for Credit"
+
+msgid "Type a number or name, or choose from the list."
+msgstr "Type a number or name, or choose from the list."
+
+msgid "Type an account number (F2 to search), then either an Annual amount or the monthly amounts. An annual budget alone is spread evenly over the year. Leave Department and Project as (none) for the company budget."
+msgstr "Type an account number (F2 to search), then either an Annual amount or the monthly amounts. An annual budget alone is spread evenly over the year. Leave Department and Project as (none) for the company budget."
+
+msgid "Type the first 4 digits (4111 client, 4011 supplier) - the full number fills in automatically"
+msgstr "Type the first 4 digits (4111 client, 4011 supplier) - the full number fills in automatically"
+
+msgid "Type:"
+msgstr "Type:"
+
+msgid "UNRECONCILED - Difference: {difference:,.2f}"
+msgstr "UNRECONCILED - Difference: {difference:,.2f}"
+
+msgid "USD Eq."
+msgstr "USD Eq."
+
+msgid "USD amount"
+msgstr "USD amount"
+
+msgid "Unbalanced Journal Voucher"
+msgstr "Unbalanced Journal Voucher"
+
+msgid "Unit"
+msgstr "Unit"
+
+msgid "Unit Cost"
+msgstr "Unit Cost"
+
+msgid "Unit Cost (average)"
+msgstr "Unit Cost (average)"
+
+msgid "Unit Price"
+msgstr "Unit Price"
+
+msgid "Units"
+msgstr "Units"
+
+msgid "Unlock"
+msgstr "Unlock"
+
+msgid "Unlock all periods? Closed months can then be changed again. A safety backup is made first."
+msgstr "Unlock all periods? Closed months can then be changed again. A safety backup is made first."
+
+msgid "Unmatch"
+msgstr "Unmatch"
+
+msgid "Unsupported language"
+msgstr "Unsupported language"
+
+msgid "Untick what the company does not use."
+msgstr "Untick what the company does not use."
+
+msgid "Untick what you do not need; the company's choice comes first."
+msgstr "Untick what you do not need; the company's choice comes first."
+
+msgid "Unverified invoice reading"
+msgstr "Unverified invoice reading"
+
+msgid "Up to"
+msgstr "Up to"
+
+msgid "Update"
+msgstr "Update"
+
+msgid "Upload Counts (Excel)"
+msgstr "Upload Counts (Excel)"
+
+msgid "Upload PDF"
+msgstr "Upload PDF"
+
+msgid "Uploaded"
+msgstr "Uploaded"
+
+msgid "Uploaded Data"
+msgstr "Uploaded Data"
+
+msgid "Uploaded Data: check whether the same supplier invoice was entered twice"
+msgstr "Uploaded Data: check whether the same supplier invoice was entered twice"
+
+msgid "Uploaded Data: open each invoice and correct the amounts"
+msgstr "Uploaded Data: open each invoice and correct the amounts"
+
+msgid "Use Amount in Payroll"
+msgstr "Use Amount in Payroll"
+
+msgid "Use OneDrive"
+msgstr "Use OneDrive"
+
+msgid "Use account"
+msgstr "Use account"
+
+msgid "Use advanced reader for photos / scans"
+msgstr "Use advanced reader for photos / scans"
+
+msgid "Use checked fields"
+msgstr "Use checked fields"
+
+msgid "Use corrected line"
+msgstr "Use corrected line"
+
+msgid "Use for photos and single-page scans (slower)"
+msgstr "Use for photos and single-page scans (slower)"
+
+msgid "Use line"
+msgstr "Use line"
+
+msgid "Use {code} - {name}? Verify it before saving."
+msgstr "Use {code} - {name}? Verify it before saving."
+
+msgid "Useful Life"
+msgstr "Useful Life"
+
+msgid "Useful life (months)"
+msgstr "Useful life (months)"
+
+msgid "User"
+msgstr "User"
+
+msgid "Username"
+msgstr "Username"
+
+msgid "Users"
+msgstr "Users"
+
+msgid "Users & Permissions"
+msgstr "Users & Permissions"
+
+msgid "Uses \"Report year\" above as the base year; compounds the growth % each year ahead."
+msgstr "Uses \"Report year\" above as the base year; compounds the growth % each year ahead."
+
+msgid "Uses the Actual report year above as the base year; a saved budget for a future year wins over the growth %."
+msgstr "Uses the Actual report year above as the base year; a saved budget for a future year wins over the growth %."
+
+msgid "Uses unpaid invoices and bills, posted payroll due, and outstanding statutory liabilities."
+msgstr "Uses unpaid invoices and bills, posted payroll due, and outstanding statutory liabilities."
+
+msgid "Uses up to 24 complete monthly periods for trend and seasonality; keeps currency rows separate."
+msgstr "Uses up to 24 complete monthly periods for trend and seasonality; keeps currency rows separate."
+
+msgid "Usually fine when the heading is the account you use; otherwise move the amounts to the sub-accounts (Journal Voucher)"
+msgstr "Usually fine when the heading is the account you use; otherwise move the amounts to the sub-accounts (Journal Voucher)"
+
+msgid "VAT"
+msgstr "VAT"
+
+msgid "VAT %"
+msgstr "VAT %"
+
+msgid "VAT (LBP)"
+msgstr "VAT (LBP)"
+
+msgid "VAT 11%"
+msgstr "VAT 11%"
+
+msgid "VAT A/C"
+msgstr "VAT A/C"
+
+msgid "VAT Account"
+msgstr "VAT Account"
+
+msgid "VAT Account (D - Debit)"
+msgstr "VAT Account (D - Debit)"
+
+msgid "VAT Adjustment"
+msgstr "VAT Adjustment"
+
+msgid "VAT Amount"
+msgstr "VAT Amount"
+
+msgid "VAT Deductibility"
+msgstr "VAT Deductibility"
+
+msgid "VAT Deductible"
+msgstr "VAT Deductible"
+
+msgid "VAT Deductible / Non-Deductible"
+msgstr "VAT Deductible / Non-Deductible"
+
+msgid "VAT No."
+msgstr "VAT No."
+
+msgid "VAT Rate %"
+msgstr "VAT Rate %"
+
+msgid "VAT Registration Date"
+msgstr "VAT Registration Date"
+
+msgid "VAT Return"
+msgstr "VAT Return"
+
+msgid "VAT Return Currency 1 / 2"
+msgstr "VAT Return Currency 1 / 2"
+
+msgid "VAT Settlement"
+msgstr "VAT Settlement"
+
+msgid "VAT Settlement Entry..."
+msgstr "VAT Settlement Entry..."
+
+msgid "VAT Treatment"
+msgstr "VAT Treatment"
+
+msgid "VAT access"
+msgstr "VAT access"
+
+msgid "VAT account"
+msgstr "VAT account"
+
+msgid "VAT by customer / supplier"
+msgstr "VAT by customer / supplier"
+
+msgid "VAT by customer / supplier (VAT 140)"
+msgstr "VAT by customer / supplier (VAT 140)"
+
+msgid "VAT cannot be negative"
+msgstr "VAT cannot be negative"
+
+msgid "VAT credit / to recover (settlement)"
+msgstr "VAT credit / to recover (settlement)"
+
+msgid "VAT credit / to recover account"
+msgstr "VAT credit / to recover account"
+
+msgid "VAT not deductible"
+msgstr "VAT not deductible"
+
+msgid "VAT payable (settlement)"
+msgstr "VAT payable (settlement)"
+
+msgid "VAT payable account"
+msgstr "VAT payable account"
+
+msgid "VAT preparation controls"
+msgstr "VAT preparation controls"
+
+msgid "VAT return, excluded from item cost"
+msgstr "VAT return, excluded from item cost"
+
+msgid "VAT settlement voucher"
+msgstr "VAT settlement voucher"
+
+msgid "VAT use"
+msgstr "VAT use"
+
+msgid "VAT used for"
+msgstr "VAT used for"
+
+msgid "Valid Until"
+msgstr "Valid Until"
+
+msgid "Valid until"
+msgstr "Valid until"
+
+msgid "Valid until (DD-MM-YYYY)"
+msgstr "Valid until (DD-MM-YYYY)"
+
+msgid "Valid until (optional)"
+msgstr "Valid until (optional)"
+
+msgid "Value"
+msgstr "Value"
+
+msgid "Variance"
+msgstr "Variance"
+
+msgid "Vendor Spend and Dependency"
+msgstr "Vendor Spend and Dependency"
+
+msgid "Verify Audit Trail"
+msgstr "Verify Audit Trail"
+
+msgid "View"
+msgstr "View"
+
+msgid "View Year"
+msgstr "View Year"
+
+msgid "View Year:"
+msgstr "View Year:"
+
+msgid "Viewer"
+msgstr "Viewer"
+
+msgid "Voucher"
+msgstr "Voucher"
+
+msgid "Voucher Cur."
+msgstr "Voucher Cur."
+
+msgid "WARNING"
+msgstr "WARNING"
+
+msgid "Warehouse"
+msgstr "Warehouse"
+
+msgid "Warehouse Transfer"
+msgstr "Warehouse Transfer"
+
+msgid "Warehouses"
+msgstr "Warehouses"
+
+msgid "Warehouses & Settings"
+msgstr "Warehouses & Settings"
+
+msgid "Warning - same item?"
+msgstr "Warning - same item?"
+
+msgid "Website"
+msgstr "Website"
+
+msgid "What is corrected"
+msgstr "What is corrected"
+
+msgid "What the form will be filled with - double-click a value to correct it before Create Excel"
+msgstr "What the form will be filled with - double-click a value to correct it before Create Excel"
+
+msgid "What the program learned from the invoices you saved. Delete a rule to stop it (it is learned again from the next invoice saved)."
+msgstr "What the program learned from the invoices you saved. Delete a rule to stop it (it is learned again from the next invoice saved)."
+
+msgid "What to do"
+msgstr "What to do"
+
+msgid "When a purchase creates new items, a table opens to choose their category / brand. Save Settings to keep the choice."
+msgstr "When a purchase creates new items, a table opens to choose their category / brand. Save Settings to keep the choice."
+
+msgid "Where does it work, and which chart of accounts?"
+msgstr "Where does it work, and which chart of accounts?"
+
+msgid "Who is the company?"
+msgstr "Who is the company?"
+
+msgid "With Branch"
+msgstr "With Branch"
+
+msgid "With Carry Forward (opening)"
+msgstr "With Carry Forward (opening)"
+
+msgid "With VAT (before VAT)"
+msgstr "With VAT (before VAT)"
+
+msgid "With the auditor's report"
+msgstr "With the auditor's report"
+
+msgid "Without Closing entries"
+msgstr "Without Closing entries"
+
+msgid "Without Opening entries"
+msgstr "Without Opening entries"
+
+msgid "Without VAT"
+msgstr "Without VAT"
+
+msgid "Without VAT (non-deductible)"
+msgstr "Without VAT (non-deductible)"
+
+msgid "Year"
+msgstr "Year"
+
+msgid "Year & Future Forecast"
+msgstr "Year & Future Forecast"
+
+msgid "Year-End Check"
+msgstr "Year-End Check"
+
+msgid "Years"
+msgstr "Years"
+
+msgid "Years ahead (1-5)"
+msgstr "Years ahead (1-5)"
+
+msgid "Years: 2024,2025 or 2025"
+msgstr "Years: 2024,2025 or 2025"
+
+msgid "You do not have access to this company. Ask the administrator (Settings > Users > Companies)."
+msgstr "You do not have access to this company. Ask the administrator (Settings > Users > Companies)."
+
+msgid "Your session has ended or your account is no longer active. Please sign in again."
+msgstr "Your session has ended or your account is no longer active. Please sign in again."
+
+msgid "Zero-rated: exports and like transactions (Art. 19-21), deductible input VAT.\nExempt: Art. 16-17 activities and goods, reduces the deduction ratio."
+msgstr "Zero-rated: exports and like transactions (Art. 19-21), deductible input VAT.\nExempt: Art. 16-17 activities and goods, reduces the deduction ratio."
+
+msgid "Zoom +"
+msgstr "Zoom +"
+
+msgid "Zoom -"
+msgstr "Zoom -"
+
+msgid "both accounts are customers / suppliers: the documents moved go to the customer / supplier of the To account (Move ALL: merge them)"
+msgstr "both accounts are customers / suppliers: the documents moved go to the customer / supplier of the To account (Move ALL: merge them)"
+
+msgid "columns"
+msgstr "columns"
+
+msgid "days after their date"
+msgstr "days after their date"
+
+msgid "expense VAT"
+msgstr "expense VAT"
+
+msgid "expenses read from Excel / PDF"
+msgstr "expenses read from Excel / PDF"
+
+msgid "expenses, receipts and payments"
+msgstr "expenses, receipts and payments"
+
+msgid "fills the accounts, the depreciation % and the useful life"
+msgstr "fills the accounts, the depreciation % and the useful life"
+
+msgid "from A/C"
+msgstr "from A/C"
+
+msgid "in"
+msgstr "in"
+
+msgid "measure"
+msgstr "measure"
+
+msgid "on A/C"
+msgstr "on A/C"
+
+msgid "or amount"
+msgstr "or amount"
+
+msgid "purchase VAT"
+msgstr "purchase VAT"
+
+msgid "purchase invoices, imports"
+msgstr "purchase invoices, imports"
+
+msgid "receipts and payments"
+msgstr "receipts and payments"
+
+msgid "receipts, payments, DOE"
+msgstr "receipts, payments, DOE"
+
+msgid "rows imported"
+msgstr "rows imported"
+
+msgid "rows ready"
+msgstr "rows ready"
+
+msgid "sales VAT"
+msgstr "sales VAT"
+
+msgid "sales invoices with items"
+msgstr "sales invoices with items"
+
+msgid "sales invoices, imports"
+msgstr "sales invoices, imports"
+
+msgid "the part of a purchase without VAT"
+msgstr "the part of a purchase without VAT"
+
+msgid "to"
+msgstr "to"
+
+msgid "unit(s)"
+msgstr "unit(s)"
+
+msgid "with a journal voucher (history stays). Details"
+msgstr "with a journal voucher (history stays). Details"
+
+msgid "{from_date} to {to_date} | {currency}"
+msgstr "{from_date} to {to_date} | {currency}"
+
+msgid "◀ Previous"
+msgstr "◀ Previous"
+
+msgid "📊 Board Dashboard"
+msgstr "📊 Board Dashboard"
+

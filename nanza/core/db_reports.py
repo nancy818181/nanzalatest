@@ -410,7 +410,7 @@ class ReportsStore:
         if account_to:
             conditions.append("CAST(REPLACE(a.code,'.','') AS INTEGER)<=?"); parameters.append(int(''.join(c for c in str(account_to) if c.isdigit())))
         if branch_id: conditions.append("e.branch_id=?"); parameters.append(int(branch_id))
-        if posting_status=="posted": conditions.append("(e.source_type!='invoice' OR i.status IN ('posted','cancelled'))")  # 2.9.97: a cancelled invoice keeps its entry (its reversal is posted too)
+        if posting_status=="posted": conditions.append("(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled')))")  # cancelled invoices retain their posted entry and reversal
         elif posting_status=="review": conditions.append("(e.source_type='invoice' AND i.status='review')")
         where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
         with self.connect() as db:
@@ -617,7 +617,7 @@ class ReportsStore:
         normalized="""CASE WHEN e.entry_date GLOB '??-??-????'
             THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
             ELSE e.entry_date END"""
-        conditions=["(e.source_type!='invoice' OR i.status IN ('posted','cancelled'))"]; parameters=[]
+        conditions=["(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled')))"]; parameters=[]
         if currency: conditions.append("e.currency=?"); parameters.append(currency)
         totals={}
         with self.connect() as db:

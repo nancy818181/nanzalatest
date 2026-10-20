@@ -863,7 +863,7 @@ class PurchasesMixin:
             if not item.get("item_code"): continue
             line_percent=_num(item.get("discount_percent")) or 0
             unit_cost=float(item.get("unit_price") or 0)/max((1-line_percent/100)*factor,0.000001)
-            self.purchase_item_line({"item_code":item["item_code"],"name":item.get("description") or "", "quantity":_num(item.get("quantity")) or 1,
+            self.purchase_item_line({"item_code":item["item_code"],"name":item.get("description") or "", "quantity":_num(item.get("quantity")) if item.get("quantity") not in (None, "") else 1,
                                      "unit":item.get("unit") or "", "unit_cost":unit_cost,"discount_percent":line_percent})
         label = next((n for n, p in f.get("supplier_map", {}).items() if p["name"] == row.get("party_name")), row.get("party_name") or "")
         for key, value in (("supplier", label), ("number", row["invoice_number"]), ("date", _dd(row["invoice_date"])), ("due", _dd(row.get("due_date")) if row.get("due_date") else ""),

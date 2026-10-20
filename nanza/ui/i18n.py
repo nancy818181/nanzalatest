@@ -130,5 +130,47 @@ TRANSLATIONS = {
     },
 }
 
+import json
+import logging
+from pathlib import Path
+from nanza_paths import ROOT
+
+try:
+    CATALOG = json.loads((ROOT / "nanza" / "translations.json").read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    logging.getLogger("saber.i18n").warning("JSON translations unavailable; using built-in catalogue")
+    CATALOG = {}
+for _language in ("en", "ar"):
+    TRANSLATIONS[_language].update(CATALOG.get(_language, {}))
+
+
 def tr(language, key):
     return TRANSLATIONS.get(language, TRANSLATIONS["en"]).get(key, key)
+
+
+def saved_language():
+    import app_runtime
+    try:
+        value = json.loads((app_runtime.data_dir() / "ui_language.json").read_text(encoding="utf-8")).get("language")
+        return value if value in ("en", "ar", "fr") else "en"
+    except (OSError, ValueError, AttributeError):
+        return "en"
+
+
+def save_language(language):
+    if language not in ("en", "ar", "fr"): raise ValueError("Unsupported language")
+    import app_runtime
+    import os
+    import tempfile
+    path = app_runtime.data_dir() / "ui_language.json"
+    temporary = None
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            json.dump({"language": language}, stream)
+        os.replace(temporary, path)
+    except OSError:
+        logging.getLogger("saber.i18n").warning("Could not save UI language", exc_info=True)
+    finally:
+        if temporary is not None: temporary.unlink(missing_ok=True)
