@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import re
+import unicodedata
+from decimal import Decimal, InvalidOperation
 
 
 RULES = {
     "fuel": ("fuel", "petrol", "gasoline", "diesel", "carburant", "essence", "محروقات", "وقود", "بنزين", "مازوت"),
+    "telecom": ("telephone", "telecommunications", "landline", "mobile", "touch", "alfa", "ogero", "هاتف", "اتصالات", "خلوي"),
     "rent": ("rent", "lease", "loyer", "إيجار", "كراء"),
     "salary": ("salary", "payroll", "wage", "salaire", "رواتب", "أجور"),
-    "utilities": ("utilities", "electricity", "water", "utility", "électricité", "eau", "كهرباء", "ماء"),
+    "utilities": ("utilities", "edl", "electricity", "water", "utility", "électricité", "eau", "كهرباء", "ماء"),
     "travel": ("travel", "transport", "transportation", "voyage", "transport", "سفر", "نقل"),
     "office": ("office", "stationery", "supplies", "bureau", "fournitures", "مكتبي", "قرطاسية"),
     "maintenance": ("maintenance", "repair", "entretien", "réparation", "صيانة", "إصلاح"),
@@ -19,7 +22,9 @@ def _active(value):
 
 
 def _tokens(value):
-    return set(re.findall(r"[^\W_]+", str(value or "").casefold(), flags=re.UNICODE))
+    value = unicodedata.normalize("NFKC", str(value or "")).casefold()
+    value = re.sub(r"[\u064b-\u065f\u0670ـ]", "", value)
+    return set(re.findall(r"[^\W_]+", value, flags=re.UNICODE))
 
 
 def _score_account(account, topic_terms, input_tokens):
@@ -31,16 +36,21 @@ def _score_account(account, topic_terms, input_tokens):
     matched = topic_terms & account_tokens
     if not matched:
         return 0.0
-    topic_coverage = len(matched) / max(1, len(account_tokens))
-    input_coverage = len(matched & input_tokens) / len(topic_terms)
-    return min(1.0, 0.55 + 0.25 * topic_coverage + 0.20 * input_coverage)
+    # Synonyms in different languages are equivalent evidence, not a penalty.
+    return 0.85 + 0.10 * len(matched & input_tokens) / max(1, len(input_tokens))
 
 
 def classify_expense(description, accounts):
     """Suggest an active posting account, abstaining on weak or ambiguous matches."""
     text = str(description or "").casefold()
     tokens = _tokens(text)
-    ranked = []
+    detected_topics = {topic for topic, keywords in RULES.items()
+                       if any(_tokens(word) <= tokens for word in keywords)}
+    if len(detected_topics) > 1:
+        return {"account_code": None, "heuristic_score": 0.0, "abstain": True,
+                "ambiguous": True, "reason": "Itemize distinct expense categories with their amounts"}
+    ranked_by_code = {}
+    accounts = list(accounts or ())
     for topic, keywords in RULES.items():
         topic_terms = set().union(*(_tokens(word) for word in keywords))
         if not (topic_terms & tokens):
@@ -48,11 +58,17 @@ def classify_expense(description, accounts):
         for account in accounts or ():
             if not _active(account.get("is_active")) or not _active(account.get("is_posting")):
                 continue
-            if not (account.get("code") or account.get("account_code")):
+            code = str(account.get("code") or account.get("account_code") or "")
+            if not re.fullmatch(r"6[0-9]{8}", code):
+                continue
+            if str(account.get("type") or account.get("account_type") or "expense").casefold() != "expense":
                 continue
             score = _score_account(account, topic_terms, tokens)
             if score:
-                ranked.append((score, topic, account))
+                previous = ranked_by_code.get(code)
+                if previous is None or score > previous[0]:
+                    ranked_by_code[code] = (score, topic, account)
+    ranked = list(ranked_by_code.values())
     ranked.sort(key=lambda item: (-item[0], str(item[2].get("code") or item[2].get("account_code") or "")))
     if not ranked:
         return {"account_code": None, "heuristic_score": 0.0, "abstain": True}
@@ -66,7 +82,7 @@ def classify_expense(description, accounts):
             "abstain": True,
             "ambiguous": True,
             "candidates": [
-                {"account_code": account.get("code") or account.get("account_code"),
+                {"account_code": str(account.get("code") or account.get("account_code")),
                  "name": account.get("name_en") or account.get("name") or account.get("name_fr") or account.get("name_ar"),
                  "heuristic_score": score}
                 for score, _, account in [ranked[0]] + ambiguous
@@ -75,7 +91,7 @@ def classify_expense(description, accounts):
         }
     if best_score < 0.8:
         return {"account_code": None, "heuristic_score": best_score, "abstain": True, "topic": best_topic}
-    account_code = best_account.get("code") or best_account.get("account_code")
+    account_code = str(best_account.get("code") or best_account.get("account_code"))
     if not account_code:
         return {"account_code": None, "heuristic_score": best_score, "abstain": True, "topic": best_topic}
     return {
@@ -97,7 +113,7 @@ def suggest_account(description, accounts=(), account_type="expense"):
     result["requires_review"] = True
     if result.get("account_code") is not None:
         selected = next((account for account in chart
-                         if (account.get("code") or account.get("account_code")) == result["account_code"]), {})
+                         if str(account.get("code") or account.get("account_code")) == result["account_code"]), {})
         result["account_name"] = (
             selected.get("name_en") or selected.get("name") or selected.get("name_fr")
             or selected.get("name_ar") or ""
@@ -106,6 +122,96 @@ def suggest_account(description, accounts=(), account_type="expense"):
     else:
         result["label"] = "No suggestion"
     return result
+
+
+_NON_DEDUCTIBLE_TERMS = {
+    "EDL": ("edl", "electricite du liban", "électricité du liban", "electricity", "كهرباء"),
+    "TEL": ("tel", "ogero", "landline", "telephone", "telecommunications", "هاتف", "اتصالات"),
+    "CELL": ("cell", "touch", "alfa", "mobile", "cellular", "خلوي"),
+    "FUEL": RULES["fuel"],
+}
+
+
+def _non_deductible_category(item):
+    category = str(item.get("expense_category") or "").upper()
+    if category in _NON_DEDUCTIBLE_TERMS:
+        return category
+    tokens = _tokens(item.get("description"))
+    for category, phrases in _NON_DEDUCTIBLE_TERMS.items():
+        if any(_tokens(phrase) <= tokens for phrase in phrases):
+            return category
+    return None
+
+
+def _money(value, field):
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        raise ValueError(f"{field} must be a finite non-negative amount") from None
+    if not amount.is_finite() or amount < 0:
+        raise ValueError(f"{field} must be a finite non-negative amount")
+    return amount
+
+
+def split_invoice_expenses(items, accounts, *, currency, invoice_total=None):
+    """Build reviewable expense allocations from explicit, exclusive-VAT subtotals.
+
+    Each item needs description, subtotal (or gross total), and vat_amount,
+    including explicit zero VAT. Amounts are exact Decimal values; no estimated
+    percentages or equal splits are invented. A total-only mixed invoice must
+    be itemized by the caller. This does not post journals or select VAT accounts.
+    Existing VAT rules remain authoritative for all other categories.
+    """
+    if not isinstance(currency, str) or not currency.strip():
+        raise ValueError("An explicit invoice currency is required")
+    currency = currency.strip().upper()
+    accounts = list(accounts or ())
+    rows, grouped = [], {}
+    gross_total = Decimal("0")
+    for index, item in enumerate(items):
+        if str(item.get("currency", currency)).upper() != currency:
+            raise ValueError("Invoice lines must use the invoice currency")
+        vat = _money(item.get("vat_amount"), "vat_amount")
+        if item.get("subtotal") is not None:
+            net = _money(item["subtotal"], "subtotal")
+        elif item.get("total") is not None:
+            net = _money(item["total"], "total") - vat
+            if net < 0:
+                raise ValueError("VAT cannot exceed the gross line total")
+        else:
+            raise ValueError("Each line requires subtotal or gross total; no estimated splitting")
+        gross = net + vat
+        if item.get("total") is not None and _money(item["total"], "total") != gross:
+            raise ValueError("Line subtotal plus VAT does not match its gross total")
+        category = _non_deductible_category(item)
+        capitalized_vat = vat if category else Decimal("0")
+        expense_cost = net + capitalized_vat
+        # Establish VAT-inclusive expense cost before selecting an expense account.
+        description = item.get("description") or ""
+        if category:
+            description = str(description) + " " + {"EDL": "electricity", "TEL": "telephone",
+                                                    "CELL": "mobile", "FUEL": "fuel"}[category]
+        suggestion = suggest_account(description, accounts)
+        row = {**suggestion, "line_index": index, "description": item.get("description", ""),
+               "currency": currency, "subtotal": net, "vat_amount": vat,
+               "expense_cost": expense_cost, "gross_total": gross,
+               "non_deductible_category": category, "non_deductible_vat": capitalized_vat,
+               "vat_action": "capitalize_in_expense" if category else "preserve_existing_rules"}
+        rows.append(row)
+        gross_total += gross
+        code = suggestion.get("account_code")
+        if code is not None:
+            allocation = grouped.setdefault(code, {"account_code": code, "currency": currency,
+                "expense_cost": Decimal("0"), "non_deductible_vat": Decimal("0"), "line_indexes": []})
+            allocation["expense_cost"] += expense_cost
+            allocation["non_deductible_vat"] += capitalized_vat
+            allocation["line_indexes"].append(index)
+    reconciled = invoice_total is None or gross_total == _money(invoice_total, "invoice_total")
+    unresolved = [row["line_index"] for row in rows if row["abstain"]]
+    return {"lines": rows, "allocations": list(grouped.values()), "currency": currency,
+            "gross_total": gross_total, "unresolved_line_indexes": unresolved,
+            "reconciled": reconciled, "complete": bool(rows) and not unresolved and reconciled,
+            "requires_review": True}
 
 
 class ExpenseClassifier:
