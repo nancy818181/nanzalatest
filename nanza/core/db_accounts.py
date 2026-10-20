@@ -128,6 +128,87 @@ class AccountsStore:
         if not row: raise ValueError(f"{label} account {_code(code) or '(empty)'} was not found")
         return row
 
+    @staticmethod
+    def _ai_posting_code(value):
+        code = str(value).strip()
+        if not re.fullmatch(r"[0-9]{9}", code):
+            raise ValueError("AI posting accounts must contain exactly 9 digits")
+        return code
+
+    def ai_posting_accounts(self, account_type="expense", parent_code=None, code=None):
+        """Read eligible existing accounts; headings and historical codes are unchanged."""
+        if account_type not in ("asset", "liability", "equity", "income", "expense"):
+            raise ValueError("Invalid account type")
+        conditions = ["a.type=?", "a.active=1", "NOT EXISTS (SELECT 1 FROM accounts c WHERE c.parent_id=a.id)"]
+        parameters = [account_type]
+        if code is not None:
+            conditions.append("a.code=?"); parameters.append(self._ai_posting_code(code))
+        with self.connect() as db:
+            if parent_code is not None:
+                parent = self._account_row(db, parent_code, "Parent")
+                if not parent["active"] or parent["type"] != account_type:
+                    raise ValueError("Parent account must be active and have the requested type")
+                conditions.append("a.id IN (WITH RECURSIVE children(id) AS ("
+                                  "SELECT id FROM accounts WHERE parent_id=? UNION "
+                                  "SELECT a.id FROM accounts a JOIN children c ON a.parent_id=c.id) SELECT id FROM children)")
+                parameters.append(parent["id"])
+            rows = db.execute("SELECT a.*,p.code parent_code,a.active is_active,1 is_posting "
+                              "FROM accounts a LEFT JOIN accounts p ON p.id=a.parent_id WHERE "
+                              + " AND ".join(conditions) + " ORDER BY a.code", parameters)
+            return [dict(row) for row in rows if re.fullmatch(r"[0-9]{9}", row["code"])]
+
+    @atomic
+    def get_or_create_ai_account(self, parent_code, name_en, user_id, *, account_type="expense", name_ar="", name_fr=""):
+        """Create/reuse a detail account under an explicit existing expense/supplier parent.
+
+        Uses the existing account saver and audit trail. This never posts a voucher,
+        changes VAT/default accounts, or creates a supplier's party record.
+        """
+        import unicodedata
+        def normalized(value):
+            return " ".join(unicodedata.normalize("NFKC", str(value or "")).casefold().split())
+        name = str(name_en or "").strip()
+        if not name or account_type not in ("expense", "liability"):
+            raise ValueError("Enter an expense or supplier account name and type")
+        with self.connect() as db:
+            user = db.execute("SELECT role,active FROM users WHERE id=?", (user_id,)).fetchone()
+            if not user or not user["active"] or user["role"] == "viewer":
+                raise PermissionError("Account creation requires an active user with write access")
+            parent = self._account_row(db, parent_code, "Parent")
+            if not parent["active"] or parent["type"] != account_type:
+                raise ValueError("Parent account must be active and have the requested type")
+            if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)*", parent["code"]):
+                raise ValueError("Choose an existing numbered parent account")
+            prefix = parent["code"].replace(".", "")
+            if not 1 <= len(prefix) < 9:
+                raise ValueError("Choose a heading parent, not a 9-digit posting account")
+            if account_type == "expense" and not prefix.startswith("6"):
+                raise ValueError("Choose an existing class-6 expense parent")
+            if account_type == "liability" and not prefix.startswith(SCOPES["suppliers"]):
+                raise ValueError("Choose an existing supplier parent")
+            siblings = db.execute("SELECT * FROM accounts WHERE parent_id=?", (parent["id"],)).fetchall()
+            matches = [row for row in siblings if normalized(row["name_en"]) == normalized(name)]
+            if len(matches) > 1:
+                raise ValueError("Several existing accounts match; select an account explicitly")
+            if matches:
+                existing = self.ai_posting_accounts(account_type, parent["code"], matches[0]["code"])
+                if not existing:
+                    raise ValueError("Matching account is inactive or is not a 9-digit posting account")
+                return {**existing[0], "created": False, "requires_review": True}
+            if db.execute("SELECT 1 FROM journal_lines WHERE account_id=? LIMIT 1", (parent["id"],)).fetchone():
+                raise ValueError("Parent has journal lines; choose an existing heading instead")
+            used = [int(row[0]) for row in db.execute(
+                "SELECT code FROM accounts WHERE code LIKE ? UNION SELECT account_number FROM parties WHERE account_number LIKE ?",
+                (prefix + "%", prefix + "%")) if re.fullmatch(r"[0-9]{9}", str(row[0] or ""))]
+            number = str(max(used, default=int(prefix.ljust(9, "0"))) + 1).zfill(9)
+            self._ai_posting_code(number)
+            if not number.startswith(prefix):
+                raise ValueError("No account numbers remain under this parent")
+            self.save_account({"code": number, "parent_code": parent["code"], "type": account_type,
+                               "name_en": name, "name_ar": name_ar, "name_fr": name_fr}, user_id)
+            saved = self.ai_posting_accounts(account_type, parent["code"], number)[0]
+            return {**saved, "created": True, "requires_review": True}
+
     @atomic  # 2.9.121
     def move_account(self, source, target, user_id, merge_party=False):
         """Every transaction of `source` moves to `target` (journal lines and the documents that name the account).
