@@ -1803,6 +1803,17 @@ def _keep_alive_safe(method):
 for _verb in ("do_GET", "do_POST", "do_PUT", "do_DELETE"):
     setattr(ApiHandler, _verb, _keep_alive_safe(getattr(ApiHandler, _verb)))
 
+def _admin_exists(database):
+    path = Path(database)
+    if not path.is_file(): return False
+    try:
+        with closing(sqlite3.connect(str(path))) as connection:
+            found = connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'").fetchone()
+            return bool(found and connection.execute("SELECT 1 FROM users WHERE username='admin' LIMIT 1").fetchone())
+    except sqlite3.Error:
+        return False
+
+
 def run_server(host="127.0.0.1", port=8765, database="saber_accounting.db", admin_password=None, tls_cert=None, tls_key=None, allow_insecure_lan=False,
                local_key=None, on_ready=None):
     """port=0 lets Windows choose a free port; on_ready(port) is called once requests are accepted.
@@ -1810,7 +1821,11 @@ def run_server(host="127.0.0.1", port=8765, database="saber_accounting.db", admi
     if bool(tls_cert)!=bool(tls_key): raise ValueError("Provide both TLS certificate and private key")
     if host not in ("127.0.0.1","localhost","::1") and not tls_cert and not allow_insecure_lan:
         raise ValueError("Shared network access requires --tls-cert and --tls-key (or explicit --allow-insecure-lan for a trusted VPN)")
-    admin_password = admin_password or os.environ.get("SABER_ADMIN_PASSWORD") or secrets.token_urlsafe(12)
+    admin_password = admin_password or os.environ.get("SABER_ADMIN_PASSWORD")
+    if not admin_password and not _admin_exists(database):
+        raise ValueError("An initial admin password is required; set it securely before creating a new database")
+    # Existing admin hashes are preserved by INSERT OR IGNORE. This placeholder is never displayed or stored over them.
+    admin_password = admin_password or secrets.token_urlsafe(32)
     db = Database(database, pooled=True)
     db.initialize_if_needed(admin_password)
     ApiHandler.local_key = local_key
@@ -1831,8 +1846,6 @@ def run_server(host="127.0.0.1", port=8765, database="saber_accounting.db", admi
     port = server.server_address[1]
     log.info("Data service running at %s://%s:%s", 'https' if tls_cert else 'http', host, port)
     print(f"Nanza Accounting server running at {'https' if tls_cert else 'http'}://{host}:{port}")
-    print("For a new database, sign in as admin with this one-time initial password:")
-    print(admin_password)
     if on_ready: on_ready(port)
     server.serve_forever()
 
@@ -1859,6 +1872,12 @@ def main():
         import app_runtime
         args.database = str(app_runtime.main_database_path())
     Path(args.database).parent.mkdir(parents=True, exist_ok=True)
+    if not (args.admin_password or os.environ.get("SABER_ADMIN_PASSWORD") or _admin_exists(args.database)):
+        from getpass import getpass
+        first = getpass("Create initial admin password (10+ characters): ")
+        again = getpass("Confirm initial admin password: ")
+        if len(first) < 10 or first != again: parser.error("Passwords must match and contain at least 10 characters")
+        args.admin_password = first
     run_server(args.host,args.port,args.database,args.admin_password,args.tls_cert,args.tls_key,args.allow_insecure_lan)
 
 if __name__ == "__main__":
