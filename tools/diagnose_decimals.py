@@ -131,26 +131,46 @@ def collect_counts(connection: sqlite3.Connection) -> tuple[dict[str, object], d
 
         if not line_required.issubset(line_columns) or not entry_columns or not {"id", "posting_status"}.issubset(entry_columns):
             counts["posted_entries.unbalanced_after_line_rounding"] = "not found"
+            counts["posted_entries.unbalanced_before_rounding"] = "not found"
+            counts["posted_entries.balanced_before_unbalanced_after_rounding"] = "not found"
         else:
             rows = connection.execute(
                 "SELECT e.id AS entry_id,l.debit,l.credit FROM journal_entries e "
                 "JOIN journal_lines l ON l.entry_id=e.id WHERE e.posting_status='posted'"
             ).fetchall()
-            totals: dict[int, tuple[list[Decimal], list[Decimal]]] = {}
+            totals: dict[int, tuple[list[Decimal], list[Decimal], list[Decimal], list[Decimal]]] = {}
             invalid_entries: set[int] = set()
             for row in rows:
                 entry_id = int(row["entry_id"])
-                totals.setdefault(entry_id, ([], []))
+                totals.setdefault(entry_id, ([], [], [], []))
                 debit, credit = _decimal(row["debit"]), _decimal(row["credit"])
                 if debit is None or credit is None:
                     invalid_entries.add(entry_id)
                     continue
                 totals[entry_id][0].append(_round_half_up(debit))
                 totals[entry_id][1].append(_round_half_up(credit))
-            counts["posted_entries.unbalanced_after_line_rounding"] = sum(
-                entry_id not in invalid_entries and _exact_sum(debits) != _exact_sum(credits)
-                for entry_id, (debits, credits) in totals.items()
+                totals[entry_id][2].append(debit)
+                totals[entry_id][3].append(credit)
+            valid = {
+                entry_id: values for entry_id, values in totals.items()
+                if entry_id not in invalid_entries and values[0] and values[1]
+            }
+            unbalanced_before = sum(
+                _exact_sum(debits) != _exact_sum(credits)
+                for _rounded_debits, _rounded_credits, debits, credits in valid.values()
             )
+            unbalanced_after = sum(
+                _exact_sum(rounded_debits) != _exact_sum(rounded_credits)
+                for rounded_debits, rounded_credits, _debits, _credits in valid.values()
+            )
+            balanced_before_unbalanced_after = sum(
+                _exact_sum(debits) == _exact_sum(credits)
+                and _exact_sum(rounded_debits) != _exact_sum(rounded_credits)
+                for rounded_debits, rounded_credits, debits, credits in valid.values()
+            )
+            counts["posted_entries.unbalanced_after_line_rounding"] = unbalanced_after
+            counts["posted_entries.unbalanced_before_rounding"] = unbalanced_before
+            counts["posted_entries.balanced_before_unbalanced_after_rounding"] = balanced_before_unbalanced_after
             if invalid_entries:
                 counts["posted_entries.invalid_amount_values"] = len(invalid_entries)
 

@@ -45,10 +45,10 @@ class DiagnoseDecimalsTest(unittest.TestCase):
             connection.executemany(
                 "INSERT INTO journal_lines(id,entry_id,debit,credit,line_currency) VALUES(?,?,?,?,?)",
                 [
-                    (1, 1, "100.00", "0", "USD"),
+                    (1, 1, "100.000", "0", "USD"),
                     (2, 1, "0", "33.333", "USD"),
                     (3, 1, "0", "33.333", "USD"),
-                    (4, 1, "0", "33.333", "USD"),
+                    (4, 1, "0", "33.334", "USD"),
                     (5, 2, "100.005", "0", "USD"),
                     (6, 2, "0", "100.005", "USD"),
                     (7, 3, "1500000.004", "0", "LBP"),
@@ -81,12 +81,14 @@ class DiagnoseDecimalsTest(unittest.TestCase):
             output = result.stdout
             expected = {
                 "journal_lines.precision_over_2dp.LBP": "2",
-                "journal_lines.precision_over_2dp.non_LBP": "5",
+                "journal_lines.precision_over_2dp.non_LBP": "6",
                 "invoices.total.precision_over_2dp.LBP": "1",
                 "invoices.total.precision_over_2dp.non_LBP": "1",
                 "invoices.vat.precision_over_2dp.LBP": "1",
                 "invoices.vat.precision_over_2dp.non_LBP": "1",
                 "posted_entries.unbalanced_after_line_rounding": "1",
+                "posted_entries.unbalanced_before_rounding": "0",
+                "posted_entries.balanced_before_unbalanced_after_rounding": "1",
                 "journal_lines.total": "10",
                 "journal_entries.total": "4",
             }
