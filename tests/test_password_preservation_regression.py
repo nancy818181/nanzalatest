@@ -69,15 +69,27 @@ class PasswordPreservationRegressionTests(unittest.TestCase):
             fake_http = mock.Mock()
             fake_http.server_address = ("127.0.0.1", 8765)
             output = io.StringIO()
-            with mock.patch.object(server, "ThreadingHTTPServer", return_value=fake_http), \
-                 mock.patch.object(server, "CompanyManager") as manager, \
-                 redirect_stdout(output):
-                manager.return_value.organize_files.return_value = []
-                manager.return_value.discover_files.return_value = []
-                server.run_server(
-                    host="127.0.0.1", port=0, database=str(path),
-                    admin_password="Different-Seed-Value",
-                )
+            handler = server.ApiHandler
+            previous = {
+                name: getattr(handler, name)
+                for name in ("db", "master_db", "company_manager", "local_key")
+            }
+            try:
+                with mock.patch.object(server, "ThreadingHTTPServer", return_value=fake_http), \
+                     mock.patch.object(server, "CompanyManager") as manager, \
+                     redirect_stdout(output):
+                    manager.return_value.organize_files.return_value = []
+                    manager.return_value.discover_files.return_value = []
+                    server.run_server(
+                        host="127.0.0.1", port=0, database=str(path),
+                        admin_password="Different-Seed-Value",
+                    )
+            finally:
+                running_db = handler.db
+                if running_db is not None and running_db is not previous["db"]:
+                    running_db.release()
+                for name, value in previous.items():
+                    setattr(handler, name, value)
 
             with database.connect() as connection:
                 after = connection.execute(
