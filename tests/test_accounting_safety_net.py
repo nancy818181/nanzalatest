@@ -7,7 +7,7 @@ independently certified accounting results; that work belongs to Phase 2.
 import sqlite3
 from decimal import Decimal
 
-import pytest
+from tests.pytest_compat import pytest
 
 from database import utcnow
 

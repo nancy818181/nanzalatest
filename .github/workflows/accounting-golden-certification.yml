@@ -1,0 +1,35 @@
+name: Accounting golden-ledger certification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  golden-ledger:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install repository dependencies and pinned pytest
+        run: |
+          grep -iv '^pyinstaller' requirements.txt > ci-requirements.txt
+          python -m pip install -r ci-requirements.txt
+          python -m pip install pytest==8.4.2
+
+      - name: Run independent golden-ledger and precision tests
+        run: >-
+          python -m pytest -q -s
+          tests/test_golden_ledger.py
+          tests/test_float_precision_measurement.py
+          tests/test_accounting_safety_net.py
