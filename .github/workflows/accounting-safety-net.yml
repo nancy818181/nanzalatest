@@ -17,8 +17,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install repository dependencies and pytest
-        run: python -m pip install -r requirements-dev.txt
+      - name: Install repository dependencies and pinned pytest
+        run: |
+          grep -iv '^pyinstaller' requirements.txt > ci-requirements.txt
+          python -m pip install -r ci-requirements.txt
+          python -m pip install pytest==8.4.2
 
       - name: Run headless posting and report safety tests
         run: python -m pytest -q tests/test_accounting_safety_net.py
