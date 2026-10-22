@@ -148,11 +148,12 @@ class OldHiddenAccountTest(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
             db = Database(Path(folder) / "o.db"); db.initialize("secret12345")
             with db.connect() as c:
+                original_hash = hash_password("Old-Owner-2026")
                 c.execute("INSERT INTO users(username,password_hash,role,language,active,hidden,created_at) VALUES('saber-owner',?,'admin','en',1,1,?)",
-                          (hash_password("Old-Owner-2026"), utcnow()))
+                          (original_hash, utcnow()))
                 owner_access.migrate(c)
                 row = c.execute("SELECT active,password_hash FROM users WHERE username='saber-owner'").fetchone()
-            self.assertEqual((row["active"], row["password_hash"]), (0, "!"))
+            self.assertEqual((row["active"], row["password_hash"]), (0, original_hash))
             self.assertIsNone(db.login("saber-owner", "Old-Owner-2026"))
             self.assertNotIn("saber-owner", [u["username"] for u in db.list_users()])
 
