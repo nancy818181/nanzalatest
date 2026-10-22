@@ -62,6 +62,30 @@ def compute():
                         if currency == "USD" and date[3:] == "01-2026"), ZERO)
     usd_cash_feb = sum((delta for (currency, date), delta in by_date_cash.items()
                         if currency == "USD" and date[3:] == "02-2026"), ZERO)
+    bs_assets = sum(
+        (converted_balances[account] for account, kind in ACCOUNT_TYPES.items() if kind == "asset"),
+        ZERO,
+    )
+    bs_liabilities = -sum(
+        (converted_balances[account] for account, kind in ACCOUNT_TYPES.items() if kind == "liability"),
+        ZERO,
+    )
+    bs_equity = -converted_balances["equity"] + converted_pnl["income"] - converted_pnl["expense"]
+    usd_accounts = by_currency["USD"]
+    usd_assets = sum(
+        (debit - credit for account, (debit, credit) in usd_accounts.items()
+         if ACCOUNT_TYPES[account] == "asset"),
+        ZERO,
+    )
+    usd_liabilities = -sum(
+        (debit - credit for account, (debit, credit) in usd_accounts.items()
+         if ACCOUNT_TYPES[account] == "liability"),
+        ZERO,
+    )
+    usd_equity = (
+        -(usd_accounts["equity"][0] - usd_accounts["equity"][1])
+        + pnl[("USD", "income")][0] - pnl[("USD", "expense")][1]
+    )
     result = {
         "entry_count": len(ENTRIES),
         "native": native,
@@ -72,9 +96,14 @@ def compute():
         "consolidated_cash_usd": _format(converted_balances["cash"]),
         "vat_input_usd": _format(converted_balances["vat_input"]),
         "vat_output_usd_credit_balance": _format(-converted_balances["vat_output"]),
-        "bs_assets_usd": _format(sum((converted_balances[a] for a in ("cash", "ar", "vat_input")), ZERO)),
-        "bs_liabilities_usd": _format(-sum((converted_balances[a] for a in ("ap", "vat_output")), ZERO)),
-        "bs_equity_usd": _format(-converted_balances["equity"] + converted_pnl["income"] - converted_pnl["expense"]),
+        "bs_assets_usd": _format(bs_assets),
+        "bs_liabilities_usd": _format(bs_liabilities),
+        "bs_equity_usd": _format(bs_equity),
+        "bs_usd_native": {
+            "assets": _format(usd_assets),
+            "liabilities": _format(usd_liabilities),
+            "equity": _format(usd_equity),
+        },
     }
     return result
 

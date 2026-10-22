@@ -19,6 +19,7 @@ EXPECTED_NATIVE = {
 
 # USD conversion uses only the fixture rates: EUR/USD = 1.07 and USD/LBP = 89,500.
 # These are arbitrary test rates, not actual or recommended exchange rates.
+# 4427 is expected to be a liability per owner confirmation. Application seed currently disagrees.
 EXPECTED_ACCOUNT_BALANCES_USD = {
     "ap": "-29.9607", "ar": "242.2054", "cash": "1154.6177",
     "equity": "-1300", "expense": "54.3307", "income": "-114.0431",
@@ -27,6 +28,9 @@ EXPECTED_ACCOUNT_BALANCES_USD = {
 EXPECTED_CONVERTED_PNL_USD = {"income": "114.0431", "expense": "54.3307"}
 EXPECTED_CONSOLIDATED_BS_USD = {
     "assets": "1401.7731", "liabilities": "42.0607", "equity": "1359.7124"
+}
+EXPECTED_USD_BALANCE_SHEET = {
+    "assets": "1299.21", "liabilities": "42.05", "equity": "1257.16"
 }
 
 # GL period test: 01-01 through 31-01 movements yield 1,051.90 USD cash;

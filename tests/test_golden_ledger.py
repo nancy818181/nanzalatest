@@ -11,6 +11,7 @@ from golden_ledger_expected import (
     EXPECTED_CONVERTED_PNL_USD,
     EXPECTED_ENTRY_COUNT,
     EXPECTED_NATIVE,
+    EXPECTED_USD_BALANCE_SHEET,
     EXPECTED_USD_CASH_CLOSE,
     EXPECTED_USD_CASH_FEBRUARY_MOVEMENT,
     EXPECTED_USD_CASH_JANUARY_CLOSE,
@@ -79,6 +80,7 @@ def test_checked_in_golden_constants_match_independent_decimal_script():
     assert derived["bs_assets_usd"] == EXPECTED_CONSOLIDATED_BS_USD["assets"]
     assert derived["bs_liabilities_usd"] == EXPECTED_CONSOLIDATED_BS_USD["liabilities"]
     assert derived["bs_equity_usd"] == EXPECTED_CONSOLIDATED_BS_USD["equity"]
+    assert derived["bs_usd_native"] == EXPECTED_USD_BALANCE_SHEET
     assert Decimal(derived["usd_cash_january_closing"]) == Decimal(EXPECTED_USD_CASH_JANUARY_CLOSE)
     assert Decimal(derived["usd_cash_february_movement"]) == Decimal(EXPECTED_USD_CASH_FEBRUARY_MOVEMENT)
     assert Decimal(derived["native"]["USD"]["cash_closing"]) == Decimal(EXPECTED_USD_CASH_CLOSE)
@@ -120,20 +122,55 @@ def test_golden_profit_and_loss_reproduces_usd_ledger(posted_golden_ledger):
     assert actual[codes["expense"]] == Decimal(EXPECTED_NATIVE["USD"]["expense"])
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "RPT-BS-001: account 4427 is typed as an asset, so its output-VAT credit is included "
-    "as a negative asset instead of a liability in the Balance Sheet."
-))
-def test_golden_balance_sheet_balances_in_usd(posted_golden_ledger):
+def test_golden_balance_sheet_current_behavior_snapshot(posted_golden_ledger):
+    """CURRENT BEHAVIOR, NOT VERIFIED CORRECT: chart seed currently types 4427 as asset."""
     db = posted_golden_ledger["db"]
     rows = db.balance_sheet(to_date=PERIOD_END, currency="USD")
     assets = sum((_dec(row["balance"]) for row in rows if row["type"] == "asset"), Decimal("0"))
     liabilities = -sum((_dec(row["balance"]) for row in rows if row["type"] == "liability"), Decimal("0"))
     equity = -sum((_dec(row["balance"]) for row in rows if row["type"] == "equity"), Decimal("0"))
-    assert assets == Decimal("1299.21")
-    assert liabilities == Decimal("42.05")
+    assert assets == Decimal("1287.11")
+    assert liabilities == Decimal("29.95")
     assert equity == Decimal("1257.16")
     assert assets == liabilities + equity
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "RPT-BS-001: 4427 is output VAT (liability, owner-confirmed) but the seed stores asset; invoice module creates liability"
+))
+@pytest.mark.parametrize("creation_path", ["brand_new_company", "upgraded_company"])
+def test_4427_is_liability_on_every_creation_path(creation_path, tmp_path):
+    """Invariant: output VAT account 4427 must be a liability on all creation paths."""
+    from database import Database
+
+    db = Database(tmp_path / f"{creation_path}.db")
+    db.initialize("Synthetic-Only-Test-Password-2026")
+    if creation_path == "upgraded_company":
+        with db.connect() as connection:
+            connection.execute("UPDATE accounts SET type='liability' WHERE code='4427'")
+            connection.execute("UPDATE app_settings SET value='stale' WHERE key='startup_schema_version'")
+        db.initialize_if_needed("Synthetic-Only-Test-Password-2026")
+    try:
+        with db.connect() as connection:
+            row = connection.execute("SELECT type FROM accounts WHERE code='4427'").fetchone()
+        print(f"{creation_path}: stored 4427 type={row['type'] if row else 'NOT FOUND'}")
+        assert row and row["type"] == "liability"
+    finally:
+        db.release()
+
+
+def test_4427_invoice_created_account_type_is_liability(synthetic_db):
+    """CURRENT BEHAVIOR snapshot for invoice-created account insertion."""
+    with synthetic_db.connect() as connection:
+        connection.execute("DELETE FROM accounts WHERE code='4427'")
+    synthetic_db.import_invoice({
+        "invoice_number": "SYN-4427-CREATE", "invoice_date": "10-03-2026",
+        "party_name": "Synthetic supplier", "kind": "sale", "currency": "USD",
+        "subtotal": "100.00", "vat": "11.00", "total": "111.00", "status": "posted",
+    }, 1)
+    with synthetic_db.connect() as connection:
+        row = connection.execute("SELECT type FROM accounts WHERE code='4427'").fetchone()
+    assert row and row["type"] == "liability"
 
 
 def test_golden_cash_flow_net_movement_ties_to_native_cash(posted_golden_ledger):
