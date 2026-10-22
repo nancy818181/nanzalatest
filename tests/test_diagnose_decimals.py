@@ -102,9 +102,12 @@ class DiagnoseDecimalsTest(unittest.TestCase):
             self.assertNotIn(str(database_copy), output)
 
             read_only_uri = database_copy.resolve().as_uri() + "?mode=ro"
-            with sqlite3.connect(read_only_uri, uri=True) as connection:
+            connection = sqlite3.connect(read_only_uri, uri=True)
+            try:
                 with self.assertRaises(sqlite3.OperationalError):
                     connection.execute("CREATE TABLE forbidden_write(id INTEGER)")
+            finally:
+                connection.close()
 
 
 if __name__ == "__main__":

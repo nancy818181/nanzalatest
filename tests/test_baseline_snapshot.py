@@ -172,9 +172,12 @@ class BaselineSnapshotTest(unittest.TestCase):
         sys.path.insert(0, str(ROOT / "tools"))
         try:
             from baseline_snapshot import connect_read_only
-            with connect_read_only(self.database) as connection:
+            connection = connect_read_only(self.database)
+            try:
                 with self.assertRaises(sqlite3.OperationalError):
                     connection.execute("CREATE TABLE forbidden_write(id INTEGER)")
+            finally:
+                connection.close()
         finally:
             sys.path.remove(str(ROOT / "tools"))
 
