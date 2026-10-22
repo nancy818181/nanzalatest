@@ -82,10 +82,22 @@ class DiagnoseDecimalsTest(unittest.TestCase):
             expected = {
                 "journal_lines.precision_over_2dp.LBP": "2",
                 "journal_lines.precision_over_2dp.non_LBP": "6",
+                "journal_lines.text_has_more_than_2_decimal_digits.LBP": "2",
+                "journal_lines.text_has_more_than_2_decimal_digits.non_LBP": "6",
+                "journal_lines.has_nonzero_digit_beyond_2dp.LBP": "2",
+                "journal_lines.has_nonzero_digit_beyond_2dp.non_LBP": "5",
                 "invoices.total.precision_over_2dp.LBP": "1",
                 "invoices.total.precision_over_2dp.non_LBP": "1",
+                "invoices.total.text_has_more_than_2_decimal_digits.LBP": "1",
+                "invoices.total.text_has_more_than_2_decimal_digits.non_LBP": "1",
+                "invoices.total.has_nonzero_digit_beyond_2dp.LBP": "1",
+                "invoices.total.has_nonzero_digit_beyond_2dp.non_LBP": "1",
                 "invoices.vat.precision_over_2dp.LBP": "1",
                 "invoices.vat.precision_over_2dp.non_LBP": "1",
+                "invoices.vat.text_has_more_than_2_decimal_digits.LBP": "1",
+                "invoices.vat.text_has_more_than_2_decimal_digits.non_LBP": "1",
+                "invoices.vat.has_nonzero_digit_beyond_2dp.LBP": "1",
+                "invoices.vat.has_nonzero_digit_beyond_2dp.non_LBP": "1",
                 "posted_entries.unbalanced_after_line_rounding": "1",
                 "posted_entries.unbalanced_before_rounding": "0",
                 "posted_entries.balanced_before_unbalanced_after_rounding": "1",
@@ -94,6 +106,9 @@ class DiagnoseDecimalsTest(unittest.TestCase):
             }
             for key, value in expected.items():
                 self.assertIn(f"{key}: {value}\n", output)
+            # 100.000 has extra textual scale but no non-zero digit beyond cents.
+            self.assertIn("journal_lines.precision_over_2dp.non_LBP: 6\n", output)
+            self.assertIn("journal_lines.has_nonzero_digit_beyond_2dp.non_LBP: 5\n", output)
             self.assertIn("schema_type.journal_lines.debit: TEXT", output)
             self.assertIn("schema_type.journal_lines.credit: TEXT", output)
             self.assertIn("schema_type.invoices.total: TEXT", output)

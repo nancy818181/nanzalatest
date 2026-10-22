@@ -44,6 +44,19 @@ def _has_subcent_digits(value: object) -> bool | None:
     return amount.as_tuple().exponent < -2
 
 
+def _has_nonzero_subcent_digits(value: object) -> bool | None:
+    """Return whether a non-zero digit occurs beyond the hundredths place.
+
+    Unlike the textual-scale count above, trailing zeroes do not qualify.
+    """
+    amount = _decimal(value)
+    if amount is None:
+        return None
+    parts = amount.as_tuple()
+    extra_digits = max(0, -parts.exponent - 2)
+    return bool(extra_digits and any(parts.digits[-extra_digits:]))
+
+
 def _round_half_up(amount: Decimal) -> Decimal:
     parts = amount.as_tuple()
     precision = max(28, len(parts.digits) + max(0, -parts.exponent) + 3, amount.adjusted() + 4)
@@ -91,6 +104,10 @@ def collect_counts(connection: sqlite3.Connection) -> tuple[dict[str, object], d
     if line_columns is None:
         counts["journal_lines.precision_over_2dp.LBP"] = "not found"
         counts["journal_lines.precision_over_2dp.non_LBP"] = "not found"
+        counts["journal_lines.text_has_more_than_2_decimal_digits.LBP"] = "not found"
+        counts["journal_lines.text_has_more_than_2_decimal_digits.non_LBP"] = "not found"
+        counts["journal_lines.has_nonzero_digit_beyond_2dp.LBP"] = "not found"
+        counts["journal_lines.has_nonzero_digit_beyond_2dp.non_LBP"] = "not found"
         counts["journal_lines.total"] = "not found"
         counts["posted_entries.unbalanced_after_line_rounding"] = "not found"
     else:
@@ -100,6 +117,10 @@ def collect_counts(connection: sqlite3.Connection) -> tuple[dict[str, object], d
         if not line_required.issubset(line_columns) or not currency_available:
             counts["journal_lines.precision_over_2dp.LBP"] = "not found"
             counts["journal_lines.precision_over_2dp.non_LBP"] = "not found"
+            counts["journal_lines.text_has_more_than_2_decimal_digits.LBP"] = "not found"
+            counts["journal_lines.text_has_more_than_2_decimal_digits.non_LBP"] = "not found"
+            counts["journal_lines.has_nonzero_digit_beyond_2dp.LBP"] = "not found"
+            counts["journal_lines.has_nonzero_digit_beyond_2dp.non_LBP"] = "not found"
         else:
             if "line_currency" in line_columns:
                 currency_sql = "COALESCE(NULLIF(l.line_currency,''), e.currency)" if entry_columns and "currency" in entry_columns else "l.line_currency"
@@ -110,20 +131,31 @@ def collect_counts(connection: sqlite3.Connection) -> tuple[dict[str, object], d
                 f"SELECT l.debit,l.credit,{currency_sql} AS currency FROM journal_lines l {join}"
             ).fetchall()
             precision = defaultdict(int)
+            nonzero_precision = defaultdict(int)
             invalid = 0
             for row in rows:
                 side_has_extra = False
+                side_has_nonzero_extra = False
                 for column in ("debit", "credit"):
                     extra = _has_subcent_digits(row[column])
+                    nonzero_extra = _has_nonzero_subcent_digits(row[column])
                     if extra is None:
                         invalid += 1
                     elif extra:
                         side_has_extra = True
+                    if nonzero_extra:
+                        side_has_nonzero_extra = True
                 group = _classify_currency(row["currency"])
                 if side_has_extra and group:
                     precision[group] += 1
+                if side_has_nonzero_extra and group:
+                    nonzero_precision[group] += 1
             counts["journal_lines.precision_over_2dp.LBP"] = precision["LBP"]
             counts["journal_lines.precision_over_2dp.non_LBP"] = precision["non_LBP"]
+            counts["journal_lines.text_has_more_than_2_decimal_digits.LBP"] = precision["LBP"]
+            counts["journal_lines.text_has_more_than_2_decimal_digits.non_LBP"] = precision["non_LBP"]
+            counts["journal_lines.has_nonzero_digit_beyond_2dp.LBP"] = nonzero_precision["LBP"]
+            counts["journal_lines.has_nonzero_digit_beyond_2dp.non_LBP"] = nonzero_precision["non_LBP"]
             if invalid:
                 counts["journal_lines.invalid_amount_values"] = invalid
         total_lines = _count_rows(connection, "journal_lines")
@@ -181,8 +213,16 @@ def collect_counts(connection: sqlite3.Connection) -> tuple[dict[str, object], d
     if invoice_columns is None:
         counts["invoices.total.precision_over_2dp.LBP"] = "not found"
         counts["invoices.total.precision_over_2dp.non_LBP"] = "not found"
+        counts["invoices.total.text_has_more_than_2_decimal_digits.LBP"] = "not found"
+        counts["invoices.total.text_has_more_than_2_decimal_digits.non_LBP"] = "not found"
+        counts["invoices.total.has_nonzero_digit_beyond_2dp.LBP"] = "not found"
+        counts["invoices.total.has_nonzero_digit_beyond_2dp.non_LBP"] = "not found"
         counts["invoices.vat.precision_over_2dp.LBP"] = "not found"
         counts["invoices.vat.precision_over_2dp.non_LBP"] = "not found"
+        counts["invoices.vat.text_has_more_than_2_decimal_digits.LBP"] = "not found"
+        counts["invoices.vat.text_has_more_than_2_decimal_digits.non_LBP"] = "not found"
+        counts["invoices.vat.has_nonzero_digit_beyond_2dp.LBP"] = "not found"
+        counts["invoices.vat.has_nonzero_digit_beyond_2dp.non_LBP"] = "not found"
     else:
         for column in ("total", "vat"):
             if column in invoice_columns:
@@ -191,20 +231,28 @@ def collect_counts(connection: sqlite3.Connection) -> tuple[dict[str, object], d
             if amount_column not in invoice_columns or "currency" not in invoice_columns:
                 for group in ("LBP", "non_LBP"):
                     counts[f"invoices.{label}.precision_over_2dp.{group}"] = "not found"
+                    counts[f"invoices.{label}.text_has_more_than_2_decimal_digits.{group}"] = "not found"
+                    counts[f"invoices.{label}.has_nonzero_digit_beyond_2dp.{group}"] = "not found"
                 continue
             precision = defaultdict(int)
+            nonzero_precision = defaultdict(int)
             invalid = 0
             for row in connection.execute(
                 f'SELECT currency,"{amount_column}" AS amount FROM invoices'
             ):
                 extra = _has_subcent_digits(row["amount"])
+                nonzero_extra = _has_nonzero_subcent_digits(row["amount"])
                 group = _classify_currency(row["currency"])
                 if extra is None:
                     invalid += 1
                 elif extra and group:
                     precision[group] += 1
+                if nonzero_extra and group:
+                    nonzero_precision[group] += 1
             for group in ("LBP", "non_LBP"):
                 counts[f"invoices.{label}.precision_over_2dp.{group}"] = precision[group]
+                counts[f"invoices.{label}.text_has_more_than_2_decimal_digits.{group}"] = precision[group]
+                counts[f"invoices.{label}.has_nonzero_digit_beyond_2dp.{group}"] = nonzero_precision[group]
             if invalid:
                 counts[f"invoices.{label}.invalid_amount_values"] = invalid
 
