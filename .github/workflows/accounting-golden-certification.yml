@@ -33,3 +33,5 @@ jobs:
           tests/test_golden_ledger.py
           tests/test_float_precision_measurement.py
           tests/test_accounting_safety_net.py
+          tests/test_phase2a_vat_and_rounding_gaps.py
+          tests/test_phase2a_storage_vat_cases.py
