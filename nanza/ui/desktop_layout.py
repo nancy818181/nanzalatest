@@ -11,7 +11,7 @@ import logging
 import tkinter as tk
 from datetime import datetime
 
-NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 MENU_BG, MENU_HOVER, MENU_TEXT, MENU_MUTED = "#0B1F33", "#1B3A57", "#FFFFFF", "#9FB3C8"
 RED, AMBER, GREEN = "#8B1E1E", "#B7791F", "#2E7D5B"
 
@@ -27,6 +27,11 @@ MENU_GROUPS = (
 )
 MENU_WIDTH = 210
 log = logging.getLogger("saber.layout")
+
+
+def dashboard_columns(available_width):
+    """Keep dashboard KPI cards legible across compact laptops and wide monitors."""
+    return max(2, min(4, max(1, int(available_width)) // 235))
 
 
 def _settings_file():
@@ -185,20 +190,27 @@ def attention_items(app, metrics=None):
 
 def build_today_panel(app, parent):
     """Quick actions + 'Needs attention' list at the top of the Dashboard."""
-    box = tk.Frame(parent, bg=LIGHT); box.pack(fill="x", padx=12, pady=(2, 6))
-    actions = tk.Frame(box, bg=LIGHT); actions.pack(fill="x"); actions._saber_no_fold = True  # 2.9.116: shortcuts stay all in view
-    tk.Label(actions, text="Quick actions", bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 10))
+    box = tk.Frame(parent, bg=LIGHT); box.pack(fill="x", padx=12, pady=(0, 8))
+    actions = tk.Frame(box, bg="white", highlightthickness=1, highlightbackground="#D5DEE8", padx=12, pady=9)
+    actions.pack(fill="x"); actions._saber_no_fold = True  # 2.9.116: shortcuts stay all in view
+    action_heading = tk.Frame(actions, bg="white"); action_heading.pack(fill="x", pady=(0, 5))
+    tk.Label(action_heading, text="QUICK ACTIONS", bg="white", fg="#718096", font=("Segoe UI", 8, "bold")).pack(side="left")
+    tk.Label(action_heading, text="Common tasks, one click away", bg="white", fg="#718096", font=("Segoe UI", 8)).pack(side="right")
+    action_row = tk.Frame(actions, bg="white"); action_row.pack(fill="x")
     for text, attribute in QUICK_ACTIONS:
         if attribute not in getattr(app, "_page_attributes", ()): continue
-        tk.Button(actions, text=text, command=lambda a=attribute: app.select_main_tab(getattr(app, a)), bg="white", fg=NAVY,
-                  activebackground=GOLD, border=1, relief="solid", padx=12, pady=5, cursor="hand2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=3, pady=2)
+        tk.Button(action_row, text=text, command=lambda a=attribute: app.select_main_tab(getattr(app, a)), bg="white", fg=NAVY,
+                  activebackground=GOLD, border=1, relief="solid", padx=12, pady=6, cursor="hand2", font=("Segoe UI", 9, "bold")).pack(side="left", padx=3, pady=2)
     try:
         from desktop_common import flow_toolbars
-        flow_toolbars(actions)
+        flow_toolbars(action_row)
     except Exception: log.debug("Quick actions left unwrapped", exc_info=True)
-    card = tk.Frame(box, bg="white", highlightthickness=1, highlightbackground="#dfe6ee"); card.pack(fill="x", pady=(6, 0))
-    tk.Label(card, text="Needs attention", bg="white", fg=NAVY, font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", padx=12, pady=(8, 2))
-    app.today_list = tk.Frame(card, bg="white"); app.today_list.pack(fill="x", padx=12, pady=(0, 8))
+    card = tk.Frame(box, bg="white", highlightthickness=1, highlightbackground="#D5DEE8"); card.pack(fill="x", pady=(8, 0))
+    heading = tk.Frame(card, bg="white"); heading.pack(fill="x", padx=14, pady=(10, 3))
+    tk.Label(heading, text="NEEDS ATTENTION", bg="white", fg=NAVY, font=("Segoe UI", 9, "bold"), anchor="w").pack(side="left")
+    tk.Label(heading, text="Items that may need your review", bg="white", fg="#718096", font=("Segoe UI", 8)).pack(side="right")
+    tk.Frame(card, bg="#E8EDF3", height=1).pack(fill="x", padx=14, pady=(2, 4))
+    app.today_list = tk.Frame(card, bg="white"); app.today_list.pack(fill="x", padx=14, pady=(0, 8))
     return box
 
 
@@ -209,10 +221,10 @@ def fill_today_panel(app, metrics=None):
     items = attention_items(app, metrics)
     colours = {"red": RED, "amber": AMBER, "green": GREEN}
     for level, text, label, callback in items:
-        line = tk.Frame(holder, bg="white"); line.pack(fill="x", pady=2)
-        tk.Label(line, text="●", bg="white", fg=colours[level], font=("Segoe UI", 11)).pack(side="left")
-        tk.Label(line, text=text, bg="white", fg=NAVY, font=("Segoe UI", 10), anchor="w").pack(side="left", padx=6)
+        line = tk.Frame(holder, bg="white"); line.pack(fill="x", pady=3)
+        tk.Frame(line, bg=colours[level], width=3).pack(side="left", fill="y", padx=(0, 9))
+        tk.Label(line, text=text, bg="white", fg=NAVY, font=("Segoe UI", 9), anchor="w").pack(side="left", padx=(0, 6), pady=3)
         if label and callback:
-            tk.Button(line, text=label, command=callback, bg=NAVY, fg="white", border=0, padx=10, pady=2, cursor="hand2").pack(side="right")
+            tk.Button(line, text=label, command=callback, bg="white", fg=NAVY, border=0, padx=10, pady=4, cursor="hand2").pack(side="right")
     app.today_items = items
     return items

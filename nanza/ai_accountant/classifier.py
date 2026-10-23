@@ -59,7 +59,7 @@ def classify_expense(description, accounts):
             if not _active(account.get("is_active")) or not _active(account.get("is_posting")):
                 continue
             code = str(account.get("code") or account.get("account_code") or "")
-            if not re.fullmatch(r"6[0-9]{8}", code):
+            if not re.fullmatch(r"6[0-9]*(?:\.[0-9]+)?", code):  # 2.9.132: any class 6 code of the chart (6263.1, 6262, 626310001)
                 continue
             if str(account.get("type") or account.get("account_type") or "expense").casefold() != "expense":
                 continue
@@ -102,12 +102,34 @@ def classify_expense(description, accounts):
     }
 
 
+def _keyword_fallback(description, chart):
+    """2.9.132 (Phase 2): the English / French / Arabic keyword categories of the invoice reader, resolved to an account
+    that EXISTS (active, posting) in the given chart; None when ambiguous, unknown or not in the chart."""
+    import pdf_import
+    found = pdf_import.expense_classification(description)
+    if found["status"] != "suggested": return None, found["status"]
+    label, dotted, nine, _name = found["category"]
+    codes = {str(a.get("code") or a.get("account_code")): a for a in chart
+             if _active(a.get("is_active", True)) and _active(a.get("is_posting", True))}
+    code = dotted if dotted in codes else nine if nine in codes else None
+    if not code: return None, "not_in_chart"
+    evidence = found["candidates"][0]["evidence"]
+    return {"account_code": code, "heuristic_score": 0.86 if len(evidence) >= 2 else 0.78, "abstain": False, "topic": label,
+            "source": "keywords", "evidence": [{"kind": "extracted", "text": "Words on the document: " + ", ".join(evidence)},
+                                               {"kind": "inferred", "text": f"Category '{label}' -> account {code} of this chart"}]}, "suggested"
+
+
 def suggest_account(description, accounts=(), account_type="expense"):
     chart = [
         account for account in accounts or ()
         if str(account.get("type") or account.get("account_type") or "expense").casefold() == account_type.casefold()
     ]
     result = classify_expense(description, chart)
+    if result.get("account_code") is None and account_type == "expense":
+        fallback, _status = _keyword_fallback(description, chart)
+        # a broad topic ("utilities": water and electricity) is narrowed only by a more specific category among its candidates
+        if fallback and (not result.get("ambiguous") or fallback["account_code"] in {c["account_code"] for c in result.get("candidates", [])}):
+            result = fallback
     result["account_name"] = ""
     result["category"] = result.get("topic", "")
     result["requires_review"] = True
@@ -119,8 +141,14 @@ def suggest_account(description, accounts=(), account_type="expense"):
             or selected.get("name_ar") or ""
         )
         result["label"] = f"Suggested {result['heuristic_score']:.0%} heuristic score (rule-based)"
+        result.setdefault("evidence", [{"kind": "inferred", "text": f"Keyword topic '{result.get('topic')}' matches the account name"}])
+        # 2.9.132: a plain reason, and the reminder that the score is a rule score, not a measured accuracy
+        result["explanation"] = " ".join(e["text"] for e in result["evidence"]) + \
+            f". Score {result['heuristic_score']:.2f} (rule score, not a measured accuracy). Review before saving."
     else:
         result["label"] = "No suggestion"
+        result["explanation"] = ("Several expense kinds are mentioned; choose the account." if result.get("ambiguous") else
+                                 "No recognised words and no matching account in this chart; choose the account.")
     return result
 
 

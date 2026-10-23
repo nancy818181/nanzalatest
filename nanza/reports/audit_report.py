@@ -116,4 +116,6 @@ def build(db, date_from, date_to, late_days=30):
     ]
     summary = {"integrity_ok": integrity["ok"], "users": len(activity_rows), "changes": len(changes), "late": len(late), "admin": len(admin),
                "outside_hours": len(night), "manual_cash": len(cash), "entries": len(in_period)}
-    return {"from": display_date(start), "to": display_date(end), "summary": summary, "integrity": integrity, "sections": sections}
+    try: company = str(db.settings().get("company_name") or "")  # 2.9.132: the company in the report header
+    except (AttributeError, KeyError): company = ""
+    return {"from": display_date(start), "to": display_date(end), "summary": summary, "integrity": integrity, "sections": sections, "company": company}

@@ -88,6 +88,10 @@ TEXTS = {
     "NET INCREASE / (DECREASE) IN CASH": ("VARIATION NETTE DE LA TRÉSORERIE", "صافي الزيادة / (النقص) في النقد"),
     "Cash and cash equivalents at start": ("Trésorerie à l'ouverture", "النقد وما يعادله في بداية الفترة"),
     "CASH AND CASH EQUIVALENTS AT END": ("TRÉSORERIE À LA CLÔTURE", "النقد وما يعادله في نهاية الفترة"),
+    # 2.9.132
+    "Total expenses": ("Total des charges", "مجموع المصاريف"),
+    "Cash and cash equivalents in the statement of financial position": ("Trésorerie à l'état de la situation financière", "النقد وما يعادله في بيان المركز المالي"),
+    "Bank overdrafts (in other current liabilities)": ("Découverts bancaires (dans les autres passifs courants)", "حسابات مصرفية مكشوفة (ضمن المطلوبات المتداولة الأخرى)"),
     "STATEMENT OF FINANCIAL POSITION as at {end_text}": ("ÉTAT DE LA SITUATION FINANCIÈRE au {end_text}", "بيان المركز المالي كما في {end_text}"),
     "STATEMENT OF PROFIT OR LOSS AND OTHER COMPREHENSIVE INCOME {for_period}": (
         "ÉTAT DU RÉSULTAT NET ET DES AUTRES ÉLÉMENTS DU RÉSULTAT GLOBAL {for_period}", "بيان الربح أو الخسارة والدخل الشامل الآخر {for_period}"),

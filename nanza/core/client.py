@@ -257,6 +257,9 @@ class ApiClient:
         result["content"]=base64.b64decode(result["content"])
         return result
     def post_asset_period(self,asset_id,period_end): return self.request("POST",f"/api/fixed-assets/{asset_id}/post",{"period_end":period_end})["voucher"]
+    def dispose_asset(self,asset_id,disposal_date,nbv_account=None):  # 2.9.132
+        return self.request("POST",f"/api/fixed-assets/{asset_id}/dispose",{"disposal_date":disposal_date,"nbv_account":nbv_account})
+    def asset_reconcile(self,as_of): return self.request("GET",f"/api/fixed-assets/reconcile?as_of={as_of}")  # 2.9.132
     def delete_asset(self,asset_id): return self.request("DELETE",f"/api/fixed-assets/{asset_id}")
     def invoice_detail(self, invoice_id): return self.request("GET",f"/api/invoices/{invoice_id}/detail")
     def create_invoice_return(self, invoice_id, items, return_date=None, request_id=None):

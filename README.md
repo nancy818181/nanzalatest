@@ -2,6 +2,36 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.132 (phase 1 test: VAT, fixed assets, reports, IFRS)
+
+Tested end to end on a synthetic company (Q1-Q4 2026, USD and LBP, test rate 89,500): 1036 tests, no regression
+(the 72 environment-only failures of a computer without Tk / arabic-reshaper are unchanged). New tests: `tests/test_v2_9_132.py`.
+
+- VAT: the ledger check no longer lists an exempt-use purchase as "not on the return"; the Art. 31 prorata is in whole LBP
+  like the settlement and the credit carried forward; from 2026 the due date is the last day of the month after the quarter
+  (Q2 31-07, Q3 31-10 - owner decision); the deduction ratio stays between 0 and 1.
+- Fixed assets (IAS 16 / IAS 21): disposal / scrapping (Dr accumulated depreciation, Dr 6812 book value, Cr cost; the sale
+  by a sales invoice to 7812 so its VAT is declared) with disposals in the rollforward; register against ledger check;
+  reversing a depreciation or disposal voucher updates the register; depreciation and disposals use the purchase-date rate
+  (IAS 21.23(b)). Schema: two added columns `fixed_assets.disposed_on`, `disposal_entry_id` (existing rows unchanged).
+  Accounts 681, 6811, 6812, 78, 781, 7811, 7812 added to every chart template.
+- Invoices: an Assets invoice needs a class 2 account (import / API, as the screen already required); a POSTED invoice
+  whose total differs from subtotal + VAT by more than 1 is refused (no silent balancing on 6851.6); manual invoice
+  amounts are kept as exact decimal text (was float; test_v2_9_93 updated: "111.00" instead of "111.0", same value).
+- Financial statements (IAS 7.8 / 7.45): a cash or bank account with a credit balance stays a liability in the balance
+  sheet but is part of cash and cash equivalents in the cash flow, with the reconciliation lines; a review point flags cash
+  on hand with a credit balance.
+- PDF layout (no figure changed): columns sized on the longest header word plus padding (a 10-column trial balance fits one
+  band, amounts never break over two lines); a column with cents shows 2 decimals on every amount; one date line;
+  negative amounts in brackets (1,234.00) in every report; the period of the P&L and cash flow on its own line;
+  "Total expenses" in the P&L (IAS 1.102); the company name in the audit report header.
+- Ageing (owner decision): receipts / payments not allocated to an invoice settle the oldest open invoices first (FIFO by
+  due date); the net balance is unchanged; `fifo=False` keeps the earlier gross presentation (test_final_features updated).
+- The saved VAT return snapshot keeps exact decimal text (was float).
+- Not changed on purpose: the core report queries (trial balance, balance sheet, cash flow) still return float to the
+  screens; DSUM adds exactly and a float keeps cents exact up to about 10^13 (LBP 10 trillion). Changing the type would
+  touch every screen.
+
 ## Version 2.9.131 (merged audit fixes and AR/EN resources)
 
 Merged CLEAN_FIXED onto the complete source. Installer/runtime versions match.

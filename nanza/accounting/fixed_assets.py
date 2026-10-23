@@ -35,6 +35,10 @@ def migrate(db):
     if "opening_date" not in {row[1] for row in db.execute("PRAGMA table_info(fixed_assets)")}:
         # 2.9.84: an asset bought before Saber - depreciation already booked (in the opening balance) up to this date
         db.execute("ALTER TABLE fixed_assets ADD COLUMN opening_date TEXT")
+    columns = {row[1] for row in db.execute("PRAGMA table_info(fixed_assets)")}
+    # 2.9.132: disposal / scrapping (IAS 16.67-72) - added columns only, existing rows keep their data (NULL = not disposed)
+    if "disposed_on" not in columns: db.execute("ALTER TABLE fixed_assets ADD COLUMN disposed_on TEXT")
+    if "disposal_entry_id" not in columns: db.execute("ALTER TABLE fixed_assets ADD COLUMN disposal_entry_id INTEGER")
 
 
 def _iso(value):
@@ -49,6 +53,25 @@ def _money(value, label):
     except (InvalidOperation, ValueError): raise ValueError(f"{label} must be a number")
     if not number.is_finite() or number<0: raise ValueError(f"{label} cannot be negative")
     return number
+
+
+def _historical_rates(database, asset):
+    """2.9.132 (IAS 21.23(b)): PPE is a non-monetary item - its depreciation and its disposal are translated at the rate of
+    the purchase date, so cost and accumulated depreciation stay at the same rate in the LBP / USD columns. No rate saved for
+    that date: the voucher keeps the rate of its own date (as before) and the result says so."""
+    try:
+        rates=database.suggested_rates(asset["currency"],datetime.strptime(asset["acquired_on"],"%Y-%m-%d").strftime("%d-%m-%Y"))
+        return {"rate_lbp":str(rates["rate_lbp"]),"rate_usd":str(rates["rate_usd"])},""
+    except (ValueError, ArithmeticError, KeyError, TypeError):
+        import logging
+        logging.getLogger("saber.assets").warning("No exchange rate on the purchase date of %s - voucher-date rate used", asset.get("asset_code"))
+        return None,f"No exchange rate saved for {asset['acquired_on']} (purchase of {asset['asset_code']}): the rate of the voucher date was used."
+
+
+def _line(account, side, amount, currency, rates):
+    """A voucher line: at the historical rates when known, else a plain debit / credit line (rate of the voucher date)."""
+    if rates is None: return {"account_code":account,("debit" if side=="D" else "credit"):str(amount)}
+    return {"account_code":account,"side":side,"amount":str(amount),"line_currency":currency,**rates}
 
 
 def list_assets(database):
@@ -216,19 +239,22 @@ def rollforward(database, fiscal_year):
     if year<2000 or year>2100: raise ValueError("Enter a valid fiscal year")
     start=f"{year:04d}-01-01"; end=f"{year:04d}-12-31"
     with database.connect() as db:
+        # 2.9.132: an asset disposed of in the year is in the rollforward (cost and accumulated depreciation out under disposals)
         assets=[dict(row) for row in db.execute(
-            "SELECT * FROM fixed_assets WHERE status='active' AND acquired_on<=? ORDER BY asset_code",(end,))]
+            """SELECT * FROM fixed_assets WHERE acquired_on<=? AND (status='active' OR (status='disposed' AND disposed_on>=?))
+               ORDER BY asset_code""",(end,start))]
         posting_rows=[dict(row) for row in db.execute(
             """SELECT p.* FROM fixed_asset_postings p JOIN fixed_assets a ON a.id=p.asset_id
-               WHERE a.status='active' AND a.acquired_on<=? AND p.period_end<=? ORDER BY p.asset_id,p.period_end""",(end,end))]
+               WHERE a.status IN ('active','disposed') AND a.acquired_on<=? AND p.period_end<=? ORDER BY p.asset_id,p.period_end""",(end,end))]
     postings={}
     for row in posting_rows: postings.setdefault(row["asset_id"],{})[row["period_end"]]=row
-    money_fields=("opening_cost","additions","closing_cost","opening_accumulated","depreciation_posted",
-                  "closing_accumulated","opening_net_book_value","closing_net_book_value","unposted_scheduled")
+    money_fields=("opening_cost","additions","disposals_cost","closing_cost","opening_accumulated","depreciation_posted",
+                  "disposals_accumulated","closing_accumulated","opening_net_book_value","closing_net_book_value","unposted_scheduled")
     totals={}
     items=[]
     for asset in assets:
         cost=Decimal(asset["cost"]); acquired=asset["acquired_on"]
+        disposed=asset.get("status")=="disposed" and start<=str(asset.get("disposed_on") or "")<=end
         opening_cost=cost if acquired<start else Decimal("0")
         additions=cost if start<=acquired<=end else Decimal("0")
         opening_accumulated=Decimal("0"); depreciation=Decimal("0"); unposted=Decimal("0")
@@ -237,16 +263,20 @@ def rollforward(database, fiscal_year):
             amount=Decimal(posting["amount"])
             if period<start: opening_accumulated+=amount
             else: depreciation+=amount
-        for period in _schedule_rows(asset,asset_postings):
-            if start<=period["period_end"]<=end and not period["posted"]:
-                unposted+=Decimal(period["amount"])
-        closing_cost=opening_cost+additions
-        closing_accumulated=opening_accumulated+depreciation
+        if not disposed:
+            for period in _schedule_rows(asset,asset_postings):
+                if start<=period["period_end"]<=end and not period["posted"]:
+                    unposted+=Decimal(period["amount"])
+        disposals_cost=cost if disposed else Decimal("0")
+        disposals_accumulated=opening_accumulated+depreciation if disposed else Decimal("0")
+        closing_cost=opening_cost+additions-disposals_cost
+        closing_accumulated=opening_accumulated+depreciation-disposals_accumulated
         row={"asset_code":asset["asset_code"],"name":asset["name"],"currency":asset["currency"],
-             "opening_cost":opening_cost,"additions":additions,"closing_cost":closing_cost,
-             "opening_accumulated":opening_accumulated,"depreciation_posted":depreciation,
+             "opening_cost":opening_cost,"additions":additions,"disposals_cost":disposals_cost,"closing_cost":closing_cost,
+             "opening_accumulated":opening_accumulated,"depreciation_posted":depreciation,"disposals_accumulated":disposals_accumulated,
              "closing_accumulated":closing_accumulated,"opening_net_book_value":opening_cost-opening_accumulated,
-             "closing_net_book_value":closing_cost-closing_accumulated,"unposted_scheduled":unposted}
+             "closing_net_book_value":closing_cost-closing_accumulated,"unposted_scheduled":unposted,
+             "disposed_on":asset.get("disposed_on") if disposed else ""}
         items.append({key:(str(value.quantize(Decimal("0.01"),rounding=ROUND_HALF_UP)) if isinstance(value,Decimal) else value)
                       for key,value in row.items()})
         currency_totals=totals.setdefault(asset["currency"],{field:Decimal("0") for field in money_fields})
@@ -270,10 +300,12 @@ def post_period(database, asset_id, period_end, user_id, fiscal_year=None):
     amount=Decimal(row["amount"])
     if amount<=0: raise ValueError("This period has no amount to post")
     date_text=datetime.strptime(row["period_end"],"%Y-%m-%d").strftime("%d-%m-%Y")
+    rates,note=_historical_rates(database,asset)  # 2.9.132: IAS 21.23(b)
     voucher=database.save_journal_voucher({"entry_date":date_text,"description":f"Asset amortisation {asset['asset_code']} - {row['period_end']}",
         "currency":asset["currency"],"voucher_type":"06"},[
-        {"account_code":asset["depreciation_account"],"debit":str(amount)},
-        {"account_code":asset["accumulated_account"],"credit":str(amount)}],user_id)
+        _line(asset["depreciation_account"],"D",amount,asset["currency"],rates),
+        _line(asset["accumulated_account"],"C",amount,asset["currency"],rates)],user_id)
+    if note: voucher["rate_note"]=note
     with database.connect() as db:
         db.execute("INSERT INTO fixed_asset_postings(asset_id,period_end,amount,entry_id) VALUES(?,?,?,?)",
                    (asset_id,row["period_end"],str(amount),voucher["voucher"]["id"]))
@@ -289,6 +321,74 @@ def delete_asset(database, asset_id, user_id=None):
         db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,datetime('now'))",
                    (user_id,"delete","fixed_asset",asset_id,"{}"))
     return {"deleted":int(asset_id)}
+
+
+@atomic
+def dispose_asset(database, asset_id, disposal_date, user_id, nbv_account=None, fiscal_year=None):
+    """2.9.132: derecognise a sold or scrapped asset (IAS 16.67-72). One balanced voucher in the asset's currency, dated the
+    disposal date: Dr accumulated depreciation (posted so far), Dr book value of assets disposed of (6812 / 6811 for
+    intangibles), Cr the asset account (cost). The sale price and its VAT go through a sales invoice (income 7812 / 7811), so
+    the VAT return sees it; the gain or loss is 7812 less 6812. Depreciation of every period ending before the disposal
+    date must be posted first (the disposal month itself is not depreciated). Reversing the voucher makes the asset active again."""
+    day=_iso(disposal_date)
+    asset=next((item for item in list_assets(database) if item["id"]==int(asset_id)),None)
+    if not asset: raise KeyError(asset_id)
+    if day<asset["acquired_on"]: raise ValueError("The disposal date cannot be before the purchase date")
+    if fiscal_year is not None and int(day[:4])!=int(fiscal_year):
+        raise ValueError(f"Select fiscal year {day[:4]} before disposing of this asset")
+    rows=schedule(database,asset_id)
+    late=[r["period_end"] for r in rows if r["period_end"]<day and not r["posted"] and Decimal(r["amount"])>0]
+    if late: raise ValueError(f"Post the depreciation up to {late[-1]} first (periods before the disposal date)")
+    with database.connect() as db:
+        accumulated=sum((Decimal(r["amount"]) for r in db.execute("SELECT amount FROM fixed_asset_postings WHERE asset_id=?",(int(asset_id),))),Decimal("0"))
+    cost=Decimal(asset["cost"]); book_value=cost-accumulated
+    if book_value<0: raise ValueError("Accumulated depreciation is above the cost; check the postings of this asset")
+    default_nbv="6811" if str(asset["asset_account"]).startswith("21") else "6812"
+    nbv_account=str(nbv_account or default_nbv).split(" - ",1)[0].strip()
+    if not nbv_account.startswith("6"): raise ValueError("The book value of the asset disposed of goes to an expense account (class 6, e.g. 6812)")
+    with database.connect() as db:
+        if not db.execute("SELECT 1 FROM accounts WHERE code=?",(nbv_account,)).fetchone(): raise ValueError(f"Account {nbv_account} was not found")
+    rates,rate_note=_historical_rates(database,asset)  # IAS 21.23(b): the rate of the purchase, as the cost and its depreciation
+    lines=[_line(asset["accumulated_account"],"D",accumulated,asset["currency"],rates)] if accumulated>0 else []
+    if book_value>0: lines.append(_line(nbv_account,"D",book_value,asset["currency"],rates))
+    lines.append(_line(asset["asset_account"],"C",cost,asset["currency"],rates))
+    voucher=database.save_journal_voucher({"entry_date":datetime.strptime(day,"%Y-%m-%d").strftime("%d-%m-%Y"),
+        "description":f"Asset disposal {asset['asset_code']} - {asset['name']}","currency":asset["currency"],"voucher_type":"06"},lines,user_id)
+    with database.connect() as db:
+        db.execute("UPDATE fixed_assets SET status='disposed',disposed_on=?,disposal_entry_id=? WHERE id=?",(day,voucher["voucher"]["id"],int(asset_id)))
+        db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,datetime('now'))",
+                   (user_id,"dispose","fixed_asset",int(asset_id),json.dumps({"date":day,"cost":str(cost),"accumulated":str(accumulated),
+                    "book_value":str(book_value),"voucher":voucher["voucher"]["entry_number"]})))
+    return {"voucher":voucher["voucher"]["entry_number"],"cost":str(cost),"accumulated":str(accumulated),"book_value":str(book_value),
+            "nbv_account":nbv_account,"note":"Record the sale price with a sales invoice to 7812 (7811 for intangibles) so the VAT is declared."
+            + (" Yearly depreciation: the months of the disposal year were not depreciated." if asset["frequency"]=="yearly" and day[5:]!="12-31" else "")
+            + (" " + rate_note if rate_note else "")}
+
+
+def reconcile_gl(database, as_of):
+    """2.9.132: the register against the ledger at a date, per account and currency: cost of the assets held against the
+    balance of the asset account, depreciation posted against the accumulated depreciation account. A difference is an
+    asset bought without a register line, a register line without its purchase entry, or a manual entry."""
+    day=_iso(as_of)
+    with database.connect() as db:
+        assets=[dict(r) for r in db.execute("""SELECT * FROM fixed_assets WHERE acquired_on<=? AND
+            (status='active' OR (status='disposed' AND disposed_on>?))""",(day,day))]
+        posted={}
+        for r in db.execute("SELECT asset_id,period_end,amount FROM fixed_asset_postings WHERE period_end<=?",(day,)):
+            posted[r["asset_id"]]=posted.get(r["asset_id"],Decimal("0"))+Decimal(r["amount"])
+    register={}
+    for a in assets:
+        key=(a["asset_account"],a["currency"],"cost"); register[key]=register.get(key,Decimal("0"))+Decimal(a["cost"])
+        key=(a["accumulated_account"],a["currency"],"accumulated"); register[key]=register.get(key,Decimal("0"))-posted.get(a["id"],Decimal("0"))
+    rows=[]
+    for (code,currency,kind),amount in sorted(register.items()):
+        ledger=Decimal("0")
+        for r in database.trial_balance(None,day,code,include_subaccounts=False):
+            if str(r.get("code"))==str(code) and r.get("currency")==currency:
+                ledger+=Decimal(str(r.get("closing_balance") if r.get("closing_balance") is not None else r.get("balance") or 0))
+        ledger=ledger.quantize(Decimal("0.01"),rounding=ROUND_HALF_UP); amount=amount.quantize(Decimal("0.01"))
+        rows.append({"account":code,"currency":currency,"kind":kind,"register":str(amount),"ledger":str(ledger),"difference":str(amount-ledger)})
+    return {"as_of":day,"rows":rows,"agreed":all(Decimal(r["difference"])==0 for r in rows)}
 
 
 def check_carry_forward(source,target_year):
@@ -412,13 +512,24 @@ def post_category_month(database, account_code, month, user_id, fiscal_year=None
         batches.append((group,pending))
     if late: raise ValueError("Post the earlier months first for: "+", ".join(late))
     if not batches: raise ValueError("The depreciation of this account for this month is already posted (or is zero)")
-    vouchers=[]; amounts={}; count=0
+    vouchers=[]; amounts={}; count=0; notes=[]
+    registered={a["id"]:a for a in list_assets(database)}
     for group,pending in batches:
         amount=sum((a["current"] for a in pending),Decimal("0"))
+        # 2.9.132 (IAS 21.23(b)): one pair of lines per purchase-date rate, so each asset keeps its historical rate
+        by_rate={}
+        for a in pending:
+            rates,note=_historical_rates(database,registered[a["id"]])
+            if note: notes.append(note)
+            key=tuple(sorted(rates.items())) if rates else None
+            by_rate[key]=by_rate.get(key,Decimal("0"))+a["current"]
+        lines=[]
+        for key,value in by_rate.items():
+            rates=dict(key) if key else None
+            lines+=[_line(group["depreciation_account"],"D",value,group["currency"],rates),_line(group["accumulated_account"],"C",value,group["currency"],rates)]
         voucher=database.save_journal_voucher({"entry_date":datetime.strptime(end,"%Y-%m-%d").strftime("%d-%m-%Y"),
             "description":f"Depreciation {group['name'] or group['account']} ({group['account']}, {group['currency']}) - {end[:7]}","currency":group["currency"],"voucher_type":"06"},
-            [{"account_code":group["depreciation_account"],"debit":str(amount)},
-             {"account_code":group["accumulated_account"],"credit":str(amount)}],user_id)
+            lines,user_id)
         with database.connect() as db:
             for asset in pending:
                 db.execute("INSERT INTO fixed_asset_postings(asset_id,period_end,amount,entry_id) VALUES(?,?,?,?)",
@@ -427,4 +538,4 @@ def post_category_month(database, account_code, month, user_id, fiscal_year=None
         amounts[group["currency"]]=amounts.get(group["currency"],Decimal("0"))+amount
         count+=len(pending)
     return {"voucher":", ".join(vouchers),"vouchers":vouchers,"amounts":{code:float(amount) for code,amount in amounts.items()},
-            "amount":float(next(iter(amounts.values()))) if len(amounts)==1 else None,"assets":count}
+            "amount":float(next(iter(amounts.values()))) if len(amounts)==1 else None,"assets":count,"rate_notes":sorted(set(notes))}

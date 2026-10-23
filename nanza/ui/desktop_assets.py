@@ -7,7 +7,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
 
-NAVY, GOLD, LIGHT, RED = "#0a1931", "#d4a017", "#f8fafc", "#8B1E1E"
+NAVY, GOLD, LIGHT, RED = "#102A43", "#B78B45", "#F4F7FA", "#8B1E1E"
 
 
 def _dd(value):

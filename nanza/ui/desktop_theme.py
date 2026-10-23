@@ -17,30 +17,30 @@ HEADING_ACTIVE = "#142b50"
 HEADING_TEXT = "#FFFFFF"
 FORM_TEXT = NAVY
 SELECTED = "#f7edcf"
-STRIPE = "#f8fafc"
-BORDER = "#C9D3DD"
-TAB_IDLE = "#e9eef5"
-TAB_HOVER = "#f7edcf"
+STRIPE = "#F7F9FC"
+BORDER = "#D5DEE8"
+TAB_IDLE = "#EAF0F6"
+TAB_HOVER = "#F5EBD4"
 
 
 def apply_theme(root: tk.Misc) -> ttk.Style:
     style = ttk.Style(root)
     style.theme_use("clam")
-    style.configure("TNotebook", background=LIGHT, borderwidth=0, tabmargins=(6, 6, 6, 0))
-    style.configure("TNotebook.Tab", padding=(14, 8), font=(FONT, 9, "bold"), background=TAB_IDLE, foreground=NAVY, borderwidth=0)
+    style.configure("TNotebook", background=LIGHT, borderwidth=0, tabmargins=(8, 8, 8, 0))
+    style.configure("TNotebook.Tab", padding=(16, 9), font=(FONT, 9, "bold"), background=TAB_IDLE, foreground=NAVY, borderwidth=0)
     style.map("TNotebook.Tab", background=[("selected", "white"), ("active", TAB_HOVER)], foreground=[("selected", NAVY)],
               lightcolor=[("selected", GOLD)], expand=[("selected", (0, 2, 0, 0))])
-    style.configure("Treeview", rowheight=27, font=(FONT, 10), background="white", fieldbackground="white", foreground=NAVY,
+    style.configure("Treeview", rowheight=29, font=(FONT, 10), background="white", fieldbackground="white", foreground=NAVY,
                     borderwidth=0, bordercolor=BORDER)  # 2.9.59: 10 pt text in tables
     style.map("Treeview", background=[("selected", SELECTED)], foreground=[("selected", NAVY)])
-    style.configure("Treeview.Heading", background=HEADING, foreground=HEADING_TEXT, font=(FONT, 10, "bold"), relief="raised", padding=(4, 7),
-                    borderwidth=1, bordercolor=BORDER, lightcolor=HEADING, darkcolor=BORDER)
+    style.configure("Treeview.Heading", background=HEADING, foreground=HEADING_TEXT, font=(FONT, 9, "bold"), relief="flat", padding=(8, 9),
+                    borderwidth=0, bordercolor=HEADING, lightcolor=HEADING, darkcolor=HEADING)
     style.map("Treeview.Heading", background=[("active", HEADING_ACTIVE)], foreground=[("active", HEADING_TEXT)])
     style.configure("Sales.Treeview", rowheight=28, font=(FONT, 10))
     style.configure("TCombobox", padding=4, arrowsize=13, bordercolor=BORDER, lightcolor="white", darkcolor="white")
     style.map("TCombobox", bordercolor=[("focus", GOLD)], fieldbackground=[("readonly", "white")])
     style.configure("TEntry", padding=4, bordercolor=BORDER); style.map("TEntry", bordercolor=[("focus", GOLD)])
-    style.configure("TLabelframe", background=LIGHT, bordercolor=BORDER)
+    style.configure("TLabelframe", background=LIGHT, bordercolor=BORDER, borderwidth=1, relief="flat")
     style.configure("TLabelframe.Label", background=LIGHT, foreground=NAVY, font=(FONT, 9, "bold"))
     style.configure("TCheckbutton", background=LIGHT, foreground=NAVY); style.map("TCheckbutton", background=[("active", LIGHT)])
     style.configure("TRadiobutton", background=LIGHT, foreground=NAVY); style.map("TRadiobutton", background=[("active", LIGHT)])
@@ -113,7 +113,7 @@ def _lower(value):
 
 
 def _is_page_bg(widget):
-    try: return _lower(widget.cget("background")) in (_lower(PAGE), "#f8fafc")
+    try: return _lower(widget.cget("background")) in (_lower(PAGE), "#F4F7FA")
     except tk.TclError: return False
 
 
@@ -328,10 +328,10 @@ def polish(widget, fold=False):
 
 def page_title_bar(parent):
     """The bar above every screen: SECTION › Screen on the left (the currency filter goes on the right)."""
-    bar = tk.Frame(parent, bg=PAGE)
-    section = tk.Label(bar, text="", bg=PAGE, fg="#7A8794", font=(FONT, 9, "bold"))
-    section.pack(side="left", padx=(2, 6))
-    title = tk.Label(bar, text="", bg=PAGE, fg=NAVY, font=(FONT, 15, "bold"))
+    bar = tk.Frame(parent, bg="white", highlightthickness=1, highlightbackground=BORDER, padx=12, pady=8)
+    section = tk.Label(bar, text="", bg="white", fg=GOLD, font=(FONT, 8, "bold"))
+    section.pack(side="left", padx=(2, 8))
+    title = tk.Label(bar, text="", bg="white", fg=NAVY, font=(FONT, 14, "bold"))
     title.pack(side="left")
     bar._section, bar._title = section, title
     return bar

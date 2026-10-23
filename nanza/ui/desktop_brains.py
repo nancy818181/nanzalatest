@@ -203,7 +203,7 @@ class BrainsScreensMixin(BalanceReportsMixin):
         bar = tk.Frame(page, bg=NAVY); bar.pack(fill="x", padx=10, pady=(8, 0))
         tk.Label(bar, text="General Voucher", bg=NAVY, fg="white", font=("Segoe UI", 11, "bold")).pack(side="left", padx=10, pady=5)
         for text, step in (("|<", "first"), ("<", "previous"), (">", "next"), (">|", "last")):
-            tk.Button(bar, text=text, command=lambda s=step: self.navigate_voucher(s), bg="#0a1931", fg="white", activebackground="#142b50",
+            tk.Button(bar, text=text, command=lambda s=step: self.navigate_voucher(s), bg="#102A43", fg="white", activebackground="#142b50",
                     activeforeground="white", border=0, width=3, font=("Segoe UI", 9, "bold")).pack(side="left", padx=2, pady=4)
         tk.Button(bar, text="New", command=self.new_manual_voucher, bg="white", fg=NAVY, border=0, padx=12).pack(side="left", padx=(12, 2), pady=4)
         tk.Button(bar, text="Edit...", command=self.choose_voucher_to_edit, bg="white", fg=NAVY, border=0, padx=12, font=("Segoe UI", 9, "bold")).pack(side="left", padx=2, pady=4)

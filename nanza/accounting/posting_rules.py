@@ -218,9 +218,26 @@ def classify_lines(db, descriptions):
     return result
 
 
+def _posting_accounts(db):
+    """2.9.132: the active posting accounts of the company (None when no database is given - unit tests)."""
+    if db is None: return None
+    try: return {str(a["code"]): a for a in db.list_accounts() if a.get("is_active") and a.get("is_posting")}
+    except (AttributeError, sqlite3.Error): return None
+
+
 def suggest(db, scope="purchase", name=None, number=None, text="", lines=()):
     """Everything the program can propose for a new invoice of this supplier:
     {"rule": rule or None, "account": {code, confidence, source} or None, "lines": [...]}."""
+    result = _suggest(db, scope, name, number, text, lines)
+    accounts = _posting_accounts(db); account = result.get("account")
+    if accounts is not None and account and str(account.get("code") or "").split(" - ", 1)[0].strip() not in accounts:
+        # 2.9.132 (Phase 2): never propose an account that is not an active posting account of this chart
+        warning = f"The account {account.get('code')} ({account.get('source')}) is not an active posting account of this chart; choose the account."
+        result = {**result, "account": None, "review_required": True, "review_warnings": [*result.get("review_warnings", []), warning]}
+    return result
+
+
+def _suggest(db, scope="purchase", name=None, number=None, text="", lines=()):
     rule = find_rule(db, scope, name, number)
     lines = [str(line) for line in lines or () if str(line or "").strip()]
     classified = classify_lines(db, lines) if lines else []
@@ -250,7 +267,10 @@ def suggest(db, scope="purchase", name=None, number=None, text="", lines=()):
             classification = pdf_import.expense_classification(" ".join([text or "", *lines, name or ""]))
             category = classification["category"]
             if category:
-                account = {"code": category[2], "confidence": 0.7, "source": f"keywords: {category[0]}", "parent": category[1], "name": category[3]}
+                # 2.9.132: the code that exists in this chart (6263.4 in the Lebanese chart; the 9-digit form was proposed before)
+                accounts = _posting_accounts(db) or {}
+                code = category[1] if category[1] in accounts else category[2]
+                account = {"code": code, "confidence": 0.7, "source": f"keywords: {category[0]}", "parent": category[1], "name": category[3]}
             elif classification["status"] != "ambiguous":
                 import ai_mapper
                 found = ai_mapper.suggest_account(" ".join(lines) or text)

@@ -372,7 +372,8 @@ def load_period(db, start, end, basis):
         rows = [dict(r) for r in conn.execute("""SELECT j.*,a.code,a.name_en,a.name_fr,a.name_ar,e.entry_date,e.source_type,e.voucher_type,e.description entry_description,e.currency
           FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
           LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
-          WHERE (e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL)""")]
+          WHERE (e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL)
+            AND COALESCE(e.posting_status,'posted')='posted'""")]  # 2.9.132 (H-01): posted entries only
     closing = defaultdict(lambda: ZERO); opening = defaultdict(lambda: ZERO); pnl = defaultdict(lambda: ZERO); before = defaultdict(lambda: ZERO)
     names = {}; names_all = {}; count = 0
     for row in rows:
@@ -425,11 +426,23 @@ def period_data(db, start, end, basis, label, cfg=None):
     depreciation = -(accumulated + provisions)
     supplements = cfg.get('supplements', {}) if cfg.get('basis', basis) == basis else {}
     extra = {k: number(v) for k, v in supplements.items() if v != ''}
+    # 2.9.132 (IAS 7.8 / IAS 32.42): a bank or cash account with a credit balance stays a liability in the statement of
+    # financial position, but in the statement of cash flows it is part of cash and cash equivalents (net), not a
+    # working-capital movement. Its balances (negative amounts) at the start and at the end of the period:
+    def overdraft(balances):
+        return sum((v for c, v in balances.items() if c.startswith(('51', '53')) and v < 0 and group(c, v) == 'current_liabilities'), ZERO)
+    od_close = overdraft(raw['closing']); od_open = overdraft(raw['opening'])
+    od_move = od_close - od_open
+    working = {g: -(close_g[g] - open_g[g]) for g in WORKING}
+    working['current_liabilities'] += od_move  # the overdraft movement leaves operating activities
     cash_flow = {'profit': profit, 'depreciation': depreciation, 'depreciation_only': -accumulated, 'provisions': -provisions,
-                 'working': {g: -(close_g[g] - open_g[g]) for g in WORKING},
-                 'operating': profit + depreciation - delta(WORKING),
+                 'working': working,
+                 'operating': profit + depreciation - delta(WORKING) + od_move,
                  'investing': -(delta(INVESTING) - accumulated),
-                 'financing': -(delta(FINANCING) - provisions)}
+                 'financing': -(delta(FINANCING) - provisions),
+                 'cash_open': open_g['cash'] + od_open, 'cash_close': close_g['cash'] + od_close,
+                 'overdraft_open': -od_open, 'overdraft_close': -od_close,
+                 'cash_in_hand_credit': sorted(c for c, v in raw['closing'].items() if c.startswith('53') and v < 0)}
     reviewed = all(k in extra for k in ('cf_operating', 'cf_investing', 'cf_financing'))
     if reviewed:
         cash_flow.update(operating=extra['cf_operating'], investing=extra['cf_investing'], financing=extra['cf_financing'], fx=extra.get('cf_fx', ZERO))
@@ -447,7 +460,8 @@ def reconciliation_rows(data, translate=lambda text: text):
         return sum((d['close'][g] for g in ASSETS + LIABILITIES), ZERO) - d['equity_close']
     def cash(d):
         movement=sum((d['cash'].get(g,ZERO) for g in ('operating','investing','financing','fx')),ZERO)
-        return d['close']['cash'] - d['open']['cash'] - movement
+        # 2.9.132: cash and cash equivalents net of bank overdrafts (IAS 7.8), as in the statement of cash flows
+        return d['cash'].get('cash_close', d['close']['cash']) - d['cash'].get('cash_open', d['open']['cash']) - movement
     def unmapped(d):
         return sum((abs(value) for _name,value in d['accounts'].get('unmapped',{}).values()),ZERO)
     checks=[('Financial position: assets less equity and liabilities',balance),
@@ -581,12 +595,15 @@ def build(databases, options, others=(), master=None):
     line('Total income', lambda d: -sum((d['pnl'][g] for g in INCOME), ZERO), True)
     for g in EXPENSES:
         if g != 'income_tax' and any(d['pnl'][g] for d in data): line(titles[g], lambda d, g=g: -d['pnl'][g], note=note_for(g))
+    # 2.9.132: expenses by nature (IAS 1.102) with their total before the result
+    line('Total expenses', lambda d: -sum((d['pnl'][g] for g in EXPENSES if g != 'income_tax'), ZERO), True)
     line('Profit / (loss) before tax', lambda d: d['profit'] + d['pnl']['income_tax'], True)
     if any(d['pnl']['income_tax'] for d in data): line(titles['income_tax'], lambda d: -d['pnl']['income_tax'], note=note_for('income_tax'))
     line('PROFIT / (LOSS) FOR THE YEAR' if full_year else 'PROFIT / (LOSS) FOR THE PERIOD', lambda d: d['profit'], True)
     line('Other comprehensive income', lambda d: d['extra'].get('oci', ZERO))
     line('TOTAL COMPREHENSIVE INCOME', lambda d: d['profit'] + d['extra'].get('oci', ZERO), True)
     sections.append(dict(kind='profit', heading=t("STATEMENT OF PROFIT OR LOSS AND OTHER COMPREHENSIVE INCOME {for_period}", for_period=for_period),
+                         subheading=for_period,  # 2.9.132: the period on its own line in the PDF
                          headers=['', t('Notes')] + heads, rows=rows, total_rows=totals, page_break=True, fixed=True, center=True))
 
     # ---- Statement of changes in equity (oldest period first)
@@ -627,9 +644,13 @@ def build(databases, options, others=(), master=None):
     line('Capital, borrowings and dividends, net', lambda d: d['cash']['financing'])
     line('Net cash from financing activities', lambda d: d['cash']['financing'], True)
     line('NET INCREASE / (DECREASE) IN CASH', lambda d: d['cash']['operating'] + d['cash']['investing'] + d['cash']['financing'] + d['cash'].get('fx', ZERO), True)
-    line('Cash and cash equivalents at start', lambda d: d['open']['cash'])
-    line('CASH AND CASH EQUIVALENTS AT END', lambda d: d['close']['cash'], True)
-    sections.append(dict(kind='cash', heading=t('STATEMENT OF CASH FLOWS {for_period}', for_period=for_period),
+    line('Cash and cash equivalents at start', lambda d: d['cash'].get('cash_open', d['open']['cash']))
+    line('CASH AND CASH EQUIVALENTS AT END', lambda d: d['cash'].get('cash_close', d['close']['cash']), True)
+    if any(d['cash'].get('overdraft_close') or d['cash'].get('overdraft_open') for d in data):
+        # 2.9.132 (IAS 7.45): reconciliation with the statement of financial position
+        line('Cash and cash equivalents in the statement of financial position', lambda d: d['close']['cash'])
+        line('Bank overdrafts (in other current liabilities)', lambda d: -d['cash'].get('overdraft_close', ZERO))
+    sections.append(dict(kind='cash', heading=t('STATEMENT OF CASH FLOWS {for_period}', for_period=for_period), subheading=for_period,
                          headers=['', ''] + heads, rows=rows, total_rows=totals, page_break=True, fixed=True, center=True))
 
     # ---- Notes
@@ -683,6 +704,9 @@ def build(databases, options, others=(), master=None):
         if not d['cash']['reviewed'] and any(key in d['extra'] for key in ('cf_operating','cf_investing','cf_financing','cf_fx')):
             warnings.append(f"{d['label']}: incomplete cash flow overrides were ignored; enter operating, investing and financing amounts together.")
         if not d['count']: warnings.append(f"{d['label']}: no posted movements in the period.")
+        if d['cash'].get('cash_in_hand_credit'):  # 2.9.132: cash on hand cannot be negative - a missing receipt or a wrong account
+            warnings.append(f"{d['label']}: cash on hand with a credit balance ({', '.join(d['cash']['cash_in_hand_credit'])}) - "
+                            "cash cannot be negative; check the cash book before issue (shown under other current liabilities).")
         if not d['cash']['reviewed']: warnings.append(f"{d['label']}: cash flows are calculated from the balance sheet movements (indirect method); review the classification of investing and financing items.")
     if len(data) == 1: warnings.append('Single period: IAS 1 requires comparative figures for the preceding period.')
     if audit_rows is not None: warnings.append("The auditor's report is a template: the auditor completes and signs it after the audit. Remove this page before issuing.")

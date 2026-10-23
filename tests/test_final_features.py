@@ -1275,10 +1275,16 @@ class BusinessReportsTest(unittest.TestCase):
 
     def test_receivables_ageing(self):
         import business_reports
-        report = business_reports.build(self.db, "receivables", self.options)
+        # 2.9.132 (owner decision): unallocated receipts settle the oldest invoices first (FIFO); the earlier gross presentation
+        # stays available with fifo=False and keeps its original assertions
+        report = business_reports.build(self.db, "receivables", {**self.options, "fifo": False})
         rows = {r[0]: r for r in report["sections"][1]["rows"]}
         self.assertEqual([float(x) for x in rows["Client A"][2:8]], [0, 0, -133.2, 0, 1931, 0])  # 932 + 999 in 91-180 days, credit note 31-60
         self.assertEqual((float(rows["Client A"][9]), float(rows["Client A"][10])), (100, 1697.8))  # 100 received and not allocated
+        report = business_reports.build(self.db, "receivables", self.options)
+        rows = {r[0]: r for r in report["sections"][1]["rows"]}
+        self.assertEqual([float(x) for x in rows["Client A"][2:8]], [0, 0, -133.2, 0, 1831, 0])  # the 100 settles the oldest invoice
+        self.assertEqual((float(rows["Client A"][9]), float(rows["Client A"][10])), (0, 1697.8))   # same net balance
         self.assertEqual(float(rows["Client B"][2]), 244.2)  # not due yet
 
     def test_item_sales_3d_and_top(self):

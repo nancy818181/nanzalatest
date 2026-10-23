@@ -86,10 +86,7 @@ def _invoice(db, number, *, status="posted", kind="purchase"):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="A6-VAT-POSTED-SOURCE: VAT inclusion must require the source invoice's journal entry to be posted.",
-)
+# 2.9.132 (H-05): fixed
 def test_vat_return_excludes_invoice_when_linked_journal_entry_is_draft(synthetic_db):
     from vat_return import build_vat_return
 
@@ -103,10 +100,7 @@ def test_vat_return_excludes_invoice_when_linked_journal_entry_is_draft(syntheti
     assert "SYN-VAT-JE-DRAFT" not in {row["number"] for row in result["documents"]}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="A6-VAT-EXPENSE-POSTED-SOURCE: VAT inclusion must require an active posted source journal entry.",
-)
+# 2.9.132 (H-05): fixed
 def test_vat_return_excludes_expense_without_posted_journal_entry(synthetic_db):
     from vat_return import build_vat_return
 
@@ -287,10 +281,7 @@ def test_posted_invoice_source_entry_rejects_raw_sql_mutation(synthetic_db, oper
                 connection.execute("DELETE FROM journal_entries WHERE id=?", (entry_id,))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="POST-IMMUTABILITY-001 (Decision 4): a non-admin must not edit a posted sales invoice in place; corrections require reversal.",
-)
+# 2.9.132 (M-11, owner decision): fixed - only an administrator changes a posted sales invoice
 def test_non_admin_posted_sales_invoice_edit_requires_reversal():
     import server
 

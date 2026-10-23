@@ -60,7 +60,8 @@ class ApprovalTest(unittest.TestCase):
                                    "invoice_date": "12-03-2025", "party_name": "Client B", "kind": "sales", "currency": "USD", "status": "posted"},
                                    [{"description": "S", "quantity": 1, "unit_price": 150, "vat_rate": 11}])
         change = self.admin.audit_log(entity="invoice", action="change")["items"][0]
-        self.assertIn('"total": {"before": "111.0", "after": "166.5"}', change["details"].replace("'", '"'))
+        # 2.9.132: the amounts are saved as exact decimal text (111.00), no longer through float (111.0) - same values
+        self.assertIn('"total": {"before": "111.00", "after": "166.50"}', change["details"].replace("'", '"'))
 
 
 if __name__ == "__main__":

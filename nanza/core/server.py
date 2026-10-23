@@ -422,8 +422,17 @@ class ApiHandler(BaseHTTPRequestHandler):
             try:
                 if path.endswith("suggest"):
                     lines=json.loads(self._query(parsed,"lines","[]") or "[]")
-                    return self._json(200,posting_rules.suggest(self.db,self._query(parsed,"scope","purchase"),self._query(parsed,"name"),
-                                                                self._query(parsed,"number"),self._query(parsed,"text",""),lines))
+                    found=posting_rules.suggest(self.db,self._query(parsed,"scope","purchase"),self._query(parsed,"name"),
+                                                self._query(parsed,"number"),self._query(parsed,"text",""),lines)
+                    # 2.9.132 (Phase 2): the AI Accountant's reviewable answer beside it (account, confidence, reason, evidence,
+                    # abstention); read only - the screens keep using "account" / "rule" as before
+                    try: import advisor
+                    except ImportError: advisor=None  # an installer built without the module: the screens work as before
+                    if advisor is not None:
+                        scope=self._query(parsed,"scope","purchase")
+                        found["advice"]=advisor.suggest(self.db,scope if scope in ("purchase","expense","sale") else "purchase",
+                                                        party=self._query(parsed,"name"),text=self._query(parsed,"text",""),lines=lines)
+                    return self._json(200,found)
                 return self._json(200,{"items":posting_rules.list_rules(self.db)})
             except (ValueError,KeyError,TypeError,sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path == "/api/books-check":  # 2.9.119: Books Health Check (read only)
@@ -469,6 +478,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path == "/api/fixed-assets/rollforward":
             try: return self._json(200,fixed_assets.rollforward(self.db,self._query(parsed,"year","")))
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/fixed-assets/reconcile":  # 2.9.132: register against the ledger
+            try: return self._json(200,fixed_assets.reconcile_gl(self.db,self._query(parsed,"as_of","")))
+            except (ValueError, ArithmeticError, LookupError, sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/fixed-assets/") and path.endswith("/schedule"):
             try: return self._json(200,{"items":fixed_assets.schedule(self.db,int(path.split("/")[-2]))})
             except KeyError: return self._json(404,{"error":"Asset not found"})
@@ -978,6 +990,17 @@ class ApiHandler(BaseHTTPRequestHandler):
         return result,note
 
     def _approval_gate(self, user, invoice, invoice_id=None):
+        if invoice_id and isinstance(invoice, dict) and user["role"] != "admin":
+            # 2.9.132 (M-11, owner rule): a POSTED sales invoice is changed by an administrator only, whatever the approval mode;
+            # anyone else corrects it with a credit note (reversal). The status saved in the file decides when it can be read.
+            kind = str(invoice.get("kind") or invoice.get("entry_type") or "").lower(); status = str(invoice.get("status") or "").lower()
+            db = self.__dict__.get("db")
+            if db is not None:
+                with db.connect() as connection:
+                    row = connection.execute("SELECT kind,status FROM invoices WHERE id=?", (int(invoice_id),)).fetchone()
+                if row: kind, status = row["kind"], row["status"]
+            if kind in ("sale", "sales") and status == "posted":
+                raise PermissionError("A posted sales invoice can be changed by an administrator only; correct it with a credit note (reversal)")
         if not self._approval_required() or not isinstance(invoice, dict): return None
         wants_post = str(invoice.get("status") or "posted").lower() == "posted"
         if not wants_post: return None
@@ -1151,6 +1174,11 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/fixed-assets/") and path.endswith("/post"):
             try: return self._json(201,{"voucher":fixed_assets.post_period(self.db,int(path.split("/")[-2]),body.get("period_end"),user["id"],self.headers.get("X-Fiscal-Year"))})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path.startswith("/api/fixed-assets/") and path.endswith("/dispose"):  # 2.9.132: IAS 16 derecognition
+            try: return self._json(201,fixed_assets.dispose_asset(self.db,int(path.split("/")[-2]),body.get("disposal_date"),user["id"],
+                                                                   body.get("nbv_account"),self.headers.get("X-Fiscal-Year")))
+            except KeyError: return self._json(404,{"error":"Asset not found"})
+            except (ValueError, ArithmeticError, LookupError, sqlite3.Error) as exc: return self._json(400,{"error":str(exc)})
         if path.startswith("/api/expenses/") and path.endswith("/attachments"):
             try:
                 raw=base64.b64decode(body.get("content","").encode("ascii"),validate=True)
@@ -1739,7 +1767,14 @@ class ApiHandler(BaseHTTPRequestHandler):
                 result=production.delete_bom(self.db,unquote(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/payments/"): result=self.db.delete_payment(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/expenses/"): result=self.db.delete_expense(int(path.rsplit("/",1)[-1]),user["id"])
-            elif path.startswith("/api/invoices/"): result=self.db.mark_invoice_deleted(int(path.rsplit("/",1)[-1]),user["id"])
+            elif path.startswith("/api/invoices/"):
+                # 2.9.132 (H-02, owner decision): only an administrator removes a POSTED invoice (open period; the audit log keeps
+                # its amounts and journal lines); anyone else cancels it or issues a credit note
+                with self.db.connect() as connection:
+                    row=connection.execute("SELECT status FROM invoices WHERE id=?",(int(path.rsplit("/",1)[-1]),)).fetchone()
+                if row and row["status"]=="posted" and user["role"]!="admin":
+                    return self._json(403,{"error":"Only an administrator can delete a posted invoice. Cancel it or issue a credit note instead."})
+                result=self.db.mark_invoice_deleted(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/journal/"): result=self.db.delete_journal_voucher(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/posting-rules/"):
                 import posting_rules

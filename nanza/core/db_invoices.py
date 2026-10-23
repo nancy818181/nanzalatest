@@ -80,10 +80,13 @@ class InvoicesStore:
             else:
                 db.execute("INSERT OR IGNORE INTO parties(kind,name,currency) VALUES(?,?,?)", (party_kind, item.get("party_name") or "Unspecified", item.get("currency", "USD")))
                 party = db.execute("SELECT * FROM parties WHERE kind=? AND name=?", (party_kind, item.get("party_name") or "Unspecified")).fetchone()
-            raw_subtotal=Decimal(str(item.get("subtotal") or 0))
-            deductible=Decimal(str(item.get("deductible_subtotal") if item.get("deductible_subtotal") not in (None,"") else raw_subtotal))
-            non_deductible=Decimal(str(item.get("non_deductible_subtotal") or 0)); subtotal=deductible+non_deductible
-            vat = Decimal(str(item.get("vat") or 0)); total = Decimal(str(item.get("total") or subtotal + vat))
+            # 2.9.132 (H-03, owner rule): amounts with 2 decimals, the third rounded half up, before any posting or check
+            from decimal import ROUND_HALF_UP as half_up
+            cent=lambda value: Decimal(str(value)).quantize(Decimal("0.01"),rounding=half_up)
+            raw_subtotal=cent(item.get("subtotal") or 0)
+            deductible=cent(item.get("deductible_subtotal") if item.get("deductible_subtotal") not in (None,"") else raw_subtotal)
+            non_deductible=cent(item.get("non_deductible_subtotal") or 0); subtotal=deductible+non_deductible
+            vat = cent(item.get("vat") or 0); total = cent(item.get("total") or subtotal + vat)
             currency_issue = str(item.get("currency_issue") or "")
             requested_status=str(item.get("status") or "").strip().lower()
             status=requested_status if requested_status in ("posted",
@@ -102,6 +105,9 @@ class InvoicesStore:
                 defaults["expense_vat"] if self._entry_type(item)=="expenses" else defaults["purchase_vat"]
             vat_account = str(item.get("vat_account") or default_vat).strip()
             expense_account = str(item.get("expense_account") or (defaults["sales"] if kind=="sale" else defaults["purchases"])).strip()
+            if entry_type=="assets" and not expense_account.split(" - ",1)[0].strip().startswith("2"):
+                # 2.9.132: as the purchase screen already requires - an Assets invoice (Excel import, API) never goes to a purchase / expense account
+                raise ValueError(f"Invoice {item.get('invoice_number')}: an Assets purchase needs a class 2 fixed-asset account (got {expense_account})")
             if kind=="sale":  # 2.9.77: a sale never posts to an expense account or to deductible (input) VAT
                 if not expense_account.split(" - ",1)[0].strip().startswith("7"): expense_account=defaults["sales"]
                 vat_code=vat_account.split(" - ",1)[0].strip()
@@ -180,6 +186,11 @@ class InvoicesStore:
             difference = sum(x[1] for x in lines) - sum(x[2] for x in lines)
             if kind=="sale" and any(item.get(key) for key in ("supplier_side","expense_side","vat_side")) and difference:
                 raise ValueError("Sales posting accounts are unbalanced. Check their Debit/Credit selections.")
+            if status=="posted" and abs(difference)>Decimal("1"):
+                # 2.9.132: a POSTED invoice whose total is not subtotal + VAT is refused (it was balanced silently on 6851.6);
+                # a rounding difference up to 1 unit still goes to the import-variance account, a Review invoice is unchanged
+                raise ValueError(f"Invoice {item['invoice_number']}: total {total} is not subtotal + VAT ({subtotal + vat}); difference {difference} - "
+                                 "correct the amounts or import it in Review")
             if difference > 0:
                 lines.append((DEFAULT_LEBANESE_ACCOUNTS["import_variance"], 0, difference))
             elif difference < 0:
@@ -322,10 +333,11 @@ class InvoicesStore:
             invoice["expense_account"]=self.default_account("sales_goods")  # 2.9.77: items from stock -> sales of goods (2.9.81: Accounting Settings)
         if not str(invoice.get("invoice_number") or "").strip():
             invoice["invoice_number"] = self.next_invoice_number(invoice.get("kind", "sale"), invoice.get("invoice_date"))
-        invoice["deductible_subtotal"]=float(deductible_total); invoice["non_deductible_subtotal"]=float(non_deductible_total)
-        invoice["subtotal"] = float(deductible_total+non_deductible_total)
-        invoice["vat"] = float(vat_total)
-        invoice["total"] = float(deductible_total+non_deductible_total+vat_total)
+        # 2.9.132: exact decimal text, not float (import_invoice reads them with Decimal(str(...)))
+        invoice["deductible_subtotal"]=str(deductible_total); invoice["non_deductible_subtotal"]=str(non_deductible_total)
+        invoice["subtotal"] = str(deductible_total+non_deductible_total)
+        invoice["vat"] = str(vat_total)
+        invoice["total"] = str(deductible_total+non_deductible_total+vat_total)
         defaults=self.default_accounts()  # 2.9.81
         # per-item cost-account routing: split the expense side by each line's own account, remainder on the invoice default
         if expense_splits and self._entry_type(invoice)!="sales":
@@ -437,6 +449,13 @@ class InvoicesStore:
                 raise ValueError("Invoice has allocated payments. Remove the allocation before deleting it")
             if db.execute("SELECT 1 FROM invoices WHERE linked_invoice_id=? AND status NOT IN ('cancelled','deleted') LIMIT 1",(int(invoice_id),)).fetchone():
                 raise ValueError("Invoice has linked documents. Resolve them before deleting it")
+            # 2.9.132 (H-02): the audit log keeps what is removed - the invoice's amounts and every journal line - so the
+            # history can be rebuilt (it kept the invoice number only)
+            removed=[dict(r) for r in db.execute("""SELECT e.entry_number,e.entry_date,e.source_type,e.posting_status,e.currency,a.code account,
+                j.debit,j.credit,j.line_currency,j.amount,j.amount_lbp,j.amount_usd FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
+                JOIN accounts a ON a.id=j.account_id WHERE e.source_id=? AND (e.source_type IN ('invoice','journal_voucher','invoice_reversal','invoice_payment')
+                OR (e.source_type='vat_reclass' AND e.entry_number=?)) ORDER BY e.id,j.id""",(int(invoice_id),f"VATND-INV-{int(invoice_id)}"))]
+            snapshot={k:invoice[k] for k in ("invoice_number","kind","invoice_date","party_id","currency","subtotal","vat","total","status") if k in invoice.keys()}
             import inventory
             inventory.remove_invoice_documents(db,invoice_id)
             inventory._assert_nonnegative_history(db)
@@ -444,7 +463,8 @@ class InvoicesStore:
             db.execute("DELETE FROM journal_entries WHERE source_type='vat_reclass' AND entry_number=?",(f"VATND-INV-{int(invoice_id)}",))
             db.execute("UPDATE invoices SET status='deleted',cancelled_at=?,cancellation_reason='Deleted' WHERE id=?",(utcnow(),int(invoice_id)))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                       (user_id,"mark_deleted","invoice",int(invoice_id),json.dumps({"invoice_number":invoice["invoice_number"]}),utcnow()))
+                       (user_id,"mark_deleted","invoice",int(invoice_id),json.dumps({"invoice_number":invoice["invoice_number"],
+                        "invoice":snapshot,"journal_lines_removed":removed},default=str),utcnow()))
         return {"deleted":int(invoice_id),"invoice_number":invoice["invoice_number"]}
 
     @atomic  # 2.9.121

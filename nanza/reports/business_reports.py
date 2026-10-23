@@ -106,7 +106,10 @@ def ageing(db, options):
                 "buckets": [ZERO] * len(labels), "unallocated": ZERO, "invoices": [], "due_by": ZERO})
         party["buckets"][index] += value
         if days >= 0: party["due_by"] += value
-        party["invoices"].append([inv["invoice_number"], display_date(day), display_date(due), inv["currency"], _money(open_amount), max(days, 0), labels[index], _money(value)])
+        line = [inv["invoice_number"], display_date(day), display_date(due), inv["currency"], _money(open_amount), max(days, 0), labels[index], _money(value)]
+        party["invoices"].append(line)
+        party.setdefault("open", []).append({"due": due, "number": str(inv["invoice_number"]), "index": index, "days": days, "value": value,
+                                              "amount": open_amount, "line": line})
     for pay in payments:
         try: day = iso_date(pay["payment_date"])
         except ValueError: continue
@@ -116,6 +119,23 @@ def ageing(db, options):
         party = parties.setdefault(pay["party_id"], {"name": pay["party_name"] or "-", "account": pay.get("account_number") or "",
                                                      "buckets": [ZERO] * len(labels), "unallocated": ZERO, "invoices": [], "due_by": ZERO})
         party["unallocated"] += convert(free, pay["currency"], day) * (1 if pay["kind"] == payment_kind else -1)
+    # 2.9.132 (owner decision): receipts / payments not allocated to an invoice settle the oldest open invoices first (FIFO,
+    # by due date), so the ageing shows what is really overdue; what is left stays under "Unallocated". The net balance of
+    # each party is unchanged. options["fifo"] = False keeps the earlier presentation (gross ageing less unallocated).
+    fifo = options.get("fifo", True) not in (False, "0", "false", "no")
+    if fifo:
+        for party in parties.values():
+            credit = party["unallocated"]
+            for item in sorted(party.get("open", []), key=lambda x: (x["due"], x["number"])):
+                if credit <= 0: break
+                if item["value"] <= 0: continue
+                used = min(credit, item["value"]); credit -= used
+                share = (item["value"] - used) / item["value"]
+                item["value"] -= used; party["buckets"][item["index"]] -= used
+                if item["days"] >= 0: party["due_by"] -= used
+                item["line"][4] = _money(item["amount"] * share); item["line"][7] = _money(item["value"])
+            party["unallocated"] = credit
+            party["invoices"] = [l for l in party["invoices"] if abs(_d(l[7])) >= Decimal("0.01")]
     rows = []; totals = [ZERO] * len(labels); total_unallocated = ZERO
     for party in sorted(parties.values(), key=lambda p: -sum(p["buckets"], ZERO)):
         gross = sum(party["buckets"], ZERO); net = gross - party["unallocated"]; overdue = sum(party["buckets"][1:], ZERO)
@@ -150,6 +170,7 @@ def ageing(db, options):
                      "rows": outlook, "total_rows": [len(outlook) - 1]})
     company = db.settings()
     meta = [f"Company: {company.get('company_name') or '-'}   Amounts in {basis} (converted at each document date)", f"Situation at {display_date(as_of)}"]
+    if fifo: meta.append("Receipts / payments not allocated to an invoice are applied to the oldest open invoices first (FIFO, by due date).")
     return {"title": "Receivables Ageing" if kind == "sale" else "Payables Ageing", "meta": meta, "sections": sections}
 
 

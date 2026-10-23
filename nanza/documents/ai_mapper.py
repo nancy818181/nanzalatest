@@ -29,10 +29,13 @@ def suggest_account(expense_description, accounts=None):
         similarity = max(SequenceMatcher(None, query, str(name or "").casefold()).ratio()
                          for name in (english, arabic, french))
         score = max(overlap, similarity)
+        # 2.9.132 (Phase 2): a suggestion needs at least one word of the description in the account's name - a similar
+        # spelling alone proposed "Depreciation Allocation of Deferred Charges" for an electricity bill
+        if not words & tokens: continue
         candidates.append((score, len(code), code, english))
     if not candidates:
         return None
     score, _, code, name = max(candidates)
-    if score < 0.35:
+    if score < 0.5:
         return None
     return {"code": code, "name": name, "confidence": round(score, 2)}

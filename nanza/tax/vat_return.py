@@ -120,13 +120,20 @@ def _documents(db, start, end, currency, include_review, memo=None):
     std_rate = _vat_setup(db)[0]
     documents = []; skipped = []; review_excluded = 0
     key = ("documents", str(getattr(db, "path", id(db))))
-    if memo is not None and key in memo: invoices, expenses = memo[key]  # 2.9.91: read once per calculation (it was read 16 times)
+    if memo is not None and key in memo: invoices, expenses, entries = memo[key]  # 2.9.91: read once per calculation (it was read 16 times)
     else:
         with db.connect() as connection:
             invoices = [dict(row) for row in connection.execute("""SELECT i.*,p.name party_name,COALESCE(NULLIF(p.mof_number,''),p.tax_number) party_mof FROM invoices i
                 LEFT JOIN parties p ON p.id=i.party_id WHERE i.status NOT IN ('cancelled','deleted')""")]
             expenses = [dict(row) for row in connection.execute("SELECT * FROM expenses")]
-        if memo is not None: memo[key] = (invoices, expenses)
+            # 2.9.132 (H-05): the posting status of each document's journal entry - a document whose entry is a draft
+            # is not in the books, so it is not on the return
+            entries = {}
+            for row in connection.execute("""SELECT CASE WHEN source_type='expense' THEN 'expense' ELSE 'invoice' END kind,source_id,
+                    MAX(CASE WHEN COALESCE(posting_status,'posted')='posted' THEN 1 ELSE 0 END) posted
+                    FROM journal_entries WHERE source_type IN ('invoice','journal_voucher','expense') AND source_id IS NOT NULL GROUP BY 1,2"""):
+                entries[(row["kind"], row["source_id"])] = bool(row["posted"])
+        if memo is not None: memo[key] = (invoices, expenses, entries)
     for row in invoices:
         if row["status"] not in statuses and row["status"] != "review": continue
         if row.get("source_file") == "Opening balances": continue
@@ -139,6 +146,8 @@ def _documents(db, start, end, currency, include_review, memo=None):
         if row["status"] not in statuses:
             if row["status"] == "review": review_excluded += 1
             continue
+        if row["status"] == "posted" and entries.get(("invoice", row["id"])) is False:  # 2.9.132 (H-05)
+            skipped.append(f"{row['invoice_number']}: its journal entry is a draft - not on the return until it is posted"); continue
         bad = _unreadable(row, ("subtotal", "deductible_subtotal", "non_deductible_subtotal", "vat"))
         if bad: skipped.append(f"{row['invoice_number']}: {', '.join(bad)} is not a number"); continue
         if row["kind"] == "sale": category = "sales"
@@ -158,6 +167,8 @@ def _documents(db, start, end, currency, include_review, memo=None):
         try: day = iso_date(row["expense_date"])
         except ValueError: skipped.append(f"EXP-{row['id']}"); continue
         if not start <= day <= end or (currency and row["currency"] != currency): continue
+        if entries.get(("expense", row["id"])) is False:  # 2.9.132 (H-05): a deferred (draft) expense is not on the return
+            review_excluded += 1; continue
         bad = _unreadable(row, ("subtotal", "with_vat_subtotal", "without_vat_subtotal", "vat"))
         if bad: skipped.append(f"{row.get('reference') or 'EXP-' + str(row['id'])}: {', '.join(bad)} is not a number"); continue
         documents.append({"source": "expense", "id": row["id"], "date": day, "number": row.get("reference") or f"EXP-{row['id']}",
@@ -199,12 +210,13 @@ def _rounded_up(value, day):
 
 
 def due_date(year, quarter):
-    """20 days after the quarter; one month after it from 2026 (Budget Law 2026, Art. 51)."""
+    """20 days after the quarter; from 2026 the last day of the month after the quarter (Budget Law 2026, Art. 51).
+    2.9.132 (owner decision, LACPA): Q2 -> 31-07 and Q3 -> 31-10 (it was 30-07 / 30-10)."""
     from datetime import timedelta
     end = date.fromisoformat(quarter_range(year, quarter)[1])
     if int(year) >= 2026:
         month = end.month % 12 + 1; year_due = end.year + (1 if end.month == 12 else 0)
-        return date(year_due, month, min(end.day, calendar.monthrange(year_due, month)[1])).isoformat()
+        return date(year_due, month, calendar.monthrange(year_due, month)[1]).isoformat()
     return (end + timedelta(days=20)).isoformat()
 
 
@@ -275,7 +287,9 @@ def _turnover(db, start, end, include_review, rates, detail_out=None, memo=None)
 def _ratio(taxable, exempt):
     total = taxable + exempt
     # 2.9.50: six decimals, as the accountants' worksheet (the rate rounded to 0.01% moved the recoverable VAT by hundreds of LBP)
-    return Decimal("1") if total <= 0 or exempt <= 0 else (taxable / total).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+    if total <= 0 or exempt <= 0: return Decimal("1")
+    # 2.9.132: kept between 0 and 1 (credit notes larger than the sales of a kind gave a negative or > 100% ratio)
+    return min(Decimal("1"), max(ZERO, (taxable / total).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)))
 
 
 def build_vat_return(db, year, quarter, currency=None, include_review=False, previous_year_db=None, credit_brought_forward=None, refund_requested=None, _memo=None):
@@ -361,7 +375,9 @@ def _build_vat_return(db, year, quarter, currency, include_review, previous_year
         line = bucket(adjustment["currency"])[key]; line["vat"] += amount; line["vat_lbp"] += amount_lbp; line["count"] += 1
     for values in per_currency.values():
         for field in ("vat", "vat_lbp"):
-            values["prorata"][field] = -(values["mixed"][field] * (1 - ratio)).quantize(CENT, rounding=ROUND_HALF_UP)
+            # 2.9.132 (owner decision): the VAT-currency column is rounded as the rest of the return (whole LBP), as the settlement posts it
+            values["prorata"][field] = -(rnd(values["mixed"][field] * (1 - ratio)) if field == "vat_lbp" else
+                                         (values["mixed"][field] * (1 - ratio)).quantize(CENT, rounding=ROUND_HALF_UP))
             values["non_deductible"][field] += values["blocked"][field] - values["prorata"][field]
             values["total_output"][field] = values["sales"][field] + values["reverse_output"][field] + values["adj_output"][field]
             values["total_input"][field] = sum((values[k][field] for k in ("purchases", "assets", "expenses", "customs", "prorata", "adj_input")), ZERO)
@@ -538,7 +554,9 @@ def save_return(db, year, quarter, user_id, previous_year_db=None, credit_brough
     if result["dependency_errors"]:
         raise ValueError("Cannot save VAT return: an earlier quarter could not be calculated, so the credit brought forward is unknown. "
                          "Correct first: " + "; ".join(result["dependency_errors"]))
-    snapshot = json.dumps(json_ready({k: result[k] for k in ("per_currency", "totals_lbp", "credit_source", "review_excluded")}))
+    # 2.9.132: the saved snapshot keeps the exact amounts as decimal text (it was converted to float)
+    snapshot = json.dumps({k: result[k] for k in ("per_currency", "totals_lbp", "credit_source", "review_excluded")},
+                          default=str)
     with db.connect() as connection:
         connection.execute("""INSERT INTO vat_returns(year,quarter,net_lbp,credit_brought_forward_lbp,payable_lbp,credit_carried_forward_lbp,snapshot,saved_by,saved_by_name,saved_at)
             VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(year,quarter) DO UPDATE SET net_lbp=excluded.net_lbp,
@@ -634,8 +652,9 @@ def ledger_check(db, result):
             posted[(source_type, int(source_id))] = posted.get((source_type, int(source_id)), ZERO) + line["value"] * sign
     differences = []
     for doc in result["documents"]:
+        booked = posted.pop((doc["source"], int(doc["id"])), ZERO)  # 2.9.132: taken first, so a blocked document is not listed as "not on the return"
         if doc["category"] != "sales" and (not doc["recoverable"] or doc.get("use") == "exempt"): continue  # blocked VAT is part of the cost
-        expected = doc["vat_lbp"]; booked = posted.pop((doc["source"], int(doc["id"])), ZERO)
+        expected = doc["vat_lbp"]
         if doc.get("treatment") == "reverse_charge": continue
         if abs(expected - booked) >= tolerance:
             differences.append([display_date(doc["date"]), doc["number"], doc["party"], CATEGORIES[doc["category"]], rnd(expected), rnd(booked), rnd(expected - booked)])

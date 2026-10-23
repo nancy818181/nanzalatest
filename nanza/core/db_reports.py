@@ -9,6 +9,11 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
 from database_common import _soft_iso  # noqa: F401
 from settlements import posted_payment_sql, invoice_kind as payment_invoice_kind, settlement_sign
 
+# 2.9.132 (H-01): the statements read POSTED entries only - the same rule as the trial balance (a draft voucher or the
+# entry of an invoice in Review is not in the books yet; a cancelled invoice keeps its posted entry and its reversal).
+POSTED_ONLY = ("(COALESCE(e.posting_status,'posted')='posted' AND (e.source_type!='invoice' OR EXISTS("
+               "SELECT 1 FROM invoices pi WHERE pi.id=e.source_id AND pi.status IN ('posted','cancelled'))))")
+
 
 class ReportsStore:
     # ---------------------------------------------------------------- 2.9.80: every currency converted (planning tools)
@@ -76,7 +81,7 @@ class ReportsStore:
                 THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
                 ELSE e.entry_date END"""
             conditions = ["(a.code LIKE '51%' OR a.code LIKE '53%')",
-                          "COALESCE(e.source_type,'other') NOT IN ('opening','year_close')"]
+                          "COALESCE(e.source_type,'other') NOT IN ('opening','year_close')", POSTED_ONLY]
             parameters = []
             if from_date: conditions.append(f"{normalized_date}>=?"); parameters.append(from_date)
             if to_date: conditions.append(f"{normalized_date}<=?"); parameters.append(to_date)
@@ -114,7 +119,7 @@ class ReportsStore:
     def profit_and_loss(self, from_date=None, to_date=None, currency=None, department_id=None, project_id=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
         # The year-end closing brings 6 & 7 to zero; the P&L must show the year before closing.
-        conditions = ["a.type IN ('income','expense')", "NOT (e.source_type='year_close' OR (e.voucher_type='05' AND e.description LIKE 'CLOSING 6&7 - %'))"]
+        conditions = ["a.type IN ('income','expense')", "NOT (e.source_type='year_close' OR (e.voucher_type='05' AND e.description LIKE 'CLOSING 6&7 - %'))", POSTED_ONLY]
         parameters = []
         normalized_date = """CASE WHEN e.entry_date GLOB '??-??-????'
             THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
@@ -339,7 +344,8 @@ class ReportsStore:
                 FROM invoices WHERE status NOT IN ('cancelled','deleted') AND COALESCE(source_file,'')<>'Opening balances' GROUP BY kind,currency""").fetchall()
             return [dict(r) for r in rows]
 
-    def journal(self, from_date=None, to_date=None, currency=None, limit=None, branch_id=None, entry_number=None, account_code=None, source_type=None):
+    def journal(self, from_date=None, to_date=None, currency=None, limit=None, branch_id=None, entry_number=None, account_code=None, source_type=None,
+                posted_only=False, running_balance=True):
         """Return journal lines with a running balance per account and currency.
         2.9.51: no line limit any more (5,000 lines used to hide later entries from the journal, the general ledger and
         'open transaction'); one entry, one account or one kind of entry can be asked for directly."""
@@ -349,6 +355,7 @@ class ReportsStore:
         if entry_number: conditions.append("e.entry_number=?"); parameters.append(str(entry_number))
         if account_code: conditions.append("a.code=?"); parameters.append(str(account_code))
         if source_type: conditions.append("e.source_type=?"); parameters.append(str(source_type))
+        if posted_only: conditions.append(POSTED_ONLY)  # 2.9.132 (H-01): the general ledger; the journal list itself still shows drafts
         normalized_date = """CASE
             WHEN e.entry_date GLOB '??-??-????'
                 THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
@@ -385,10 +392,11 @@ class ReportsStore:
                 ORDER BY {normalized_date},e.id,j.id LIMIT ?""", parameters)]
         balances = {}
         for row in rows:
+            row.pop("line_id", None)
+            if not running_balance: continue  # 2.9.132 (performance): the general ledger computes its own balances
             key = (row["currency"], row["account_code"])
             balances[key] = balances.get(key, Decimal("0")) + Decimal(str(row["debit"] or 0)) - Decimal(str(row["credit"] or 0))
             row["balance"] = float(balances[key])
-            row.pop("line_id", None)
         return rows
 
     def trial_balance(self, from_date=None, to_date=None, account_code=None, include_subaccounts=True, account_from=None, account_to=None, branch_id=None, posting_status="posted"):
@@ -421,22 +429,34 @@ class ReportsStore:
                 LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
                 {where_clause} GROUP BY a.code,a.name_en,e.currency,e.entry_date ORDER BY e.currency,a.code""",parameters)]
         totals={}
+        # 2.9.132 (performance): a day's ISO form and a (currency, day) rate are worked out once per report, not once per row;
+        # the values are the same (same strptime rule, same _converted_amount factor, same Decimal products)
+        days={}; factors={}
+        def iso_day(text):
+            if text not in days:
+                try: days[text]=datetime.strptime(text,"%d-%m-%Y").strftime("%Y-%m-%d")
+                except ValueError: days[text]=text
+            return days[text]
+        def convert(amount,currency,target,day):
+            key=(currency,target,day)
+            if key not in factors: factors[key]=self._converted_amount(Decimal("1"),currency,target,day)
+            return amount if str(currency or "USD").upper()==target else amount*factors[key]
         for row in raw:
             key=(row["code"],row["name_en"],row["currency"])
             # 2.9.97: added as exact Decimals, turned into numbers once at the end (floats drifted: 600.0000000000002)
-            item=totals.setdefault(key,{"code":row["code"],"name_en":row["name_en"],"currency":row["currency"],
-                **{field:Decimal("0") for field in ("opening","debit","credit","balance","closing_balance","usd_opening","usd_debit","usd_credit",
-                   "usd_balance","usd_closing_balance","lbp_opening","lbp_debit","lbp_credit","lbp_balance","lbp_closing_balance")}})
-            date=str(row["entry_date"] or "")
-            try: date=datetime.strptime(date,"%d-%m-%Y").strftime("%Y-%m-%d")
-            except ValueError: pass
+            item=totals.get(key)
+            if item is None:  # 2.9.132 (performance): the 15 zero totals are made once per account, not once per row
+                item=totals[key]={"code":row["code"],"name_en":row["name_en"],"currency":row["currency"],
+                    **{field:Decimal("0") for field in ("opening","debit","credit","balance","closing_balance","usd_opening","usd_debit","usd_credit",
+                       "usd_balance","usd_closing_balance","lbp_opening","lbp_debit","lbp_credit","lbp_balance","lbp_closing_balance")}}
+            date=iso_day(str(row["entry_date"] or ""))
             debit=Decimal(str(row["debit"] or 0)); credit=Decimal(str(row["credit"] or 0))
-            usd_d=self._converted_amount(debit,row["currency"],"USD",date); usd_c=self._converted_amount(credit,row["currency"],"USD",date)
-            lbp_d=self._converted_amount(debit,row["currency"],"LBP",date); lbp_c=self._converted_amount(credit,row["currency"],"LBP",date)
+            usd_d=convert(debit,row["currency"],"USD",date); usd_c=convert(credit,row["currency"],"USD",date)
+            lbp_d=convert(debit,row["currency"],"LBP",date); lbp_c=convert(credit,row["currency"],"LBP",date)
             if from_date and date<from_date:
-                item["opening"]+=debit-credit; item["usd_opening"]+=Decimal(str(usd_d-usd_c)); item["lbp_opening"]+=Decimal(str(lbp_d-lbp_c))
+                item["opening"]+=debit-credit; item["usd_opening"]+=usd_d-usd_c; item["lbp_opening"]+=lbp_d-lbp_c  # already exact Decimals
                 continue
-            for field,value in (("debit",debit),("credit",credit),("usd_debit",usd_d),("usd_credit",usd_c),("lbp_debit",lbp_d),("lbp_credit",lbp_c)): item[field]+=Decimal(str(value))
+            for field,value in (("debit",debit),("credit",credit),("usd_debit",usd_d),("usd_credit",usd_c),("lbp_debit",lbp_d),("lbp_credit",lbp_c)): item[field]+=value
         for item in totals.values():
             item["balance"]=item["debit"]-item["credit"]
             item["usd_balance"]=item["usd_debit"]-item["usd_credit"]
@@ -450,12 +470,14 @@ class ReportsStore:
 
     def general_ledger(self, account_code=None, from_date=None, to_date=None, currency=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
-        rows=self.journal(None,to_date,currency,account_code=account_code)
-        opening={}; items=[]; balances={}
+        rows=self.journal(None,to_date,currency,account_code=account_code,posted_only=True,running_balance=False)
+        opening={}; items=[]; balances={}; days={}  # 2.9.132 (performance): each day parsed once
         for row in rows:
             normalized=str(row["entry_date"] or "")
-            try: normalized=datetime.strptime(normalized,"%d-%m-%Y").strftime("%Y-%m-%d")
-            except ValueError: pass
+            if normalized not in days:
+                try: days[normalized]=datetime.strptime(normalized,"%d-%m-%Y").strftime("%Y-%m-%d")
+                except ValueError: days[normalized]=normalized
+            normalized=days[normalized]
             key=(row["currency"],row["account_code"])
             movement=Decimal(str(row["debit"] or 0))-Decimal(str(row["credit"] or 0))
             if from_date and normalized<from_date:
@@ -466,7 +488,7 @@ class ReportsStore:
 
     def balance_sheet(self, to_date=None, currency=None):
         to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
-        conditions=["a.type IN ('asset','liability','equity')"]
+        conditions=["a.type IN ('asset','liability','equity')",POSTED_ONLY]
         parameters=[]
         normalized_date="""CASE WHEN e.entry_date GLOB '??-??-????'
             THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
@@ -497,7 +519,7 @@ class ReportsStore:
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
         normalized_date="""CASE WHEN e.entry_date GLOB '??-??-????'
             THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2) ELSE e.entry_date END"""
-        conditions=["(a.code LIKE '51%' OR a.code LIKE '53%')"]; parameters=[]
+        conditions=["(a.code LIKE '51%' OR a.code LIKE '53%')",POSTED_ONLY]; parameters=[]
         if from_date: conditions.append(f"{normalized_date}>=?"); parameters.append(from_date)
         if to_date: conditions.append(f"{normalized_date}<=?"); parameters.append(to_date)
         if currency: conditions.append("e.currency=?"); parameters.append(currency)

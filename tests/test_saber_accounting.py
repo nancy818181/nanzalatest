@@ -1,6 +1,7 @@
 import tests_setup  # noqa: F401  2.9.74: the sample company of the tests (a new installation has none)
 import tempfile
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 from openpyxl import Workbook
@@ -456,7 +457,8 @@ class SaberAccountingTest(unittest.TestCase):
             invoice_id=db.import_invoice({"invoice_number":"NV-1","invoice_date":"22-09-2026","party_name":"Supplier NV",
                 "kind":"expenses","entry_type":"expenses","currency":"USD","subtotal":100,"vat":0,"total":100},user["id"])
             saved=next(row for row in db.list_invoices() if row["id"]==invoice_id)
-            self.assertEqual(saved["vat"],"0"); self.assertEqual(saved["total"],"100")
+            # 2.9.132: amounts are stored rounded to the cent ("0.00", "100.00"); the money value is what is checked
+            self.assertEqual(Decimal(saved["vat"]),Decimal("0")); self.assertEqual(Decimal(saved["total"]),Decimal("100"))
             self.assertEqual(saved["expense_account"],"601100000"); self.assertEqual(saved["expense_no_vat_account"],
                     "601100001"); self.assertEqual(saved["vat_account"],"44216")  # expenses VAT account
             changed=db.update_invoice(invoice_id,{"invoice_number":"NV-1","invoice_date":"22-09-2026","party_name":"Supplier NV",
@@ -647,7 +649,7 @@ class SaberAccountingTest(unittest.TestCase):
                 linked=connection.execute("SELECT CAST(rate AS REAL) rate FROM exchange_rates WHERE rate_date='20-09-2026' AND from_currency='EUR' AND to_currency='LBP'").fetchone()
             self.assertAlmostEqual(linked["rate"],98450)
             invoice_id=db.import_invoice({"invoice_number":"OPEN-1","invoice_date":"01-09-2026","party_name":"Supplier X","kind":"purchases","currency":"USD",
-                    "deductible_subtotal":100,"non_deductible_subtotal":20,"vat":11,"total":131,"expense_no_vat_side":"C - Credit"},user["id"])
+                    "deductible_subtotal":100,"non_deductible_subtotal":20,"vat":11,"total":131,"expense_no_vat_side":"D - Debit"},user["id"])
             party=next(p for p in db.list_parties() if p["name"]=="Supplier X")
             with_opening=db.statement_of_account(party["id"],"2026-09-10","2026-09-30",None,True,"LBP")
             without_opening=db.statement_of_account(party["id"],"2026-09-10","2026-09-30",None,False,"LBP")
@@ -660,6 +662,20 @@ class SaberAccountingTest(unittest.TestCase):
             self.assertEqual(next(r for r in lines if r["account_code"]=="601100000")["credit"],10)
             trial=db.trial_balance("2026-09-20","2026-09-20")
             self.assertTrue(all("usd_balance" in r and "lbp_balance" in r for r in trial))
+
+    def test_posted_purchase_with_one_side_flipped_against_its_total_is_refused(self):
+        # 2.9.132 rule: only the no-VAT part is put on Credit while the total (131 = 100 + 20 + 11) still counts it as a charge.
+        # The lines cannot balance (Dr 111 / Cr 151); before 2.9.132 the -40.00 was posted silently to import variance 6851.6.
+        with tempfile.TemporaryDirectory() as folder:
+            db=Database(Path(folder)/"single_flip.db"); db.initialize("secret")
+            user=db.user_for_token(db.login("admin","secret")["token"])
+            with self.assertRaisesRegex(ValueError,r"^Invoice FLIP-1: .*difference -40\.00 - "):
+                db.import_invoice({"invoice_number":"FLIP-1","invoice_date":"01-09-2026","party_name":"Supplier X","kind":"purchases","currency":"USD",
+                    "deductible_subtotal":100,"non_deductible_subtotal":20,"vat":11,"total":131,"expense_no_vat_side":"C - Credit"},user["id"])
+            self.assertEqual([r for r in db.list_invoices() if r["invoice_number"]=="FLIP-1"],[])  # nothing saved
+            with db.connect() as connection:
+                self.assertEqual(connection.execute("SELECT COUNT(*) FROM journal_entries WHERE source_type='invoice'").fetchone()[0],0)
+                self.assertEqual(connection.execute("SELECT COUNT(*) FROM journal_lines j JOIN accounts a ON a.id=j.account_id WHERE a.code='6851.6'").fetchone()[0],0)
 
     def test_payroll_employee_number_calculation_and_editable_rules(self):
         with tempfile.TemporaryDirectory() as folder:

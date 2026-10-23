@@ -826,7 +826,14 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         if not username or role not in ("admin","accountant","viewer") or language not in ("en","ar","fr"):
             raise ValueError("Enter a valid username, role, and language")
         if password and len(password)<6: raise ValueError("Password must contain at least 6 characters")
-        permissions=json.dumps(parse_permissions(item.get("permissions")))
+        given=item.get("permissions")
+        if isinstance(given,str):
+            try: given=json.loads(given or "{}")
+            except ValueError: given={}
+        given=dict(given or {})
+        if not item.get("id") and "delete" not in given:
+            given["delete"]=False  # 2.9.132 (H-04): a NEW user cannot delete unless the administrator ticks it; saved users keep theirs
+        permissions=json.dumps(parse_permissions(given))
         one_year=(datetime.now()+timedelta(days=USER_VALIDITY_DAYS)).strftime("%Y-%m-%d")
         with self.connect() as db:
             existing=db.execute("SELECT * FROM users WHERE id=?",(int(user_id),)).fetchone() if user_id else None

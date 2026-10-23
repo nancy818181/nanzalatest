@@ -8,9 +8,9 @@ from urllib.parse import urlencode
 from desktop_common import main_currency, flow_toolbar
 from desktop_stage3_common import run_with_progress
 
-NAVY = "#0a1931"
+NAVY = "#102A43"
 GREEN = "#16836A"
-GOLD = "#d4a017"
+GOLD = "#B78B45"
 BG = "#F1F5F7"
 MUTED = "#617482"
 

@@ -9,7 +9,7 @@ from tkinter import messagebox, simpledialog, ttk
 import accounting_setup as rules
 from desktop_common import account_code, account_label, accounting_setup
 
-NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, MUTED, GREEN, AMBER = "#8B1E1E", "#5f6b76", "#2E7D5B", "#8a5a00"
 
 
@@ -315,7 +315,7 @@ class AccountingSetupMixin:
         try: report = self.client.audit_report(filters["date_from"], filters["date_to"], self.audit_late_days.get() or "30")
         except Exception as exc: return messagebox.showerror("Audit Report", str(exc))
         s = report["summary"]
-        meta = [f"Period {report['from']} - {report['to']}", report["integrity"]["message"],
+        meta = ([f"Company: {report['company']}"] if report.get("company") else []) + [f"Period {report['from']} - {report['to']}", report["integrity"]["message"],
                 f"{s['entries']} entries, {s['changes']} changes after saving, {s['late']} late, {s['admin']} by the administrator, "
                 f"{s['outside_hours']} outside working hours, {s['manual_cash']} manual vouchers on cash / bank"]
         self.save_sections("Audit Report", meta, report["sections"], "Audit_Report", fmt)

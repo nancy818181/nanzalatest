@@ -24,7 +24,7 @@ from report_export import export_excel, export_invoice_pdf, export_pdf, print_ro
 from party_similarity import similar_parties
 from multi_select import MultiSelect, chosen_values  # 2.9.50: pick any combination in filters
 
-NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 TAXABLE_LABEL="Taxable (standard rate)"  # 2.9.72: the rate is the company's (Settings > General)
 SALE_TREATMENTS={TAXABLE_LABEL:"standard","Zero-rated (export)":"zero_rated","Exempt (Art. 16-17)":"exempt","Out of scope":"out_of_scope"}
 PURCHASE_USES={"Mixed (partial deduction)":"mixed","Taxable sales only (100%)":"taxable","Exempt sales only (0%)":"exempt"}

@@ -441,6 +441,8 @@ def _cell_text(value):
     """PDF / screen text: zero amounts show as a dash."""
     from decimal import Decimal
     if isinstance(value, (int, float, Decimal)) and not isinstance(value, bool) and float(value) == 0: return "-"
+    if isinstance(value, (float, Decimal)) and not isinstance(value, bool) and value < 0:
+        return f"({_formatted(-value)})"  # 2.9.132: a negative amount in brackets, as in the financial statements (counts stay -5)
     return _formatted(value)
 
 
@@ -815,7 +817,8 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
         story = _financial_cover(doc, styles, regular, bold_font, meta, sections, contents_pages)  # 2.9.83: centred front page
     else:
         story = [pdf_paragraph(title, styles["Title"], True)]
-        for line in list(meta or []) + [f"{_ar('Generated')}: {datetime.now():%d-%m-%Y %H:%M}"]: story.append(pdf_paragraph(line, styles["Normal"]))
+        printed = any(str(line).startswith("Printed") for line in meta or [])  # 2.9.132: one date line, not "Printed" and "Generated"
+        for line in list(meta or []) + ([] if printed else [f"{_ar('Generated')}: {datetime.now():%d-%m-%Y %H:%M}"]): story.append(pdf_paragraph(line, styles["Normal"]))
         story.append(Spacer(1, 4*mm))
     centred = ParagraphStyle("centred-heading", parent=styles["Heading3"], alignment=1)
     subheading = ParagraphStyle("sub-heading", parent=styles["Normal"], fontName=bold_font, spaceBefore=4)
@@ -831,7 +834,12 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
         if financial and section.get("logo_b64"):  # 2.9.97: the auditor's logo on top of the Independent Auditor's Report
             logo = _logo_flowable(section["logo_b64"], doc.width * 0.35, 22*mm)
             if logo: story += [logo, Spacer(1, 3*mm)]
-        story.append(pdf_paragraph(section["heading"], centred if financial and section.get("center") else styles["Heading3"], True))
+        heading_text = section["heading"]; sub = str(section.get("subheading") or "").strip()
+        if financial and sub and heading_text.endswith(sub) and heading_text != sub:  # 2.9.132: the period on a second line
+            story.append(pdf_paragraph(heading_text[:-len(sub)].strip(), centred if section.get("center") else styles["Heading3"], True))
+            story.append(pdf_paragraph(sub, ParagraphStyle("sub-period", parent=styles["Normal"], alignment=1 if section.get("center") else 0, spaceAfter=6)))
+        else:
+            story.append(pdf_paragraph(heading_text, centred if financial and section.get("center") else styles["Heading3"], True))
         if section.get("narrative"):
             start = len(story)
             for values in section["rows"]:
@@ -856,14 +864,27 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
         if not count:
             continue
         text_of = _accounting_text if financial else _cell_text  # 2.9.83: (1,234) for negative amounts in the financial statements
-        body = [[text_of(value) for value in list(values) + [""] * (count - len(values))] for values in section["rows"]]
+        raw = [list(values) + [""] * (count - len(values)) for values in section["rows"]]
+        body = [[text_of(value) for value in values] for values in raw]
+        if not financial:  # 2.9.132: a column of amounts with any cents shows every amount with 2 decimals (5,661.00 under 2,275.50)
+            from decimal import Decimal as _D
+            for column in range(count):
+                values = [row[column] for row in raw if column < len(row)]
+                if any(isinstance(v, (float, _D)) and not isinstance(v, bool) and v == v and abs(v) < 1e18 and v != int(v) for v in values):
+                    for row_text, row in zip(body, raw):
+                        v = row[column] if column < len(row) else ""
+                        if isinstance(v, (float, _D)) and not isinstance(v, bool) and v and abs(v) >= _D("0.005"):
+                            row_text[column] = f"({abs(v):,.2f})" if v < 0 else f"{v:,.2f}"
         if any(len(row) > count for row in body):
             raise ValueError(f"Section {section['heading']!r} has more values than headers")
         def preferred_width(column):
-            header = max((len(part.strip()) for part in str(headers[column]).split(" | ")), default=0)
+            # 2.9.132: a header wraps on several lines, so only its longest word sets the width (a long header such as
+            # "Debit (LBP) (period)" split a 10-column trial balance in two bands); the cell padding (2 x 6 pt) is added
+            # so an amount such as -4,475,000,000 is never broken over two lines.
+            header = max((len(word) for part in str(headers[column]).split(" | ") for word in part.split()), default=0)
             longest = max([header] + [len(row[column]) for row in body])
-            numeric = all(not row[column] or row[column] == "-" or row[column].replace(",", "").replace(".", "").lstrip("-").isdigit() for row in body)
-            return min(65*mm, max((20 if numeric else 29)*mm, longest * (4.5 if numeric else 4)))
+            numeric = all(not row[column] or _looks_numeric(row[column]) for row in body)  # 2.9.132: (1,234) is an amount too
+            return min(65*mm, max((20 if numeric else 29)*mm, longest * (4.5 if numeric else 4) + 12))
         widths = [preferred_width(i) for i in range(count)]
         if financial and count == 5:
             weights = [13, 24, 29, 20, 23] if headers[0] == "Account" else [35, 16, 23, 16, 16]

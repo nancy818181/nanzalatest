@@ -3,6 +3,9 @@
 Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from JournalStore."""
 from __future__ import annotations
 from database_common import atomic  # 2.9.121
+import sqlite3  # 2.9.132
+from decimal import Decimal as _Decimal, ROUND_HALF_UP as _HALF_UP  # 2.9.132 (H-03)
+_CENT = _Decimal("0.01")
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, Decimal, display_date, iso_date, json, utcnow
@@ -64,9 +67,11 @@ class JournalStore:
             else:
                 try: debit=Decimal(str(line.get("debit") or 0)); credit=Decimal(str(line.get("credit") or 0))
                 except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"Line {index}: Debit and Credit must be numbers") from exc
+            # 2.9.132 (H-03, owner rule): every amount has 2 decimals, the third is rounded; debits must equal credits exactly after rounding
+            debit=debit.quantize(_CENT,rounding=_HALF_UP); credit=credit.quantize(_CENT,rounding=_HALF_UP)
             if not code or min(debit,credit)<0 or (debit>0 and credit>0) or (debit==0 and credit==0): raise ValueError(f"Line {index}: choose an account and enter either Debit or Credit")
             normalized.append((code,str(line.get("description") or "").strip(),debit,credit,extra,line)); total_debit+=debit; total_credit+=credit
-        if abs(total_debit-total_credit)>=Decimal("0.005"): raise ValueError(f"Journal Voucher is unbalanced. Debit {total_debit}; Credit {total_credit}; Remaining {abs(total_debit-total_credit)}")
+        if total_debit!=total_credit: raise ValueError(f"Journal Voucher is unbalanced. Debit {total_debit}; Credit {total_credit}; Remaining {abs(total_debit-total_credit)}")
         if voucher_type=="07":
             from chart_extra import EXCHANGE_GAIN_ACCOUNT, EXCHANGE_LOSS_ACCOUNT
             # A DOE voucher revalues one or more class 4/5 accounts (Automatic DOE posts one voucher per
@@ -335,6 +340,17 @@ class JournalStore:
         with self.connect() as db:
             if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=? LIMIT 1", (int(entry_id),)).fetchone():
                 raise ValueError("This journal voucher has already been reversed")
+            # 2.9.132: a depreciation voucher - the register periods it booked are freed by the reversal (below), so the
+            # register follows the ledger. A later period of the same asset must be reversed first (no gap in the schedule).
+            asset_periods = []
+            try:
+                asset_periods = [dict(r) for r in db.execute("SELECT p.*,a.asset_code FROM fixed_asset_postings p JOIN fixed_assets a ON a.id=p.asset_id WHERE p.entry_id=?", (int(entry_id),))]
+            except sqlite3.OperationalError: asset_periods = []  # a file without the fixed-asset tables
+            for period in asset_periods:
+                later = db.execute("SELECT period_end FROM fixed_asset_postings WHERE asset_id=? AND period_end>? AND entry_id IS NOT NULL ORDER BY period_end LIMIT 1",
+                                   (period["asset_id"], period["period_end"])).fetchone()
+                if later:
+                    raise ValueError(f"Asset {period['asset_code']}: reverse the depreciation of {later['period_end']} first (later periods are posted)")
         date = display_date(iso_date(reversal_date, "Reversal date"))
         self._assert_period_open(date)
         lines = [{"account_code": row["account_code"], "description": row["description"],
@@ -350,4 +366,18 @@ class JournalStore:
                        (user_id, "reverse", "journal_voucher", int(entry_id),
                         json.dumps({"original": entry["entry_number"],
                                     "reversal": reversed_voucher["voucher"]["entry_number"]}), utcnow()))
+            try:  # 2.9.132: reversing a disposal voucher puts the asset back in the register
+                disposed = db.execute("SELECT id FROM fixed_assets WHERE disposal_entry_id=? AND status='disposed'", (int(entry_id),)).fetchall()
+            except sqlite3.OperationalError: disposed = []
+            for asset in disposed:
+                db.execute("UPDATE fixed_assets SET status='active',disposed_on=NULL,disposal_entry_id=NULL WHERE id=?", (asset["id"],))
+                db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                           (user_id, "disposal_reversed", "fixed_asset", asset["id"], json.dumps({"original": entry["entry_number"],
+                            "reversal": reversed_voucher["voucher"]["entry_number"]}), utcnow()))
+            for period in asset_periods:  # 2.9.132: the register period is open again; its old link is kept in the audit log
+                db.execute("DELETE FROM fixed_asset_postings WHERE id=?", (period["id"],))
+                db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                           (user_id, "depreciation_reversed", "fixed_asset", period["asset_id"],
+                            json.dumps({"period_end": period["period_end"], "amount": str(period["amount"]), "entry_id": int(entry_id),
+                                        "original": entry["entry_number"], "reversal": reversed_voucher["voucher"]["entry_number"]}), utcnow()))
         return reversed_voucher

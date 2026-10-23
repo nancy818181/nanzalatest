@@ -103,10 +103,7 @@ def test_posted_manual_voucher_is_immutable_at_storage_layer(synthetic_db):
             connection.execute("DELETE FROM journal_entries WHERE id=?", (entry["id"],))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="POST-DECIMAL-001: journal posting accepts a nonzero 0.004 Decimal imbalance under its tolerance.",
-)
+# 2.9.132 (H-03): fixed - each amount is rounded to 2 decimals (owner rule) and the stored lines balance exactly
 def test_posted_entry_must_balance_exactly_as_decimal(synthetic_db):
     cash, _equity, _income, expense = _account_codes(synthetic_db)
     _voucher(synthetic_db, "SYN-ROUNDING-1", cash, expense, Decimal("1.004"),
@@ -180,10 +177,7 @@ def test_trial_balance_default_excludes_draft_voucher(synthetic_db):
 
 
 @pytest.mark.parametrize("report", ["pnl", "balance_sheet", "cash_flow", "general_ledger", "financial_statements"])
-@pytest.mark.xfail(
-    strict=True,
-    reason="RPT-UNPOSTED-001: current report query paths include draft journal vouchers.",
-)
+# 2.9.132 (H-01): fixed - the statements read posted entries only
 def test_financial_reports_exclude_draft_voucher(synthetic_db, report):
     _draft_voucher(synthetic_db)
     if report == "pnl":

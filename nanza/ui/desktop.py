@@ -1097,12 +1097,23 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         return tree
 
     def build_dashboard(self):
-        actions=tk.Frame(self.dashboard_tab,bg=LIGHT); actions.pack(fill="x",padx=12,pady=(8,6))
-        tk.Label(actions,text="Company overview",bg=LIGHT,fg=NAVY,font=("Segoe UI",12,"bold")).pack(side="left",padx=(0,16))
+        # A clear executive landing area: one quiet hero, one compact control surface,
+        # then the decision-support cards and charts. Existing commands and data stay unchanged.
+        hero=tk.Frame(self.dashboard_tab,bg=NAVY,padx=20,pady=14); hero.pack(fill="x",padx=12,pady=(12,8))
+        hero_copy=tk.Frame(hero,bg=NAVY); hero_copy.pack(side="left",fill="x",expand=True)
+        tk.Label(hero_copy,text="FINANCIAL OVERVIEW",bg=NAVY,fg=GOLD,font=("Segoe UI",8,"bold")).pack(anchor="w")
+        tk.Label(hero_copy,text="Company performance",bg=NAVY,fg="white",font=("Segoe UI",18,"bold")).pack(anchor="w",pady=(2,0))
+        company_name=str(getattr(self,"current_company",{}).get("name","") or "Company")
+        fiscal_year=str(getattr(self,"current_fiscal_year","") or "")
+        tk.Label(hero_copy,text=f"{company_name}  ·  Fiscal year {fiscal_year}",bg=NAVY,fg="#DCE4EF",
+                 font=("Segoe UI",9)).pack(anchor="w",pady=(3,0))
+        actions=tk.Frame(self.dashboard_tab,bg="white",highlightthickness=1,highlightbackground="#D5DEE8",padx=12,pady=8)
+        actions.pack(fill="x",padx=12,pady=(0,8))
+        tk.Label(actions,text="VIEW SETTINGS",bg="white",fg="#718096",font=("Segoe UI",8,"bold")).pack(side="left",padx=(0,12))
         self.action_button(actions,tr(self.language.get(),"refresh"),self.load_dashboard).pack(side="left",padx=4)
-        tk.Label(actions,text="Base currency",bg=LIGHT).pack(side="left",padx=(10,3))
+        tk.Label(actions,text="Base currency",bg="white",fg=NAVY).pack(side="left",padx=(10,3))
         ttk.Combobox(actions,textvariable=self.dashboard_base_currency,values=["All Currencies","USD","LBP","EUR","AED"],state="readonly",width=13).pack(side="left")
-        tk.Label(actions,text="Convert to",bg=LIGHT).pack(side="left",padx=(10,3))
+        tk.Label(actions,text="Convert to",bg="white",fg=NAVY).pack(side="left",padx=(10,3))
         ttk.Combobox(actions,textvariable=self.dashboard_display_currency,values=["Original","USD","LBP","EUR","AED"],state="readonly",width=9).pack(side="left")
         self.action_button(actions,"Apply",self.load_dashboard).pack(side="left",padx=4)
         self.action_button(actions,"Export Excel",lambda:self.export_report("dashboard","xlsx")).pack(side="left",padx=4)
@@ -1159,24 +1170,30 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
 
     # 2.9.116: the figures as KPI cards (as in Zoho): one row per currency, a large number per card with a colour
     # strip that says what it is. The same figures as before, only shown larger.
-    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#d4a017"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
-               ("receivables","Receivables","#0a1931"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
+    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#B78B45"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
+               ("receivables","Receivables","#102A43"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
 
     def draw_kpi_cards(self,rows):
         holder=self.dashboard_cards
+        try:
+            available=max(1,holder.winfo_width())
+            if available<100: available=max(1,self.winfo_screenwidth()-(240 if getattr(self,"side_menu_mode",False) else 48))
+        except tk.TclError: available=960
+        import desktop_layout
+        columns=desktop_layout.dashboard_columns(available)
         for index,r in enumerate(rows):
-            block=tk.Frame(holder,bg=LIGHT); block.grid(row=index,column=0,sticky="ew",pady=(4,6))
-            tk.Label(block,text=r["currency"],bg=LIGHT,fg=NAVY,font=("Segoe UI",10,"bold"),anchor="w").grid(row=0,column=0,columnspan=7,sticky="w",padx=4,pady=(0,4))
+            block=tk.Frame(holder,bg=LIGHT); block.grid(row=index,column=0,sticky="ew",pady=(4,10))
+            tk.Label(block,text=r["currency"],bg=LIGHT,fg=NAVY,font=("Segoe UI",10,"bold"),anchor="w").grid(row=0,column=0,columnspan=columns,sticky="w",padx=4,pady=(0,5))
             for col,(key,title,colour) in enumerate(self.KPI_CARDS):
-                card=tk.Frame(block,bg="white",highlightthickness=1,highlightbackground="#DDE4EC"); card.grid(row=1,column=col,sticky="nsew",padx=4)
+                card=tk.Frame(block,bg="white",highlightthickness=1,highlightbackground="#D5DEE8"); card.grid(row=1+col//columns,column=col%columns,sticky="nsew",padx=4,pady=3)
                 tk.Frame(card,bg=colour,height=4).pack(fill="x")
-                inner=tk.Frame(card,bg="white",padx=12,pady=8); inner.pack(fill="both",expand=True)
+                inner=tk.Frame(card,bg="white",padx=14,pady=10); inner.pack(fill="both",expand=True)
                 tk.Label(inner,text=title.upper(),bg="white",fg="#6B7A89",font=("Segoe UI",8,"bold"),anchor="w").pack(anchor="w")
                 number=float(r[key] or 0)
                 value=str(r[key]) if key=="overdue" else f'{number:,.2f}'
                 tone=("#8B1E1E" if number<0 else "#2E7D5B") if key=="profit" else ("#8B1E1E" if key=="overdue" and number else NAVY)
-                tk.Label(inner,text=value,bg="white",fg=tone,font=("Segoe UI",16,"bold"),anchor="w").pack(anchor="w",pady=(2,0))
-                block.grid_columnconfigure(col,weight=1,uniform="kpi")
+                tk.Label(inner,text=value,bg="white",fg=tone,font=("Segoe UI",16,"bold"),anchor="w").pack(anchor="w",pady=(3,0))
+            for col in range(columns): block.grid_columnconfigure(col,weight=1,uniform="kpi")
         holder.grid_columnconfigure(0,weight=1)
 
     def draw_dashboard_chart(self,rows):

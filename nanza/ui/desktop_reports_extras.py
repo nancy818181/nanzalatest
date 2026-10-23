@@ -8,7 +8,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
 
-NAVY, GOLD, LIGHT = "#0a1931", "#d4a017", "#f8fafc"
+NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 MUTED = "#5f6b76"
 log = logging.getLogger("saber")
 

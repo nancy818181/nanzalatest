@@ -1,6 +1,7 @@
 """Read-only counts-only diagnostic tests using synthetic temporary SQLite data."""
 
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 import tempfile
@@ -14,7 +15,8 @@ DIAGNOSTIC = REPOSITORY_ROOT / "tools" / "diagnose_decimals.py"
 
 class DiagnoseDecimalsTest(unittest.TestCase):
     def _synthetic_database(self, path: Path) -> None:
-        with sqlite3.connect(path) as connection:
+        # closing(): `with connection` only commits; an open handle blocks temp cleanup on Windows (WinError 32).
+        with closing(sqlite3.connect(path)) as connection, connection:
             connection.executescript(
                 """
                 CREATE TABLE journal_entries (

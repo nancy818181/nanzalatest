@@ -52,7 +52,8 @@ class AssetRegisterMixin:
             self.action_button(actions,label,command).pack(side="left",padx=3)
         tk.Label(actions,text="  |  ",bg=LIGHT,fg=MUTED).pack(side="left")
         for label,command in (("Fill from PDF",self.choose_asset_pdf),("PDF Attachments",self.asset_attachments_window),
-                              ("Schedule of this asset",self.show_asset_schedule),("Record Asset Purchase",self.open_asset_purchase)):
+                              ("Schedule of this asset",self.show_asset_schedule),("Record Asset Purchase",self.open_asset_purchase),
+                              ("Dispose / Scrap",self.dispose_asset_entry),("Register vs Ledger",self.show_asset_reconcile)):  # 2.9.132
             self.action_button(actions,label,command).pack(side="left",padx=3)
         lists=tk.LabelFrame(page,text="Asset register - click a line to edit it",bg=LIGHT,padx=4,pady=4); lists.pack(fill="both",expand=True,padx=8,pady=(0,6))
         self.asset_list=ttk.Treeview(lists,columns=("code","name","purchase","cost","currency","previous","yearly","cumulative","net"),show="headings")
@@ -237,10 +238,10 @@ class AssetRegisterMixin:
         tk.Label(window,text=title,bg=LIGHT,fg=NAVY,font=("Segoe UI",14,"bold")).pack(anchor="w",padx=14,pady=(12,4))
         tk.Label(window,text="Posted depreciation is shown separately from the unposted schedule; amounts remain in each asset's currency.",
                  bg=LIGHT,fg=MUTED,wraplength=1250,justify="left").pack(anchor="w",padx=14,pady=(0,8))
-        headers=("Asset code","Description","Currency","Opening cost","Additions","Closing cost","Opening accumulated depreciation",
-                 "Depreciation posted","Closing accumulated depreciation","Closing net book value","Unposted schedule")
-        keys=("asset_code","name","currency","opening_cost","additions","closing_cost","opening_accumulated","depreciation_posted",
-              "closing_accumulated","closing_net_book_value","unposted_scheduled")
+        headers=("Asset code","Description","Currency","Opening cost","Additions","Disposals (cost)","Closing cost","Opening accumulated depreciation",
+                 "Depreciation posted","Disposals (depreciation)","Closing accumulated depreciation","Closing net book value","Unposted schedule")  # 2.9.132
+        keys=("asset_code","name","currency","opening_cost","additions","disposals_cost","closing_cost","opening_accumulated","depreciation_posted",
+              "disposals_accumulated","closing_accumulated","closing_net_book_value","unposted_scheduled")
         container=tk.Frame(window,bg=LIGHT); container.pack(fill="both",expand=True,padx=12,pady=4)
         tree=ttk.Treeview(container,columns=keys,show="headings")
         vertical=ttk.Scrollbar(container,orient="vertical",command=tree.yview)
@@ -443,6 +444,29 @@ class AssetRegisterMixin:
         try: self.client.delete_asset(self.asset_edit_id)
         except Exception as exc: return messagebox.showerror("Assets",str(exc))
         self.new_asset(); self.load_assets()
+
+    def dispose_asset_entry(self):
+        """2.9.132: derecognition of a sold or scrapped asset (IAS 16.67): one voucher, the sale itself by a sales invoice."""
+        if not self.asset_edit_id: return messagebox.showwarning("Assets","Select an asset in the register first")
+        from tkinter import simpledialog
+        day=simpledialog.askstring("Dispose / Scrap","Disposal date (DD-MM-YYYY):",initialvalue=self.fiscal_today(),parent=self)
+        if not day: return
+        if not messagebox.askyesno("Dispose / Scrap","Post the disposal voucher (Dr accumulated depreciation, Dr 6812 book value, Cr asset cost)?\n"
+                                   "Record the sale price with a sales invoice to 7812 so its VAT is declared."): return
+        try: result=self.client.dispose_asset(self.asset_edit_id,day.strip())
+        except (RuntimeError, ValueError, OSError, KeyError) as exc: return messagebox.showerror("Dispose / Scrap",str(exc))
+        messagebox.showinfo("Dispose / Scrap",f"Voucher {result['voucher']}: cost {float(result['cost']):,.2f}, accumulated {float(result['accumulated']):,.2f}, "
+                            f"book value {float(result['book_value']):,.2f} to {result['nbv_account']}.\n{result['note']}")
+        self.new_asset(); self.load_assets(); self.load_journal(); self.load_trial()
+
+    def show_asset_reconcile(self):
+        """2.9.132: the register against the ledger at the end of the fiscal year (or today)."""
+        try: report=self.client.asset_reconcile(self.fiscal_today())
+        except (RuntimeError, ValueError, OSError, KeyError) as exc: return messagebox.showerror("Register vs Ledger",str(exc))
+        lines=[f"{r['account']} {r['currency']} {'cost' if r['kind']=='cost' else 'accumulated depreciation'}: register {float(r['register']):,.2f} - "
+               f"ledger {float(r['ledger']):,.2f} = difference {float(r['difference']):,.2f}" for r in report["rows"]]
+        head="Register and ledger agree." if report["agreed"] else "DIFFERENCES - check the asset purchases and manual entries:"
+        messagebox.showinfo("Register vs Ledger",head+"\n\n"+("\n".join(lines) or "No asset in the register."))
 
     def post_asset_period(self):
         tree=getattr(self,"asset_schedule_tree",None)

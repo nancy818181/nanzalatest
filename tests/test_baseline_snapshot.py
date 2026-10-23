@@ -1,6 +1,7 @@
 """Synthetic, headless tests for the read-only baseline snapshot command."""
 
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 import tempfile
@@ -108,7 +109,8 @@ class BaselineSnapshotTest(unittest.TestCase):
         self.temp.cleanup()
 
     def _create_database(self):
-        with sqlite3.connect(self.database) as connection:
+        # closing(): `with connection` only commits; an open handle blocks temp cleanup on Windows (WinError 32).
+        with closing(sqlite3.connect(self.database)) as connection, connection:
             connection.executescript(
                 """
                 CREATE TABLE accounts(id INTEGER PRIMARY KEY, code TEXT UNIQUE, type TEXT);
@@ -188,8 +190,7 @@ class BaselineSnapshotTest(unittest.TestCase):
 
     def test_missing_legacy_tables_are_reported_without_failure(self):
         old_database = Path(self.temp.name) / "older-copy.db"
-        with sqlite3.connect(old_database):
-            pass
+        sqlite3.connect(old_database).close()
         result = subprocess.run(
             [sys.executable, str(SCRIPT), str(old_database), "--confirm-copy"],
             cwd=ROOT, capture_output=True, text=True, check=False, timeout=30,
@@ -202,7 +203,7 @@ class BaselineSnapshotTest(unittest.TestCase):
 
     def test_missing_vat_return_columns_are_reported(self):
         old_database = Path(self.temp.name) / "older-vat-copy.db"
-        with sqlite3.connect(old_database) as connection:
+        with closing(sqlite3.connect(old_database)) as connection, connection:
             connection.execute("CREATE TABLE vat_returns(year INTEGER,quarter INTEGER,net_lbp TEXT)")
             connection.execute("INSERT INTO vat_returns VALUES(2025,4,'12.50')")
         result = subprocess.run(

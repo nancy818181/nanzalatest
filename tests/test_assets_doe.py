@@ -96,7 +96,8 @@ class AssetAndDoeTest(unittest.TestCase):
             [{"account_code":"4011","debit":"100"},{"account_code":"211","credit":"100"}],1)
         before=next(row for row in self.db.doe_candidates("30-09-2024")["items"] if row["account"]=="4011")
         self.assertEqual(before["currency"],"USD")
-        self.assertEqual(before["balance"],"100")
+        # 2.9.132 (H-03): amounts are stored with 2 decimals ("100.00"); the value is compared, not its spelling
+        self.assertEqual(Decimal(before["balance"]),Decimal("100"))
         self.db.save_journal_voucher({"entry_date":"30-09-2024","currency":"LBP","voucher_type":"07"},
             [{"account_code":"4011","debit":"500"},{"account_code":"775100000","credit":"500"}],1)
         after=next(row for row in self.db.doe_candidates("30-09-2024")["items"] if row["account"]=="4011")
