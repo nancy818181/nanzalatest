@@ -346,28 +346,28 @@ class ReportsMixin:
         # Keep the report controls visually separate from the dense report tabs. The two
         # filter groups wrap independently on narrow windows; all existing variables and
         # callbacks remain unchanged.
-        controls=tk.Frame(self.reports_tab,bg=LIGHT); controls.pack(fill="x",padx=12,pady=(10,6))
-        heading=tk.Frame(controls,bg=NAVY,padx=16,pady=10); heading.pack(fill="x")
+        controls=tk.Frame(self.reports_tab,bg=LIGHT); controls.pack(fill="x",padx=10,pady=(6,3))
+        heading=tk.Frame(controls,bg=NAVY,padx=12,pady=7); heading.pack(fill="x")
         tk.Label(heading,text="Financial Reports",bg=NAVY,fg="white",font=("Segoe UI",16,"bold")).pack(anchor="w")
         tk.Label(heading,text="Choose a reporting period and account range, then open the report you need.",
                  bg=NAVY,fg="#DCE4EF",font=("Segoe UI",9)).pack(anchor="w",pady=(2,0))
-        filter_card=tk.Frame(controls,bg="white",highlightbackground="#D7DEE8",highlightthickness=1,padx=12,pady=8)
-        filter_card.pack(fill="x",pady=(8,0))
-        period_group=tk.Frame(filter_card,bg="white"); period_group.pack(side="left",fill="x",expand=True,anchor="n")
+        filter_card=tk.Frame(controls,bg="white",highlightbackground="#D7DEE8",highlightthickness=1,padx=9,pady=6)
+        filter_card.pack(fill="x",pady=(5,0))
+        period_group=tk.Frame(filter_card,bg="white"); period_group.pack(side="left",anchor="n")
         tk.Label(period_group,text="REPORT PERIOD",bg="white",fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(0,4))
         period_inputs=tk.Frame(period_group,bg="white"); period_inputs.pack(anchor="w",fill="x")
         tk.Label(period_inputs,text="From",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
         self.date_entry(period_inputs,self.report_from_date,13).pack(side="left",padx=(5,12))
         tk.Label(period_inputs,text="To",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
         self.date_entry(period_inputs,self.report_to_date,13).pack(side="left",padx=(5,8))
-        account_group=tk.Frame(filter_card,bg="white"); account_group.pack(side="left",fill="x",expand=True,padx=(14,0),anchor="n")
+        account_group=tk.Frame(filter_card,bg="white"); account_group.pack(side="left",padx=(22,0),anchor="n")
         tk.Label(account_group,text="ACCOUNT RANGE",bg="white",fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(0,4))
         account_inputs=tk.Frame(account_group,bg="white"); account_inputs.pack(anchor="w",fill="x")
         tk.Label(account_inputs,text="From",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
         self.account_search_box(account_inputs,self.report_account_from,16).pack(side="left",padx=(5,8))
         tk.Label(account_inputs,text="To",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
         self.account_search_box(account_inputs,self.report_account_to,16).pack(side="left",padx=(5,8))
-        actions=tk.Frame(filter_card,bg="white"); actions.pack(side="right",anchor="n",padx=(12,0),pady=(17,0))
+        actions=tk.Frame(filter_card,bg="white"); actions.pack(side="right",anchor="n",padx=(10,0),pady=(14,0))
         tk.Button(actions,text="Apply",command=self.load_financial_reports,bg=GOLD,fg=NAVY,border=0,
                   padx=18,pady=7,font=("Segoe UI",9,"bold"),cursor="hand2").pack(side="left",padx=(0,6))
         tk.Button(actions,text="More filters",command=self.choose_financial_filters,bg=NAVY,fg="white",border=0,

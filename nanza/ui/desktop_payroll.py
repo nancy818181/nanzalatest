@@ -36,49 +36,64 @@ class PayrollMixin:
             ("salary","Base Salary",120),("nssf","NSSF Number",120),("active","Active",65)])
         self.employee_tree.bind("<Double-1>",lambda _event:self.edit_selected_employee())
 
-        form=tk.LabelFrame(run,text="Monthly Payroll",bg=LIGHT); form.pack(fill="x",padx=10,pady=8)
+        import desktop_design as design
+        # 2.9.134: the form as a card in four bands - who and when (with the actions), earnings, retro / allowances, result
+        card,form=design.card(run,"Monthly Payroll","one employee, one salary month"); card.pack(fill="x",padx=10,pady=8)
+        C=design.CARD
         self.payroll_extra_allowances={}; self.payroll_allowance_accounts={}
         self.payroll_employee=tk.StringVar(); self.payroll_period=tk.StringVar(value=datetime.now().strftime("%Y-%m-%d"))
         self.payroll_vars={name:tk.StringVar(value="0") for name in ("salary","transport","overtime","commission","retro_salary","schooling","bonus","thirteenth_month","director_remuneration")}
         self.payroll_family_override=tk.StringVar()
         self.payroll_retro_from=tk.StringVar(); self.payroll_retro_to=tk.StringVar()
-        tk.Label(form,text="Employee",bg=LIGHT).grid(row=0,column=0,padx=6,pady=5,sticky="w")
-        self.payroll_employee_combo=ttk.Combobox(form,textvariable=self.payroll_employee,state="readonly",width=26); self.payroll_employee_combo.grid(row=0,column=1,padx=6,pady=5,sticky="w")
+        top=tk.Frame(form,bg=C); top.grid(row=0,column=0,columnspan=6,sticky="ew",pady=(2,8)); form.grid_columnconfigure(5,weight=1)
+        tk.Label(top,text="Employee",bg=C,fg=design.MUTED).pack(side="left",padx=(0,6))
+        self.payroll_employee_combo=ttk.Combobox(top,textvariable=self.payroll_employee,state="readonly",width=34); self.payroll_employee_combo.pack(side="left",padx=(0,18))
         self.payroll_employee_combo.bind("<<ComboboxSelected>>",lambda _event:self.payroll_employee_chosen())
-        tk.Label(form,text="Period Date",bg=LIGHT).grid(row=0,column=2,padx=6,pady=5,sticky="w"); self.date_entry(form,self.payroll_period,14).grid(row=0,column=3,padx=6,pady=5,sticky="w")
+        tk.Label(top,text="Period Date",bg=C,fg=design.MUTED).pack(side="left",padx=(0,6))
+        period_entry=self.date_entry(top,self.payroll_period,14); period_entry.pack(side="left")
+        buttons=tk.Frame(top,bg=C); buttons.pack(side="right")
+        self.action_button(buttons,"Schooling Law",self.schooling_law_dialog).pack(side="left",padx=3)
+        self.action_button(buttons,"Additional payments",self.additional_payroll_payments).pack(side="left",padx=3)
+        self.action_button(buttons,"Calculate",self.calculate_payroll).pack(side="left",padx=3)
+        tk.Button(buttons,text="Save Payroll",command=self.save_payroll,bg=GOLD,fg=NAVY,border=0,padx=15,pady=7,font=("Segoe UI",9,"bold")).pack(side="left",padx=(3,0))
+        design.divider(form).grid(row=1,column=0,columnspan=6,sticky="ew",pady=(0,6))
+        tk.Label(form,text="EARNINGS",bg=C,fg=design.GOLD,font=("Segoe UI",8,"bold")).grid(row=2,column=0,columnspan=6,sticky="w",pady=(0,2))
         labels=(("salary","Salary"),("transport","Transport"),("overtime","Overtime"),("commission","Commission"),("retro_salary","Retroactive Salary"),
                 ("schooling","Schooling"),("bonus","Bonus"),("thirteenth_month","13th Month"),("director_remuneration","Director Remuneration (not taxable)"))
         for index,(key,label) in enumerate(labels):
-            row=1+index//3; column=(index%3)*2
-            tk.Label(form,text=label,bg=LIGHT).grid(row=row,column=column,padx=6,pady=4,sticky="w")
-            tk.Entry(form,textvariable=self.payroll_vars[key],width=16).grid(row=row,column=column+1,padx=6,pady=4,sticky="w")
-        tk.Label(form,text="Retro From",bg=LIGHT).grid(row=4,column=0,padx=6,pady=4,sticky="w"); self.date_entry(form,self.payroll_retro_from,14).grid(row=4,column=1,padx=6,pady=4,sticky="w")
-        tk.Label(form,text="Retro To",bg=LIGHT).grid(row=4,column=2,padx=6,pady=4,sticky="w"); self.date_entry(form,self.payroll_retro_to,14).grid(row=4,column=3,padx=6,pady=4,sticky="w")
+            row=3+index//3; column=(index%3)*2
+            tk.Label(form,text=label,bg=C,fg=design.MUTED).grid(row=row,column=column,padx=(0,8),pady=5,sticky="w")
+            tk.Entry(form,textvariable=self.payroll_vars[key],width=18,justify="right").grid(row=row,column=column+1,padx=(0,26),pady=5,sticky="w")
+        tk.Label(form,text="RETROACTIVE PAY, TRANSPORT DAYS AND FAMILY ALLOCATION",bg=C,fg=design.GOLD,font=("Segoe UI",8,"bold")).grid(row=6,column=0,columnspan=6,sticky="w",pady=(10,2))
+        extra=tk.Frame(form,bg=C); extra.grid(row=7,column=0,columnspan=6,sticky="w")
+        tk.Label(extra,text="Retro From",bg=C,fg=design.MUTED).pack(side="left",padx=(0,6)); self.date_entry(extra,self.payroll_retro_from,14).pack(side="left",padx=(0,22))
+        tk.Label(extra,text="Retro To",bg=C,fg=design.MUTED).pack(side="left",padx=(0,6)); self.date_entry(extra,self.payroll_retro_to,14).pack(side="left",padx=(0,22))
         self.payroll_transport_days=tk.StringVar()
-        tk.Label(form,text="Transport Days",bg=LIGHT).grid(row=4,column=4,padx=6,pady=4,sticky="w"); days_entry=tk.Entry(form,
-                textvariable=self.payroll_transport_days,width=6); days_entry.grid(row=4,column=5,padx=6,pady=4,sticky="w")
+        tk.Label(extra,text="Transport Days",bg=C,fg=design.MUTED).pack(side="left",padx=(0,6)); days_entry=tk.Entry(extra,
+                textvariable=self.payroll_transport_days,width=6,justify="right"); days_entry.pack(side="left",padx=(0,22))
         # Typing the transport days fills Transport at once: days x the daily transport of the period (Tax & NSSF Settings).
         days_entry.bind("<KeyRelease>",lambda _event:self.payroll_transport_from_days(),add="+"); days_entry.bind("<FocusOut>",lambda _event:self.payroll_transport_from_days(),add="+")
-        tk.Label(form,text="Family Allocation",bg=LIGHT).grid(row=4,column=6,padx=6,pady=4,sticky="w")
-        family_entry=tk.Entry(form,textvariable=self.payroll_family_override,width=12); family_entry.grid(row=4,column=7,padx=6,pady=4,sticky="w")
+        tk.Label(extra,text="Family Allocation",bg=C,fg=design.MUTED).pack(side="left",padx=(0,6))
+        family_entry=tk.Entry(extra,textvariable=self.payroll_family_override,width=12,justify="right"); family_entry.pack(side="left")
         # The automatic family allocation appears here as soon as the employee / period is chosen; typing in it
         # makes it a manual amount for this payroll (Calculate / Save use it).
         self._family_manual=False
         family_entry.bind("<KeyRelease>",lambda event:setattr(self,"_family_manual",True) if len(event.keysym)==1 or event.keysym in ("BackSpace","Delete") else None,add="+")
-        period_widgets=[w for w in form.grid_slaves(row=0,column=3)]
-        for widget in period_widgets: widget.bind("<FocusOut>",lambda _event:self.payroll_family_auto(),add="+")
-        self.payroll_breakdown=tk.Label(form,text="",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=1060); self.payroll_breakdown.grid(row=6,column=0,columnspan=8,padx=6,sticky="w")
-        self.payroll_notes=tk.Label(form,text="",bg=LIGHT,fg="#8B1E1E",anchor="w",justify="left",font=("Segoe UI",9,"bold"),
-                wraplength=1060); self.payroll_notes.grid(row=7,column=0,columnspan=8,padx=6,sticky="w")
+        period_entry.bind("<FocusOut>",lambda _event:self.payroll_family_auto(),add="+")
+        design.divider(form).grid(row=8,column=0,columnspan=6,sticky="ew",pady=(12,8))
+        tiles=tk.Frame(form,bg=C); tiles.grid(row=9,column=0,columnspan=6,sticky="ew")
+        self.payroll_tiles={}
+        for key,caption,kind in (("gross","GROSS","neutral"),("tax","INCOME TAX","warning"),("nssf","EMPLOYEE NSSF","info"),("employer","EMPLOYER NSSF","neutral"),("net","NET SALARY","success")):
+            tile,number=design.stat_tile(tiles,caption,"-",kind,width=16); tile.pack(side="left",padx=(0,10)); self.payroll_tiles[key]=number
         self.payroll_result=tk.StringVar(value="Gross: 0 | Tax: 0 | Employee NSSF: 0 | Net: 0")
-        tk.Label(form,textvariable=self.payroll_result,bg=LIGHT,fg=NAVY,font=("Segoe UI",10,"bold"),wraplength=1000,justify="left").grid(row=5,column=0,columnspan=8,padx=6,pady=6,sticky="w")
+        self.payroll_status=design.banner(form,"Choose the employee and the salary month, enter the earnings, then press Calculate.","neutral",wraplength=1060)
+        self.payroll_status.grid(row=10,column=0,columnspan=6,sticky="ew",pady=(10,4))
+        self._payroll_calculated=False
+        self.payroll_breakdown=tk.Label(form,text="",bg=C,fg="#5f6b76",anchor="w",justify="left",wraplength=1060); self.payroll_breakdown.grid(row=11,column=0,columnspan=6,sticky="w")
+        self.payroll_notes=tk.Label(form,text="",bg=C,fg="#8B1E1E",anchor="w",justify="left",font=("Segoe UI",9,"bold"),
+                wraplength=1060); self.payroll_notes.grid(row=12,column=0,columnspan=6,sticky="w")
         for variable in (self.payroll_employee,self.payroll_period,*self.payroll_vars.values(),self.payroll_transport_days):
             variable.trace_add("write",self.mark_payroll_stale)
-        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=0,column=4,columnspan=4,sticky="w",padx=6)
-        self.action_button(buttons,"Schooling Law",self.schooling_law_dialog).pack(side="left",padx=3)
-        self.action_button(buttons,"Calculate",self.calculate_payroll).pack(side="left",padx=3)
-        self.action_button(buttons,"Additional payments",self.additional_payroll_payments).pack(side="left",padx=3)
-        tk.Button(buttons,text="Save Payroll",command=self.save_payroll,bg=GOLD,fg=NAVY,border=0,padx=15,pady=7,font=("Segoe UI",9,"bold")).pack(side="left",padx=3)
         payroll_actions=tk.Frame(run,bg=LIGHT); payroll_actions.pack(fill="x",padx=10)
         self.action_button(payroll_actions,"Post Selected to Accounting",self.post_selected_payroll).pack(side="left",padx=4,pady=3)
         self.action_button(payroll_actions,"Record salary payment",self.salary_payment_dialog).pack(side="left",padx=4,pady=3)
@@ -581,6 +596,12 @@ class PayrollMixin:
             self.payroll_result.set("Inputs changed - click Calculate for the current tax and net salary")
         if hasattr(self,"payroll_breakdown"): self.payroll_breakdown.config(text="")
         if hasattr(self,"payroll_notes"): self.payroll_notes.config(text="")
+        # 2.9.134: the warning only after a figure was shown (it appeared on a fresh form too); the figures are dimmed to a dash
+        status=getattr(self,"payroll_status",None)
+        if status is not None and getattr(self,"_payroll_calculated",False):
+            status.set("Inputs changed - click Calculate for the current tax and net salary","warning")
+            for number in getattr(self,"payroll_tiles",{}).values(): number.config(text="-")
+            self._payroll_calculated=False
 
     def payroll_payload(self):
         employee=self.payroll_employee_map.get(self.payroll_employee.get())
@@ -616,6 +637,15 @@ class PayrollMixin:
         self.payroll_notes.config(text=("Check: "+"  |  ".join(result.get("compliance_notes") or [])) if result.get("compliance_notes") else "Compliant with the rules of this period")
         self.payroll_notes.config(fg="#8B1E1E" if result.get("compliance_notes") else NAVY)
         self.payroll_result.set(f'Gross: {result["gross_salary"]:,.2f} | Tax: {result["income_tax"]:,.2f} {result["currency"]} ({result["income_tax_lbp"]:,.0f} LBP){retro} | Employee NSSF: {result["employee_nssf"]:,.2f} | Employer NSSF: {result["employer_medical"]+result["employer_family"]+result["employer_end_service"]:,.2f} | Net: {result["net_salary"]:,.2f}{period}')
+        try:  # 2.9.134: the same figures as tiles, and a status line
+            cur=result["currency"]; tiles=getattr(self,"payroll_tiles",{})
+            employer=result["employer_medical"]+result["employer_family"]+result["employer_end_service"]
+            for key,value in (("gross",result["gross_salary"]),("tax",result["income_tax"]),("nssf",result["employee_nssf"]),("employer",employer),("net",result["net_salary"])):
+                if key in tiles: tiles[key].config(text=f"{value:,.2f} {cur}")
+            if getattr(self,"payroll_status",None) is not None:
+                self.payroll_status.set(f'Calculated{period}' if not result.get("compliance_notes") else "Calculated - read the checks below","success" if not result.get("compliance_notes") else "warning")
+            self._payroll_calculated=True
+        except (KeyError,TypeError,tk.TclError): pass
         return result
 
     def save_payroll(self):
@@ -625,26 +655,43 @@ class PayrollMixin:
         self.load_payroll(); messagebox.showinfo("Payroll",f'Payroll {saved["payroll_number"]} saved as draft')
 
     def additional_payroll_payments(self):
+        """2.9.134: every benefit can be entered as taxable or as not taxable (both lists are shown; the calculation already treated them
+        differently: taxable lines enter the tax base and NSSF, not-taxable lines go to the not-taxable column of the R6 statement)."""
         import payroll_lines
+        import desktop_design as design
         window=tk.Toplevel(self); window.title("Additional payments"); window.configure(bg=LIGHT); window.transient(self)
-        self.fit_dialog(window,920,650,640,420)
-        tk.Label(window,text="Additional cash benefits are taxable by default. Use the existing statutory categories for exemptions; changing an account does not change tax or NSSF.",
-            bg=LIGHT,fg=NAVY,wraplength=850,justify="left").pack(fill="x",padx=10,pady=8)
-        outer,form=self.scrollable_page(window); outer.pack(fill="both",expand=True)
+        self.fit_dialog(window,1000,720,760,460)
+        design.banner(window,"Choose the line that matches the legal treatment of the payment. Taxable lines enter the tax base and NSSF (unless excluded in "
+            "Tax & NSSF Settings). Not-taxable lines are reported in the not-taxable column of the R6 statement and enter neither. "
+            "Changing an account does not change tax or NSSF.",kind="info",wraplength=940).pack(fill="x",padx=12,pady=(12,6))
+        outer,form=self.scrollable_page(window); outer.pack(fill="both",expand=True,padx=12,pady=4)
         fields={}
-        for column,title in enumerate(("Benefit", "Amount", "Expense account")):
-            tk.Label(form,text=title,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).grid(row=0,column=column,padx=6,pady=6,sticky="w")
         try: settings=self.client.payroll_settings(self.payroll_period.get())
         except (RuntimeError,ValueError,OSError) as exc:
             window.destroy(); return messagebox.showerror("Payroll",str(exc))
         mapping=settings.get("employee_account_map") or {}
-        for index,(key,details) in enumerate((entry for entry in payroll_lines.ALLOWANCES.items() if entry[1][1]),1):
-            tk.Label(form,text=details[4],bg=LIGHT,anchor="w").grid(row=index,column=0,sticky="w",padx=6,pady=3)
-            value=tk.StringVar(value=getattr(self,"payroll_extra_allowances",{}).get(key,""))
-            account=tk.StringVar(value=getattr(self,"payroll_allowance_accounts",{}).get(key) or mapping.get(f"allowance_{key}") or mapping.get("salary") or "6311")
-            tk.Entry(form,textvariable=value,width=14).grid(row=index,column=1,padx=6)
-            self.account_search_box(form,account,28).grid(row=index,column=2,padx=6)
-            fields[key]=(value,account)
+        current=getattr(self,"payroll_extra_allowances",{}); chosen_accounts=getattr(self,"payroll_allowance_accounts",{})
+        row_index=[0]
+        def section(title,subtitle,kind):
+            card,body=design.card(form,title,subtitle)
+            card.grid(row=row_index[0],column=0,sticky="ew",padx=2,pady=(6,8)); form.grid_columnconfigure(0,weight=1); row_index[0]+=1
+            for column,heading in enumerate(("Benefit","Treatment","Amount","Expense account")):
+                tk.Label(body,text=heading,bg=design.CARD,fg=design.MUTED,font=("Segoe UI",8,"bold")).grid(row=0,column=column,padx=6,pady=(2,4),sticky="w")
+            body.grid_columnconfigure(3,weight=1)
+            return body,kind
+        groups=((True,"Taxable benefits","enter the tax base","warning"),(False,"Not-taxable benefits","reported as not taxable","success"))
+        for taxable,title,subtitle,kind in groups:
+            body,tone=section(title,subtitle,kind); line=1
+            for key,details in payroll_lines.ALLOWANCES.items():
+                if bool(details[1])!=taxable: continue
+                tk.Label(body,text=details[4],bg=design.CARD,anchor="w").grid(row=line,column=0,sticky="w",padx=6,pady=4)
+                treatment=("Taxable" if taxable else "Not taxable")+("" if details[2] else " | one-off")
+                design.chip(body,treatment,tone).grid(row=line,column=1,sticky="w",padx=6)
+                value=tk.StringVar(value=current.get(key,""))
+                account=tk.StringVar(value=chosen_accounts.get(key) or mapping.get(f"allowance_{key}") or mapping.get("salary") or "6311")
+                tk.Entry(body,textvariable=value,width=14,justify="right").grid(row=line,column=2,padx=6,pady=4)
+                self.account_search_box(body,account,34).grid(row=line,column=3,padx=6,sticky="ew")
+                fields[key]=(value,account); line+=1
         def apply():
             try:
                 amounts=payroll_lines.clean_allowances({key:value.get() for key,(value,_account) in fields.items()})
@@ -654,7 +701,9 @@ class PayrollMixin:
             except (ValueError,RuntimeError,OSError) as exc: return messagebox.showerror("Payroll",str(exc),parent=window)
             self.payroll_extra_allowances=payload["allowances"]; self.payroll_allowance_accounts=accounts
             window.destroy(); self.calculate_payroll()
-        tk.Button(window,text="Apply additional payments",command=apply,bg=GOLD,fg=NAVY).pack(pady=8)
+        footer=tk.Frame(window,bg=LIGHT); footer.pack(fill="x",padx=12,pady=10)
+        tk.Button(footer,text="Apply additional payments",command=apply,bg=GOLD,fg=NAVY).pack(side="right",padx=4)
+        tk.Button(footer,text="Cancel",command=window.destroy,bg="white",fg=NAVY).pack(side="right",padx=4)
         window.grab_set()
 
     def salary_payment_dialog(self):

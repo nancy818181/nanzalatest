@@ -495,10 +495,12 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                                for r, found in list(duplicates.values())[:10])
             skip = True if auto else messagebox.askyesnocancel("Already saved",
                 f"{len(duplicates)} invoice(s) are already in the books (same customer / supplier and number):\n{listed}\n\n"
-                "Yes = skip them (they stay in the preview)\nNo = save them again anyway\nCancel = stop")
+                "Yes = skip them (they stay in the preview)\nNo = save them again anyway (administrator only; anyone else gets a duplicate-number error)\nCancel = stop")
             if skip is None: return
             for r, found in duplicates.values():
                 r["notes"] = f"Already saved (ID {found[0]['id']}, {found[0]['invoice_date']}) - not saved again. " + str(r.get("notes") or "").replace("Already saved", "Was saved")
+            if skip is False:
+                for r, _found in duplicates.values(): r["allow_duplicate"] = True  # 2.9.134 (D3): honoured by the server for administrators only
             if skip:
                 rows = [r for r in rows if id(r) not in duplicates]
                 for iid in self.import_sheet.rows: self.import_sheet.refresh(iid)
@@ -536,7 +538,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                                   "kind": row_kind, "entry_type": row_type, "currency": r["currency"], "subtotal": r["subtotal"], "vat": r["vat"],
                                   "total": r["total"], "source_file": r["source"], "remember_posting": self.import_mode == "pdf",
                                   "supplier_account": r.get("supplier_account") or "", "vat_account": r.get("vat_account") or "",
-                                  "expense_account": r.get("expense_account") or "", "expense_no_vat_account": r.get("expense_no_vat_account") or ""})
+                                  "expense_account": r.get("expense_account") or "", "expense_no_vat_account": r.get("expense_no_vat_account") or "",
+                                  "allow_duplicate": bool(r.get("allow_duplicate"))})
                 if items:
                     result=self.client.import_invoices(items, replace_existing=self.import_replace.get())
                     done+=result["imported"]
@@ -615,40 +618,48 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                                                                             "commission_account", "exchange_gain_account", "exchange_loss_account")}}
         v = form["vars"]; v["date"].set(self.fiscal_today()); v["currency"].set(main_currency(self, 1)); v["method"].set("Cash"); v["cash_account"].set("531")
         form["department"] = tk.StringVar(); form["project"] = tk.StringVar()
-        box = tk.LabelFrame(page, text="Customer Receipt (RV)" if kind == "customer_receipt" else "Supplier Payment (PV)", bg=LIGHT, padx=8, pady=6); box.pack(fill="x", padx=8, pady=6)
+        import desktop_design as design
+        outer, box = design.panel(page, "Customer Receipt (RV)" if kind == "customer_receipt" else "Supplier Payment (PV)",
+                                  "Money received from a customer" if kind == "customer_receipt" else "Money paid to a supplier")
+        outer.pack(fill="x", padx=8, pady=6)
         # 2.9.118: a tidy grid - two columns of label | field that line up (Zoho / Odoo). The same fields, made in the same order
         # (the Tab key goes through them as before), with the same keys and actions.
+        # 2.9.134: grouped under small headings, account boxes wide enough to read "number - name", fields left-aligned.
         grid = tk.Frame(box, bg=LIGHT); grid.pack(fill="x")
+        grid.grid_columnconfigure(2, weight=1); grid.grid_columnconfigure(5, weight=1)
         form["not_deductible"] = tk.BooleanVar(value=False)
         place_tick(tax_tick(box, form["not_deductible"], LIGHT), side="bottom", anchor="w")  # 2.9.113 (bank commission / expense lines)
         def put(row, column, label, widget, bold=False, note=None):
             if label:
-                tk.Label(grid, text=label, bg=LIGHT, font=("Segoe UI", 9, "bold") if bold else None).grid(row=row, column=3 * column, sticky="w",
-                                                                                                       padx=(0 if column == 0 else 28, 8), pady=1)
-            widget.grid(row=row, column=3 * column + 1, sticky="w", pady=1)
+                tk.Label(grid, text=label, bg=LIGHT, fg=NAVY if bold else "#33475B", font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)
+                         ).grid(row=row, column=3 * column, sticky="w", padx=(0 if column == 0 else 28, 8), pady=3)
+            widget.grid(row=row, column=3 * column + 1, sticky="w", pady=3)
             if note: tk.Label(grid, text=note, bg=LIGHT, fg=MUTED).grid(row=row, column=3 * column + 2, sticky="w", padx=(4, 0))
             return widget
-        put(0, 0, "Number", tk.Entry(grid, textvariable=v["number"], width=16, state="readonly", readonlybackground="white", font=("Segoe UI", 10, "bold")), True)
-        put(0, 1, "Date", self.date_entry(grid, v["date"], 11))
+        design.section_label(grid, "Document", 0)
+        put(1, 0, "Number", tk.Entry(grid, textvariable=v["number"], width=16, state="readonly", readonlybackground="white", font=("Segoe UI", 10, "bold")), True)
+        put(1, 1, "Date", self.date_entry(grid, v["date"], 11))
         form["type"] = tk.StringVar(value="All")
-        type_box = ttk.Combobox(grid, textvariable=form["type"], values=["All", "client", "supplier", "asset_supplier", "other_payable"], state="readonly", width=13)
-        put(1, 0, "Customer Type" if kind == "customer_receipt" else "Supplier Type", type_box)
+        type_box = ttk.Combobox(grid, textvariable=form["type"], values=["All", "client", "supplier", "asset_supplier", "other_payable"], state="readonly", width=16)
+        put(2, 0, "Customer Type" if kind == "customer_receipt" else "Supplier Type", type_box)
         type_box.bind("<<ComboboxSelected>>", lambda _e: self.payment_type_changed(form))
-        form["party_box"] = put(1, 1, "Customer" if kind == "customer_receipt" else "Supplier", ttk.Combobox(grid, textvariable=v["party"], width=26))
+        form["party_box"] = put(2, 1, "Customer" if kind == "customer_receipt" else "Supplier", ttk.Combobox(grid, textvariable=v["party"], width=36))
         form["party_box"].bind("<KeyRelease>", lambda e: self.filter_payment_parties(form, e)); form["party_box"].bind("<<ComboboxSelected>>", lambda _e: self.payment_party_chosen(form))
         form["party_box"].bind("<FocusOut>", lambda _e: self.payment_party_chosen(form), add="+"); form["party_box"].bind("<Return>", lambda _e: self.payment_party_chosen(form), add="+")
-        put(2, 0, "Currency", ttk.Combobox(grid, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=6))
-        put(2, 1, "Amount", tk.Entry(grid, textvariable=v["amount"], width=14, font=("Segoe UI", 10, "bold")), True)
-        put(3, 0, "Method", ttk.Combobox(grid, textvariable=v["method"], values=METHODS, state="readonly", width=13))
-        form["cash_box"] = put(3, 1, "Cash / Bank Account", ttk.Combobox(grid, textvariable=v["cash_account"], width=26, state="readonly"))
-        put(4, 0, "Ref. / Cheque", tk.Entry(grid, textvariable=v["reference"], width=14))
-        put(4, 1, "Description", tk.Entry(grid, textvariable=v["description"], width=30))
+        put(3, 0, "Currency", ttk.Combobox(grid, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=8))
+        put(3, 1, "Amount", tk.Entry(grid, textvariable=v["amount"], width=18, font=("Segoe UI", 10, "bold")), True)
+        design.section_label(grid, "Payment", 4)
+        put(5, 0, "Method", ttk.Combobox(grid, textvariable=v["method"], values=METHODS, state="readonly", width=16))
+        form["cash_box"] = put(5, 1, "Cash / Bank Account", ttk.Combobox(grid, textvariable=v["cash_account"], width=36, state="readonly"))
+        put(6, 0, "Ref. / Cheque", tk.Entry(grid, textvariable=v["reference"], width=18))
+        put(6, 1, "Description", tk.Entry(grid, textvariable=v["description"], width=38))
         # 2.9.79: bank commission and exchange difference, each on the account chosen here (number - name)
-        put(5, 0, "Bank Commission", tk.Entry(grid, textvariable=v["bank_commission"], width=11))
-        put(5, 1, "Commission A/C", self.account_search_box(grid, v["commission_account"], 30))
-        put(6, 0, "Exchange Difference (+ / -)", tk.Entry(grid, textvariable=v["exchange_difference"], width=11))
-        put(7, 0, "Exchange Gain A/C", self.account_search_box(grid, v["exchange_gain_account"], 30))
-        put(7, 1, "Exchange Loss A/C", self.account_search_box(grid, v["exchange_loss_account"], 30))
+        design.section_label(grid, "Bank commission and exchange difference", 7)
+        put(8, 0, "Bank Commission", tk.Entry(grid, textvariable=v["bank_commission"], width=14))
+        put(8, 1, "Commission A/C", self.account_search_box(grid, v["commission_account"], 38))
+        put(9, 0, "Exchange Difference (+ / -)", tk.Entry(grid, textvariable=v["exchange_difference"], width=14))
+        put(10, 0, "Exchange Gain A/C", self.account_search_box(grid, v["exchange_gain_account"], 38))
+        put(10, 1, "Exchange Loss A/C", self.account_search_box(grid, v["exchange_loss_account"], 38))
         form["preview"] = tk.Label(box, text="", bg="#eef3f8", fg=NAVY, anchor="w", justify="left", font=("Consolas", 9))
         form["preview"].pack(fill="x", pady=(6, 0))
         self.reset_payment_accounts(form)

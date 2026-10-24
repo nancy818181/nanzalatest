@@ -58,8 +58,8 @@ def _responsive_invoice_details(form, fields, dimensions):
 class SalesInvoiceMixin:
     def build_sales_invoice(self):
         self.sales_items=[]; self.sales_edit_id=None
-        header=tk.LabelFrame(self.sales_tab,text="Sales Invoice",bg=LIGHT,padx=6,pady=2)
-        header.pack(fill="x",padx=10,pady=(2,1))
+        import desktop_design as design  # 2.9.134: framed panel with a gold-marked title (same controls and bindings as before)
+        header_outer,header=design.panel(self.sales_tab,"Sales Invoice",pady=6); header_outer.pack(fill="x",padx=10,pady=(2,3))
         self.sales_no=tk.StringVar(); self.sales_date=tk.StringVar(value=self.fiscal_today())
         self.sales_party=tk.StringVar(); self.sales_kind=tk.StringVar(value="sales"); self.sales_currency=tk.StringVar(value="USD")
         self.sales_supplier_account=tk.StringVar(value="")
@@ -100,10 +100,10 @@ class SalesInvoiceMixin:
         doc_box=ttk.Combobox(form,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
         put(0,0,"Document",doc_box); doc_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_doc_type_changed())
         put(0,1,"Invoice No.",tk.Entry(form,textvariable=self.sales_no,width=18,font=("Segoe UI",10,"bold"),state="readonly",readonlybackground="white"),True)
-        self.sales_party_box=put(1,0,"Customer",ttk.Combobox(form,textvariable=self.sales_party,width=23))
+        self.sales_party_box=put(1,0,"Customer",ttk.Combobox(form,textvariable=self.sales_party,width=28))
         self.sales_party_box.bind("<KeyRelease>",self.search_sales_customers); self.sales_party_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_customer_chosen())
         self.sales_party_box.bind("<Return>",lambda _event:self.select_searched_sales_customer())
-        put(1,1,"Client Account",tk.Entry(form,textvariable=self.sales_supplier_account,width=12))
+        put(1,1,"Client Account",tk.Entry(form,textvariable=self.sales_supplier_account,width=16))
         put(2,0,"Currency",ttk.Combobox(form,textvariable=self.sales_currency,values=self.currency_codes,state="readonly",width=6))
         account_fields=[("Client Account",self.sales_supplier_account,self.sales_supplier_side),("VAT Account",self.sales_vat_account,self.sales_vat_side),
                 ("Revenue Account",self.sales_expense_account,self.sales_expense_side)]
@@ -133,7 +133,7 @@ class SalesInvoiceMixin:
                                                        and self.after_idle(self.refresh_sales_number)))
         put(5,1,"Amount Paid",tk.Entry(form,textvariable=self.sales_amount_paid,width=10))
         self.sales_cash_account=tk.StringVar()
-        put(6,0,"Paid into",self.account_search_box(form,self.sales_cash_account,12))
+        put(6,0,"Paid into",self.account_search_box(form,self.sales_cash_account,20))
         self.sales_treatment=tk.StringVar(value=TAXABLE_LABEL)
         treatment_box=put(6,1,"VAT Treatment",ttk.Combobox(form,textvariable=self.sales_treatment,values=list(SALE_TREATMENTS),state="readonly",width=19),True)
         treatment_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_treatment_changed())
@@ -182,7 +182,7 @@ class SalesInvoiceMixin:
         # Item table on top, enlarged
         items_area=tk.Frame(body,bg=LIGHT); items_area.pack(side="top",fill="both",expand=True)
         sheet_frame=tk.Frame(items_area,bg=LIGHT); sheet_frame.pack(fill="both",expand=True)
-        self.sales_columns=[("item_code","Item",90),("description","Description",250),("quantity","Qty",55),("unit","Unit",60),("unit_price","Unit Price",95),
+        self.sales_columns=[("item_code","Item Code (F2)",145),("description","Item Description",250),("quantity","Qty",55),("unit","Unit",60),("unit_price","Unit Price",95),
             ("gross_amount","Total Amount",105),("discount_percent","Discount %",80),("vat_rate","VAT %",60),("total","Net",105)]
         self.sales_sheet=ttk.Treeview(sheet_frame,columns=[c[0] for c in self.sales_columns],show="headings",height=6,style="Sales.Treeview")
         for key,label,width in self.sales_columns: self.sales_sheet.heading(key,text=label); self.sales_sheet.column(key,width=width,anchor="w" if key=="description" else "e")
@@ -194,6 +194,7 @@ class SalesInvoiceMixin:
         sheet_frame.grid_rowconfigure(0,weight=1); sheet_frame.grid_columnconfigure(0,weight=1)
         self.sales_sheet.bind("<Double-1>",self.edit_sales_cell); self.sales_sheet.bind("<Return>",self.edit_sales_cell)
         self.sales_sheet.bind("<Delete>",lambda _event:self.remove_sales_item())
+        self.sales_sheet.bind("<F2>",lambda _event:self.sales_item_lookup())
         # 2.9.118: the totals in a card at the bottom right, one line each and the total to pay last, as in Zoho
         card_bg="white"; line="#DDE4EC"
         totals=tk.Frame(bottom,bg=LIGHT); totals.pack(side="right",fill="y",padx=(8,0))
@@ -443,6 +444,74 @@ class SalesInvoiceMixin:
     def sales_item_for(self,iid):
         return next((item for item in self.sales_items if item.get("_iid")==iid),None)
 
+    def apply_sales_inventory_item(self, item, product):
+        """Fill a sales line from a reviewed inventory item; preserve the existing defaults."""
+        item["item_code"] = product["sku"] if product else ""
+        if product:
+            item["description"] = product["name"]; item["unit"] = product.get("unit") or ""
+            if product["sales_price"]: item["unit_price"] = product["sales_price"]
+            if product.get("default_vat") not in (None, ""):
+                item["vat_rate"] = 0.0 if str(product["default_vat"]).replace("%", "").strip() in ("0", "0.0") else vat_rate(self)
+                item["_vat_typed"] = False
+
+    def sales_item_lookup(self, iid=None, editor=None):
+        """F2 item picker showing the full code, description, unit, price and VAT."""
+        iid = iid or self.sales_sheet.focus()
+        if not iid or not self.sales_sheet.exists(iid):
+            return messagebox.showinfo("Sales Invoice", "Select or add an invoice line, then press F2 in Item Code.")
+        products = getattr(self, "inventory_rows", None)
+        if not products:
+            try: products = self.client.inventory_items()
+            except RuntimeError as exc: return messagebox.showerror("Sales Invoice", f"Could not load inventory items: {exc}")
+            self.inventory_rows = products
+        products = [row for row in products if row.get("active", 1)]
+        window = tk.Toplevel(self); window.title("Choose an inventory item"); window.configure(bg=LIGHT); window.transient(self); window.grab_set()
+        width = max(600, min(900, self.winfo_screenwidth() - 40)); height = max(380, min(560, self.winfo_screenheight() - 100))
+        window.geometry(f"{width}x{height}")
+        tk.Label(window, text="Search by item code, name or category. Double-click a row or press Enter to select.",
+                 bg=LIGHT, fg=NAVY, anchor="w").pack(fill="x", padx=12, pady=(10, 4))
+        search_var = tk.StringVar(value=editor.get().strip() if editor is not None and editor.winfo_exists() else "")
+        search = tk.Entry(window, textvariable=search_var, width=54); search.pack(fill="x", padx=12, pady=(0, 8)); search.focus_set()
+        frame = tk.Frame(window, bg=LIGHT); frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        columns = ("code", "name", "category", "unit", "price", "vat")
+        tree = ttk.Treeview(frame, columns=columns, show="headings")
+        for key, title, column_width in (("code", "Item Code", 135), ("name", "Item Name", 340), ("category", "Category", 135),
+                                         ("unit", "Unit", 75), ("price", "Sales Price", 115), ("vat", "Default VAT", 100)):
+            tree.heading(key, text=title); tree.column(key, width=column_width, minwidth=65, stretch=key == "name",
+                                                        anchor="e" if key == "price" else "w")
+        yscroll = ttk.Scrollbar(frame, orient="vertical", command=tree.yview); xscroll = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=yscroll.set, xscrollcommand=xscroll.set)
+        tree.grid(row=0, column=0, sticky="nsew"); yscroll.grid(row=0, column=1, sticky="ns"); xscroll.grid(row=1, column=0, sticky="ew")
+        frame.grid_rowconfigure(0, weight=1); frame.grid_columnconfigure(0, weight=1)
+        by_iid = {}
+        def fill(*_args):
+            tree.delete(*tree.get_children()); by_iid.clear()
+            query = search_var.get().casefold().strip()
+            for index, product in enumerate(products):
+                searchable = " ".join(str(product.get(key) or "") for key in ("sku", "name", "category", "subcategory", "barcode")).casefold()
+                if query and query not in searchable: continue
+                row_id = str(index); by_iid[row_id] = product
+                default_vat = str(product.get("default_vat") or "")
+                tree.insert("", "end", iid=row_id, values=(product.get("sku", ""), product.get("name", ""), product.get("category", ""),
+                           product.get("unit", ""), f'{float(product.get("sales_price") or 0):,.2f}', default_vat))
+            matches = tree.get_children()
+            if matches: tree.selection_set(matches[0]); tree.focus(matches[0]); tree.see(matches[0])
+        def choose(_event=None):
+            selected = tree.selection()
+            if not selected: return
+            product = by_iid.get(selected[0]); item = self.sales_item_for(iid)
+            if item is None or product is None: return
+            if editor is not None and editor.winfo_exists(): editor.destroy()
+            self.apply_sales_inventory_item(item, product); self.recalculate_sales_item(item)
+            self.sales_sheet.item(iid, values=self.sales_row_values(item)); self.update_sales_totals()
+            window.destroy(); self.sales_sheet.focus_set()
+        search_var.trace_add("write", fill); tree.bind("<Double-1>", choose); tree.bind("<Return>", choose)
+        search.bind("<Return>", lambda _event: (choose(), "break")[1])
+        window.bind("<Escape>", lambda _event: window.destroy())
+        if editor is not None and editor.winfo_exists(): editor.bind("<F2>", lambda _event: (self.sales_item_lookup(iid, editor), "break")[1])
+        fill(); search.focus_set()
+        return window
+
     def edit_sales_cell(self,event=None,column_index=None,iid=None):
         """Put an entry box over one cell of the sheet, like a spreadsheet."""
         tree=self.sales_sheet
@@ -471,12 +540,7 @@ class SalesInvoiceMixin:
             elif key=="item_code":
                 product=self.item_by_code(text) if text else None
                 if text and not product: return messagebox.showwarning("Sales Invoice",f"Item {text} was not found (Inventory > Items)")
-                item["item_code"]=product["sku"] if product else ""
-                if product:
-                    item["description"]=product["name"]; item["unit"]=product.get("unit") or ""
-                    if product["sales_price"]: item["unit_price"]=product["sales_price"]
-                    if product.get("default_vat") not in (None,""):
-                        item["vat_rate"]=0.0 if str(product["default_vat"]).replace("%","").strip() in ("0","0.0") else vat_rate(self); item["_vat_typed"]=False  # 2.9.72
+                self.apply_sales_inventory_item(item, product)
             else:
                 try: number=float(text.replace(",","") or 0)
                 except ValueError: return messagebox.showwarning("Sales Invoice",f"{self.sales_columns[column_index][1]} must be a number")
@@ -495,6 +559,7 @@ class SalesInvoiceMixin:
                     if index+1<len(rows): self.after(10,lambda:self.edit_sales_cell(column_index=0,iid=rows[index+1]))
                     elif item["description"]: self.add_sales_item()
         editor.bind("<Return>",lambda _event:commit(1)); editor.bind("<Tab>",lambda _event:(commit(1),"break")[1])
+        editor.bind("<F2>",lambda _event:(self.sales_item_lookup(iid,editor),"break")[1]) if key == "item_code" else None
         editor.bind("<FocusOut>",lambda _event:commit(0) if editor.winfo_exists() else None); editor.bind("<Escape>",lambda _event:editor.destroy())
 
     def remove_sales_item(self):

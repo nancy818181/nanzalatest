@@ -12,6 +12,8 @@ ROOT = TESTS.parent
 for _path in (ROOT, TESTS):
     if str(_path) not in sys.path: sys.path.insert(0, str(_path))
 import nanza_paths  # noqa: E402,F401
+import os  # noqa: E402
+os.environ.setdefault("NANZA_SCRYPT_LOG_N", "10")  # 2.9.134: the tests hash passwords at a low cost (the program uses 2^17); one test checks the real setting
 
 
 class _Repository(type(ROOT)):

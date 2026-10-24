@@ -314,28 +314,28 @@ class UsersAlertsAndRatesTest(unittest.TestCase):
     def tearDown(self): self.folder.cleanup()
 
     def test_new_users_expire_after_one_year_and_can_be_renewed(self):
-        user = self.db.save_user({"username": "clerk", "password": "clerk123", "role": "accountant"}, self.user)
+        user = self.db.save_user({"username": "clerk", "password": "clerk123456", "role": "accountant"}, self.user)
         self.assertEqual(user["expires_at"], (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d"))
         self.assertIsNone(next(u for u in self.db.list_users() if u["username"] == "admin")["expires_at"])
-        token = self.db.login("clerk", "clerk123")["token"]
+        token = self.db.login("clerk", "clerk123456")["token"]
         self.db.save_user({"id": user["id"], "username": "clerk", "role": "accountant", "expires_at": "01-01-2020"}, self.user)
         self.assertIsNone(self.db.user_for_token(token))
-        with self.assertRaisesRegex(PermissionError, "expired on 01-01-2020"): self.db.login("clerk", "clerk123")
+        with self.assertRaisesRegex(PermissionError, "expired on 01-01-2020"): self.db.login("clerk", "clerk123456")
         renewed = self.db.save_user({"id": user["id"], "username": "clerk", "role": "accountant", "renew": True}, self.user)
-        self.assertEqual(renewed["days_remaining"], 365); self.assertTrue(self.db.login("clerk", "clerk123"))
+        self.assertEqual(renewed["days_remaining"], 365); self.assertTrue(self.db.login("clerk", "clerk123456"))
 
     def test_permissions_last_admin_and_validation(self):
-        clerk = self.db.save_user({"username": "clerk", "password": "clerk123", "role": "accountant", "permissions": {"payroll": False, "vat": True}}, self.user)
-        row = self.db.user_for_token(self.db.login("clerk", "clerk123")["token"])
+        clerk = self.db.save_user({"username": "clerk", "password": "clerk123456", "role": "accountant", "permissions": {"payroll": False, "vat": True}}, self.user)
+        row = self.db.user_for_token(self.db.login("clerk", "clerk123456")["token"])
         self.assertFalse(self.db.user_can(row, "payroll")); self.assertTrue(self.db.user_can(row, "vat"))
         with self.assertRaisesRegex(ValueError, "administrator must remain"):
             self.db.save_user({"id": 1, "username": "admin", "role": "viewer"}, self.user)
-        with self.assertRaisesRegex(ValueError, "already used"): self.db.save_user({"username": "CLERK", "password": "another1", "role": "viewer"}, self.user)
-        with self.assertRaisesRegex(ValueError, "6 characters"): self.db.save_user({"id": clerk["id"], "username": "clerk", "role": "viewer", "password": "123"}, self.user)
+        with self.assertRaisesRegex(ValueError, "already used"): self.db.save_user({"username": "CLERK", "password": "another12345", "role": "viewer"}, self.user)
+        with self.assertRaisesRegex(ValueError, "10 characters"): self.db.save_user({"id": clerk["id"], "username": "clerk", "role": "viewer", "password": "123"}, self.user)
 
     def test_sessions_expire(self):
         token = self.db.login("admin", "secret")["token"]
-        with self.db.connect() as db: db.execute("UPDATE sessions SET created_at=? WHERE token=?", ((datetime.now() - timedelta(hours=30)).astimezone().isoformat(), token))
+        with self.db.connect() as db: db.execute("UPDATE sessions SET created_at=? WHERE token=?", ((datetime.now() - timedelta(hours=30)).astimezone().isoformat(), __import__("database_common").session_token_hash(token)))  # 2.9.134: the table keeps the hash
         self.assertIsNone(self.db.user_for_token(token))
 
     def test_legal_document_alerts(self):
@@ -1378,14 +1378,14 @@ class StandaloneEndToEndTest(unittest.TestCase):
         api.create_manual_invoice({"invoice_date": f"10-02-{year}", "party_name": "E2E Client", "kind": "sales", "currency": "LBP", "status": "posted"},
                                   [{"description": "Service", "quantity": 1, "unit_price": 10000000, "vat_rate": 11}])
         self.assertEqual(api.vat_return(year, 1)["payable_lbp"], 1100000)
-        api.save_user({"username": "nopay", "password": "nopay123", "role": "accountant", "permissions": {"payroll": False, "vat": True}})
-        limited = ApiClient(self.url); session = limited.login("nopay", "nopay123"); limited.select_company_year(api.company_id, year)
+        api.save_user({"username": "nopay", "password": "nopay12345", "role": "accountant", "permissions": {"payroll": False, "vat": True}})
+        limited = ApiClient(self.url); session = limited.login("nopay", "nopay12345"); limited.select_company_year(api.company_id, year)
         self.assertFalse(session["permissions"]["payroll"]); self.assertEqual(session["expires_at"], (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d"))
         with self.assertRaisesRegex(RuntimeError, "permission to use Payroll"): limited.payroll()
         self.assertEqual(limited.vat_return(year, 1)["payable_lbp"], 1100000)
         users = {u["username"]: u for u in api.users()}
         api.save_user({"id": users["nopay"]["id"], "username": "nopay", "role": "accountant", "expires_at": "01-01-2020"})
-        with self.assertRaisesRegex(RuntimeError, "expired"): ApiClient(self.url).login("nopay", "nopay123")
+        with self.assertRaisesRegex(RuntimeError, "expired"): ApiClient(self.url).login("nopay", "nopay12345")
         expired_calls = []; limited.on_unauthorized = lambda: expired_calls.append(True)
         with self.assertRaises(RuntimeError): limited.vat_returns()
         self.assertEqual(expired_calls, [True])

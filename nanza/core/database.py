@@ -13,6 +13,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     register_money_functions, SCHEMA, secrets, SESSION_HOURS, sqlite3, threading, timedelta, timezone,
     USER_VALIDITY_DAYS, utcnow, VAT_ACCOUNT_9, verify_password
 )
+from database_common import password_needs_rehash, session_token_hash  # 2.9.134 (D7)
 from database_common import _soft_iso  # noqa: F401
 from db_invoices import InvoicesStore
 from db_journal import JournalStore
@@ -483,7 +484,11 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             db.execute("CREATE TABLE IF NOT EXISTS tax_flags(source_type TEXT NOT NULL,source_id INTEGER NOT NULL,PRIMARY KEY(source_type,source_id))")
             db.execute("""CREATE TABLE IF NOT EXISTS income_exemptions(source_type TEXT NOT NULL,source_id INTEGER NOT NULL,reason TEXT NOT NULL,
                 PRIMARY KEY(source_type,source_id))""")  # 2.9.113: income not subject to income tax, with its legal reason
-            db.execute("INSERT OR IGNORE INTO users(username,password_hash,role) VALUES(?,?,?)", ("admin", hash_password(admin_password), "admin"))
+            if not db.execute("SELECT 1 FROM users WHERE username='admin'").fetchone():  # 2.9.134: no 128 MiB hash on every start-up of an existing file
+                db.execute("INSERT OR IGNORE INTO users(username,password_hash,role) VALUES(?,?,?)", ("admin", hash_password(admin_password), "admin"))
+            # 2.9.134 (D7): session tokens are kept as hashes; a session of an older file is converted once (the signed-in program keeps its token)
+            for legacy in db.execute("SELECT token FROM sessions WHERE token NOT LIKE 'h1:%'").fetchall():
+                db.execute("UPDATE sessions SET token=? WHERE token=?", (session_token_hash(legacy["token"]), legacy["token"]))
             db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('base_currency','USD')")
             db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('second_currency','LBP')")  # 2.9.71: the 2 main currencies
             # 2.9.72: the VAT of the company - rate (Lebanon 11%) and the 2 currencies of the VAT return (LBP, with USD)
@@ -525,6 +530,17 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 if old and new and old["id"] != new["id"]:
                     db.execute("UPDATE journal_lines SET account_id=? WHERE account_id=?", (new["id"], old["id"]))
                     db.execute("DELETE FROM accounts WHERE id=?", (old["id"],))
+            # 2.9.133 (RPT-BS-001): output VAT (4427 and the sub-accounts made under it) is a liability. The chart seed typed it as an
+            # asset, so the account-type balance sheet showed the VAT payable as a negative asset (assets and liabilities both
+            # understated by the same amount). Owner decision recorded in tests/golden_ledger_expected.py. Every entry stays as it
+            # was; only the account type of existing files is corrected, once, and the number of accounts changed is audited.
+            if not db.execute("SELECT 1 FROM app_settings WHERE key='output_vat_liability_2933'").fetchone():
+                vat_fixed = db.execute("UPDATE accounts SET type='liability' WHERE (code='4427' OR code LIKE '4427%') AND type='asset'").rowcount
+                db.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('output_vat_liability_2933',?)", (utcnow(),))
+                if vat_fixed:
+                    db.execute("INSERT INTO audit_log(user_id,action,entity,details,created_at) VALUES(?,?,?,?,?)",
+                               (None, "migrate", "chart_of_accounts",
+                                json.dumps({"change": "output VAT accounts 4427* typed asset -> liability", "accounts": vat_fixed}), utcnow()))
             db.execute("UPDATE invoices SET supplier_account=? WHERE supplier_account='2100'",
                        (DEFAULT_LEBANESE_ACCOUNTS["accounts_payable"],))
             db.execute("UPDATE invoices SET vat_account=? WHERE vat_account='1300'",
@@ -762,6 +778,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                            (user["id"] if user else None,"login_failed","auth",json.dumps({"username":username,"remote_addr":remote_addr}),utcnow()))
                 return None
             db.execute("DELETE FROM login_attempts WHERE key=?",(keys[0],))
+            if password_needs_rehash(user["password_hash"]):  # 2.9.134 (D7): a hash from before 2.9.134 is written again at this sign-in
+                db.execute("UPDATE users SET password_hash=? WHERE id=?", (hash_password(password), user["id"]))
             state = licence.status(db)  # 2.9.121: an ended licence opens the books read only (reports, exports, backups) - not blocked
             if self.user_is_expired(user):
                 raise PermissionError(f"This account expired on {display_date(user['expires_at'])}. Ask the administrator to renew it.")
@@ -771,7 +789,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                      if (parse_ts(row["created_at"]) or datetime.now(timezone.utc)) < cutoff]
             for stale_token in stale:
                 db.execute("DELETE FROM sessions WHERE token=?", (stale_token,))
-            db.execute("INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)", (token, user["id"], utcnow()))
+            db.execute("INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)", (session_token_hash(token), user["id"], utcnow()))  # 2.9.134 (D7): hash only
             return {"token": token, "username": user["username"], "role": user["role"], "language": user["language"],
                 "expires_at": user["expires_at"], "permissions": parse_permissions(user["permissions"]) if user["role"]!="admin" else {m:True for m in PERMISSION_MODULES},
                 "licence": state, "read_only": bool(state["expired"]), "companies": user_companies(user)}
@@ -780,7 +798,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         if not token: return None
         with self.connect() as db:
             row=db.execute("""SELECT u.*, s.created_at AS session_created_at FROM sessions s JOIN users u ON u.id=s.user_id
-                WHERE s.token=? AND u.active=1""", (token,)).fetchone()
+                WHERE s.token=? AND u.active=1""", (session_token_hash(token),)).fetchone()
         if not row: return None
         created=parse_ts(row["session_created_at"])
         if created is None or (datetime.now(timezone.utc)-created) > timedelta(hours=SESSION_HOURS): return None
@@ -825,7 +843,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
         active=1 if item.get("active",True) else 0; user_id=item.get("id")
         if not username or role not in ("admin","accountant","viewer") or language not in ("en","ar","fr"):
             raise ValueError("Enter a valid username, role, and language")
-        if password and len(password)<6: raise ValueError("Password must contain at least 6 characters")
+        if password and len(password)<10: raise ValueError("Password must contain at least 10 characters")  # 2.9.134 (D7): was 6; saved users keep signing in with theirs
         given=item.get("permissions")
         if isinstance(given,str):
             try: given=json.loads(given or "{}")

@@ -97,7 +97,7 @@ COUNTRY = {
             "69": ("Zakat and Income Tax", "الزكاة وضريبة الدخل", "Zakat et impôt sur le résultat"),
         },
         "accounts": [
-            ("442700015", "Output VAT 15% (ZATCA)", "ضريبة القيمة المضافة على المبيعات 15%", "TVA collectée 15%", "asset", "4427"),
+            ("442700015", "Output VAT 15% (ZATCA)", "ضريبة القيمة المضافة على المبيعات 15%", "TVA collectée 15%", "liability", "4427"),
             ("442660015", "Input VAT 15% (ZATCA)", "ضريبة القيمة المضافة على المشتريات 15%", "TVA déductible 15%", "asset", "4426.6"),
             ("443300001", "Zakat Payable", "الزكاة المستحقة", "Zakat à payer", "asset", "443"),
             ("695000001", "Zakat Expense", "مصروف الزكاة", "Charge de zakat", "expense", "69"),
@@ -113,7 +113,7 @@ COUNTRY = {
             "69": ("Corporate Tax Expense", "مصروف ضريبة الشركات", "Impôt sur les sociétés"),
         },
         "accounts": [
-            ("442700005", "Output VAT 5% (FTA)", "ضريبة القيمة المضافة على المبيعات 5%", "TVA collectée 5%", "asset", "4427"),
+            ("442700005", "Output VAT 5% (FTA)", "ضريبة القيمة المضافة على المبيعات 5%", "TVA collectée 5%", "liability", "4427"),
             ("442660005", "Input VAT 5% (FTA)", "ضريبة القيمة المضافة على المشتريات 5%", "TVA déductible 5%", "asset", "4426.6"),
             ("443400001", "Corporate Tax Payable (9%)", "ضريبة الشركات المستحقة (9%)", "Impôt sur les sociétés à payer (9%)", "asset", "443"),
             ("696000001", "Corporate Tax Expense (9%)", "مصروف ضريبة الشركات (9%)", "Charge d'impôt sur les sociétés (9%)", "expense", "69"),

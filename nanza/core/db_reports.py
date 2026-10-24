@@ -15,6 +15,26 @@ POSTED_ONLY = ("(COALESCE(e.posting_status,'posted')='posted' AND (e.source_type
                "SELECT 1 FROM invoices pi WHERE pi.id=e.source_id AND pi.status IN ('posted','cancelled'))))")
 
 
+def _present_class4_by_sign(rows):
+    """2.9.134 (D5, owner approved): third-party accounts (class 4) are shown as an asset when their balance is a debit and as a
+    liability when it is a credit, per account and currency - as the IFRS statements already group them (financial_statements.default_group).
+    Provisions on third parties (49) stay with the receivables they correct; an equity row or a zero balance keeps its stored type.
+    Only the section changes: no amount does, so assets = liabilities + equity is unaffected."""
+    for row in rows:
+        code = str(row.get("code") or "")
+        if not code.startswith("4") or code.startswith("49") or row.get("type") not in ("asset", "liability"): continue
+        balance = Decimal(str(row.get("balance") or 0))
+        if balance > 0: row["type"] = "asset"
+        elif balance < 0: row["type"] = "liability"
+    return rows
+
+
+def _exact_amount(positive, negative):
+    """2.9.133 (MONEY-FLOAT-001): positive - negative worked out as exact Decimals, then turned into a number once.
+    Subtracting two floats gave 110.47999999999999 instead of 110.48; both inputs are already exact to 6 decimals (DSUM)."""
+    return float(Decimal(str(positive or 0)) - Decimal(str(negative or 0)))
+
+
 class ReportsStore:
     # ---------------------------------------------------------------- 2.9.80: every currency converted (planning tools)
     def _converted_lines(self, currency, from_date=None, to_date=None, without_opening=False,
@@ -42,7 +62,7 @@ class ReportsStore:
             else: item["credit"] -= Decimal(str(value))
         for item in totals.values(): item["debit"], item["credit"] = float(item["debit"]), float(item["credit"])
         rows = sorted(totals.values(), key=lambda r: r["code"])
-        for row in rows: row["amount"] = (row["credit"] - row["debit"]) if row["type"] == "income" else (row["debit"] - row["credit"])
+        for row in rows: row["amount"] = _exact_amount(row["credit"], row["debit"]) if row["type"] == "income" else _exact_amount(row["debit"], row["credit"])
         return rows
 
     def cash_flow_converted(self, from_date=None, to_date=None, currency="USD"):
@@ -114,7 +134,7 @@ class ReportsStore:
             if value >= 0: item["debit"] += value
             else: item["credit"] -= value
             item["balance"] += value
-        return sorted(totals.values(), key=lambda r: r["code"])
+        return _present_class4_by_sign(sorted(totals.values(), key=lambda r: r["code"]))
 
     def profit_and_loss(self, from_date=None, to_date=None, currency=None, department_id=None, project_id=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
@@ -135,7 +155,7 @@ class ReportsStore:
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
                 WHERE {' AND '.join(conditions)} GROUP BY e.currency,a.id ORDER BY e.currency,a.code""", parameters)]
         for row in rows:
-            row["amount"] = (row["credit"] - row["debit"]) if row["type"] == "income" else (row["debit"] - row["credit"])
+            row["amount"] = _exact_amount(row["credit"], row["debit"]) if row["type"] == "income" else _exact_amount(row["debit"], row["credit"])
         return rows
 
     def close_fiscal_year(self, year, user_id):
@@ -511,7 +531,7 @@ class ReportsStore:
             if result:
                 rows.append({"currency":code,"code":"13","name_en":"Current Year Net Result","type":"equity",
                     "debit":float(-result) if result<0 else 0.0,"credit":float(result) if result>0 else 0.0,"balance":float(-result)})
-        return rows
+        return _present_class4_by_sign(rows)
 
     def cash_flow(self,from_date=None,to_date=None,currency=None):
         """Cash and bank movements (classes 51 / 53) by origin. 2.9.51: summed by the database itself - every line

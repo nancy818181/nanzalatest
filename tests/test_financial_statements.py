@@ -130,8 +130,8 @@ class FinancialStatementsApiTest(unittest.TestCase):
                     api.business_report('financial_statements',{'years':'2023'})
                 registry=manager._read();registry['companies'][0]['years'][0]['status']='closed';manager._write(registry)
                 api.save_financial_config(2024,{'notes':{'Entity and activities':'Closed books draft'}})
-                db.save_user({'username':'fsviewer','password':'view12345','role':'viewer'},1)
-                viewer=ApiClient(api.base_url);viewer.login('fsviewer','view12345');viewer.select_company_year(company['id'],2024)
+                db.save_user({'username':'fsviewer','password':'view1234567','role':'viewer'},1)
+                viewer=ApiClient(api.base_url);viewer.login('fsviewer','view1234567');viewer.select_company_year(company['id'],2024)
                 with self.assertRaisesRegex(RuntimeError,'read-only'): viewer.save_financial_config(2024,{})
             finally:
                 http.shutdown();http.server_close();thread.join(timeout=5)

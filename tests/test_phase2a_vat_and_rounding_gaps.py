@@ -250,10 +250,7 @@ def test_posting_rounding_difference_line_is_visible(synthetic_db):
     assert any("round" in row["code"].lower() for row in lines)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="POST-DUPLICATE-001 (Decision 3): duplicate identity policy is not approved; importer currently permits repeated invoice numbers.",
-)
+# 2.9.134 (D3, owner approved): fixed - a second invoice with the same identity is refused
 def test_duplicate_invoice_identity_is_rejected(synthetic_db):
     _invoice(synthetic_db, "SYN-DUPLICATE-IDENTITY")
     with pytest.raises(ValueError, match="(?i)duplicate"):

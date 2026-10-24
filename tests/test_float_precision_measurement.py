@@ -1,10 +1,10 @@
-"""Measure (do not certify) float error after fractional postings reach a report."""
+"""Measure float error after fractional postings reach a report. 2.9.133: the P&L now subtracts exact Decimals (MONEY-FLOAT-001)."""
 
 from decimal import Decimal
 
 
 def test_measurement_pnl_float_subtraction_for_fractional_amounts(synthetic_db):
-    """CURRENT BEHAVIOR: 40 one-cent entries leave a measurable float residue."""
+    """2.9.133: 40 one-cent entries leave NO float residue in the P&L (was 0.19999999999999998)."""
     with synthetic_db.connect() as connection:
         cash_code = connection.execute("SELECT code FROM accounts WHERE code='531'").fetchone()["code"]
         income_code = connection.execute(
@@ -36,5 +36,5 @@ def test_measurement_pnl_float_subtraction_for_fractional_amounts(synthetic_db):
     difference = actual - expected
     print(f"float measurement: expected={expected}; actual={actual}; difference={difference}")
 
-    assert actual == Decimal("0.19999999999999998")
-    assert difference == Decimal("-2E-17")
+    assert actual == expected
+    assert difference == Decimal("0")

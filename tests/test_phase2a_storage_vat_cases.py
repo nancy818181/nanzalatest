@@ -181,9 +181,7 @@ def test_invoice_import_service_closed_period_matrix(synthetic_db, period):
         _new_invoice(synthetic_db, "purchase", date)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "RPT-BS-001: 4427 is output VAT (liability, owner-confirmed) but the seed stores asset; invoice module creates liability"
-))
+# 2.9.133: RPT-BS-001 fixed; the strict xfail marker was removed on purpose.
 def test_balance_sheet_vat_control_accounts_remain_separate_in_refund_position(synthetic_db):
     cash, input_vat, output_vat = "531", "44210", "4427"
     for number, debit, credit in (
@@ -210,7 +208,7 @@ def test_4427_read_only_diagnostic_on_synthetic_database(synthetic_db):
         [sys.executable, str(script), str(synthetic_db.path)],
         check=True, capture_output=True, text=True,
     )
-    assert "4427 stored type: asset" in result.stdout
+    assert "4427 stored type: liability" in result.stdout  # 2.9.133: was asset (RPT-BS-001)
     assert "Accounts whose type differs from Lebanese seed:" in result.stdout
     count = int(result.stdout.rsplit(":", 1)[1].strip())
     assert count == 0

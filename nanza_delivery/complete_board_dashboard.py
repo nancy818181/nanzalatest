@@ -9,7 +9,7 @@ from decimal import Decimal
 from database_common import iso_date
 
 ZERO = Decimal(0)
-GOLD, BLACK, GREEN, RED = "#c8a54c", "#171717", "#26775c", "#a73f42"
+GOLD, BLACK, GREEN, RED = "#c8a54c", "#102A43", "#26775c", "#a73f42"
 GROUPS = {
     "cogs": "Cost of sales",
     "sga": "SG&A",
@@ -540,8 +540,8 @@ def render_board(data):
                 0.15,
                 boxstyle="round,pad=.003,rounding_size=.004",
                 facecolor="white",
-                edgecolor="#dfdfdf",
-                linewidth=1,
+                edgecolor="#e7edf3",
+                linewidth=0.7,
             )
         )
         if i == 0:
@@ -628,10 +628,11 @@ def render_board(data):
         ax.set_axis_off()
         return ax
 
-    left = 0.035
-    middle = 0.357
-    right = 0.679
-    width = 0.286
+    # Three compact columns keep related figures together without oversized card gaps.
+    left = 0.03
+    middle = 0.35
+    right = 0.67
+    width = 0.30
     summary = panel(left, 0.38, width, 0.34, "Exec Summary", "ملخص الإدارة")
     summary_text = "\n".join(textwrap.fill(line, 43 if not ar else 46) for line in data["summary"][:3])
     txt(summary, 0.01, 0.97, summary_text, 9, va="top", linespacing=1.5)
@@ -839,8 +840,11 @@ def open_board(app):
             self.canvas = None
             self.title("NANZA | The Complete Board Dashboard")
             scale = max(1.0, self._get_window_scaling())
-            width = min(1280, int((self.winfo_screenwidth() - 40) / scale))
-            height = min(890, int((self.winfo_screenheight() - 80) / scale))
+            # Leave room around the dashboard on ordinary laptop displays and account
+            # for Windows display scaling before CustomTkinter applies its geometry.
+            width = min(1180, int((self.winfo_screenwidth() - 80) / scale))
+            height = min(790, int((self.winfo_screenheight() - 120) / scale))
+            width = max(760, width); height = max(560, height)
             self.geometry(f"{width}x{height}")
             self.minsize(min(950, width), min(650, height))
             self.bar = ctk.CTkFrame(self, fg_color=BLACK, corner_radius=0, height=35)
@@ -939,13 +943,24 @@ def open_board(app):
             self.state_label.pack_forget()
             self.figure = render_board(data)
             self.canvas = FigureCanvasTkAgg(self.figure, master=self.holder)
-            self.canvas.get_tk_widget().pack(fill="both", expand=True)
+            widget = self.canvas.get_tk_widget()
+            widget.pack(fill="both", expand=True)
+            widget.bind("<Configure>", self.resize_figure, add="+")
             self.canvas.draw_idle()
             self.pdf_button.configure(state="normal")
             tooltip(
                 self.canvas.get_tk_widget(),
                 "الأرقام من القيود المرحّلة. الشرطة — تعني بيانات أو إعدادات غير متاحة. افتح ⚙ لربط الحسابات. نهاية السنة الفعلية ليست توقعاً.",
             )
+
+        def resize_figure(self, event):
+            if self.figure is None or event.width < 200 or event.height < 200:
+                return
+            dpi = self.figure.get_dpi()
+            size = (event.width / dpi, event.height / dpi)
+            if any(abs(old - new) > 0.03 for old, new in zip(self.figure.get_size_inches(), size)):
+                self.figure.set_size_inches(*size, forward=True)
+                self.canvas.draw_idle()
 
         def export(self):
             if self.data is None:
