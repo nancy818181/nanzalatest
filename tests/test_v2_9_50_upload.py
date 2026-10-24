@@ -1,5 +1,6 @@
-"""2.9.50: an uploaded purchase invoice is saved and posted at once; items it lists are created and received in stock."""
+"""PDF purchase line handling; OCR output stays in review until explicitly saved."""
 import tempfile
+import secrets
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,8 +18,9 @@ class _Client:
 class ImportPdfItemsTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.db = Database(Path(self.temp.name) / "u.db"); self.db.initialize("secret")
-        self.user = self.db.user_for_token(self.db.login("admin", "secret")["token"])["id"]
+        self.test_password = secrets.token_urlsafe(24)
+        self.db = Database(Path(self.temp.name) / "u.db"); self.db.initialize(self.test_password)
+        self.user = self.db.user_for_token(self.db.login("admin", self.test_password)["token"])["id"]
         import desktop_stage3
         self.mixin = desktop_stage3.Stage3Mixin
         self.app = SimpleNamespace(client=_Client(self.db, self.user), import_mode="pdf")
@@ -58,29 +60,17 @@ class ImportPdfItemsTest(unittest.TestCase):
 
 
 class PurchaseUploadTest(unittest.TestCase):
-    def test_missing_fields_stop_the_automatic_save(self):
-        try: import tkinter as tk
-        except ImportError as exc: self.skipTest(str(exc))
+    def test_ocr_callback_never_saves_automatically(self):
         import desktop_purchases
-        try: root = tk.Tk()
-        except tk.TclError as exc: self.skipTest(f"no display: {exc}")
-        try:
-            root.withdraw()
-            names = ("supplier", "number", "date", "taxable", "exempt", "vat", "type")
-            v = {k: tk.StringVar(master=root) for k in names}
-            v["supplier"].set("Panel Trading"); v["date"].set("05-03-2026"); v["taxable"].set("500"); v["vat"].set("55"); v["type"].set("Purchases")
-            label = tk.Label(root)
-            app = SimpleNamespace(purchase_form={"vars": v, "id": None, "pdf_suggested_type": "", "pdf_label": label}, saved=[])
-            app.purchase_upload_missing = lambda: desktop_purchases.PurchasesMixin.purchase_upload_missing(app)
-            app.save_purchase = lambda auto=False: app.saved.append(auto)
-            desktop_purchases.PurchasesMixin.auto_save_purchase_upload(app)
-            self.assertEqual(app.saved, []); self.assertIn("invoice number", label.cget("text"))
-            v["number"].set("F-1"); desktop_purchases.PurchasesMixin.auto_save_purchase_upload(app)
-            self.assertEqual(app.saved, [True])
-            app.purchase_form["pdf_suggested_type"] = "Expenses"; app.saved.clear()
-            desktop_purchases.PurchasesMixin.auto_save_purchase_upload(app)
-            self.assertEqual(app.saved, []); self.assertIn("Expenses", label.cget("text"))
-        finally: root.destroy()
+        from unittest.mock import Mock, patch
+        label=Mock(); save=Mock()
+        app=SimpleNamespace(purchase_form={"id":None,"pdf_label":label},save_purchase=save)
+        desktop_purchases.PurchasesMixin.auto_save_purchase_upload(app)
+        save.assert_not_called()
+        self.assertIn("review",label.config.call_args.kwargs["text"].casefold())
+        with patch.object(desktop_purchases.messagebox,"showwarning") as warning:
+            desktop_purchases.PurchasesMixin.save_purchase(app,auto=True)
+        warning.assert_called_once()
 
 
 if __name__ == "__main__":

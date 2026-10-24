@@ -1,5 +1,6 @@
 """2.9.97: money is added exactly (no floating-point drift) in the trial balance and the ledger reports."""
 import tempfile
+import secrets
 import unittest
 from decimal import Decimal
 from pathlib import Path
@@ -7,10 +8,15 @@ from pathlib import Path
 from database import Database
 
 
+def _synthetic_test_password():
+    """Use a fresh throwaway test password; never store a reusable credential in source."""
+    return secrets.token_urlsafe(24)
+
+
 class ExactMoneyTest(unittest.TestCase):
     def setUp(self):
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
-        self.db = Database(Path(folder.name) / "m.db"); self.db.initialize("secret12345"); self.addCleanup(self.db.release)
+        self.db = Database(Path(folder.name) / "m.db"); self.db.initialize(_synthetic_test_password()); self.addCleanup(self.db.release)
         self.db.save_exchange_rate({"date_from": "01-01-2026", "date_to": "31-12-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, 1)
 
     def test_many_small_amounts_add_exactly(self):
@@ -37,7 +43,7 @@ class VatByPartyTest(unittest.TestCase):
 
     def setUp(self):
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
-        self.db = Database(Path(folder.name) / "v.db"); self.db.initialize("secret12345"); self.addCleanup(self.db.release)
+        self.db = Database(Path(folder.name) / "v.db"); self.db.initialize(_synthetic_test_password()); self.addCleanup(self.db.release)
         self.db.save_exchange_rate({"date_from": "01-01-2026", "date_to": "31-12-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, 1)
         import vat_ledgers
         self.vat_ledgers = vat_ledgers
@@ -100,7 +106,7 @@ class AuditTrailTest(unittest.TestCase):
         self.folder = Path(folder.name)
         old = os.environ.get("SABER_AUDIT_KEY"); os.environ["SABER_AUDIT_KEY"] = str(self.folder / "audit.key")
         self.addCleanup(lambda: os.environ.__setitem__("SABER_AUDIT_KEY", old) if old else os.environ.pop("SABER_AUDIT_KEY", None))
-        self.db = Database(self.folder / "a.db"); self.db.initialize("secret12345")
+        self.db = Database(self.folder / "a.db"); self.db.initialize(_synthetic_test_password())
         self.db.save_exchange_rate({"date_from": "01-01-2026", "date_to": "31-12-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, 1)
 
     def test_chain_refuses_changes_and_detects_outside_edits(self):
@@ -132,6 +138,40 @@ class AuditTrailTest(unittest.TestCase):
         from datetime import datetime as _dt, timezone as _tz
         self.assertEqual(audit_report._beirut_offset(_dt(2026, 3, 1, 21, 30, tzinfo=_tz.utc)), 2)   # winter (also without time-zone data)
         self.assertEqual(audit_report._beirut_offset(_dt(2026, 7, 1, 12, 0, tzinfo=_tz.utc)), 3)    # summer
+
+    def test_control_sheet_distinguishes_flags_from_reconciliation_work(self):
+        import audit_report
+        report={"integrity":{"ok":False,"message":"Broken chain"},"summary":{"late":2,"admin":0,"outside_hours":1,"manual_cash":0}}
+        sections=audit_report.control_sheet_sections(report)
+        self.assertEqual(len(sections),4)
+        system={row[0]:row for row in sections[0]["rows"]}
+        self.assertEqual(system["Audit trail integrity"][1],"Broken chain")
+        self.assertEqual(system["Late entries"][1],"2 system flag(s)")
+        self.assertEqual(sections[1]["rows"][0][2],"Not calculated by this audit report")
+        self.assertIn("Trial Balance debit / credit",[row[1] for row in sections[1]["rows"]])
+        self.assertIn("Evidence to request",sections[2]["headers"])
+        self.assertEqual(sections[2]["rows"][0][4:], ["","","","Not started"])
+        self.assertIn("NEEDS ACCOUNTANT SIGN-OFF",sections[3]["rows"][-1][0])
+
+    def test_control_sheet_content_matches_excel_and_pdf_exports(self):
+        from audit_report import control_sheet_sections
+        from report_export import export_sections_excel,export_sections_pdf
+        report={"integrity":{"ok":True,"message":"Audit chain verified"},"summary":{"late":0,"admin":0,"outside_hours":0,"manual_cash":0}}
+        sections=control_sheet_sections(report)
+        workbook=self.folder/"control_sheet.xlsx"; pdf=self.folder/"control_sheet.pdf"
+        export_sections_excel(workbook,"Auditor Control Sheet",["Synthetic test company"],sections)
+        export_sections_pdf(pdf,"Auditor Control Sheet",["Synthetic test company"],sections)
+        from openpyxl import load_workbook
+        values=[]; book=load_workbook(workbook,read_only=True,data_only=True)
+        try:
+            for sheet in book.worksheets:
+                values.extend(str(cell.value or "") for row in sheet.iter_rows() for cell in row)
+        finally: book.close()
+        from pypdf import PdfReader
+        pdf_text=" ".join(" ".join((page.extract_text() or "").split()) for page in PdfReader(pdf).pages)
+        for phrase in ("Trial Balance debit / credit","Not calculated by this audit report","NEEDS ACCOUNTANT SIGN-OFF"):
+            self.assertTrue(any(phrase in item for item in values),phrase)
+            self.assertIn(phrase,pdf_text)
 
 
 
@@ -172,7 +212,7 @@ class CancelPurchaseTest(unittest.TestCase):
 
     def test_cancel_wrong_purchase(self):
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
-        db = Database(Path(folder.name) / "p.db"); db.initialize("secret12345"); self.addCleanup(db.release)
+        db = Database(Path(folder.name) / "p.db"); db.initialize(_synthetic_test_password()); self.addCleanup(db.release)
         db.save_exchange_rate({"date_from": "01-01-2026", "date_to": "31-12-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, 1)
         wrong = db.create_manual_invoice({"invoice_date": "12-02-2026", "party_name": "Diwan", "kind": "purchases", "currency": "USD", "status": "posted"},
                                          [{"description": "Paper", "quantity": 10, "unit_price": 400, "vat_rate": 11}], 1)  # 10 instead of 1
@@ -260,7 +300,7 @@ class ExpensePdfTest(unittest.TestCase):
 
     def test_nine_digit_account_opened(self):
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
-        db = Database(Path(folder.name) / "e.db"); db.initialize("secret12345"); self.addCleanup(db.release)
+        db = Database(Path(folder.name) / "e.db"); db.initialize(_synthetic_test_password()); self.addCleanup(db.release)
         account = db.save_account({"code": "626420000", "name_en": "Travel & Accommodation Expenses", "type": "expense", "parent_code": "6264.2"}, 1)
         self.assertEqual(account["code"] if isinstance(account, dict) else account, "626420000")
 
@@ -272,7 +312,7 @@ class PhysicalCountTest(unittest.TestCase):
     def test_count_posts_quantities_and_voucher(self):
         import inventory
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
-        db = Database(Path(folder.name) / "i.db"); db.initialize("secret12345"); self.addCleanup(db.release)
+        db = Database(Path(folder.name) / "i.db"); db.initialize(_synthetic_test_password()); self.addCleanup(db.release)
         db.save_exchange_rate({"date_from": "01-01-2026", "date_to": "31-12-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, 1)
         panel = inventory.find_or_create_item(db, "HPL Panel 8mm", "panel", None, 1)
         glue = inventory.find_or_create_item(db, "Glue 1L", "unit", None, 1)
@@ -301,9 +341,9 @@ class AuditedStatementsTest(unittest.TestCase):
         from PIL import Image
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
         root = Path(folder.name)
-        master = Database(root / "main.db"); master.initialize("secret12345"); self.addCleanup(master.release)
-        first = Database(root / "a.db"); first.initialize("secret12345"); self.addCleanup(first.release)
-        second = Database(root / "b.db"); second.initialize("secret12345"); self.addCleanup(second.release)
+        master = Database(root / "main.db"); master.initialize(_synthetic_test_password()); self.addCleanup(master.release)
+        first = Database(root / "a.db"); first.initialize(_synthetic_test_password()); self.addCleanup(first.release)
+        second = Database(root / "b.db"); second.initialize(_synthetic_test_password()); self.addCleanup(second.release)
         for db in (first, second):
             db.save_exchange_rate({"date_from": "01-01-2026", "date_to": "31-12-2026", "from_currency": "USD", "to_currency": "LBP", "rate": "89500"}, 1)
             db.save_journal_voucher({"entry_date": "05-01-2026", "description": "Capital", "currency": "USD", "voucher_type": "01"},
@@ -342,7 +382,7 @@ class TaxReviewTest(unittest.TestCase):
     def test_rules_list(self):
         import tax_review
         folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(folder.cleanup)
-        db = Database(Path(folder.name) / "t.db"); db.initialize("secret12345"); self.addCleanup(db.release)
+        db = Database(Path(folder.name) / "t.db"); db.initialize(_synthetic_test_password()); self.addCleanup(db.release)
         db.apply_lebanese_payroll_rules(1)
         review = tax_review.build(db, "31-12-2026")
         rows = {row[1]: row for row in review["sections"][0]["rows"]}

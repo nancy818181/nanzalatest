@@ -141,6 +141,7 @@ class SalesInvoiceMixin:
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
         self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
         self.sales_mode_label.pack(side="right",padx=(12,4))
+        flow_toolbar(nav)  # Keep invoice search, previous/next, and numbering visible on narrow windows.
         # 2.9.113: income not subject to income tax (already taxed / exempt by law) - the legal reason is required; Settings switches it on
         from tax_adjustments import EXEMPT_REASONS
         self.sales_exempt_reason=tk.StringVar(); self.sales_exempt_article=tk.StringVar()

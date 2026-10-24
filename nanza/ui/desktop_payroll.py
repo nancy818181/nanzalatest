@@ -7,6 +7,15 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
     safe_display_date, tk, ttk
 )
 
+EMPLOYEE_OPTIONAL_COLUMNS=("leaving","branch","currency","nssf")
+EMPLOYEE_DEFAULT_HIDDEN_COLUMNS=EMPLOYEE_OPTIONAL_COLUMNS
+
+
+def employee_visible_columns(column_keys, hidden_columns=None):
+    """Return the displayed employee fields; hidden details remain in the tree and searchable."""
+    hidden=set(EMPLOYEE_DEFAULT_HIDDEN_COLUMNS if hidden_columns is None else hidden_columns)
+    return tuple(key for key in column_keys if key not in hidden)
+
 
 class PayrollMixin:
     def build_payroll(self):
@@ -20,20 +29,32 @@ class PayrollMixin:
                 text="Payroll Reports & Worksheets (R5 / R6 / R10)"); nested.add(forms_page,text="NSSF & MOF Forms (Excel)"); nested.add(settings_outer,
                 text="Tax & NSSF Settings")
         extras_page=tk.Frame(nested,bg=LIGHT); nested.insert(2,extras_page,text="End of Service & Leave"); self.build_payroll_extras_page(extras_page)  # 2.9.82
-        employee_actions=tk.Frame(employees,bg=LIGHT); employee_actions.pack(fill="x",padx=10,pady=8)
-        self.action_button(employee_actions,"New Employee",lambda:self.employee_dialog()).pack(side="left",padx=4)
-        self.action_button(employee_actions,"Edit Selected",self.edit_selected_employee).pack(side="left",padx=4)
-        # 2.9.49 (owner request): the R3 / R3-1 worksheets and CNSS Employee Forms buttons are removed; the same forms are in "Official Forms (Excel)".
-        
-        nssf_forms=tk.Frame(employees,bg=LIGHT); nssf_forms.pack(fill="x",padx=10,pady=(0,5))
-        tk.Label(nssf_forms,text="NSSF employee forms:",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=4)
+        employee_heading=tk.Frame(employees,bg=LIGHT); employee_heading.pack(fill="x",padx=14,pady=(12,2))
+        tk.Label(employee_heading,text="Employee directory",bg=LIGHT,fg=NAVY,font=("Segoe UI",13,"bold")).pack(side="left")
+        tk.Label(employee_heading,text="Manage employee records and official forms",bg=LIGHT,fg="#5f6b76",font=("Segoe UI",9)).pack(side="left",padx=(12,0),pady=(3,0))
+
+        employee_actions=tk.Frame(employees,bg=LIGHT); employee_actions.pack(fill="x",padx=10,pady=(8,5))
+        primary_actions=tk.Frame(employee_actions,bg=LIGHT); primary_actions.pack(side="left")
+        secondary_actions=tk.Frame(employee_actions,bg=LIGHT); secondary_actions.pack(side="right")
+        self.action_button(primary_actions,"New Employee",lambda:self.employee_dialog()).pack(side="left",padx=4)
+        self.action_button(primary_actions,"Edit Selected",self.edit_selected_employee).pack(side="left",padx=4)
+        self.action_button(primary_actions,"Refresh",self.load_payroll).pack(side="left",padx=4)
+        tk.Button(secondary_actions,text="Official Forms (Excel)",command=self.official_excel_form,bg=GOLD,fg=NAVY,border=0,padx=12,pady=7,font=("Segoe UI",9,"bold")).pack(side="right",padx=4)
+        columns_button=tk.Menubutton(secondary_actions,text="Columns ▾",bg="white",fg=NAVY,relief="solid",bd=1,padx=12,pady=6,font=("Segoe UI",9,"bold"),activebackground="#E8EEF4")
+        columns_button.pack(side="right",padx=4)
+        columns_menu=tk.Menu(columns_button,tearoff=False)
+        columns_button.configure(menu=columns_menu)
+
+        # 2.9.49 (owner request): R3 / R3-1 worksheets and CNSS Employee Forms buttons are removed;
+        # the same forms remain available below and in "Official Forms (Excel)".
+        nssf_forms=tk.LabelFrame(employees,text="NSSF worksheets",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),padx=6,pady=4)
+        nssf_forms.pack(fill="x",padx=14,pady=(0,5))
         self.action_button(nssf_forms,"Employment Declaration Worksheet",lambda:self.employee_nssf_declaration("hire","preview")).pack(side="left",padx=4)
         self.action_button(nssf_forms,"Termination Declaration Worksheet",lambda:self.employee_nssf_declaration("leave","preview")).pack(side="left",padx=4)
-        tk.Button(employee_actions,text="Official Forms (Excel)",command=self.official_excel_form,bg=GOLD,fg=NAVY,border=0,padx=12,pady=7,font=("Segoe UI",9,"bold")).pack(side="left",padx=4)
-        self.action_button(employee_actions,"Refresh",self.load_payroll).pack(side="left",padx=4)
         self.employee_tree=self.table(employees,[("number","Employee ID",105),("name","Employee Name",220),("job","Job Title",150),
             ("start","Starting Date",110),("leaving","Leaving Date",110),("branch","Branch",120),("currency","Currency",70),
             ("salary","Base Salary",120),("nssf","NSSF Number",120),("active","Active",65)])
+        self._configure_employee_columns(columns_button,columns_menu)
         self.employee_tree.bind("<Double-1>",lambda _event:self.edit_selected_employee())
 
         form=tk.LabelFrame(run,text="Monthly Payroll",bg=LIGHT); form.pack(fill="x",padx=10,pady=8)
@@ -74,11 +95,11 @@ class PayrollMixin:
         tk.Label(form,textvariable=self.payroll_result,bg=LIGHT,fg=NAVY,font=("Segoe UI",10,"bold"),wraplength=1000,justify="left").grid(row=5,column=0,columnspan=8,padx=6,pady=6,sticky="w")
         for variable in (self.payroll_employee,self.payroll_period,*self.payroll_vars.values(),self.payroll_transport_days):
             variable.trace_add("write",self.mark_payroll_stale)
-        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=0,column=4,columnspan=4,sticky="w",padx=6)
+        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=8,column=0,columnspan=8,sticky="ew",padx=6,pady=(8,4))
         self.action_button(buttons,"Schooling Law",self.schooling_law_dialog).pack(side="left",padx=3)
         self.action_button(buttons,"Calculate",self.calculate_payroll).pack(side="left",padx=3)
         self.action_button(buttons,"Additional payments",self.additional_payroll_payments).pack(side="left",padx=3)
-        tk.Button(buttons,text="Save Payroll",command=self.save_payroll,bg=GOLD,fg=NAVY,border=0,padx=15,pady=7,font=("Segoe UI",9,"bold")).pack(side="left",padx=3)
+        tk.Button(buttons,text="Save Payroll",command=self.save_payroll,bg=GOLD,fg=NAVY,border=0,padx=15,pady=7,font=("Segoe UI",9,"bold")).pack(side="right",padx=3)
         payroll_actions=tk.Frame(run,bg=LIGHT); payroll_actions.pack(fill="x",padx=10)
         self.action_button(payroll_actions,"Post Selected to Accounting",self.post_selected_payroll).pack(side="left",padx=4,pady=3)
         self.action_button(payroll_actions,"Record salary payment",self.salary_payment_dialog).pack(side="left",padx=4,pady=3)
@@ -172,6 +193,33 @@ class PayrollMixin:
         self.build_cnss_forms_page(forms_page)
         self.load_payroll()
         self.load_payroll_settings()
+
+    def _configure_employee_columns(self, button, menu):
+        """Keep the employee list readable at normal window widths; optional fields stay one click away."""
+        import desktop_layout
+
+        optional=EMPLOYEE_OPTIONAL_COLUMNS
+        settings=desktop_layout.layout_settings()
+        hidden_by_table=settings.get("hidden_columns",{})
+        saved_hidden=hidden_by_table.get("payroll_employees")
+        hidden=set(EMPLOYEE_DEFAULT_HIDDEN_COLUMNS if saved_hidden is None else saved_hidden)
+        variables={key:tk.BooleanVar(master=self.employee_tree,value=key not in hidden) for key in optional}
+
+        def apply_columns():
+            hidden_now=[key for key in optional if not variables[key].get()]
+            visible=employee_visible_columns(self.employee_tree["columns"],hidden_now)
+            self.employee_tree.configure(displaycolumns=visible)
+            latest=desktop_layout.layout_settings().get("hidden_columns",{})
+            saved=dict(latest)
+            saved["payroll_employees"]=[key for key in optional if not variables[key].get()]
+            desktop_layout.save_layout_settings(hidden_columns=saved)
+
+        labels=(("leaving","Leaving date"),("branch","Branch"),("currency","Currency"),("nssf","NSSF number"))
+        for key,label in labels:
+            menu.add_checkbutton(label=label,variable=variables[key],command=apply_columns)
+        self.employee_tree.configure(displaycolumns=employee_visible_columns(self.employee_tree["columns"],hidden))
+        button._column_variables=variables
+
 
     def employee_dialog(self,employee=None):
         window=tk.Toplevel(self); window.title("Employee File"); window.configure(bg=LIGHT); window.transient(self); window.grab_set()

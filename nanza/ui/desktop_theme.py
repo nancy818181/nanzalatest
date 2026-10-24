@@ -27,7 +27,7 @@ def apply_theme(root: tk.Misc) -> ttk.Style:
     style = ttk.Style(root)
     style.theme_use("clam")
     style.configure("TNotebook", background=LIGHT, borderwidth=0, tabmargins=(8, 8, 8, 0))
-    style.configure("TNotebook.Tab", padding=(16, 9), font=(FONT, 9, "bold"), background=TAB_IDLE, foreground=NAVY, borderwidth=0)
+    style.configure("TNotebook.Tab", padding=(12, 7), font=(FONT, 9, "bold"), background=TAB_IDLE, foreground=NAVY, borderwidth=0)
     style.map("TNotebook.Tab", background=[("selected", "white"), ("active", TAB_HOVER)], foreground=[("selected", NAVY)],
               lightcolor=[("selected", GOLD)], expand=[("selected", (0, 2, 0, 0))])
     style.configure("Treeview", rowheight=29, font=(FONT, 10), background="white", fieldbackground="white", foreground=NAVY,

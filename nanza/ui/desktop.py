@@ -1124,6 +1124,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self.action_button(actions,"Quotes / Orders / Consignment",self.open_commercial_documents).pack(side="left",padx=4)
         flow_toolbars(actions)
         import desktop_layout; desktop_layout.build_today_panel(self,self.dashboard_tab)  # 2.9.60: quick actions + needs attention
+        tk.Label(self.dashboard_tab,text="KEY FIGURES",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),anchor="w").pack(fill="x",padx=14,pady=(2,0))
         self.dashboard_cards=tk.Frame(self.dashboard_tab,bg=LIGHT); self.dashboard_cards.pack(fill="x",padx=12)
         self.dashboard_chart=tk.Canvas(self.dashboard_tab,height=105,bg="white",highlightthickness=0)
         # 2.9.60: the small monthly strip repeated the "by month" chart below; it is kept (exports use it) but not shown

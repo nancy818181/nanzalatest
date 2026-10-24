@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 
 import accounting_setup as rules
-from desktop_common import account_code, account_label, accounting_setup
+from desktop_common import account_code, account_label, accounting_setup, flow_toolbars
 
 NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, MUTED, GREEN, AMBER = "#8B1E1E", "#5f6b76", "#2E7D5B", "#8a5a00"
@@ -275,6 +275,11 @@ class AccountingSetupMixin:
         tk.Label(auditor, text="Late entries = entered more than", bg=LIGHT).pack(side="left", padx=(12, 2))
         self.audit_late_days = tk.StringVar(value="30"); tk.Entry(auditor, textvariable=self.audit_late_days, width=4).pack(side="left")
         tk.Label(auditor, text="days after their date", bg=LIGHT).pack(side="left", padx=2)
+        for label, fmt in (("Control Sheet (Excel)", "xlsx"), ("Control Sheet (PDF)", "pdf")):
+            self.action_button(auditor, label, lambda f=fmt: self.export_audit_control_sheet(f)).pack(side="left", padx=2)
+        flow_toolbars(bar,auditor)
+        tk.Label(page,text="System flags are prompts for review, not an auditor conclusion, audit opinion, or proof of compliance.",
+                 bg=LIGHT,fg=MUTED,anchor="w").pack(fill="x",padx=10,pady=(0,2))
         frame = tk.Frame(page, bg=LIGHT); frame.pack(fill="both", expand=True, padx=8, pady=4)
         self.audit_tree = ttk.Treeview(frame, columns=("when", "user", "action", "entity", "id", "details"), show="headings")
         for key, label, width in (("when", "Date / time (UTC)", 150), ("user", "User", 100), ("action", "Action", 90), ("entity", "Record", 120), ("id", "No.", 60), ("details", "Details", 460)):
@@ -311,14 +316,23 @@ class AccountingSetupMixin:
         (messagebox.showinfo if result["ok"] else messagebox.showwarning)("Verify Audit Trail", result["message"] + (f"\n\n{details}" if details else ""))
 
     def export_audit_report(self, fmt):  # 2.9.97
+        from audit_report import control_sheet_sections
         filters = {k: v.get().strip() for k, v in self.audit_filters.items()}
         try: report = self.client.audit_report(filters["date_from"], filters["date_to"], self.audit_late_days.get() or "30")
         except Exception as exc: return messagebox.showerror("Audit Report", str(exc))
         s = report["summary"]
-        meta = ([f"Company: {report['company']}"] if report.get("company") else []) + [f"Period {report['from']} - {report['to']}", report["integrity"]["message"],
+        meta = ([f"Company: {report['company']}"] if report.get("company") else []) + [f"Fiscal year: {getattr(self,'current_fiscal_year','')}", f"Period {report['from']} - {report['to']}", report["integrity"]["message"],
                 f"{s['entries']} entries, {s['changes']} changes after saving, {s['late']} late, {s['admin']} by the administrator, "
                 f"{s['outside_hours']} outside working hours, {s['manual_cash']} manual vouchers on cash / bank"]
-        self.save_sections("Audit Report", meta, report["sections"], "Audit_Report", fmt)
+        self.save_sections("Audit Report", meta, report["sections"]+control_sheet_sections(report), "Audit_Report", fmt)
+
+    def export_audit_control_sheet(self, fmt):
+        from audit_report import control_sheet_sections
+        filters = {k: v.get().strip() for k, v in self.audit_filters.items()}
+        try: report = self.client.audit_report(filters["date_from"], filters["date_to"], self.audit_late_days.get() or "30")
+        except Exception as exc: return messagebox.showerror("Auditor Control Sheet", str(exc))
+        meta=([f"Company: {report['company']}"] if report.get("company") else [])+[f"Fiscal year: {getattr(self,'current_fiscal_year','')}",f"Period {report['from']} - {report['to']}","Generated from the selected company and fiscal year."]
+        self.save_sections("Auditor Control Sheet",meta,control_sheet_sections(report),"Auditor_Control_Sheet",fmt)
 
     def save_onboarding_template(self):
         """2.9.119: the empty Excel file of Start with Nanza."""

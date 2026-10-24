@@ -155,7 +155,7 @@ class V22Mixin:
 
     def _apply_sales_pdf(self, path, data):
         from desktop_stage3_common import review_handwriting
-        data = review_handwriting(self, path, data)
+        data = review_handwriting(self, path, data, force=True)
         if data is None: return
         self.new_sales_invoice(confirm=False); self.sales_pdf_path = path  # attached when saved
         if data.get("invoice_date"): self.sales_date.set(data["invoice_date"])
