@@ -1,7 +1,7 @@
 """Fixed assets page of Purchases & Expenses (moved out of desktop_stage3.py in 2.9.42, unchanged)."""
 from __future__ import annotations
 import logging
-from desktop_common import add_search_bar  # 2.9.78
+from desktop_common import add_search_bar, flow_toolbar  # 2.9.78
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
     asset_pdf_details, export_excel, export_pdf, filedialog, GOLD, LIGHT, messagebox, MUTED, NAVY, os, Path,
@@ -55,12 +55,19 @@ class AssetRegisterMixin:
                               ("Schedule of this asset",self.show_asset_schedule),("Record Asset Purchase",self.open_asset_purchase),
                               ("Dispose / Scrap",self.dispose_asset_entry),("Register vs Ledger",self.show_asset_reconcile)):  # 2.9.132
             self.action_button(actions,label,command).pack(side="left",padx=3)
+        flow_toolbar(actions)
         lists=tk.LabelFrame(page,text="Asset register - click a line to edit it",bg=LIGHT,padx=4,pady=4); lists.pack(fill="both",expand=True,padx=8,pady=(0,6))
-        self.asset_list=ttk.Treeview(lists,columns=("code","name","purchase","cost","currency","previous","yearly","cumulative","net"),show="headings")
+        table_frame=tk.Frame(lists,bg=LIGHT); table_frame.pack(fill="both",expand=True)
+        self.asset_list=ttk.Treeview(table_frame,columns=("code","name","purchase","cost","currency","previous","yearly","cumulative","net"),show="headings")
         for key,title,width in (("code","Asset",90),("name","Description",190),("purchase","Purchase date",100),("cost","Purchase value",110),("currency","Currency",70),
                                 ("previous","Old deprec.",100),("yearly","This year",100),("cumulative","Total deprec.",110),("net","Net value",110)):
             self.asset_list.heading(key,text=title); self.asset_list.column(key,width=width,stretch=key=="name",anchor="w" if key in ("code","name","purchase","currency") else "e")
-        self.asset_list.pack(fill="both",expand=True); self.asset_list.bind("<<TreeviewSelect>>",lambda _e:self.select_asset()); add_search_bar(self.asset_list)  # 2.9.78
+        vertical=ttk.Scrollbar(table_frame,orient="vertical",command=self.asset_list.yview)
+        horizontal=ttk.Scrollbar(table_frame,orient="horizontal",command=self.asset_list.xview)
+        self.asset_list.configure(yscrollcommand=vertical.set,xscrollcommand=horizontal.set)
+        self.asset_list.grid(row=0,column=0,sticky="nsew"); vertical.grid(row=0,column=1,sticky="ns"); horizontal.grid(row=1,column=0,sticky="ew")
+        table_frame.grid_rowconfigure(0,weight=1); table_frame.grid_columnconfigure(0,weight=1)
+        self.asset_list.bind("<<TreeviewSelect>>",lambda _e:self.select_asset()); add_search_bar(self.asset_list)  # 2.9.78
         self.asset_schedule_tree=None
         self.load_assets()
 
@@ -99,7 +106,7 @@ class AssetRegisterMixin:
 
     def _apply_asset_pdf(self, path, data):
         from desktop_stage3_common import review_handwriting
-        data = review_handwriting(self, path, data)
+        data = review_handwriting(self, path, data, force=True)
         if data is None: return
         details=asset_pdf_details(data)
         self.new_asset()

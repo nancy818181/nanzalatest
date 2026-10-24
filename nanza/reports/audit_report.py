@@ -20,6 +20,47 @@ CHANGE_ACTIONS = ("change", "update", "delete", "cancel", "reopen", "replace")
 ENTRY_ACTIONS = ("create", "save", "import", "post", "add")
 
 
+def control_sheet_sections(report):
+    """Build an auditor workpaper checklist from the selected company's audit report, without asserting conclusions."""
+    summary=report.get("summary") or {}; integrity=report.get("integrity") or {}
+    system_rows=[
+        ["Audit trail integrity",integrity.get("message","Not available"),"Audit Report: Integrity of the audit trail",
+         "Review system flag" if not integrity.get("ok") else "Auditor review pending"],
+    ]
+    for key,label,section in (("late","Late entries","4. Late entries"),("admin","Administrator entries","5. Entries made by the administrator"),
+                              ("outside_hours","Outside-hours entries","6. Entries made outside working hours"),("manual_cash","Manual cash/bank vouchers","7. Manual journal vouchers on cash or bank")):
+        count=int(summary.get(key) or 0)
+        system_rows.append([label,f"{count} system flag(s)" if count else "No rows flagged by this check",f"Audit Report: {section}",
+                            "Review system flags" if count else "Auditor review pending"])
+    checks=[
+        ("General ledger", "Trial Balance debit / credit", "Financial Reports > Trial Balance", "Recalculate debit and credit totals and investigate any difference.", "Trial Balance export and ledger detail"),
+        ("General ledger", "General Ledger to Trial Balance", "Financial Reports > General Ledger; Trial Balance", "Agree selected account movements and closing balances between reports.", "General Ledger and Trial Balance exports"),
+        ("Profit and loss", "P&L to Trial Balance", "Financial Reports > P&L; Trial Balance", "Agree revenue and expense report totals to the mapped ledger accounts.", "P&L, Trial Balance, account mapping"),
+        ("Balance sheet", "Balance Sheet to Trial Balance", "Financial Reports > Balance Sheet; Trial Balance", "Agree balance sheet balances to the corresponding Trial Balance accounts.", "Balance Sheet and Trial Balance exports"),
+        ("Cash", "Cash Flow to cash / bank ledger", "Financial Reports > Cash Flow; General Ledger", "Trace selected cash-flow movements to cash and bank ledger activity.", "Cash Flow, cash/bank ledgers, bank reconciliations"),
+        ("VAT", "VAT report to invoice registers", "Financial Reports > Lebanese VAT Report; Sales and Purchases", "Reconcile report totals to invoice registers and inspect selected source documents.", "VAT report, sales/purchase registers, source invoices"),
+        ("Receivables and payables", "Customer / supplier statements to aging", "Statements of Account; Aging", "Agree selected party balances and investigate aged or unreconciled items.", "Party statements, aging report, subsequent receipts/payments"),
+        ("Inventory", "Inventory valuation to ledger", "Inventory reports; General Ledger", "Compare inventory report totals to ledger balances and inspect count/valuation support.", "Inventory valuation, stock count records, ledger"),
+        ("Fixed assets", "Fixed asset register to ledger", "Assets & Depreciation > Register vs Ledger", "Trace selected additions, disposals, and depreciation to register and ledger evidence.", "Asset register, invoices, disposal support, depreciation schedule"),
+        ("Payroll", "Payroll reports to posted payroll entries", "Payroll reports; General Ledger", "Agree selected payroll totals to posted entries and supporting payroll records.", "Payroll reports, approved payroll records, ledger"),
+    ]
+    reconciliation_rows=[[area,name,"Not calculated by this audit report",source,"Not performed"] for area,name,source,_procedure,_evidence in checks]
+    procedure_rows=[[area,name,procedure,evidence,"","","","Not started"] for area,name,_source,procedure,evidence in checks]
+    return [
+        {"heading":"Auditor Control Sheet - system-generated flags (review required)",
+         "headers":["Check","System result","Source reference","Status"],"rows":system_rows},
+        {"heading":"Reconciliation checklist - not calculated by this audit report",
+         "headers":["Area","Control objective","System result","Source report","Status"],"rows":reconciliation_rows},
+        {"heading":"Suggested procedures and evidence requests - reviewer to complete",
+         "headers":["Area","Control objective","Suggested procedure","Evidence to request","Auditor result","Reviewer notes","Responsible","Status"],"rows":procedure_rows},
+        {"heading":"Control sheet scope and limitations","headers":["Notice"],"rows":[
+            ["System-generated flags are prompts for review. They are not an auditor conclusion, audit opinion, or proof of compliance."],
+            ["Reconciliations above are not calculated by this control sheet; record evidence and conclusions only after checking the referenced reports."],
+            ["No verified legal, tax, IFRS, or IAS reference pack is attached. NEEDS ACCOUNTANT SIGN-OFF."],
+        ]},
+    ]
+
+
 def _local(created_at):
     """created_at (UTC, ISO) -> Beirut local time."""
     try: moment = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))

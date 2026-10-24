@@ -2,6 +2,14 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.133 (reviewed UI and document controls)
+
+- Financial Reports now saves named period, account, filter, currency, and tab layouts in local preferences scoped to the company, fiscal year, and signed-in user. Existing custom report templates remain available.
+- Dashboard, report tabs, Sales Invoice, Purchases & Expenses, Assets & Depreciation, Customer Receipt, and Supplier Payment have tighter responsive spacing, wrapped controls, clearer section labels, and complete table scrolling.
+- OCR values now open beside the source document for review before filling entry screens. OCR-based purchase and batch-import workflows require an explicit Save action; automatic posting after reading is disabled.
+- The auditor export includes a company-period control sheet with system flags, source references, unreconciled checks, and reviewer completion fields. It states that system flags are not auditor conclusions and that references need accountant sign-off.
+- No database schema, accounting calculations, posting rules, VAT treatment, or historical records were changed.
+
 ## Version 2.9.132 (phase 1 test: VAT, fixed assets, reports, IFRS)
 
 Tested end to end on a synthetic company (Q1-Q4 2026, USD and LBP, test rate 89,500): 1036 tests, no regression
@@ -140,7 +148,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers are 2.9.131 for this additive source change. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers are 2.9.133 for this additive source change. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 
