@@ -100,6 +100,7 @@ def tab_bar(notebook, min_tabs=7):
     a bar with the tabs in a row, ‹ › arrows and an "All tabs" list. The Notebook itself keeps working (select, add, hide, text),
     so every other part of the program is unchanged. If anything goes wrong the Notebook keeps its normal tabs.
     Returns the bar object, or None when it was not needed."""
+    if getattr(notebook, "_saber_no_tabbar", False): return None
     done = getattr(notebook, "_saber_tabbar", None)
     if done is not None: return done
     try:
