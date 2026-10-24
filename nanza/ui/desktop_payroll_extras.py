@@ -7,6 +7,7 @@ import calendar
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
+from desktop_common import flow_toolbars
 
 NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
 RED, MUTED = "#8B1E1E", "#5f6b76"
@@ -32,6 +33,7 @@ class PayrollExtrasMixin:
             self.action_button(bar, label, lambda f=fmt: self.export_payroll_extra(f)).pack(side="left", padx=2)
         tk.Label(bar, text="Payslips of month (MM-YYYY)", bg=LIGHT).pack(side="left", padx=(18, 2)); tk.Entry(bar, textvariable=self.px_month, width=8).pack(side="left")
         tk.Button(bar, text="All Payslips (PDF)", command=self.export_month_payslips, bg=GOLD, fg=NAVY, border=0, padx=12, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
+        flow_toolbars(bar)
         tk.Label(page, text="End of service: last salary x years of service, less the end-of-service contributions paid (Nanza's posted payroll + 'contributions before Nanza' "
                  "on the employee). Post Provision brings 1552.1 to that amount (Dr 6355 / Cr 1552.1, or Dr 1552.1 / Cr 7552.2 when it goes down). "
                  "Annual leave: 15 days a year unless set on the employee; the value is the balance x monthly salary / 30.",
@@ -49,6 +51,7 @@ class PayrollExtrasMixin:
         tk.Label(form, text="Note", bg=LIGHT).pack(side="left"); tk.Entry(form, textvariable=self.px_leave["note"], width=20).pack(side="left", padx=(4, 8))
         self.action_button(form, "Add Leave", self.add_leave).pack(side="left", padx=3)
         tk.Button(form, text="Delete Selected", command=self.delete_leave, bg=RED, fg="white", border=0, padx=10, pady=6).pack(side="left", padx=3)
+        flow_toolbars(form)
         self.px_leave_tree = self.table(leave, [("employee", "Employee", 220), ("from", "From", 95), ("to", "To", 95), ("days", "Days", 70), ("type", "Type", 110), ("note", "Note", 260)])
         self.load_leave_records()
 

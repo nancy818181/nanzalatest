@@ -1,7 +1,7 @@
 """Fixed assets page of Purchases & Expenses (moved out of desktop_stage3.py in 2.9.42, unchanged)."""
 from __future__ import annotations
 import logging
-from desktop_common import add_search_bar  # 2.9.78
+from desktop_common import add_search_bar, flow_toolbars  # 2.9.78; 2.9.134 responsive asset actions
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
     asset_pdf_details, export_excel, export_pdf, filedialog, GOLD, LIGHT, messagebox, MUTED, NAVY, os, Path,
@@ -23,7 +23,7 @@ class AssetRegisterMixin:
         form=tk.LabelFrame(page,text="Asset",bg=LIGHT,padx=10,pady=6); form.pack(fill="x",padx=8,pady=(6,0))
         layout=[[("Asset code","asset_code",14),("Description","name",34),("Currency","currency",8)],
                 [("Purchase date","acquired_on",12),("Purchase value","cost",16),("Residual value","residual",12)],
-                [("Depreciation start","start_on",12),("Purchase invoice No./ID","invoice_id",16),("Booked before Nanza up to","opening_date",12)]]
+                [("Depreciation start","start_on",12),("Purchase invoice ID","invoice_id",12),("Booked before Nanza up to","opening_date",12)]]
         for row,items in enumerate(layout):
             for index,(label,key,width) in enumerate(items):
                 if not key: continue
@@ -32,8 +32,18 @@ class AssetRegisterMixin:
                 if key in ("acquired_on","start_on"): widget=self.date_entry(form,self.asset_fields[key],width)
                 elif key=="currency": widget=ttk.Combobox(form,textvariable=self.asset_fields[key],state="readonly",width=width,values=getattr(self,"currency_codes",None) or ["USD","LBP","EUR","AED"])
                 else: widget=tk.Entry(form,textvariable=self.asset_fields[key],width=width)
-                widget.grid(row=row,column=column+1,sticky="w",padx=(2,14),pady=4)
-        rules=tk.LabelFrame(page,text="Depreciation (filled from the asset account in tab 1 - change only if needed)",bg=LIGHT,padx=10,pady=4); rules.pack(fill="x",padx=8,pady=(6,0))
+                if key=="invoice_id":
+                    invoice_cell=tk.Frame(form,bg=LIGHT)
+                    widget=tk.Entry(invoice_cell,textvariable=self.asset_fields[key],width=width)
+                    widget.pack(side="left")
+                    widget.bind("<Return>",lambda _event:self.show_asset_invoice_details())
+                    widget.bind("<FocusOut>",lambda _event:self.show_asset_invoice_details(),add="+")
+                    self.action_button(invoice_cell,"Show supplier / VAT",self.show_asset_invoice_details).pack(side="left",padx=(4,0))
+                widget.grid(row=row,column=column+1,sticky="w",padx=(2,14),pady=3) if key!="invoice_id" else invoice_cell.grid(row=row,column=column+1,sticky="w",padx=(2,8),pady=3)
+        self.asset_invoice_info=tk.Label(form,text="Supplier and VAT details appear here when a posted Assets purchase invoice is linked.",
+                                         bg=LIGHT,fg="#5f6b76",anchor="w")
+        self.asset_invoice_info.grid(row=3,column=0,columnspan=6,sticky="ew",padx=4,pady=(0,3))
+        rules=tk.LabelFrame(page,text="Depreciation (filled from the asset account in tab 1 - change only if needed)",bg=LIGHT,padx=10,pady=4); rules.pack(fill="x",padx=8,pady=(4,0))
         tk.Label(rules,text="Rate % / year",bg=LIGHT).grid(row=0,column=0,sticky="w",padx=4)
         tk.Entry(rules,textvariable=self.asset_rate,width=8).grid(row=0,column=1,sticky="w",padx=(2,14))
         tk.Label(rules,text="Useful life (months)",bg=LIGHT).grid(row=0,column=2,sticky="w",padx=4)
@@ -55,25 +65,39 @@ class AssetRegisterMixin:
                               ("Schedule of this asset",self.show_asset_schedule),("Record Asset Purchase",self.open_asset_purchase),
                               ("Dispose / Scrap",self.dispose_asset_entry),("Register vs Ledger",self.show_asset_reconcile)):  # 2.9.132
             self.action_button(actions,label,command).pack(side="left",padx=3)
+        flow_toolbars(actions)
         lists=tk.LabelFrame(page,text="Asset register - click a line to edit it",bg=LIGHT,padx=4,pady=4); lists.pack(fill="both",expand=True,padx=8,pady=(0,6))
-        self.asset_list=ttk.Treeview(lists,columns=("code","name","purchase","cost","currency","previous","yearly","cumulative","net"),show="headings")
+        tree_frame=tk.Frame(lists,bg=LIGHT); tree_frame.pack(fill="both",expand=True)
+        self.asset_list=ttk.Treeview(tree_frame,columns=("code","name","purchase","cost","currency","previous","yearly","cumulative","net"),show="headings")
         for key,title,width in (("code","Asset",90),("name","Description",190),("purchase","Purchase date",100),("cost","Purchase value",110),("currency","Currency",70),
                                 ("previous","Old deprec.",100),("yearly","This year",100),("cumulative","Total deprec.",110),("net","Net value",110)):
             self.asset_list.heading(key,text=title); self.asset_list.column(key,width=width,stretch=key=="name",anchor="w" if key in ("code","name","purchase","currency") else "e")
-        self.asset_list.pack(fill="both",expand=True); self.asset_list.bind("<<TreeviewSelect>>",lambda _e:self.select_asset()); add_search_bar(self.asset_list)  # 2.9.78
+        yscroll=ttk.Scrollbar(tree_frame,orient="vertical",command=self.asset_list.yview)
+        xscroll=ttk.Scrollbar(tree_frame,orient="horizontal",command=self.asset_list.xview)
+        self.asset_list.configure(yscrollcommand=yscroll.set,xscrollcommand=xscroll.set)
+        self.asset_list.grid(row=0,column=0,sticky="nsew"); yscroll.grid(row=0,column=1,sticky="ns"); xscroll.grid(row=1,column=0,sticky="ew")
+        tree_frame.grid_rowconfigure(0,weight=1); tree_frame.grid_columnconfigure(0,weight=1)
+        self.asset_list.bind("<<TreeviewSelect>>",lambda _e:self.select_asset()); add_search_bar(self.asset_list)  # 2.9.78
         self.asset_schedule_tree=None
         self.load_assets()
 
     def show_asset_schedule(self):
         if not self.asset_edit_id: return messagebox.showwarning("Assets","Select an asset in the register first")
-        window=tk.Toplevel(self); window.title("Depreciation schedule of the selected asset"); window.geometry("720x460"); window.configure(bg=LIGHT)
-        tree=ttk.Treeview(window,columns=("date","amount","accumulated","net","status"),show="headings")
+        window=tk.Toplevel(self); window.title("Depreciation schedule of the selected asset"); window.geometry("720x460"); window.minsize(560,340); window.configure(bg=LIGHT)
+        holder=tk.Frame(window,bg=LIGHT); holder.pack(fill="both",expand=True)
+        tree=ttk.Treeview(holder,columns=("date","amount","accumulated","net","status"),show="headings")
         for key,title,width in (("date","Period end",120),("amount","Depreciation",130),("accumulated","Accumulated",130),("net","Net book value",130),("status","Status",90)):
             tree.heading(key,text=title); tree.column(key,width=width,anchor="w" if key in ("date","status") else "e")
-        tree.pack(fill="both",expand=True,padx=8,pady=8); self.asset_schedule_tree=tree
+        yscroll=ttk.Scrollbar(holder,orient="vertical",command=tree.yview)
+        xscroll=ttk.Scrollbar(holder,orient="horizontal",command=tree.xview)
+        tree.configure(yscrollcommand=yscroll.set,xscrollcommand=xscroll.set)
+        tree.grid(row=0,column=0,sticky="nsew",padx=(8,0),pady=8); yscroll.grid(row=0,column=1,sticky="ns",pady=8)
+        xscroll.grid(row=1,column=0,sticky="ew",padx=(8,0)); holder.grid_rowconfigure(0,weight=1); holder.grid_columnconfigure(0,weight=1)
+        self.asset_schedule_tree=tree
         bar=tk.Frame(window,bg=LIGHT); bar.pack(fill="x",padx=8,pady=(0,8))
         self.action_button(bar,"Post selected period",self.post_asset_period).pack(side="left",padx=3)
         tk.Label(bar,text="Monthly posting by account is in tab 3.",bg=LIGHT,fg=MUTED).pack(side="left",padx=10)
+        flow_toolbars(bar)
         window.bind("<Destroy>",lambda e:setattr(self,"asset_schedule_tree",None) if e.widget is window else None)
         self.select_asset()
 
@@ -83,6 +107,8 @@ class AssetRegisterMixin:
         for key,var in self.asset_fields.items():
             var.set({"acquired_on":self.fiscal_today(),"start_on":self.fiscal_today(),"currency":"USD","residual":"0",
                      "useful_months":"60","frequency":"monthly"}.get(key,""))
+        if hasattr(self,"asset_invoice_info"):
+            self.asset_invoice_info.config(text="Supplier and VAT details appear here when a posted Assets purchase invoice is linked.")
         if getattr(self,"asset_schedule_tree",None) is not None: self.asset_schedule_tree.delete(*self.asset_schedule_tree.get_children())
 
     def choose_asset_pdf(self):
@@ -282,6 +308,27 @@ class AssetRegisterMixin:
         self.action_button(controls,"Close",window.destroy).pack(side="right",padx=4)
         self.fit_dialog(window,1450,680,min_width=920,min_height=460)
 
+    def show_asset_invoice_details(self):
+        """Display supplier and VAT from the linked invoice; the asset record stores only its existing invoice ID."""
+        invoice_id=self.asset_fields["invoice_id"].get().strip()
+        if not invoice_id:
+            self.asset_invoice_info.config(text="No supplier invoice linked. Enter the ID of a posted Assets purchase invoice.")
+            return
+        try:
+            invoice=self.client.invoice_detail(int(invoice_id))["invoice"]
+        except (ValueError,TypeError):
+            self.asset_invoice_info.config(text="Enter a numeric purchase invoice ID to display its supplier and VAT.")
+            return
+        except (RuntimeError,OSError,KeyError) as exc:
+            self.asset_invoice_info.config(text=f"Supplier / VAT details unavailable: {exc}")
+            return
+        if invoice.get("kind")!="purchase" or invoice.get("entry_type")!="assets" or invoice.get("status")!="posted":
+            self.asset_invoice_info.config(text="This is not a posted Assets purchase invoice. Choose a posted invoice with Type = Assets.")
+            return
+        amount=float(invoice.get("vat") or 0)
+        self.asset_invoice_info.config(text=(f"Supplier: {invoice.get('party_name') or '—'}   ·   VAT: {amount:,.2f} {invoice.get('currency') or ''}   ·   "
+                                              f"VAT account: {invoice.get('vat_account') or '—'}   ·   Invoice: {invoice.get('invoice_number') or invoice_id}"))
+
     def select_asset(self):
         selected=self.asset_list.selection()
         if not selected: return
@@ -289,6 +336,7 @@ class AssetRegisterMixin:
         for key,var in self.asset_fields.items():
             value=asset.get(key) or ""
             var.set(_dd(value) if key in ("acquired_on","start_on","opening_date") and value else str(value))
+        self.show_asset_invoice_details()
         self.asset_rate.set(str(asset.get("annual_rate") or ""))
         tree=getattr(self,"asset_schedule_tree",None)
         if tree is None or not tree.winfo_exists(): return

@@ -136,6 +136,7 @@ class SettingsMixin:
             self.action_button(backup_controls,"Open Log Folder",self.open_log_folder).pack(side="left",padx=4)
             self.action_button(backup_controls,"Network Check",self.network_check).pack(side="left",padx=4)  # 2.9.98
             if is_admin: tk.Button(backup_controls,text="Restore Selected",command=self.restore_selected_backup,bg="#8B1E1E",fg="white",border=0,padx=15,pady=7).pack(side="left",padx=4)
+            flow_toolbars(backup_controls)
             if is_admin:
                 lock_bar=tk.LabelFrame(backups,text="Close the books (period lock)",bg=LIGHT,padx=8,pady=6); lock_bar.pack(fill="x",padx=10,pady=(0,6))
                 self.books_lock_date=tk.StringVar()
@@ -144,6 +145,7 @@ class SettingsMixin:
                 tk.Button(lock_bar,text="Lock",command=self.lock_books,bg=GOLD,fg=NAVY,border=0,padx=14,pady=5,font=("Segoe UI",9,"bold")).pack(side="left",padx=4)
                 self.action_button(lock_bar,"Unlock",self.unlock_books).pack(side="left",padx=4)
                 self.books_lock_label=tk.Label(lock_bar,text="",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")); self.books_lock_label.pack(side="left",padx=12)
+                flow_toolbars(lock_bar)
             if is_admin: self.build_second_copy_box(backups)
             tk.Label(backups,text=(
                 "An automatic backup of this company and year is made every day when you open it (the newest 30 automatic copies are "
@@ -164,6 +166,7 @@ class SettingsMixin:
         self.action_button(rate_controls,"Add Daily Rate",self.save_exchange_rate).pack(side="left",padx=5)
         self.action_button(rate_controls,"Restore EUR Rates 2024-Today",self.restore_euro_rates).pack(side="left",padx=5)
         self.action_button(rate_controls,"Restore ALL Currencies 2024-Today",self.restore_all_rates).pack(side="left",padx=5)
+        flow_toolbars(rate_controls)
         currency_controls=tk.Frame(rates,bg=LIGHT); currency_controls.pack(fill="x",padx=12,pady=(0,6))
         self.new_currency_code=tk.StringVar(); self.new_currency_name=tk.StringVar()
         tk.Label(currency_controls,text="Create currency",bg=LIGHT,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,6))
@@ -173,12 +176,14 @@ class SettingsMixin:
         tk.Label(currency_controls,text="Name",bg=LIGHT).pack(side="left",padx=(3,8))
         self.action_button(currency_controls,"Add Currency",self.create_currency).pack(side="left",padx=4)
         tk.Label(currency_controls,text="Set a rate before using it in another currency's report.",bg=LIGHT,fg="#5f6b76").pack(side="left",padx=8)
+        flow_toolbars(currency_controls)
         self.rates_tree=self.table(rates,[("date","Date",110),("from","From",80),("to","To",80),("rate","Daily Average",150),("samples","Entries",75),("created","Saved",180)])
         self.rates_tree.bind("<Double-1>",lambda _event:self.edit_selected_exchange_rate())
         branch_controls=tk.Frame(branches,bg=LIGHT); branch_controls.pack(fill="x",padx=10,pady=10)
         self.new_branch_name=tk.StringVar(); tk.Label(branch_controls,text="New Branch Name",bg=LIGHT).pack(side="left"); tk.Entry(branch_controls,
                 textvariable=self.new_branch_name,width=32).pack(side="left",padx=6)
         self.action_button(branch_controls,"Save Branch",self.save_branch).pack(side="left",padx=4)
+        flow_toolbars(branch_controls)
         self.branches_tree=self.table(branches,[("id","ID",80),("name","Branch Name",320),("active","Active",90)])
         self.base_currency=tk.StringVar(value="USD"); self.second_currency=tk.StringVar(value="LBP"); self.backup_hours=tk.StringVar(value="24")
         self.company_fields={key:tk.StringVar() for key in ("company_name","company_address","company_phone","company_mof","company_nssf","company_email","company_website","company_logo",

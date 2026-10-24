@@ -1,6 +1,6 @@
 """Assets & Depreciation: 1. asset accounts with depreciation %, 2. data entry (existing form + category), 3. monthly depreciation table."""
 from __future__ import annotations
-from desktop_common import add_search_bar  # 2.9.78
+from desktop_common import add_search_bar, flow_toolbars  # 2.9.78; 2.9.134 responsive asset actions
 from desktop_common import account_label  # 2.9.79
 
 import tkinter as tk
@@ -31,6 +31,7 @@ class AssetsMixin:
         tk.Button(bar, text="Delete", command=self.delete_asset_account, bg=RED, fg="white", border=0, padx=12, pady=5).pack(side="left", padx=2)
         tk.Label(bar, text="Example: 2251 Passenger Vehicles 20% - expense 6512.5 - accumulated 2825 (681 is the book value of assets SOLD, not depreciation). Double-click a line to change it.",
                 bg=LIGHT, fg="#5f6b76").pack(side="left", padx=10)
+        flow_toolbars(bar)
         self.ac_tree = self.table(page, [("code", "Asset Account", 110), ("name", "Name", 230), ("rate", "Depreciation %", 110), ("years", "Useful Life", 90),
                                          ("dep", "Expense Account", 220), ("acc", "Accumulated Account", 240)])
         self.ac_tree.bind("<Double-1>", lambda _e: self.edit_asset_account())
@@ -76,6 +77,7 @@ class AssetsMixin:
         self.asset_category_box = ttk.Combobox(bar, textvariable=self.asset_category, state="readonly", width=40); self.asset_category_box.pack(side="left", pady=4)
         self.asset_category_box.bind("<<ComboboxSelected>>", lambda _e: self.asset_category_chosen())
         tk.Label(bar, text="fills the accounts, the depreciation % and the useful life", bg="#e8eef4", fg="#5f6b76").pack(side="left", padx=8)
+        flow_toolbars(bar)
         self.load_asset_accounts()
 
     def asset_category_chosen(self):
@@ -104,6 +106,7 @@ class AssetsMixin:
             tk.Button(bar2, text=text, command=lambda m=mode: self.export_depreciation_table(m), bg=NAVY, fg="white", border=0, padx=10, pady=5).pack(side="left", padx=2)
         if hasattr(self, "show_asset_rollforward"):
             tk.Button(bar2, text="Annual Rollforward", command=self.show_asset_rollforward, bg=NAVY, fg="white", border=0, padx=10, pady=5).pack(side="left", padx=(12, 2))
+        flow_toolbars(bar, bar2)
         self.dt_info = tk.Label(page, text="Each asset account shows its assets, then one depreciation entry per account (Dr expense / Cr accumulated).", bg=LIGHT, fg=NAVY, anchor="w")
         self.dt_info.pack(fill="x", padx=10)
         self.dt_tree = ttk.Treeview(page, columns=("code", "name", "date", "value", "old", "current", "total", "net", "posted"), show="headings")
@@ -111,8 +114,13 @@ class AssetsMixin:
                                   ("current", "Deprec. (month)", 110), ("total", "Total Deprec.", 105), ("net", "Net Value", 95), ("posted", "Entry", 88)):
             self.dt_tree.heading(key, text=label); self.dt_tree.column(key, width=width, minwidth=60, stretch=False, anchor="w" if key in ("code", "name", "date", "posted") else "e")
         self.dt_tree.tag_configure("group", background="#dfe6ee", font=("Segoe UI", 9, "bold")); self.dt_tree.tag_configure("total", background="#c9d6e3", font=("Segoe UI", 9, "bold"))
-        scroll = ttk.Scrollbar(page, orient="horizontal", command=self.dt_tree.xview); self.dt_tree.configure(xscrollcommand=scroll.set)
-        scroll.pack(side="bottom", fill="x", padx=8); self.dt_tree.pack(fill="both", expand=True, padx=8, pady=(4, 2)); add_search_bar(self.dt_tree)  # 2.9.78
+        hscroll = ttk.Scrollbar(page, orient="horizontal", command=self.dt_tree.xview)
+        vscroll = ttk.Scrollbar(page, orient="vertical", command=self.dt_tree.yview)
+        self.dt_tree.configure(xscrollcommand=hscroll.set, yscrollcommand=vscroll.set)
+        hscroll.pack(side="bottom", fill="x", padx=8)
+        self.dt_tree.pack(side="left", fill="both", expand=True, padx=(8, 0), pady=(4, 2))
+        vscroll.pack(side="right", fill="y", padx=(0, 8), pady=(4, 2))
+        add_search_bar(self.dt_tree)  # 2.9.78
         self.load_asset_accounts()
 
     def _dt_account(self):

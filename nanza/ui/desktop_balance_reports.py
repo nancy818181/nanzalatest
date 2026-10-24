@@ -4,7 +4,7 @@ from __future__ import annotations
 from desktop_brains_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, GOLD, LIGHT, messagebox, MUTED, NAVY, RED, tk, ttk
 )
-from desktop_common import main_currency  # 2.9.71
+from desktop_common import flow_toolbars, main_currency  # responsive controls / 2.9.134
 from desktop_brains_common import _date_text, _fmt, _num
 import logging
 from multi_select import MultiSelect, chosen_values
@@ -87,6 +87,7 @@ class BalanceReportsMixin:
         tk.Button(actions, text="Show", command=lambda: self.run_balance_report(state), bg=GOLD, fg=NAVY, border=0, padx=22, pady=7, font=("Segoe UI", 10, "bold")).pack(side="left", padx=3)
         for text, fmt in (("Print", "print"), ("Excel", "xlsx"), ("PDF", "pdf")):
             self.action_button(actions, text, lambda f=fmt: self.export_balance_report(state, f)).pack(side="left", padx=3)
+        flow_toolbars(row0, rows_box, row1, options, row3, actions, state["dimension_row"])
         state["info"] = tk.Label(page, text="Choose the options and press Show. Each Show opens its own tab; double-click a line to open the transaction.", bg=LIGHT, fg=MUTED, anchor="w")
         state["info"].pack(fill="x", padx=12)
         state["notebook"] = notebook; state["options_page"] = options_page
@@ -136,6 +137,7 @@ class BalanceReportsMixin:
         for text, fmt in (("PDF", "pdf"), ("Excel", "xlsx"), ("Print", "print"), ("Print Preview", "preview")):
             tk.Button(bar, text=text, command=lambda f=fmt: self.export_balance_report(state, f), bg=NAVY, fg="white", border=0, padx=10, pady=5).pack(side="right", padx=2)
         tk.Button(bar, text="< Options", command=lambda: state["notebook"].select(state["options_page"]), bg=GOLD, fg=NAVY, border=0, padx=10, pady=5).pack(side="right", padx=(2, 10))
+        flow_toolbars(bar)
         info = tk.Label(bar, text="", bg=LIGHT, fg=NAVY, anchor="w", font=("Segoe UI", 9, "bold")); info.pack(side="left", fill="x", expand=True)
         viewer = self.report_viewer(frame, [95, 130, 330, 110, 110, 110, 110, 115, 115, 115]); viewer.bind("<Double-1>", lambda event: self.open_report_line(state, viewer, event)); viewer._info = info
         tk.Label(frame, text="Double-click a line to open the transaction (statement) or the statement of the account (trial balance).", bg=LIGHT, fg=MUTED).pack(anchor="w", padx=12, pady=(0, 4))

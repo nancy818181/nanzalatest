@@ -216,6 +216,7 @@ class ReportsMixin:
         self.action_button(actions,"Export PDF",lambda:self.profit_loss_report("pdf")).pack(side="left",padx=4)
         self.action_button(actions,"Print",lambda:self.profit_loss_report("print")).pack(side="left",padx=4)
         self.pnl_totals=tk.Label(actions,text="",bg=LIGHT,font=("Segoe UI",10,"bold")); self.pnl_totals.pack(side="left",padx=15)
+        flow_toolbars(controls, closing, actions)
         self.load_profit_loss()
 
     def refresh_fiscal_status(self):
@@ -347,60 +348,31 @@ class ReportsMixin:
         # filter groups wrap independently on narrow windows; all existing variables and
         # callbacks remain unchanged.
         controls=tk.Frame(self.reports_tab,bg=LIGHT); controls.pack(fill="x",padx=10,pady=(6,3))
-        heading=tk.Frame(controls,bg=NAVY,padx=12,pady=7); heading.pack(fill="x")
-        tk.Label(heading,text="Financial Reports",bg=NAVY,fg="white",font=("Segoe UI",16,"bold")).pack(anchor="w")
-        tk.Label(heading,text="Choose a reporting period and account range, then open the report you need.",
-                 bg=NAVY,fg="#DCE4EF",font=("Segoe UI",9)).pack(anchor="w",pady=(2,0))
+        heading=tk.Frame(controls,bg=NAVY,padx=10,pady=4); heading.pack(fill="x")
+        tk.Label(heading,text="Financial Reports",bg=NAVY,fg="white",font=("Segoe UI",12,"bold")).pack(side="left")
+        tk.Label(heading,text="Choose a period and account range, then open a report.",
+                 bg=NAVY,fg="#DCE4EF",font=("Segoe UI",9)).pack(side="left",padx=(10,0))
         filter_card=tk.Frame(controls,bg="white",highlightbackground="#D7DEE8",highlightthickness=1,padx=9,pady=6)
-        filter_card.pack(fill="x",pady=(5,0))
-        period_group=tk.Frame(filter_card,bg="white")
-        tk.Label(period_group,text="REPORT PERIOD",bg="white",fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(0,4))
-        period_inputs=tk.Frame(period_group,bg="white"); period_inputs.pack(anchor="w",fill="x")
-        tk.Label(period_inputs,text="From",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
-        self.date_entry(period_inputs,self.report_from_date,13).pack(side="left",padx=(5,12))
-        tk.Label(period_inputs,text="To",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
-        self.date_entry(period_inputs,self.report_to_date,13).pack(side="left",padx=(5,8))
-        account_group=tk.Frame(filter_card,bg="white")
-        tk.Label(account_group,text="ACCOUNT RANGE",bg="white",fg=MUTED,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(0,4))
-        account_inputs=tk.Frame(account_group,bg="white"); account_inputs.pack(anchor="w",fill="x")
-        tk.Label(account_inputs,text="From",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
-        self.account_search_box(account_inputs,self.report_account_from,16).pack(side="left",padx=(5,8))
-        tk.Label(account_inputs,text="To",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
-        self.account_search_box(account_inputs,self.report_account_to,16).pack(side="left",padx=(5,8))
-        actions=tk.Frame(filter_card,bg="white")
+        filter_card.pack(fill="x",pady=(3,0))
+        ranges_row=tk.Frame(filter_card,bg="white"); ranges_row.pack(fill="x")
+        def range_field(label, make_widget):
+            cell=tk.Frame(ranges_row,bg="white")
+            tk.Label(cell,text=label,bg="white",fg=NAVY,font=("Segoe UI",8,"bold")).pack(anchor="w",pady=(0,2))
+            widget=make_widget(cell)
+            widget.pack(anchor="w",fill="x")
+            cell.pack(side="left",padx=(0,10),pady=1)
+            return cell
+        range_field("From date",lambda parent:self.date_entry(parent,self.report_from_date,10))
+        range_field("To date",lambda parent:self.date_entry(parent,self.report_to_date,10))
+        range_field("Account from",lambda parent:self.account_search_box(parent,self.report_account_from,16))
+        range_field("Account to",lambda parent:self.account_search_box(parent,self.report_account_to,16))
+        actions=tk.Frame(ranges_row,bg="white")
         tk.Button(actions,text="Apply",command=self.load_financial_reports,bg=GOLD,fg=NAVY,border=0,
                   padx=18,pady=7,font=("Segoe UI",9,"bold"),cursor="hand2").pack(side="left",padx=(0,6))
         tk.Button(actions,text="More filters",command=self.choose_financial_filters,bg=NAVY,fg="white",border=0,
                   padx=12,pady=7,font=("Segoe UI",9),cursor="hand2").pack(side="left")
-        filter_layout={"columns":None,"pending":False}
-        def arrange_filter_groups(_event=None):
-            if filter_layout["pending"]: return
-            filter_layout["pending"]=True
-            def apply_layout():
-                filter_layout["pending"]=False
-                if not filter_card.winfo_exists(): return
-                width=max(1,filter_card.winfo_width())
-                columns=3 if width>=1000 else 2 if width>=700 else 1
-                if filter_layout["columns"]==columns: return
-                filter_layout["columns"]=columns
-                for column in range(3): filter_card.grid_columnconfigure(column,weight=0,minsize=0,uniform="")
-                filter_card.grid_columnconfigure(0,weight=1,minsize=300 if columns>1 else 0)
-                if columns>1: filter_card.grid_columnconfigure(1,weight=1,minsize=380 if columns==3 else 300)
-                if columns==3: filter_card.grid_columnconfigure(2,weight=0,minsize=220)
-                period_group.grid(row=0,column=0,columnspan=1,sticky="nw",padx=(0,10),pady=2)
-                if columns==3:
-                    account_group.grid(row=0,column=1,sticky="nw",padx=(8,10),pady=2)
-                    actions.grid(row=0,column=2,sticky="ne",padx=(8,0),pady=(14,0))
-                elif columns==2:
-                    account_group.grid(row=0,column=1,sticky="nw",padx=(8,0),pady=2)
-                    actions.grid(row=1,column=0,columnspan=2,sticky="w",padx=0,pady=(7,0))
-                else:
-                    account_group.grid(row=1,column=0,sticky="nw",padx=0,pady=(6,0))
-                    actions.grid(row=2,column=0,sticky="w",padx=0,pady=(7,0))
-            filter_card.after_idle(apply_layout)
-        filter_card.bind("<Configure>",arrange_filter_groups,add="+")
-        arrange_filter_groups()
-        flow_toolbars(period_inputs,account_inputs,actions)
+        actions.pack(side="right",padx=(6,0),pady=(12,0))
+        flow_toolbars(ranges_row)
         # 2.9.49: optional filters - only the ones ticked in "Choose filters..." appear (kept on this computer).
         self.fin_filter_row=tk.Frame(self.reports_tab,bg=LIGHT); self.fin_filter_row.pack(fill="x",padx=10,pady=(0,4))
         self.fin_filters={key:tk.StringVar(value="All") for key in FIN_FILTERS}; self.fin_filter_boxes={}
@@ -541,6 +513,12 @@ class ReportsMixin:
                 ("movement","Movement",120),("closing","Closing",120),("prior","Prior Year Closing",130),("variance","Variance",120)]); self.report_buttons(ctb_page,"ctb")
         self.enable_drill_down(self.ctb_tree,1,lambda:(self.financial_report_range() or (None,None)))
         self.enable_drill_down(self.balance_tree,1,lambda:(None,(self.financial_report_range() or (None,None))[1]))
+        # Keep the report chooser at the top of the screen; the normal notebook still owns
+        # page selection and content, while its compact tab strip is moved above the filters.
+        import desktop_design
+        report_tab_bar=desktop_design.tab_bar(nested)
+        if report_tab_bar is not None:
+            report_tab_bar.bar.pack(before=controls,fill="x",padx=10,pady=(2,0))
         self.load_financial_reports()
         self.load_ageing_report()
         self.load_cashflow_outlook()

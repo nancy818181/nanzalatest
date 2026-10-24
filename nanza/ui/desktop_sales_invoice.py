@@ -28,10 +28,12 @@ def _responsive_invoice_details(form, fields, dimensions):
         label_width = max(label.winfo_reqwidth() for label, _widget in fields)
         field_width = max(widget.winfo_reqwidth() for _label, widget in fields)
         gap = max(16, round(form.winfo_fpixels("0.16i")))
-        columns = max(1, min(3, width // max(1, label_width + field_width + gap)))
+        # Four compact field groups fit the supplied 1920px layout; reduce columns as the
+        # usable page width shrinks so labels and account values remain readable.
+        columns = 4 if width >= 1450 else 3 if width >= 1050 else 2 if width >= 650 else 1
         if columns == state["columns"] and width == state["width"]: return
         state.update(columns=columns, width=width)
-        for column in range(6):
+        for column in range(8):
             form.grid_columnconfigure(column, weight=0, minsize=0, uniform="")
         for column in range(columns):
             labels = fields[column::columns]
@@ -40,8 +42,8 @@ def _responsive_invoice_details(form, fields, dimensions):
             form.grid_columnconfigure(2 * column + 1, minsize=field_size)
         for index, (label, widget) in enumerate(fields):
             row, column = divmod(index, columns)
-            label.grid_configure(row=row, column=2 * column, padx=(0 if column == 0 else gap, 8), pady=3)
-            widget.grid_configure(row=row, column=2 * column + 1, sticky="ew", padx=(0, 2), pady=3)
+            label.grid_configure(row=row, column=2 * column, padx=(0 if column == 0 else gap, 6), pady=2)
+            widget.grid_configure(row=row, column=2 * column + 1, sticky="ew", padx=(0, 2), pady=2)
         dimensions.grid_configure(row=(len(fields) + columns - 1) // columns,
                                   column=0, columnspan=2 * columns, sticky="ew", pady=(3, 1))
 

@@ -6,6 +6,7 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
     ttk
 )
 from desktop_common import main_currency  # 2.9.71
+from desktop_common import flow_toolbars  # responsive actions / 2.9.134
 
 
 class PartiesMixin:
@@ -14,30 +15,34 @@ class PartiesMixin:
         self.edit_party_id=None; self.party_name=tk.StringVar(); self.party_kind=tk.StringVar(value="client"); self.party_account_number=tk.StringVar(); \
             self.party_tax=tk.StringVar(); self.party_mof=tk.StringVar(); self.party_address=tk.StringVar(); self.party_contact=tk.StringVar(); \
                 self.party_currency=tk.StringVar(value="USD"); self.party_due_days=tk.StringVar(value="0")
-        tk.Label(form,text="Account Number",bg=LIGHT,font=("Segoe UI",10,"bold")).grid(row=0,column=0,sticky="w",padx=4,pady=4)
-        account_entry=tk.Entry(form,textvariable=self.party_account_number,width=16,font=("Segoe UI",11,"bold")); account_entry.grid(row=0,column=1,sticky="w",padx=4,pady=4)
-        self.party_account_hint=tk.Label(form,text="Type the first 4 digits (4111 client, 4011 supplier) - the full number fills in automatically",bg=LIGHT,fg="#5f6b76")
-        self.party_account_hint.grid(row=0,column=2,columnspan=6,sticky="w",padx=4)
-        account_entry.bind("<KeyRelease>",self.party_account_typed)
-        tk.Label(form,text="Type",bg=LIGHT).grid(row=1,column=0,sticky="w",padx=4,pady=4)
-        kind_box=ttk.Combobox(form,textvariable=self.party_kind,values=["client","supplier","asset_supplier","other_payable"],state="readonly",
-                width=15); kind_box.grid(row=1,column=1,sticky="w",padx=4)
+        for column in (1, 3): form.grid_columnconfigure(column, weight=1)
+        def put(row, column, label, widget, bold=False):
+            base = column * 2
+            tk.Label(form, text=label, bg=LIGHT, font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)).grid(
+                row=row, column=base, sticky="w", padx=(4, 8), pady=4)
+            widget.grid(row=row, column=base + 1, sticky="ew", padx=4, pady=4)
+            return widget
+        kind_box=put(0,0,"Type",ttk.Combobox(form,textvariable=self.party_kind,values=["client","supplier","asset_supplier","other_payable"],state="readonly",width=15))
         kind_box.bind("<<ComboboxSelected>>",lambda _event:self.suggest_party_prefix())
-        tk.Label(form,text="Name",bg=LIGHT).grid(row=1,column=2,sticky="w",padx=4); tk.Entry(form,textvariable=self.party_name,width=32).grid(row=1,column=3,sticky="w",padx=4)
-        tk.Label(form,text="Currency",bg=LIGHT).grid(row=1,column=4,sticky="w",padx=4)
-        ttk.Combobox(form,textvariable=self.party_currency,values=self.currency_codes,state="readonly",width=7).grid(row=1,column=5,sticky="w",padx=4)
-        tk.Label(form,text="Due days from invoice",bg=LIGHT).grid(row=2,column=4,sticky="w",padx=4)
-        tk.Entry(form,textvariable=self.party_due_days,width=6).grid(row=2,column=5,sticky="w",padx=4)
-        for index,(label,var,width) in enumerate((("Tax Number",self.party_tax,16),("MOF Number",self.party_mof,16),("Address",self.party_address,32),("Contact Number",self.party_contact,16))):
-            tk.Label(form,text=label,bg=LIGHT).grid(row=2+index//2,column=(index%2)*2,sticky="w",padx=4,pady=4)
-            tk.Entry(form,textvariable=var,width=width).grid(row=2+index//2,column=(index%2)*2+1,sticky="w",padx=4,pady=4)
-        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=4,column=0,columnspan=6,sticky="w",padx=4,pady=(6,0))
+        put(0,1,"Name",tk.Entry(form,textvariable=self.party_name,width=32),True)
+        account_entry=put(1,0,"Account Number",tk.Entry(form,textvariable=self.party_account_number,width=16,font=("Segoe UI",11,"bold")),True)
+        account_entry.bind("<KeyRelease>",self.party_account_typed)
+        put(1,1,"Currency",ttk.Combobox(form,textvariable=self.party_currency,values=self.currency_codes,state="readonly",width=7))
+        put(2,0,"Tax Number",tk.Entry(form,textvariable=self.party_tax,width=18))
+        put(2,1,"MOF Number",tk.Entry(form,textvariable=self.party_mof,width=18))
+        put(3,0,"Address",tk.Entry(form,textvariable=self.party_address,width=32))
+        put(3,1,"Contact Number",tk.Entry(form,textvariable=self.party_contact,width=18))
+        put(4,0,"Due days from invoice",tk.Entry(form,textvariable=self.party_due_days,width=8))
+        self.party_account_hint=tk.Label(form,text="Enter the first 4 account digits; the next available full account number fills automatically.",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=900)
+        self.party_account_hint.grid(row=5,column=0,columnspan=4,sticky="ew",padx=4,pady=(2,4))
+        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=6,column=0,columnspan=4,sticky="w",padx=4,pady=(6,0))
         self.action_button(buttons,"New",self.new_party_account).pack(side="left",padx=3)
         tk.Button(buttons,text="Save",command=self.save_party,bg=GOLD,fg=NAVY,font=("Segoe UI",9,"bold"),border=0,padx=18,pady=7).pack(side="left",padx=3)
         self.action_button(buttons,"Edit Selected",self.edit_selected_party).pack(side="left",padx=3)
         self.action_button(buttons,"Legal Documents",self.party_documents_dialog).pack(side="left",padx=3)
         self.action_button(buttons,"Customer / Supplier Ageing",self.open_party_ageing).pack(side="left",padx=3)
         self.action_button(buttons,"Client Items: Qty & Value",self.open_client_items_report).pack(side="left",padx=3)
+        flow_toolbars(buttons)
         self.parties_tree=self.table(self.parties_tab,[("id","ID",55),("account","9-Digit Account",115),("name","Name",180),("kind","Type",85),("tax",
                 "Tax Number",110),("mof","MOF Number",110),("address","Address",180),("contact","Contact",110),("currency","Currency",70),("due_days",
                 "Due Days",80)])
@@ -205,4 +210,5 @@ class PartiesMixin:
         self.action_button(buttons,"Save",save).pack(side="left",padx=4)
         self.action_button(buttons,"Attach / Replace File…",attach).pack(side="left",padx=4)
         self.action_button(buttons,"Download File",download).pack(side="left",padx=4)
+        flow_toolbars(controls, buttons)
         refresh()

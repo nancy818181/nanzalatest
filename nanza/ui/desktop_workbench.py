@@ -10,6 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from client import ApiClient
 from desktop_common import NAVY, GOLD, LIGHT, flow_toolbars
+from i18n import tr
 
 LOG = logging.getLogger("nanza.workbench")
 
@@ -396,7 +397,7 @@ class AgeingWindow(WorkbenchWindow):
 
 class CustomReportWindow(WorkbenchWindow):
     def __init__(self, app):
-        super().__init__(app, "Custom reports • تقارير مخصصة")
+        super().__init__(app, tr(app.language.get(), "custom_reports_title"))
         self.pending = None
         self.page = 0
         self.result = None
@@ -434,7 +435,7 @@ class CustomReportWindow(WorkbenchWindow):
                 highlightthickness=1,
                 highlightbackground="#dce2eb",
             )
-            card.pack(side="left", fill="x", expand=True, padx=3)
+            card.grid(sticky="ew", padx=3, pady=3)
             grip = tk.Label(card, text="⋮⋮ " + labels[k], bg="white", fg=NAVY, cursor="fleur")
             grip.pack(anchor="w")
             grip.bind("<ButtonPress-1>", lambda _e, c=card: setattr(self, "dragging", c))
@@ -451,6 +452,8 @@ class CustomReportWindow(WorkbenchWindow):
             if not k.startswith("date_"):
                 entry.bind("<KeyRelease>", lambda _e, field=k: self.search_choices(field))
             var.trace_add("write", self.changed)
+        self.filters_bar.bind("<Configure>", self.arrange_filter_cards, add="+")
+        self.arrange_filter_cards()
         self.ledger_controls()
         actions = tk.Frame(self, bg=LIGHT)
         actions.pack(fill="x", padx=8)
@@ -463,6 +466,7 @@ class CustomReportWindow(WorkbenchWindow):
         self.template_box.bind("<<ComboboxSelected>>", self.apply_template)
         button(actions, "←", lambda: self.change_page(-1), "الصفحة السابقة")
         button(actions, "→", lambda: self.change_page(1), "الصفحة التالية")
+        flow_toolbars(actions)
         from nanza_delivery.custom_report_builder import HEADERS
 
         self.tree = table(self, HEADERS)
@@ -484,31 +488,45 @@ class CustomReportWindow(WorkbenchWindow):
         )
         self.changed()
 
+    def arrange_filter_cards(self, _event=None):
+        """Lay filters out in readable columns while keeping their saved drag order."""
+        width = self.filters_bar.winfo_width()
+        columns = 3 if width >= 900 or width <= 1 else 2 if width >= 620 else 1
+        for column in range(6):
+            self.filters_bar.grid_columnconfigure(column, weight=0, uniform="")
+        for column in range(columns):
+            self.filters_bar.grid_columnconfigure(column, weight=1, uniform="custom_report_filters")
+        for index, card in enumerate(self.cards):
+            card.grid(row=index // columns, column=index % columns, sticky="ew", padx=3, pady=3)
+
     def ledger_controls(self):
         from nanza_delivery.custom_report_builder import LEDGER_DIMENSIONS, LEDGER_MEASURES
         panel = tk.Frame(self, bg=LIGHT)
         panel.pack(fill="x", padx=8)
+        self.ledger_controls_panel = panel
         self.report_kind = tk.StringVar(value="sales")
         self.reporting_currencies = tk.StringVar(value="native")
         self.report_accounts = tk.StringVar()
+        self._ledger_control_frames = []
         for label, variable, choices in (
             ("Layout / نوع التقرير", self.report_kind, ("sales", "pnl", "balance")),
             ("Currencies / العملات (USD,LBP)", self.reporting_currencies, None),
             ("9-digit accounts / الحسابات (comma separated)", self.report_accounts, None),
         ):
             frame = tk.Frame(panel, bg=LIGHT)
-            frame.pack(side="left", padx=4)
+            frame.grid(sticky="nw", padx=4, pady=3)
             tk.Label(frame, text=label, bg=LIGHT).pack(anchor="w")
             widget = ttk.Combobox(frame, textvariable=variable, values=choices, state="readonly", width=12) if choices else ttk.Entry(frame, textvariable=variable, width=22)
             widget.pack(fill="x")
             variable.trace_add("write", self.changed)
+            self._ledger_control_frames.append(frame)
         self.layout_boxes = {}
         for field, values, label in (
             ("group_by", LEDGER_DIMENSIONS, "Dimensions: select + drag / الأبعاد"),
             ("columns", LEDGER_MEASURES, "Columns: select + drag / الأعمدة"),
         ):
             frame = tk.Frame(panel, bg=LIGHT)
-            frame.pack(side="left", padx=4)
+            frame.grid(sticky="nw", padx=4, pady=3)
             tk.Label(frame, text=label, bg=LIGHT).pack(anchor="w")
             box = tk.Listbox(frame, height=3, width=24, selectmode="extended", exportselection=False)
             box.insert("end", *values)
@@ -518,6 +536,20 @@ class CustomReportWindow(WorkbenchWindow):
             box.bind("<ButtonPress-1>", lambda e, b=box: setattr(b, "_drag_index", b.nearest(e.y)), add="+")
             box.bind("<ButtonRelease-1>", lambda e, b=box: self.drop_layout(e, b))
             self.layout_boxes[field] = box
+            self._ledger_control_frames.append(frame)
+        panel.bind("<Configure>", self.arrange_ledger_controls, add="+")
+        self.arrange_ledger_controls()
+
+    def arrange_ledger_controls(self, _event=None):
+        """Keep report type, currency, account and layout selectors on screen."""
+        width = self.ledger_controls_panel.winfo_width()
+        columns = 3 if width >= 1000 or width <= 1 else 2 if width >= 650 else 1
+        for column in range(5):
+            self.ledger_controls_panel.grid_columnconfigure(column, weight=0, uniform="")
+        for column in range(columns):
+            self.ledger_controls_panel.grid_columnconfigure(column, weight=1, uniform="ledger_controls")
+        for index, frame in enumerate(self._ledger_control_frames):
+            frame.grid(row=index // columns, column=index % columns, sticky="nw", padx=4, pady=3)
 
     def drop_layout(self, event, box):
         source = getattr(box, "_drag_index", None)
@@ -546,10 +578,7 @@ class CustomReportWindow(WorkbenchWindow):
         if dragged is not None and target is not None and dragged is not target:
             self.cards.remove(dragged)
             self.cards.insert(self.cards.index(target), dragged)
-            for card in self.cards:
-                card.pack_forget()
-            for card in self.cards:
-                card.pack(side="left", fill="x", expand=True, padx=3)
+            self.arrange_filter_cards()
         self.dragging = None
 
     def metadata(self, data):
@@ -802,16 +831,22 @@ class WorkbenchMixin:
     def build_workbench_tools(self, parent):
         panel = tk.Frame(parent, bg="white", highlightbackground="#dce2eb", highlightthickness=1)
         panel.pack(fill="x", padx=12, pady=8)
+        language = self.language.get()
+        tk.Label(panel, text=tr(language, "workbench_tools_title"), bg="white", fg="#5f6b76",
+                 font=("Segoe UI", 8, "bold"), anchor="w").pack(fill="x", padx=10, pady=(5, 0))
         actions = tk.Frame(panel, bg="white")
         actions.pack(fill="x", padx=8)
         button(
-            actions, "Ageing / أعمار الذمم", self.open_ageing_workbench, "الذمم المتأخرة والتفاصيل بنقرتين"
-        )
-        button(
             actions,
-            "Custom reports / تقارير مخصصة",
+            tr(language, "custom_reports_title"),
             self.open_custom_reports,
-            "فلاتر قابلة للسحب ومعاينة فورية",
+            tr(language, "custom_reports_hint"),
+        )
+        ai_button = button(actions, tr(language, "ai_accountant_title"), self.open_ai_accountant,
+                           tr(language, "ai_accountant_hint"))
+        ai_button.configure(bg=GOLD, fg=NAVY, activebackground="#e3c178", activeforeground=NAVY)
+        button(
+            actions, "Ageing / أعمار الذمم", self.open_ageing_workbench, "الذمم المتأخرة والتفاصيل بنقرتين"
         )
         button(
             actions,
@@ -984,6 +1019,17 @@ class WorkbenchMixin:
 
     def open_custom_reports(self):
         return CustomReportWindow(self)
+
+    def open_ai_accountant(self):
+        """Open Financial Reports directly on the AI Accountant page."""
+        container = self.main_tab_container(self.reports_tab)
+        if container not in getattr(self, "main_tab_pages", ()):
+            return self.select_main_tab(self.reports_tab)
+        self.select_main_tab(container)
+        page = getattr(self, "ai_accountant_page", None)
+        notebook = getattr(self, "financial_notebook", None)
+        if page is not None and notebook is not None:
+            self.after_idle(lambda: notebook.select(page) if notebook.winfo_exists() else None)
 
     def open_whatsapp_summary(self):
         return WhatsAppWindow(self)

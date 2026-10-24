@@ -95,7 +95,7 @@ def divider(parent, bg=BORDER):
     return tk.Frame(parent, bg=bg, height=1)
 
 
-def tab_bar(notebook, min_tabs=7):
+def tab_bar(notebook, min_tabs=5):
     """A tab strip that never cuts a tab off: when a Notebook has many tabs, its own strip (which cannot scroll) is replaced by
     a bar with the tabs in a row, ‹ › arrows and an "All tabs" list. The Notebook itself keeps working (select, add, hide, text),
     so every other part of the program is unchanged. If anything goes wrong the Notebook keeps its normal tabs.
