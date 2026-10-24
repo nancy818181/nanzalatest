@@ -3758,3 +3758,31 @@ AR.update({
     "Supplier invoice no. (purchases)": "رقم فاتورة المورد (المشتريات)", "Supplier tax ID": "رقم المورد الضريبي",
     "Invoice draft": "مسودة فاتورة", "Not saved": "لم يتم الحفظ",
 })
+
+
+AR.update({  # 2.9.134
+    'Choose the line that matches the legal treatment of the payment. Taxable lines enter the tax base and NSSF (unless excluded in Tax & NSSF Settings). Not-taxable lines are reported in the not-taxable column of the R6 statement and enter neither. Changing an account does not change tax or NSSF.': 'اختر البند الذي يطابق المعاملة القانونية للدفعة. البنود الخاضعة تدخل في الوعاء الضريبي وفي الضمان الاجتماعي (إلا إذا استُثنيت في إعدادات الضريبة والضمان). البنود غير الخاضعة تُصرَّح في عمود «غير خاضع» من بيان R6 ولا تدخل في أيٍّ منهما. تغيير الحساب لا يغيّر الضريبة ولا الضمان.',
+    'Treatment': 'المعاملة',
+    'Taxable': 'خاضع',
+    'Not taxable': 'غير خاضع',
+    'one-off': 'لمرة واحدة',
+    'Taxable benefits': 'تقديمات خاضعة',
+    'Not-taxable benefits': 'تقديمات غير خاضعة',
+    'enter the tax base': 'تدخل في الوعاء الضريبي',
+    'reported as not taxable': 'تُصرَّح كغير خاضعة',
+    'Car allowance - not taxable': 'بدل سيارة غير خاضع',
+    'Housing allowance - not taxable': 'بدل سكن غير خاضع',
+    'Health insurance - not taxable': 'تأمينات صحية غير خاضعة',
+    'Sickness aid - not taxable': 'مساعدات مرضية غير خاضعة',
+    'Benefit': 'التقديم',
+    'All tabs': 'كل التبويبات',
+})
+
+
+AR.update({  # 2.9.134 (layout headings)
+    'Document': 'المستند',
+    'Payment': 'الدفع',
+    'Bank commission and exchange difference': 'عمولة المصرف وفرق القطع',
+    'Money received from a customer': 'مبلغ مقبوض من عميل',
+    'Money paid to a supplier': 'مبلغ مدفوع لمورد',
+})

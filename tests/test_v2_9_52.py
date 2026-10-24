@@ -140,7 +140,7 @@ class PermissionAndSigningTest(_Base):
         import database
         self.assertIn("delete", database.PERMISSION_MODULES)
         self.assertEqual(database.parse_permissions("{}")["delete"], True)     # existing users keep what they could do
-        user = self.db.save_user({"username": "x", "password": "Secret12", "role": "accountant", "permissions": {"delete": False}}, self.user)
+        user = self.db.save_user({"username": "x", "password": "Secret1234", "role": "accountant", "permissions": {"delete": False}}, self.user)
         with self.db.connect() as db:
             row = db.execute("SELECT * FROM users WHERE username='x'").fetchone()
         self.assertFalse(self.db.user_can(row, "delete")); self.assertTrue(self.db.user_can(row, "vat"))

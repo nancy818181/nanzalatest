@@ -2,6 +2,40 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.134 (duplicate guard, balance-sheet class 4, password hardening, not-taxable benefits, cleaner layouts)
+
+Details, evidence and the pre-push checklist: `docs/RELEASE_2.9.134.md`; trial plan: `docs/TRIAL_PLAN.md`.
+
+- **Duplicate invoices refused (D3):** same sales number, or same supplier + supplier invoice number; administrators can confirm an override. `duplicate_invoice_report` lists existing duplicates.
+- **Balance sheet by type (D5):** class 4 accounts follow the balance sign. Stored types unchanged.
+- **Passwords (D7):** new/changed passwords need 10 characters; scrypt N=2^17 (versioned, old hashes re-hashed at login); session tokens stored hashed.
+- **Payroll additional payments:** not-taxable benefits (car, housing, health insurance, sickness aid) reported in the R6 not-taxable column; they enter neither tax nor NSSF base.
+- **Layouts:** framed panels, grouped sections and wider account boxes on Sales Invoice, Purchases, Payment & Receipt, Payroll Entry; Financial Reports tab bar that never cuts tabs. The desktop was not run in the review environment: check on Windows before release.
+- Not changed: D2 (owner rule H-03), D4 (owner rule H-02 / risk), D6, D8.
+
+## Version 2.9.133 (trial-readiness review: output VAT type, exact P&L, trial pack)
+
+Deep review before a trial installation (code read + executed on Linux/Python 3.13 without Tk; see `docs/TRIAL_PLAN.md`).
+
+- **Output VAT is a liability (RPT-BS-001, owner-confirmed).** Account 4427 and its sub-accounts were typed `asset` in the Lebanese chart,
+  so the account-type balance sheet showed the VAT payable as a negative asset (assets and liabilities both understated by the VAT
+  payable). The seed and the KSA/UAE templates now type them `liability`; an existing file is corrected once at start-up
+  (`app_settings.output_vat_liability_2933`, the number of accounts changed is written to the audit trail). No journal entry,
+  amount or VAT return changes; only the account type. The formal IFRS statements (grouping by sign) were not affected.
+- **Exact P&L (MONEY-FLOAT-001).** `profit_and_loss` and `profit_and_loss_converted` subtract exact Decimals (was 110.47999999999999
+  for 110.48 in the golden ledger). Same stored values, no schema change.
+- **Audit trail of an invoice delete.** `delete_invoice` now records every journal line it removes (as `mark_invoice_deleted` does
+  since 2.9.132). Behaviour is unchanged: see "Decisions still open" in `docs/TRIAL_PLAN.md`.
+- **Trial pack.** `tools/trial_simulation.py` posts a known scenario through the API and recomputes every figure independently
+  (trial balance, VAT Q1, balance sheet, year close, backup); `docs/TRIAL_PLAN.md` has the acceptance checklist, expected figures,
+  limits of this review and the open owner decisions. New tests: `tests/test_v2_9_133.py`.
+- Tests changed on purpose (AI_RULES section 2): the strict `xfail` markers of RPT-BS-001 and MONEY-FLOAT-001 were removed because those
+  defects are fixed; three tests that recorded the old behaviour now assert the corrected, independently derived values
+  (`test_golden_balance_sheet_current_behavior_snapshot`, `test_measurement_pnl_float_subtraction_for_fractional_amounts`,
+  `test_4427_read_only_diagnostic_on_synthetic_database`).
+- Not changed (owner decisions D2-D4 still open, 34 documented `xfail` cases): posting tolerance / rounding line, duplicate invoice
+  numbers, immutability of posted invoice-source entries and hard delete of posted invoices.
+
 ## Version 2.9.132 (phase 1 test: VAT, fixed assets, reports, IFRS)
 
 Tested end to end on a synthetic company (Q1-Q4 2026, USD and LBP, test rate 89,500): 1036 tests, no regression
@@ -140,7 +174,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers are 2.9.131 for this additive source change. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.134. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 

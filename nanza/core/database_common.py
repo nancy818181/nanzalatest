@@ -325,15 +325,52 @@ def parse_vat_rate(value):
     return rate.normalize() if rate != rate.to_integral() else rate.quantize(Decimal("1"))
 
 
+# 2.9.134 (D7): scrypt N=2^17, r=8, p=1 (128 MiB) is the first setting in the OWASP Password Storage Cheat Sheet (checked online 24-10-2026).
+# The hash text is versioned ("scrypt$17$8$1$salt$digest"); a hash written before 2.9.134 ("salt:digest", N=2^14) still verifies and is
+# written again in the new format at that user's next sign-in. NANZA_SCRYPT_LOG_N lowers the cost for automated tests only (never below 10).
+SCRYPT_LOG_N = 17
+
+
+def _scrypt_log_n():
+    try: return max(10, min(20, int(os.environ.get("NANZA_SCRYPT_LOG_N") or SCRYPT_LOG_N)))
+    except ValueError: return SCRYPT_LOG_N
+
+
+def _scrypt(password, salt, log_n, r=8, p=1):
+    return hashlib.scrypt(password.encode(), salt=salt, n=2**log_n, r=r, p=p, maxmem=2**29).hex()
+
+
 def hash_password(password, salt=None):
-    salt = salt or secrets.token_bytes(16)
-    digest = hashlib.scrypt(password.encode(), salt=salt, n=2**14, r=8, p=1)
-    return f"{salt.hex()}:{digest.hex()}"
+    salt = salt or secrets.token_bytes(16); log_n = _scrypt_log_n()
+    return f"scrypt${log_n}$8$1${salt.hex()}${_scrypt(password, salt, log_n)}"
+
 
 def verify_password(password, encoded):
+    encoded = str(encoded or "")
+    if encoded.startswith("scrypt$"):
+        try:
+            _tag, log_n, r, p, salt_hex, digest_hex = encoded.split("$")
+            candidate = _scrypt(password, bytes.fromhex(salt_hex), int(log_n), int(r), int(p))
+        except (ValueError, TypeError): return False
+        return hmac.compare_digest(candidate, digest_hex)
+    if ":" not in encoded: return False  # "!" = a copy of the user in a company-year file: no password there
     salt_hex, digest_hex = encoded.split(":", 1)
-    candidate = hash_password(password, bytes.fromhex(salt_hex)).split(":", 1)[1]
+    try: candidate = _scrypt(password, bytes.fromhex(salt_hex), 14)  # before 2.9.134
+    except (ValueError, TypeError): return False
     return hmac.compare_digest(candidate, digest_hex)
+
+
+def password_needs_rehash(encoded):
+    """True for a hash written before 2.9.134 or with a lower cost than today's."""
+    encoded = str(encoded or "")
+    if not encoded.startswith("scrypt$"): return ":" in encoded
+    try: return int(encoded.split("$")[1]) < _scrypt_log_n()
+    except (ValueError, IndexError): return True
+
+
+def session_token_hash(token):
+    """2.9.134 (D7): the sessions table keeps only a hash of the token; the program keeps the token itself."""
+    return "h1:" + hashlib.sha256(str(token).encode("utf-8")).hexdigest()
 
 
 # ---------------------------------------------------------------- 2.9.97: exact money sums in SQL

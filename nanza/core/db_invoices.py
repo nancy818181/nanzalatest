@@ -66,7 +66,7 @@ class InvoicesStore:
 
     def import_invoice(self, item, user_id):
         self.require_eur_rate(item.get("currency"), item.get("invoice_date"))
-        # No uniqueness constraint is applied to invoice numbers: duplicates are intentionally retained.
+        # 2.9.134 (D3): a duplicate invoice identity is refused below (_assert_unique_invoice_number); an administrator can allow one on purpose.
         self._assert_period_open(item.get("invoice_date")); self._assert_vat_open(item.get("invoice_date"))
         defaults=self.default_accounts()  # 2.9.81: Settings > Accounting Settings
         with self.connect() as db:
@@ -80,6 +80,7 @@ class InvoicesStore:
             else:
                 db.execute("INSERT OR IGNORE INTO parties(kind,name,currency) VALUES(?,?,?)", (party_kind, item.get("party_name") or "Unspecified", item.get("currency", "USD")))
                 party = db.execute("SELECT * FROM parties WHERE kind=? AND name=?", (party_kind, item.get("party_name") or "Unspecified")).fetchone()
+            self._assert_unique_invoice_number(db, item, kind, party["id"])  # 2.9.134 (D3)
             # 2.9.132 (H-03, owner rule): amounts with 2 decimals, the third rounded half up, before any posting or check
             from decimal import ROUND_HALF_UP as half_up
             cent=lambda value: Decimal(str(value)).quantize(Decimal("0.01"),rounding=half_up)
@@ -426,6 +427,12 @@ class InvoicesStore:
             self._assert_no_active_linked_assets(db,invoice_id,"delete")
             self._assert_period_open(invoice["invoice_date"]); self._assert_vat_open(invoice["invoice_date"])
             details=dict(invoice)
+            # 2.9.133: the audit trail keeps every journal line this delete removes (as mark_invoice_deleted does since 2.9.132),
+            # so a deleted POSTED invoice can be rebuilt from the audit trail alone
+            removed=[dict(r) for r in db.execute("""SELECT e.entry_number,e.entry_date,e.source_type,e.posting_status,e.currency,a.code account,
+                j.debit,j.credit,j.line_currency,j.amount,j.amount_lbp,j.amount_usd FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
+                JOIN accounts a ON a.id=j.account_id WHERE e.source_id=? AND (e.source_type IN ('invoice','journal_voucher','invoice_payment')
+                OR (e.source_type='vat_reclass' AND e.entry_number=?)) ORDER BY e.id,j.id""",(int(invoice_id),f"VATND-INV-{int(invoice_id)}"))]
             db.execute("DELETE FROM journal_entries WHERE source_type IN ('invoice','journal_voucher','invoice_payment') AND source_id=?",(int(invoice_id),))
             db.execute("DELETE FROM journal_entries WHERE source_type='vat_reclass' AND entry_number=?",(f"VATND-INV-{int(invoice_id)}",))
             import inventory
@@ -433,7 +440,8 @@ class InvoicesStore:
             inventory._assert_nonnegative_history(db)
             db.execute("DELETE FROM invoices WHERE id=?",(int(invoice_id),))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (user_id,"delete","invoice",int(invoice_id),json.dumps({"invoice_number":details.get("invoice_number"),"party_id":details.get("party_id"),"total":details.get("total")}),utcnow()))
+                (user_id,"delete","invoice",int(invoice_id),json.dumps({"invoice_number":details.get("invoice_number"),"party_id":details.get("party_id"),"total":details.get("total"),
+                "status":details.get("status"),"invoice_date":details.get("invoice_date"),"journal_lines_removed":removed},default=str),utcnow()))
         return {"deleted":int(invoice_id)}
 
     def mark_invoice_deleted(self, invoice_id, user_id):
@@ -583,6 +591,10 @@ class InvoicesStore:
             party_name = str(item["party_name"]).strip()
             db.execute("INSERT OR IGNORE INTO parties(kind,name,currency) VALUES(?,?,?)", (party_kind, party_name, currency))
             party = db.execute("SELECT * FROM parties WHERE kind=? AND name=?", (party_kind, party_name)).fetchone()
+            # 2.9.134 (D3): only when the identity changes - an older file may already hold a duplicate that must stay editable
+            if (self.invoice_number_key(item["invoice_number"]) != self.invoice_number_key(existing["invoice_number"])
+                    or kind != existing["kind"] or (kind == "purchase" and party["id"] != existing["party_id"])):
+                self._assert_unique_invoice_number(db, {**item, "doc_subtype": existing["doc_subtype"] if "doc_subtype" in existing.keys() else item.get("doc_subtype")}, kind, party["id"], exclude_id=invoice_id)
             due_date = self._invoice_due_date(item, party)
             party_account = self._ensure_party_account(db, party)
             if kind == "purchase" and supplier_account == DEFAULT_LEBANESE_ACCOUNTS["accounts_payable"] and party_account:
@@ -914,6 +926,51 @@ class InvoicesStore:
                 WHERE l.entity='invoice' AND l.entity_id=? ORDER BY l.id DESC""", (invoice_id,))]
 
     # 2.9.51: the same invoice must not be recorded twice by an upload (same customer / supplier and same number)
+    # 2.9.134 (D3): invoice identity. A sales invoice number is unique per document type across all customers (Lebanese sales
+    # invoices are sequential); a purchase / expense document is unique per supplier + supplier's number. Cancelled and deleted
+    # documents are ignored. Number comparison is the one the import screen already uses (INV-0045 = INV45).
+    _NUMBER_SQL = "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(i.invoice_number,'-',''),' ',''),'/',''),'.',''),'_',''))"
+
+    def find_same_invoice_number(self, db, number, kind, party_id, doc_subtype="invoice", exclude_id=None):
+        """The first saved invoice with the same identity, or None. `db` is an open connection."""
+        import re as _re
+        key = self.invoice_number_key(number)
+        if not key: return None
+        digits = max(_re.findall(r"[0-9]+", key), key=len, default="")
+        needle = digits or key  # SQL pre-filter only; the exact comparison is the key below
+        sql = (f"SELECT i.id,i.invoice_number,i.invoice_date,i.party_id,COALESCE(i.doc_subtype,'invoice') st FROM invoices i "
+               f"WHERE i.kind=? AND i.status NOT IN ('cancelled','deleted') AND {self._NUMBER_SQL} LIKE ?")
+        args = [kind, f"%{needle}%"]
+        if exclude_id is not None: sql += " AND i.id<>?"; args.append(int(exclude_id))
+        subtype = str(doc_subtype or "invoice").lower()
+        for row in db.execute(sql, args):
+            if str(row["st"] or "invoice").lower() != subtype: continue
+            if self.invoice_number_key(row["invoice_number"]) != key: continue
+            if kind == "purchase" and row["party_id"] != party_id: continue
+            return dict(row)
+        return None
+
+    def _assert_unique_invoice_number(self, db, item, kind, party_id, exclude_id=None):
+        if item.get("allow_duplicate"): return  # only an administrator's request keeps this flag (server._approval_gate)
+        if exclude_id is None and item.get("replaces_invoice_id") not in (None, ""): exclude_id = int(item["replaces_invoice_id"])  # an edit saved as a new document
+        found = self.find_same_invoice_number(db, item.get("invoice_number"), kind, party_id, item.get("doc_subtype"), exclude_id)
+        if found:
+            raise ValueError(f"Duplicate invoice number {str(item.get('invoice_number')).strip()}: already saved as invoice ID {found['id']} "
+                             f"({found['invoice_number']}, {found['invoice_date']}). Use another number; only an administrator can save a duplicate on purpose")
+
+    def duplicate_invoice_report(self):
+        """Report (never a block): groups of saved, not cancelled invoices that share an identity. For the first review of an existing file."""
+        with self.connect() as db:
+            rows = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.kind,i.party_id,i.total,i.currency,
+                COALESCE(i.doc_subtype,'invoice') st FROM invoices i WHERE i.status NOT IN ('cancelled','deleted') ORDER BY i.id""")]
+        groups = {}
+        for r in rows:
+            key = self.invoice_number_key(r["invoice_number"])
+            if not key: continue
+            identity = (r["kind"], str(r["st"]).lower(), key) + ((r["party_id"],) if r["kind"] == "purchase" else ())
+            groups.setdefault(identity, []).append(r)
+        return [g for g in groups.values() if len(g) > 1]
+
     @staticmethod
     def invoice_number_key(number):
         import re as _re
@@ -993,7 +1050,7 @@ class InvoicesStore:
             files = [dict(r) for r in db.execute("SELECT file_name,mime_type,content FROM invoice_attachments WHERE invoice_id=?", (int(invoice_id),))]
             linked = [r["id"] for r in db.execute("SELECT id FROM invoices WHERE linked_invoice_id=?", (int(invoice_id),))]
             self._assert_period_open(old["invoice_date"]); self._assert_vat_open(old["invoice_date"], item.get("invoice_date"))
-            item = {**item, "invoice_number": item.get("invoice_number") or old["invoice_number"]}
+            item = {**item, "invoice_number": item.get("invoice_number") or old["invoice_number"], "replaces_invoice_id": int(invoice_id)}  # 2.9.134 (D3)
             import inventory
             inventory.remove_invoice_documents(db, invoice_id)
             new_id = self.create_manual_invoice(item, line_items, user_id)

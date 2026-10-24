@@ -110,10 +110,7 @@ def test_golden_trial_balance_ties_to_general_ledger_for_february_cash(posted_go
     assert _dec(trial["closing_balance"]) == closing
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "MONEY-FLOAT-001: P&L subtracts SQLite float totals and returns 110.47999999999999 "
-    "instead of the exact Decimal ledger value 110.48."
-))
+# 2.9.133: MONEY-FLOAT-001 fixed (profit_and_loss subtracts exact Decimals); the strict xfail marker was removed on purpose.
 def test_golden_profit_and_loss_reproduces_usd_ledger(posted_golden_ledger):
     db, codes = posted_golden_ledger["db"], posted_golden_ledger["codes"]
     rows = db.profit_and_loss(from_date=PERIOD_START, to_date=PERIOD_END, currency="USD")
@@ -123,21 +120,20 @@ def test_golden_profit_and_loss_reproduces_usd_ledger(posted_golden_ledger):
 
 
 def test_golden_balance_sheet_current_behavior_snapshot(posted_golden_ledger):
-    """CURRENT BEHAVIOR, NOT VERIFIED CORRECT: chart seed currently types 4427 as asset."""
+    """2.9.133: with 4427 (output VAT) typed as a liability the account-type balance sheet equals the independently derived
+    EXPECTED_USD_BALANCE_SHEET (1299.21 / 42.05 / 1257.16). Before the fix it showed 1287.11 / 29.95 (VAT payable as a negative asset)."""
     db = posted_golden_ledger["db"]
     rows = db.balance_sheet(to_date=PERIOD_END, currency="USD")
     assets = sum((_dec(row["balance"]) for row in rows if row["type"] == "asset"), Decimal("0"))
     liabilities = -sum((_dec(row["balance"]) for row in rows if row["type"] == "liability"), Decimal("0"))
     equity = -sum((_dec(row["balance"]) for row in rows if row["type"] == "equity"), Decimal("0"))
-    assert assets == Decimal("1287.11")
-    assert liabilities == Decimal("29.95")
-    assert equity == Decimal("1257.16")
+    assert assets == Decimal(EXPECTED_USD_BALANCE_SHEET["assets"])
+    assert liabilities == Decimal(EXPECTED_USD_BALANCE_SHEET["liabilities"])
+    assert equity == Decimal(EXPECTED_USD_BALANCE_SHEET["equity"])
     assert assets == liabilities + equity
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "RPT-BS-001: 4427 is output VAT (liability, owner-confirmed) but the seed stores asset; invoice module creates liability"
-))
+# 2.9.133: RPT-BS-001 fixed (seed + one-time migration type 4427 as liability); the strict xfail marker was removed on purpose.
 @pytest.mark.parametrize("creation_path", ["brand_new_company", "upgraded_company"])
 def test_4427_is_liability_on_every_creation_path(creation_path, tmp_path):
     """Invariant: output VAT account 4427 must be a liability on all creation paths."""

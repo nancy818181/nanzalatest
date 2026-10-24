@@ -136,10 +136,7 @@ def test_posted_invoice_journal_entry_is_immutable_at_storage_layer(synthetic_db
                 connection.execute("DELETE FROM journal_entries WHERE id=?", (entry_id,))
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="POST-DUPLICATE-001: repeated supplier/customer invoice identity is retained by import_invoice without a hard idempotency guard.",
-)
+# 2.9.134 (D3): POST-DUPLICATE-001 is fixed - the strict xfail marker was removed because the test now passes.
 def test_same_posted_invoice_identity_cannot_be_posted_twice(synthetic_db):
     _posted_synthetic_invoice(synthetic_db, "SYN-DUPLICATE-1")
     with pytest.raises(ValueError, match="(?i)duplicate"):

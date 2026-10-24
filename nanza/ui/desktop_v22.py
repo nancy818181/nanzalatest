@@ -522,25 +522,29 @@ class V22Mixin:
         year = getattr(self, "current_fiscal_year", datetime.now().year)
         self.bk = {k: tk.StringVar(value=v) for k, v in (("account", ""), ("currency", "USD"), ("from", f"01-01-{year}"), ("to", f"31-12-{year}"), ("balance",
                 ""), ("post_account", "6739 - Bank Commissions & Other Charges"))}
-        bar = tk.Frame(page, bg=LIGHT); bar.pack(fill="x", padx=8, pady=(8, 2))
+        # 2.9.134: one framed panel - row 1 the account and period, row 2 the actions, then a coloured result banner (same controls and commands)
+        import desktop_design as design
+        outer, body = design.panel(page, "Bank Reconciliation", "Match each statement line (left) with its book line (right)", pady=6)
+        outer.pack(fill="x", padx=8, pady=(8, 4))
+        bar = tk.Frame(body, bg=LIGHT); bar.pack(fill="x", pady=(0, 4))
         tk.Label(bar, text="Bank account", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        self.bk_account_box = ttk.Combobox(bar, textvariable=self.bk["account"], state="readonly", width=30); self.bk_account_box.pack(side="left", padx=(4, 8))
-        ttk.Combobox(bar, textvariable=self.bk["currency"], values=getattr(self, "currency_codes", ["USD", "LBP", "EUR", "AED"]), state="readonly", width=5).pack(side="left", padx=4)
-        tk.Label(bar, text="From", bg=LIGHT).pack(side="left"); self.date_entry(bar, self.bk["from"], 11).pack(side="left", padx=(4, 6))
-        tk.Label(bar, text="To", bg=LIGHT).pack(side="left"); self.date_entry(bar, self.bk["to"], 11).pack(side="left", padx=(4, 6))
-        tk.Label(bar, text="Statement ending balance", bg=LIGHT).pack(side="left"); tk.Entry(bar, textvariable=self.bk["balance"], width=12).pack(side="left", padx=4)
-        tk.Button(bar, text="Show", command=self.load_bank_rec, bg=GOLD, fg=NAVY, border=0, padx=14, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=6)
-        bar2 = tk.Frame(page, bg=LIGHT); bar2.pack(fill="x", padx=8, pady=2)
+        self.bk_account_box = ttk.Combobox(bar, textvariable=self.bk["account"], state="readonly", width=40); self.bk_account_box.pack(side="left", padx=(4, 12))
+        ttk.Combobox(bar, textvariable=self.bk["currency"], values=getattr(self, "currency_codes", ["USD", "LBP", "EUR", "AED"]), state="readonly", width=6).pack(side="left", padx=(0, 12))
+        tk.Label(bar, text="From", bg=LIGHT).pack(side="left"); self.date_entry(bar, self.bk["from"], 11).pack(side="left", padx=(4, 10))
+        tk.Label(bar, text="To", bg=LIGHT).pack(side="left"); self.date_entry(bar, self.bk["to"], 11).pack(side="left", padx=(4, 10))
+        tk.Label(bar, text="Statement ending balance", bg=LIGHT).pack(side="left"); tk.Entry(bar, textvariable=self.bk["balance"], width=14).pack(side="left", padx=(4, 10))
+        tk.Button(bar, text="Show", command=self.load_bank_rec, bg=GOLD, fg=NAVY, border=0, padx=16, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
+        tk.Button(bar, text="Report", command=lambda: self.bank_report("preview"), bg=NAVY, fg="white", border=0, padx=10, pady=5).pack(side="left", padx=2)
+        design.divider(body).pack(fill="x", pady=2)
+        bar2 = tk.Frame(body, bg=LIGHT); bar2.pack(fill="x", pady=(4, 0))
         for text, command in (("Import Statement (Excel / CSV / PDF)", self.import_bank_statement), ("Auto Match", self.bank_auto_match), ("Match Selected", self.bank_match_selected),
                               ("Partial Match", self.bank_match_partial),
                               ("Unmatch", self.bank_unmatch), ("Delete Statement Line", self.bank_delete_line)):
             tk.Button(bar2, text=text, command=command, bg=NAVY if text != "Delete Statement Line" else "#8B1E1E", fg="white", border=0, padx=10, pady=5).pack(side="left", padx=2)
-        tk.Label(bar2, text="Book to", bg=LIGHT).pack(side="left", padx=(8, 2)); tk.Entry(bar2, textvariable=self.bk["post_account"], width=20).pack(side="left")
-        tk.Button(bar2, text="Post Line", command=self.bank_post_line, bg=GOLD, fg=NAVY, border=0, padx=10, pady=5).pack(side="left", padx=4)
-        tk.Button(bar, text="Report", command=lambda: self.bank_report("preview"), bg=NAVY, fg="white", border=0, padx=10, pady=5).pack(side="left", padx=2)
-        self.bk_info = tk.Label(page, text="Choose the bank account and press Show. Match each statement line (left) with its book line (right).", bg=LIGHT,
-                fg=NAVY, anchor="w", font=("Segoe UI", 9, "bold"))
-        self.bk_info.pack(fill="x", padx=10, pady=(2, 2))
+        tk.Label(bar2, text="Book to", bg=LIGHT).pack(side="left", padx=(14, 2)); self.account_search_box(bar2, self.bk["post_account"], 34).pack(side="left")
+        tk.Button(bar2, text="Post Line", command=self.bank_post_line, bg=GOLD, fg=NAVY, border=0, padx=12, pady=5, font=("Segoe UI", 9, "bold")).pack(side="left", padx=6)
+        self.bk_info = design.banner(page, "Choose the bank account and press Show. Match each statement line (left) with its book line (right).", "info", wraplength=1100)
+        self.bk_info.pack(fill="x", padx=8, pady=(0, 4))
         panes = tk.Frame(page, bg=LIGHT); panes.pack(fill="both", expand=True, padx=8, pady=(0, 8))
         self.bk_trees = {}
         for index, (key, title, columns) in enumerate((("statement", "Bank statement", (("date", "Date", 82), ("ref", "Reference", 80), ("desc", "Description",
@@ -584,9 +588,9 @@ class V22Mixin:
             tree.insert("", "end", iid=str(b["id"]), values=(_dd(b["iso_date"]), b["entry_number"], b.get("description") or "",
                         f'{float(b["amount"]):,.2f}', status), tags=(tag,))
         r = data["report"]; diff = r.get("difference")
-        self.bk_info.config(text=f'Book balance {r["book_balance"]:,.2f}   Expected bank balance {r["expected"]:,.2f}   Matched {r["matched"]} of {r["statement_count"]} statement line(s)' +
-                            (f'   DIFFERENCE {diff:,.2f}' if diff is not None else "   (enter the statement ending balance to check the difference)"),
-                            fg="#2E7D5B" if diff is not None and abs(diff) < 0.005 else NAVY if diff is None else "#8B1E1E")
+        text = (f'Book balance {r["book_balance"]:,.2f}   Expected bank balance {r["expected"]:,.2f}   Matched {r["matched"]} of {r["statement_count"]} statement line(s)' +
+                (f'   DIFFERENCE {diff:,.2f}' if diff is not None else "   (enter the statement ending balance to check the difference)"))
+        self.bk_info.set(text, "info" if diff is None else "success" if abs(diff) < 0.005 else "danger")
 
     def import_bank_statement(self):
         import bank_rec

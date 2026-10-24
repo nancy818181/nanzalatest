@@ -320,6 +320,11 @@ def polish(widget, fold=False):
         if isinstance(item, tk.Button): _polish_button(item)
         elif isinstance(item, tk.LabelFrame): _polish_card(item)
         elif isinstance(item, tk.Entry) and not isinstance(item, ttk.Entry): _polish_entry(item)
+        elif isinstance(item, ttk.Notebook):  # 2.9.134: a Notebook with many tabs gets a scrolling tab bar (the normal strip cuts tabs off)
+            try:
+                import desktop_design
+                desktop_design.tab_bar(item)
+            except (tk.TclError, ValueError, RuntimeError, AttributeError, ImportError): logging.getLogger("saber.ignored").debug("Tab bar skipped", exc_info=True)
         try: stack.extend(item.winfo_children())
         except tk.TclError: pass
     if fold: fold_toolbars(widget)

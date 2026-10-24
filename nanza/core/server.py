@@ -990,6 +990,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         return result,note
 
     def _approval_gate(self, user, invoice, invoice_id=None):
+        if isinstance(invoice, dict):  # 2.9.134 (D3): allow_duplicate is an administrator's choice; replaces_invoice_id is set by the program only
+            invoice.pop("replaces_invoice_id", None)
+            if user["role"] != "admin": invoice.pop("allow_duplicate", None)
         if invoice_id and isinstance(invoice, dict) and user["role"] != "admin":
             # 2.9.132 (M-11, owner rule): a POSTED sales invoice is changed by an administrator only, whatever the approval mode;
             # anyone else corrects it with a credit note (reversal). The status saved in the file decides when it can be read.

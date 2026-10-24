@@ -1891,7 +1891,7 @@ LEBANESE_ACCOUNTS = [
     "Value Added Tax - Collected on Revenues",
     "ضريبة القيمة المضافة - محصّلة من الإيرادات",
     "TVA - Percue sur Produits",
-    "asset",
+    "liability",
     "4425"
   ],
   [

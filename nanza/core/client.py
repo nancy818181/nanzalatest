@@ -218,21 +218,23 @@ class ApiClient:
     def import_invoices(self, items, replace_existing=True): return self.request("POST", "/api/invoices/import", {"items": items, "replace_existing": replace_existing})
     def create_manual_invoice(self, invoice, items):
         invoice = dict(invoice); checked = invoice.pop("duplicate_ok", False)
-        if not checked: self._check_duplicate_invoice(invoice)
+        # 2.9.134 (D3): "duplicate_ok" (the screen already asked) or a confirmation here = the user chose to save it again; the server honours it for an administrator only
+        if checked or self._check_duplicate_invoice(invoice): invoice["allow_duplicate"] = True
         return self.request("POST", "/api/invoices/manual", {"invoice": invoice, "items": items})
 
     def _check_duplicate_invoice(self, invoice):
         """2.9.103: on every screen (purchases, expenses as invoices, sales, assets, uploads): the same supplier / customer and
         the same invoice number already saved -> warning; not saved unless the user confirms."""
-        if not self.confirm_duplicate or not str(invoice.get("invoice_number") or "").strip(): return
+        if not self.confirm_duplicate or not str(invoice.get("invoice_number") or "").strip(): return False
         try: found = self.invoice_duplicates([invoice])[0]
-        except Exception: return
-        if not found: return
+        except Exception: return False
+        if not found: return False
         old = found[0]
         text = (f"WARNING - already saved: invoice {invoice.get('invoice_number')} of {old.get('party_name') or invoice.get('party_name')} "
                 f"(ID {old['id']}, {old.get('invoice_date')}, total {float(old.get('total') or 0):,.2f} {old.get('currency') or ''})"
                 + (f" and {len(found) - 1} more" if len(found) > 1 else "") + ".\n\nSave it again anyway?")
         if not self.confirm_duplicate(text): raise RuntimeError(f"Not saved: invoice {invoice.get('invoice_number')} of this supplier / customer is already saved.")
+        return True  # the user chose to save it again
     def update_invoice(self, invoice_id, invoice): return self.request("PUT", f"/api/invoices/{invoice_id}", {"invoice": invoice})
     def invoice_duplicates(self, items): return self.request("POST","/api/invoices/duplicates",{"items":items})["items"]
     def create_missing_invoice_payments(self): return self.request("POST","/api/invoices/payment-entries",{})

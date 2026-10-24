@@ -71,8 +71,11 @@ class VatChildAccountsCharacterizationTest(unittest.TestCase):
                 self.assertEqual(
                     states,
                     [
-                        ("current types", "asset", Decimal("-11.0")),
-                        ("after 4427-only liability change", "asset", Decimal("-11.0")),
+                        # 2.9.133 (RPT-BS-001 / F-01): output-VAT accounts are seeded as liability, so the
+                        # sub-account is a liability in every state. The pre-2.9.133 pinned values were
+                        # asset / asset / liability; the signed balance (-11.0) is unchanged.
+                        ("current types", "liability", Decimal("-11.0")),
+                        ("after 4427-only liability change", "liability", Decimal("-11.0")),
                         ("after 4427 and descendants liability change", "liability", Decimal("-11.0")),
                     ],
                 )

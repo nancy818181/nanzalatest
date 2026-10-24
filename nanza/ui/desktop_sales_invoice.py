@@ -58,8 +58,8 @@ def _responsive_invoice_details(form, fields, dimensions):
 class SalesInvoiceMixin:
     def build_sales_invoice(self):
         self.sales_items=[]; self.sales_edit_id=None
-        header=tk.LabelFrame(self.sales_tab,text="Sales Invoice",bg=LIGHT,padx=6,pady=2)
-        header.pack(fill="x",padx=10,pady=(2,1))
+        import desktop_design as design  # 2.9.134: framed panel with a gold-marked title (same controls and bindings as before)
+        header_outer,header=design.panel(self.sales_tab,"Sales Invoice",pady=6); header_outer.pack(fill="x",padx=10,pady=(2,3))
         self.sales_no=tk.StringVar(); self.sales_date=tk.StringVar(value=self.fiscal_today())
         self.sales_party=tk.StringVar(); self.sales_kind=tk.StringVar(value="sales"); self.sales_currency=tk.StringVar(value="USD")
         self.sales_supplier_account=tk.StringVar(value="")
@@ -100,10 +100,10 @@ class SalesInvoiceMixin:
         doc_box=ttk.Combobox(form,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
         put(0,0,"Document",doc_box); doc_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_doc_type_changed())
         put(0,1,"Invoice No.",tk.Entry(form,textvariable=self.sales_no,width=18,font=("Segoe UI",10,"bold"),state="readonly",readonlybackground="white"),True)
-        self.sales_party_box=put(1,0,"Customer",ttk.Combobox(form,textvariable=self.sales_party,width=23))
+        self.sales_party_box=put(1,0,"Customer",ttk.Combobox(form,textvariable=self.sales_party,width=28))
         self.sales_party_box.bind("<KeyRelease>",self.search_sales_customers); self.sales_party_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_customer_chosen())
         self.sales_party_box.bind("<Return>",lambda _event:self.select_searched_sales_customer())
-        put(1,1,"Client Account",tk.Entry(form,textvariable=self.sales_supplier_account,width=12))
+        put(1,1,"Client Account",tk.Entry(form,textvariable=self.sales_supplier_account,width=16))
         put(2,0,"Currency",ttk.Combobox(form,textvariable=self.sales_currency,values=self.currency_codes,state="readonly",width=6))
         account_fields=[("Client Account",self.sales_supplier_account,self.sales_supplier_side),("VAT Account",self.sales_vat_account,self.sales_vat_side),
                 ("Revenue Account",self.sales_expense_account,self.sales_expense_side)]
@@ -133,7 +133,7 @@ class SalesInvoiceMixin:
                                                        and self.after_idle(self.refresh_sales_number)))
         put(5,1,"Amount Paid",tk.Entry(form,textvariable=self.sales_amount_paid,width=10))
         self.sales_cash_account=tk.StringVar()
-        put(6,0,"Paid into",self.account_search_box(form,self.sales_cash_account,12))
+        put(6,0,"Paid into",self.account_search_box(form,self.sales_cash_account,20))
         self.sales_treatment=tk.StringVar(value=TAXABLE_LABEL)
         treatment_box=put(6,1,"VAT Treatment",ttk.Combobox(form,textvariable=self.sales_treatment,values=list(SALE_TREATMENTS),state="readonly",width=19),True)
         treatment_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_treatment_changed())

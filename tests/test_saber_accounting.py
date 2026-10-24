@@ -41,9 +41,10 @@ class SaberAccountingTest(unittest.TestCase):
             ws.append(["A-100","01-09-2026","Supplier A",100,11,111])
             ws.append([None,None,None,None,None,None])
             ws.append([None,"02-09-2026","Supplier B",200,22,200])
-            ws.append(["A-100","01-09-2026","Supplier A",100,11,111]); wb.save(path)
+            # Keep the import set valid under the 2.9.134 duplicate-number guard.
+            ws.append(["A-101","01-09-2026","Supplier A",100,11,111]); wb.save(path)
             rows = read_invoices(path)
-            self.assertEqual([r["invoice_number"] for r in rows], ["A-100","4","A-100"])
+            self.assertEqual([r["invoice_number"] for r in rows], ["A-100","4","A-101"])
             db=Database(Path(folder)/"test.db"); db.initialize("secret")
             user=db.user_for_token(db.login("admin","secret")["token"])
             for row in rows: db.import_invoice(row,user["id"])
