@@ -649,7 +649,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             tab_nav.bind("<Configure>",size_navigation)
             nav_canvas.bind("<Configure>",size_navigation)
         ttk.Style(self).layout("Tabless.TNotebook.Tab",[])
-        notebook=ttk.Notebook(host,style="Tabless.TNotebook"); self.main_notebook=notebook
+        notebook=ttk.Notebook(host,style="Tabless.TNotebook"); notebook._saber_no_tabbar=True; self.main_notebook=notebook
         filter_bar=tk.Frame(host,bg=LIGHT); filter_bar.pack(fill="x",padx=28 if not side_menu else 14,pady=(6 if side_menu else 0,0))
         notebook.pack(fill="both",expand=True,padx=18 if not side_menu else 8,pady=(6,16 if not side_menu else 8))
         import arabic_ui
