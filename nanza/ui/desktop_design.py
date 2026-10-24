@@ -135,11 +135,13 @@ class _TabBar:
         self.canvas = tk.Canvas(self.bar, bg=LIGHT, height=36, highlightthickness=0, bd=0)
         self.inner = _Strip(self.canvas, bg=LIGHT)
         self.window = self.canvas.create_window(0, 0, window=self.inner, anchor="nw")
-        self.left.pack(side="left"); self.more.pack(side="right"); self.right.pack(side="right"); self.canvas.pack(side="left", fill="x", expand=True)
+        # Tabs wrap onto additional rows so every report stays readable on a small display.
+        # Keep the menu as a keyboard/mouse fallback; the horizontal arrows remain available
+        # to the existing callers but are hidden when the wrapped strip is active.
+        self.more.pack(side="right"); self.canvas.pack(side="left", fill="x", expand=True)
         # sit just above the notebook, in the same place in the layout
         info = notebook.pack_info(); self.bar.pack(before=notebook, fill="x", padx=info.get("padx", 0), pady=(4, 0))
-        self.canvas.bind("<Configure>", lambda _e: self.refresh_arrows())
-        self.inner.bind("<Configure>", lambda _e: self._resize())
+        self.canvas.bind("<Configure>", lambda _e: self._resize())
         notebook.bind("<<NotebookTabChanged>>", lambda _e: self.rebuild(), add="+")
         self.bar.bind("<Map>", lambda _e: self.rebuild(), add="+")
         self.signature = None
@@ -157,7 +159,27 @@ class _TabBar:
             pass
 
     def _resize(self):
-        self.canvas.configure(scrollregion=(0, 0, self.inner.winfo_reqwidth(), 34)); self.refresh_arrows()
+        """Lay every tab out in readable rows sized to the available window width."""
+        try:
+            width = max(1, self.canvas.winfo_width())
+            self.canvas.itemconfigure(self.window, width=width)
+            x = y = row_height = 0
+            gap_x, gap_y = 3, 2
+            for button in self.buttons.values():
+                needed = button.winfo_reqwidth() or 120
+                height = button.winfo_reqheight() or 32
+                if x and x + needed > width:
+                    y += row_height + gap_y; x = 0; row_height = 0
+                button.place(x=x, y=y)
+                x += needed + gap_x
+                row_height = max(row_height, height)
+            height = max(36, y + row_height + 2)
+            self.canvas.configure(height=height, scrollregion=(0, 0, width, height))
+            self.canvas.itemconfigure(self.window, width=width, height=height)
+            self.canvas.xview_moveto(0)
+            self.refresh_arrows()
+        except tk.TclError:
+            pass
 
     def rebuild(self):
         """Re-read the tabs (a tab may have been added, renamed - e.g. translated - hidden or shown)."""
@@ -172,7 +194,6 @@ class _TabBar:
                 text = self.nb.tab(tab, "text")
                 button = tk.Label(self.inner, text=text, padx=self.PAD[0], pady=self.PAD[1], cursor="arrow" if disabled else "hand2",
                                   bg="white" if active else "#EAF0F6", fg="#9AA8B6" if disabled else NAVY, font=(FONT, 9, "bold"))
-                button.pack(side="left", padx=(0, 2))
                 if not disabled:
                     button.bind("<Button-1>", lambda _e, t=tab: self.nb.select(t))
                     if not active:
@@ -192,15 +213,9 @@ class _TabBar:
         except tk.TclError: pass
 
     def reveal(self, button):
-        """Scroll so that the open tab is fully in view."""
+        """All tabs are laid out in visible rows; keep the active row in the viewport."""
         try:
-            total = max(1, self.inner.winfo_reqwidth()); view = self.canvas.winfo_width()
-            if total <= view: self.canvas.xview_moveto(0); return
-            left, right = button.winfo_x(), button.winfo_x() + button.winfo_reqwidth()
-            first = self.canvas.canvasx(0)
-            if left < first: self.canvas.xview_moveto(max(0, left - 20) / total)
-            elif right > first + view: self.canvas.xview_moveto(min(1.0, (right - view + 20) / total))
-            self.refresh_arrows()
+            self.canvas.xview_moveto(0); self.canvas.yview_moveto(0); self.refresh_arrows()
         except tk.TclError:
             pass
 

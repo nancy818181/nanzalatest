@@ -1182,12 +1182,12 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         import desktop_layout
         columns=desktop_layout.dashboard_columns(available)
         for index,r in enumerate(rows):
-            block=tk.Frame(holder,bg=LIGHT); block.grid(row=index,column=0,sticky="ew",pady=(4,10))
+            block=tk.Frame(holder,bg=LIGHT); block.grid(row=index,column=0,sticky="ew",pady=(2,4))
             tk.Label(block,text=r["currency"],bg=LIGHT,fg=NAVY,font=("Segoe UI",10,"bold"),anchor="w").grid(row=0,column=0,columnspan=columns,sticky="w",padx=4,pady=(0,5))
             for col,(key,title,colour) in enumerate(self.KPI_CARDS):
-                card=tk.Frame(block,bg="white",highlightthickness=1,highlightbackground="#D5DEE8"); card.grid(row=1+col//columns,column=col%columns,sticky="nsew",padx=4,pady=3)
+                card=tk.Frame(block,bg="white",highlightthickness=1,highlightbackground="#D5DEE8"); card.grid(row=1+col//columns,column=col%columns,sticky="nsew",padx=2,pady=2)
                 tk.Frame(card,bg=colour,height=4).pack(fill="x")
-                inner=tk.Frame(card,bg="white",padx=14,pady=10); inner.pack(fill="both",expand=True)
+                inner=tk.Frame(card,bg="white",padx=10,pady=7); inner.pack(fill="both",expand=True)
                 tk.Label(inner,text=title.upper(),bg="white",fg="#6B7A89",font=("Segoe UI",8,"bold"),anchor="w").pack(anchor="w")
                 number=float(r[key] or 0)
                 value=str(r[key]) if key=="overdue" else f'{number:,.2f}'

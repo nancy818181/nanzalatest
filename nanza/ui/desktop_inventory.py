@@ -97,14 +97,14 @@ class InventoryMixin:
         self.item_id = None; self.item_vars = {k: tk.StringVar() for k in ("sku", "name", "unit", "category", "subcategory", "brand", "supplier_name",
                 "location", "sales_price", "reorder_level", "barcode", "notes", "default_vat", "cost_account", "stock_account")}
         self.item_vars["unit"].set("unit"); self.item_vars["default_vat"].set(vat_rate_text(self)); self.item_active = tk.BooleanVar(value=True)
-        self.item_boxes = {}
+        self.item_boxes = {}; item_fields = []
         for index, (key, label, width) in enumerate((("sku", "Item Code (auto if blank)", 14), ("name", "Item Name", 24), ("unit", "Unit", 12), ("category", "Category", 16),
                                                      ("subcategory", "Subcategory", 16), ("brand", "Brand", 16), ("supplier_name", "Supplier", 22),
                                                              ("sales_price", "Sales Price", 11), ("default_vat", "Default VAT", 9), ("reorder_level",
                                                              "Reorder Level", 9),
                                                      ("location", "Location (shelf)", 12), ("barcode", "Barcode", 14), ("notes", "Notes", 24),
                                                      ("stock_account", "Stock Account", 26), ("cost_account", "Cost Account (linked)", 24))):
-            tk.Label(form, text=label, bg=LIGHT).grid(row=index // 3, column=(index % 3) * 2, sticky="w", padx=4, pady=2)
+            caption = tk.Label(form, text=label, bg=LIGHT)
             if key == "default_vat":
                 widget = ttk.Combobox(form, textvariable=self.item_vars[key], values=[vat_rate_text(self), "0%"], state="readonly", width=width); self.item_boxes[key] = widget
             elif key in ("unit", "category", "subcategory", "supplier_name", "brand"):
@@ -115,14 +115,14 @@ class InventoryMixin:
                 widget.bind("<<ComboboxSelected>>", lambda _e: self.item_stock_account_chosen(True)); widget.bind("<FocusOut>", lambda _e: self.item_stock_account_chosen(False), add="+")
             elif key == "cost_account": widget = self.account_search_box(form, self.item_vars[key], width)
             else: widget = tk.Entry(form, textvariable=self.item_vars[key], width=width)
-            widget.grid(row=index // 3, column=(index % 3) * 2 + 1, sticky="w", padx=4, pady=2)
-            if key == "brand": self.item_brand_widgets = (form.grid_slaves(row=index // 3, column=(index % 3) * 2)[0], widget)
-        self.item_link_label = tk.Label(form, text="", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=620); self.item_link_label.grid(row=5, column=0, columnspan=4, sticky="w", padx=4)
+            item_fields.append((caption, widget))
+            if key == "brand": self.item_brand_widgets = (caption, widget)
+        self.item_link_label = tk.Label(form, text="", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=620)
         self.item_cost_label = tk.Label(form, text="Cost price (average of purchases): -", bg=LIGHT, fg="#1a5fb4", cursor="hand2", font=("Segoe UI", 9, "bold",
-                "underline")); self.item_cost_label.grid(row=5, column=4, columnspan=2, sticky="w", padx=4)
+                "underline"))
         # The cost is a link: click it to open the item's Stock Card (each purchase / sale and the running average cost).
         self.item_cost_label.bind("<Button-1>", lambda _event: self.open_item_cost_link())
-        buttons = tk.Frame(form, bg=LIGHT); buttons.grid(row=6, column=0, columnspan=6, sticky="w", pady=(4, 0))
+        buttons = tk.Frame(form, bg=LIGHT)
         self.load_item_stock_accounts(); self.item_vars["stock_account"].set(self.item_stock_choice("37")); self.item_stock_account_chosen(False)
         # 2.9.106: which customs boxes of "Cost on Purchase" this item shares (all items always share "Customs - all items")
         self.item_customs = tk.StringVar(value="No customs")
@@ -133,6 +133,31 @@ class InventoryMixin:
         tk.Button(buttons, text="Save", command=self.save_item, bg=GOLD, fg=NAVY, border=0, padx=18, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
         self.action_button(buttons, "Stock Card", lambda: self.open_stock_card()).pack(side="left", padx=3)
         tk.Label(buttons, text="Quantity and cost come from the stock documents. Double-click an item to edit it.", bg=LIGHT, fg=MUTED).pack(side="left", padx=10)
+        layout_state = {"columns": None, "scheduled": False}
+        def arrange_item_fields(_event=None):
+            if layout_state["scheduled"]: return
+            layout_state["scheduled"] = True
+            def apply_layout():
+                layout_state["scheduled"] = False
+                if not form.winfo_exists(): return
+                width = max(1, form.winfo_width())
+                columns = 3 if width >= 1320 else 2 if width >= 820 else 1
+                if layout_state["columns"] != columns:
+                    layout_state["columns"] = columns
+                    for column in range(6): form.grid_columnconfigure(column, weight=0, uniform="")
+                    for index, (caption, widget) in enumerate(item_fields):
+                        row, group = divmod(index, columns); label_column = group * 2
+                        caption.grid(row=row, column=label_column, sticky="w", padx=(4, 6), pady=3)
+                        widget.grid(row=row, column=label_column + 1, sticky="ew", padx=(0, 10), pady=3)
+                        form.grid_columnconfigure(label_column + 1, weight=1)
+                info_row = (len(item_fields) + columns - 1) // columns
+                self.item_link_label.grid(row=info_row, column=0, columnspan=columns * 2, sticky="ew", padx=4, pady=(3, 1))
+                self.item_cost_label.grid(row=info_row + 1, column=0, columnspan=columns * 2, sticky="w", padx=4, pady=(1, 2))
+                buttons.grid(row=info_row + 2, column=0, columnspan=columns * 2, sticky="w", pady=(3, 0))
+                self.item_link_label.configure(wraplength=max(300, width - 28))
+            form.after_idle(apply_layout)
+        form.bind("<Configure>", arrange_item_fields, add="+")
+        arrange_item_fields()
         self.items_tree = self.table(page, [("sku", "Item Code", 95), ("name", "Item", 200), ("category", "Category", 95), ("subcategory", "Subcategory", 95),
                 ("brand", "Brand", 90), ("supplier", "Supplier", 120),
             ("unit", "Unit", 50), ("qty", "On Hand", 80), ("cost", "Cost Price (avg)", 100), ("value", "Stock Value", 100), ("price", "Sales Price", 85), ("status", "Status", 65)])
@@ -422,9 +447,9 @@ class InventoryMixin:
         ttk.Combobox(bar, textvariable=self.ir_method, values=["Company setting", "Weighted average", "FIFO"], state="readonly", width=15).pack(side="left", padx=4)
         item_row = tk.Frame(page, bg=LIGHT); self.ir_item_row = item_row
         tk.Label(item_row, text="Item From", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        self.ir_item_box = ttk.Combobox(item_row, textvariable=self.ir_item, width=29); self.ir_item_box.pack(side="left", padx=(4, 12))
+        self.ir_item_box = ttk.Combobox(item_row, textvariable=self.ir_item, width=44); self.ir_item_box.pack(side="left", padx=(4, 12))
         tk.Label(item_row, text="Item To", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        self.ir_item_to_box = ttk.Combobox(item_row, textvariable=self.ir_item_to, width=29); self.ir_item_to_box.pack(side="left", padx=(4, 8))
+        self.ir_item_to_box = ttk.Combobox(item_row, textvariable=self.ir_item_to, width=44); self.ir_item_to_box.pack(side="left", padx=(4, 8))
         for widget, variable in ((self.ir_item_box, self.ir_item), (self.ir_item_to_box, self.ir_item_to)):
             widget.bind("<KeyRelease>", lambda event, box=widget, var=variable: self.filter_report_items(event, box, var))
             widget.bind("<Return>", lambda event, box=widget, var=variable: self.select_report_item(event, box, var))
@@ -460,7 +485,7 @@ class InventoryMixin:
             ttk.Combobox(analysis_bar, textvariable=variable, values=values, state="readonly", width=12).pack(side="left", padx=(4, 10))
         self.action_button(analysis_bar, "3D Chart", self.show_inventory_3d_chart).pack(side="left", padx=4)
         tk.Label(analysis_bar, text="Choose any 3. Stock at To date; with Month, Project or Branch: net movement From / To.", bg=LIGHT, fg=MUTED).pack(side="left", padx=6)
-        flow_toolbars(bar2, analysis_bar)  # 2.9.59 (bar / bar3 hide filters by setting, they keep pack)
+        flow_toolbars(bar, bar2, bar3, analysis_bar)  # 2.9.59: long filter rows remain reachable at laptop widths
         self.inventory_report_selected()
         self.ir_viewer = self.report_viewer(page)
 
@@ -478,6 +503,7 @@ class InventoryMixin:
 
     def inventory_report_selected(self, _event=None):
         self.ir_item_row.pack(fill="x", padx=8, pady=(2, 0), before=self.ir_controls_row)
+        if not getattr(self.ir_item_row, "_saber_flow", False): flow_toolbars(self.ir_item_row)
         if hasattr(self, "ir_analysis_bar"):
             if self.ir_report.get() == "Inventory Analysis (3D)": self.ir_analysis_bar.pack(fill="x", padx=8, pady=(2, 0), before=self.ir_info)
             else: self.ir_analysis_bar.pack_forget()
