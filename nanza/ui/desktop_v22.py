@@ -190,7 +190,10 @@ class V22Mixin:
             if box is not None: box._f2 = (lambda b=box, k=kinds: self.party_picker(b, k))
         items = [(getattr(self, "sales_sheet", None), self.sales_item_f2), (getattr(self, "stock_sheet", None) and self.stock_sheet.tree, self.stock_item_lookup),
                  (getattr(self, "sio_sheet", None) and self.sio_sheet.tree, lambda: self.item_picker(self.sio_pick))]
-        if getattr(self, "purchase_form", None): items.append((self.purchase_form["items_sheet"].tree, self.purchase_item_lookup))
+        purchase_form = getattr(self, "purchase_form", None)
+        purchase_sheet = purchase_form.get("items_sheet") if isinstance(purchase_form, dict) else None
+        if purchase_sheet is not None:
+            items.append((purchase_sheet.tree, self.purchase_item_lookup))
         for widget, action in items:
             if widget is not None: widget._f2 = action
 

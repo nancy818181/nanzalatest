@@ -194,7 +194,6 @@ class PurchasesMixin:
         report_bar = tk.Frame(cost, bg=LIGHT); report_bar.pack(fill="x", pady=4)
         self.action_button(report_bar, "Cost breakdown PDF", lambda: self.landed_cost_report("pdf")).pack(side="left", padx=3)
         self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
-        from desktop_common import flow_toolbars
         f["pdf_label"].configure(wraplength=600,justify="left")
         flow_toolbars(r1,accounts_row,r3,r4,r5,find,wh,r2,summary,
                       settings,c2,payment,actions,attachments,report_bar)
