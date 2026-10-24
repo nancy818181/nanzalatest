@@ -94,6 +94,10 @@ class DesignBlocksTest(unittest.TestCase):
         from tkinter import ttk
         few = ttk.Notebook(tk.Frame(), titles=["a", "b"])
         self.assertIsNone(self.design.tab_bar(few))
+        main = ttk.Notebook(tk.Frame(), titles=[f"Page {i}" for i in range(12)])
+        main._saber_no_tabbar = True  # the left sidebar already navigates these top-level pages
+        self.assertIsNone(self.design.tab_bar(main))
+        self.assertFalse(hasattr(main, "_saber_tabbar"))
         many = ttk.Notebook(tk.Frame(), titles=[f"Tab {i}" for i in range(12)])
         bar = self.design.tab_bar(many)
         self.assertIsNotNone(bar); self.assertIs(self.design.tab_bar(many), bar)  # once only
