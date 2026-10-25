@@ -339,8 +339,8 @@ class PaymentsStore:
                     and db.execute("SELECT 1 FROM journal_lines WHERE entry_id=? LIMIT 1", (entry["id"],)).fetchone())
 
     def _payment_snapshot(self, db, row, entry):
-        lines = [dict(r) for r in db.execute("""SELECT a.code account,j.party_id,j.debit,j.credit,j.department_id,j.project_id
-            FROM journal_lines j JOIN accounts a ON a.id=j.account_id WHERE j.entry_id=? ORDER BY j.id""", (entry["id"],))] if entry else []
+        lines = [dict(r) for r in db.execute("""SELECT j.*,a.code account_code FROM journal_lines j
+            JOIN accounts a ON a.id=j.account_id WHERE j.entry_id=? ORDER BY j.id""", (entry["id"],))] if entry else []
         allocations = [dict(r) for r in db.execute("""SELECT a.invoice_id,i.invoice_number,a.amount FROM payment_allocations a
             LEFT JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=? ORDER BY a.id""", (int(row["id"]),))]
         return {"number": row["payment_number"], "kind": row["kind"], "date": row["payment_date"], "party_id": row["party_id"],
@@ -385,20 +385,23 @@ class PaymentsStore:
         if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=? LIMIT 1", (entry["id"],)).fetchone():
             raise ValueError(f"{row['payment_number']} has already been reversed")
         lines = [dict(r) for r in db.execute("SELECT * FROM journal_lines WHERE entry_id=? ORDER BY id", (entry["id"],))]
-        if any(line.get(k) not in (None, "") for line in lines for k in ("amount", "amount_lbp", "amount_usd", "revalue_amount")):
-            raise ValueError("This entry has currency amounts per line - reverse it with a journal voucher (needs accountant review)")
         number = f"REV-{row['payment_number']}"
         new = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at,
             posting_status,posted_at,posted_by,reversal_of) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
             (number, reversal_date, f"Reversal of {row['payment_number']}", "payment_reversal", int(row["id"]), entry["currency"],
              user_id, utcnow(), "posted", utcnow(), user_id, entry["id"])).lastrowid
         total_debit = total_credit = Decimal("0")
+        columns = [column["name"] for column in db.execute("PRAGMA table_info(journal_lines)")]
+        columns = [column for column in columns if column not in ("id", "entry_id")]
+        insert_columns = ["entry_id", *columns]
+        placeholders = ",".join("?" for _ in insert_columns)
+        insert_sql = f"INSERT INTO journal_lines({','.join(insert_columns)}) VALUES({placeholders})"
         for line in lines:
             debit, credit = Decimal(str(line["credit"] or 0)), Decimal(str(line["debit"] or 0))
             total_debit += debit; total_credit += credit
-            db.execute("""INSERT INTO journal_lines(entry_id,account_id,party_id,description,debit,credit,department_id,project_id,reference)
-                VALUES(?,?,?,?,?,?,?,?,?)""", (new, line["account_id"], line["party_id"], line["description"], str(debit), str(credit),
-                                              line["department_id"], line["project_id"], line["reference"]))
+            values = {column: line[column] for column in columns}
+            values["debit"], values["credit"] = str(debit), str(credit)
+            db.execute(insert_sql, (new, *(values[column] for column in columns)))
         if total_debit != total_credit: raise ValueError("Reversal does not balance - nothing was saved")
         return number
 
