@@ -196,6 +196,9 @@ msgstr "Accounts & Statements"
 msgid "Accounts and amounts"
 msgstr "Accounts and amounts"
 
+msgid "Accounts used by company"
+msgstr "Accounts used by company"
+
 msgid "Accounts without transactions"
 msgstr "Accounts without transactions"
 
@@ -3001,6 +3004,9 @@ msgstr "Journal Voucher"
 msgid "Journal Voucher deleted"
 msgstr "Journal Voucher deleted"
 
+msgid "Journal lines"
+msgstr "Journal lines"
+
 msgid "Journal vouchers"
 msgstr "Journal vouchers"
 
@@ -4563,6 +4569,9 @@ msgstr "Reference / client order"
 
 msgid "Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. 2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831."
 msgstr "Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. 2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831."
+
+msgid "References"
+msgstr "References"
 
 msgid "Refresh"
 msgstr "Refresh"

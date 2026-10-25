@@ -39,6 +39,8 @@ class PurchasesMixin:
         nested.add(expenses_outer, text="Expenses")
         self.build_purchases_page(purchases_outer,purchase_totals,purchase_costs); self.build_expenses_page(expenses)
         self.build_assets_page(assets_page); self.add_asset_category_selector(assets_page)
+        import desktop_design
+        desktop_design.tab_bar(nested,min_tabs=4)
         self.load_purchases(); self.load_expenses()
 
     # ---- purchases
@@ -93,12 +95,17 @@ class PurchasesMixin:
                 responsive["pending"]=False
                 if not metadata.winfo_exists(): return
                 width=max(1,metadata.winfo_width())
-                columns=3 if width>=900 else 2 if width>=570 else 1
+                columns=4 if width>=1100 else 2 if width>=570 else 1
                 if responsive["columns"]==columns: return
                 responsive["columns"]=columns
                 for index,cell in enumerate(purchase_fields):
-                    cell.grid(row=index//columns,column=index%columns,sticky="ew",padx=2,pady=1)
-                for column in range(3): metadata.grid_columnconfigure(column,weight=1 if column<columns else 0)
+                    if columns==2 and index>=4:
+                        # Put Currency, Type and Document together in the compact row.
+                        row,column=2,index-4
+                    else:
+                        row,column=index//columns,index%columns
+                    cell.grid(row=row,column=column,sticky="ew",padx=2,pady=1)
+                for column in range(4): metadata.grid_columnconfigure(column,weight=1 if (column<columns or (columns==2 and column<3)) else 0)
             metadata.after_idle(apply)
         metadata.bind("<Configure>",arrange_purchase_fields,add="+")
         arrange_purchase_fields()
@@ -136,7 +143,10 @@ class PurchasesMixin:
         percent_entry.bind("<KeyRelease>",lambda _e:self.purchase_discount_changed("percent"))
         amount_entry.bind("<KeyRelease>",lambda _e:self.purchase_discount_changed("amount"))
         f["discount_summary"] = tk.Label(summary,text="Total HT: 0.00",bg="#dfe6ee",fg=NAVY,font=("Segoe UI",9,"bold")); f["discount_summary"].pack(side="right",padx=8)
-        tax_options=tk.LabelFrame(fields,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3); tax_options.pack(fill="x",pady=(3,0))
+        # Keep the invoice header focused on supplier, account and payment details.
+        # The treatment/dimension controls are placed after the items table below,
+        # where they remain part of this same invoice workflow and scroll together.
+        tax_options=tk.LabelFrame(page,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3)
         dimensions=tk.Frame(tax_options,bg=LIGHT); dimensions.pack(fill="x")
         self.dimension_selectors(dimensions,f["department"],f["project"])
         treatment=tk.Frame(tax_options,bg=LIGHT); treatment.pack(fill="x",pady=(2,0))
@@ -163,6 +173,7 @@ class PurchasesMixin:
                     height=8)  # 2.9.87: VAT Yes / No per line; 2.9.94: 8 rows so the totals show on a laptop screen
         f["items_sheet"].tree.bind("<F2>", lambda _e: self.purchase_item_lookup())
         f["items_sheet"].tree.master.pack_configure(expand=True,fill="both")
+        tax_options.pack(fill="x",padx=8,pady=(2,3),after=items)
         r4 = tk.Frame(actions, bg=LIGHT); r4.pack(side="top", anchor="w", pady=(2, 0))
         r5 = tk.Frame(actions, bg=LIGHT); r5.pack(side="top", anchor="w", pady=(6, 0))  # 2.9.95: row 1 the invoice, row 2 the PDF
         f["pdf_label"] = tk.Label(r5, text="No PDF", bg=LIGHT, fg=MUTED)

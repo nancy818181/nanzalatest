@@ -11,8 +11,9 @@ class SettingsMixin:
         # Separate browsing from account creation; existing save, lookup and maintenance callbacks are retained.
         nested=ttk.Notebook(self.accounts_tab); nested.pack(fill="both",expand=True,padx=8,pady=6)
         self.accounts_notebook=nested
-        listing=tk.Frame(nested,bg=LIGHT); create=tk.Frame(nested,bg=LIGHT)
+        listing=tk.Frame(nested,bg=LIGHT); create=tk.Frame(nested,bg=LIGHT); used=tk.Frame(nested,bg=LIGHT)
         nested.add(listing,text="Chart of Accounts"); nested.add(create,text="Create Account")
+        nested.add(used,text=tr(self.language.get(),"Accounts used by company"))
         self.accounts_list_page=listing
         self.account_search=tk.StringVar()
         controls=tk.Frame(listing,bg=LIGHT); controls.pack(fill="x",padx=10,pady=(8,4))
@@ -31,6 +32,14 @@ class SettingsMixin:
         self.accounts_tree.bind("<Return>",lambda _event:self.edit_selected_account())
         self.accounts_tree.bind("<Delete>",lambda _event:self.delete_selected_accounts())
 
+        used_controls=tk.Frame(used,bg=LIGHT); used_controls.pack(fill="x",padx=10,pady=(8,4))
+        self.action_button(used_controls,tr(self.language.get(),"refresh"),self.load_used_accounts).pack(side="right")
+        self.account_usage_tree=self.table(used,[
+            ("code","Account",110),("name","Name",280),("type","Type",100),
+            ("lines",tr(self.language.get(),"Journal lines"),105),("references",tr(self.language.get(),"References"),260),
+            ("party","Customer / Supplier",220)])
+        flow_toolbars(used_controls)
+
         self.new_account_code=tk.StringVar(); self.new_account_name=tk.StringVar(); self.new_account_parent=tk.StringVar(); self.new_account_type=tk.StringVar(value="expense")
         form=tk.LabelFrame(create,text="New account",bg=LIGHT,padx=12,pady=10); form.pack(fill="x",padx=12,pady=10)
         form.grid_columnconfigure(1,weight=1)
@@ -46,6 +55,9 @@ class SettingsMixin:
         ttk.Combobox(form,textvariable=self.new_account_type,values=["asset","liability","equity","income","expense"],state="readonly",width=14).grid(row=3,column=1,sticky="w",padx=5,pady=5)
         self.action_button(form,"Create Account",self.save_new_account).grid(row=4,column=1,sticky="w",padx=5,pady=(8,3))
         self.load_accounts()
+        nested.bind("<<NotebookTabChanged>>",lambda _e:self.load_used_accounts() if nested.select()==str(used) else None,add="+")
+        import desktop_design
+        desktop_design.tab_bar(nested,min_tabs=3)
 
     def import_chart_from_excel(self):
         """2.9.116: add accounts (and their Arabic / French names) from an Excel file with the columns of this table."""
@@ -133,6 +145,22 @@ class SettingsMixin:
         self._account_rows=rows
         self._all_accounts={str(row["code"]):row["name_en"] for row in rows}
         self.filter_accounts()
+
+    def load_used_accounts(self):
+        """Show accounts with actual ledger lines or references in this company's records."""
+        try: rows=self.client.account_usage()
+        except Exception as exc: return messagebox.showerror("Chart of Accounts",str(exc))
+        self._used_account_rows=[row for row in rows if row.get("lines") or row.get("references") or row.get("party")]
+        self.populate_used_accounts()
+
+    def populate_used_accounts(self):
+        """Render the current account-usage snapshot; the shared table search filters all columns."""
+        rows=getattr(self,"_used_account_rows",())
+        self.account_usage_tree.delete(*self.account_usage_tree.get_children())
+        for row in rows:
+            references=", ".join(row.get("references") or ())
+            values=(row.get("code",""),row.get("name",""),row.get("type",""),row.get("lines",0),references,row.get("party") or "")
+            self.account_usage_tree.insert("","end",values=values)
 
     def filter_accounts(self):
         """Filter the loaded chart locally; typing in search does not issue another API request."""

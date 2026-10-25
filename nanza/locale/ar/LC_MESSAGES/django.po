@@ -196,6 +196,9 @@ msgstr "الحسابات والكشوف"
 msgid "Accounts and amounts"
 msgstr "الحسابات والمبالغ"
 
+msgid "Accounts used by company"
+msgstr "الحسابات المستخدمة من الشركة"
+
 msgid "Accounts without transactions"
 msgstr "حسابات بلا حركات"
 
@@ -3001,6 +3004,9 @@ msgstr "قيد يومية"
 msgid "Journal Voucher deleted"
 msgstr "حُذف قيد اليومية"
 
+msgid "Journal lines"
+msgstr "قيود دفتر اليومية"
+
 msgid "Journal vouchers"
 msgstr "سندات القيد"
 
@@ -4563,6 +4569,9 @@ msgstr "المرجع / طلبية الزبون"
 
 msgid "Reference amounts only. Load Lebanese Law to apply them to this company-year; edit the period table above to customize. 2024: Decrees 12599/12772 · 2025: Decree 422 / CNSS memo 793 · 2026: Decree 2923 / CNSS memo 831."
 msgstr "مبالغ مرجعية فقط. اضغط تحميل القانون اللبناني لتطبيقها على هذه الشركة والسنة؛ عدّل جدول الفترات أعلاه للتخصيص. 2024: المرسومان 12599/12772 · 2025: المرسوم 422 / مذكرة الضمان 793 · 2026: المرسوم 2923 / مذكرة الضمان 831."
+
+msgid "References"
+msgstr "المراجع"
 
 msgid "Refresh"
 msgstr "تحديث"

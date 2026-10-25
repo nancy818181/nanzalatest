@@ -79,15 +79,17 @@ class BalanceReportsMixin:
                                     ("2nd Column", "second_column", (("account", "Account Currency"),)+tuple((code,code) for code in self.currency_codes)+(("none", "None"),))):
             frame = tk.LabelFrame(row3, text=title, bg=LIGHT, padx=4); frame.pack(side="left", padx=(0, 6))
             ttk.Combobox(frame,textvariable=v[key],values=[value for value,_label in choices],state="readonly",width=12).pack(side="left",padx=4,pady=3)
-        actions = tk.Frame(row3, bg=LIGHT); actions.pack(side="right", padx=6)
+        # Column-format selectors stay together; report actions get a full-width
+        # compact row below the filters so they do not collapse into a vertical stack.
         state = {"vars": v, "flags": flags, "currencies": currencies, "statement": statement, "result": None}
         self.add_dimension_options(state, box)
         tk.Label(state["dimension_row"], text="Currencies", bg=LIGHT).pack(side="left", padx=(10, 0))
         for code, var in currencies.items(): tk.Checkbutton(state["dimension_row"], text=code, variable=var, bg=LIGHT).pack(side="left")
+        actions = tk.Frame(box, bg=LIGHT); actions.pack(fill="x", pady=(4, 0), padx=2)
         tk.Button(actions, text="Show", command=lambda: self.run_balance_report(state), bg=GOLD, fg=NAVY, border=0, padx=22, pady=7, font=("Segoe UI", 10, "bold")).pack(side="left", padx=3)
         for text, fmt in (("Print", "print"), ("Excel", "xlsx"), ("PDF", "pdf")):
             self.action_button(actions, text, lambda f=fmt: self.export_balance_report(state, f)).pack(side="left", padx=3)
-        flow_toolbars(row0, rows_box, row1, options, row3, actions, state["dimension_row"])
+        flow_toolbars(row0, rows_box, row1, options, row3, state["dimension_row"], actions)
         state["info"] = tk.Label(page, text="Choose the options and press Show. Each Show opens its own tab; double-click a line to open the transaction.", bg=LIGHT, fg=MUTED, anchor="w")
         state["info"].pack(fill="x", padx=12)
         state["notebook"] = notebook; state["options_page"] = options_page

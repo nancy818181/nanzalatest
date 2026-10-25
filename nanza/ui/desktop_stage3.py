@@ -610,6 +610,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         for kind, title in (("customer_receipt", "Add Customer Receipt"), ("supplier_payment", "Add Supplier Payment")):
             page = tk.Frame(nested, bg=LIGHT); nested.add(page, text=title); self.payment_forms[kind] = self.build_payment_form(page, kind)
         bank_page = tk.Frame(nested, bg=LIGHT); nested.add(bank_page, text="Bank Reconciliation"); self.build_bank_rec_page(bank_page)
+        import desktop_design
+        desktop_design.tab_bar(nested,min_tabs=3)
         self.load_transactions()
 
     def build_payment_form(self, page, kind):
@@ -620,8 +622,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         form["department"] = tk.StringVar(); form["project"] = tk.StringVar()
         import desktop_design as design
         outer, box = design.panel(page, "Customer Receipt (RV)" if kind == "customer_receipt" else "Supplier Payment (PV)",
-                                  "Money received from a customer" if kind == "customer_receipt" else "Money paid to a supplier")
-        outer.pack(fill="x", padx=8, pady=6)
+                                  "Money received from a customer" if kind == "customer_receipt" else "Money paid to a supplier",padx=10,pady=5)
+        outer.pack(fill="x", padx=8, pady=(3,4))
         # Group related receipt/payment fields into compact rows. The controls remain in
         # entry order so keyboard navigation and the existing callbacks stay intact.
         grid = tk.Frame(box, bg=LIGHT); grid.pack(fill="x")
@@ -631,11 +633,11 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         def put(row, column, label, widget, bold=False, note=None):
             if label:
                 tk.Label(grid, text=label, bg=LIGHT, fg=NAVY if bold else "#33475B", font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)
-                         ).grid(row=row, column=3 * column, sticky="w", padx=(0 if column == 0 else 12, 6), pady=2)
-            widget.grid(row=row, column=3 * column + 1, sticky="ew", padx=(0, 6), pady=2)
-            if note: tk.Label(grid, text=note, bg=LIGHT, fg=MUTED).grid(row=row, column=3 * column + 2, sticky="w", padx=(2, 0))
+                         ).grid(row=row, column=3 * column, sticky="w", padx=(0 if column == 0 else 12, 6), pady=1)
+            widget.grid(row=row, column=3 * column + 1, sticky="ew", padx=(0, 6), pady=1)
+            if note: tk.Label(grid, text=note, bg=LIGHT, fg=MUTED).grid(row=row, column=3 * column + 2, sticky="w", padx=(2, 0),pady=1)
             return widget
-        design.section_label(grid, "Document", 0, columns=9)
+        section=design.section_label(grid, "Document", 0, columns=9); section.grid_configure(pady=(3,1))
         put(1, 0, "Number", tk.Entry(grid, textvariable=v["number"], width=16, state="readonly", readonlybackground="white", font=("Segoe UI", 10, "bold")), True)
         put(1, 1, "Date", self.date_entry(grid, v["date"], 11))
         form["type"] = tk.StringVar(value="All")
@@ -647,37 +649,38 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         form["party_box"].bind("<FocusOut>", lambda _e: self.payment_party_chosen(form), add="+"); form["party_box"].bind("<Return>", lambda _e: self.payment_party_chosen(form), add="+")
         put(2, 1, "Currency", ttk.Combobox(grid, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=8))
         put(2, 2, "Amount", tk.Entry(grid, textvariable=v["amount"], width=15, font=("Segoe UI", 10, "bold")), True)
-        design.section_label(grid, "Payment", 3, columns=9)
+        section=design.section_label(grid, "Payment", 3, columns=9); section.grid_configure(pady=(3,1))
         put(4, 0, "Method", ttk.Combobox(grid, textvariable=v["method"], values=METHODS, state="readonly", width=14))
         form["cash_box"] = put(4, 1, "Cash / Bank Account", ttk.Combobox(grid, textvariable=v["cash_account"], width=25, state="readonly"))
         put(4, 2, "Ref. / Cheque", tk.Entry(grid, textvariable=v["reference"], width=16))
         put(5, 0, "Description", tk.Entry(grid, textvariable=v["description"], width=28))
         # 2.9.79: bank commission and exchange difference, each on the account chosen here (number - name)
-        design.section_label(grid, "Bank commission and exchange difference", 6, columns=9)
+        section=design.section_label(grid, "Bank commission and exchange difference", 6, columns=9); section.grid_configure(pady=(3,1))
         put(7, 0, "Bank Commission", tk.Entry(grid, textvariable=v["bank_commission"], width=13))
         put(7, 1, "Commission A/C", self.account_search_box(grid, v["commission_account"], 25))
         put(7, 2, "Exchange Difference (+ / -)", tk.Entry(grid, textvariable=v["exchange_difference"], width=13))
         put(8, 0, "Exchange Gain A/C", self.account_search_box(grid, v["exchange_gain_account"], 25))
         put(8, 1, "Exchange Loss A/C", self.account_search_box(grid, v["exchange_loss_account"], 25))
         form["preview"] = tk.Label(box, text="", bg="#eef3f8", fg=NAVY, anchor="w", justify="left", font=("Consolas", 9))
-        form["preview"].pack(fill="x", pady=(6, 0))
+        form["preview"].pack(fill="x", pady=(3, 0))
         self.reset_payment_accounts(form)
         for key in ("amount", "bank_commission", "exchange_difference", "cash_account", "commission_account", "exchange_gain_account", "exchange_loss_account", "party"):
             v[key].trace_add("write", lambda *_a, f=form: self.update_payment_preview(f))
-        row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(6, 0))
+        row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(3, 0))
         self.dimension_selectors(row3, form["department"], form["project"])
         form["balance"] = tk.Label(row3, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")); form["balance"].pack(side="left", padx=10)
         alloc = tk.LabelFrame(page, text="Allocation - which invoices this " + ("receipt settles" if kind == "customer_receipt" else "payment settles"), bg=LIGHT, padx=6, pady=2)
-        alloc.pack(fill="x", padx=8, pady=(0, 4))
+        alloc.pack(fill="x", padx=8, pady=(0, 3))
         bar = tk.Frame(alloc, bg=LIGHT); bar.pack(fill="x")
         self.action_button(bar, "Auto Allocate (oldest first)", lambda: self.auto_allocate(form)).pack(side="left", padx=(0, 4))
         self.action_button(bar, "Clear Allocation", lambda: self.clear_allocation(form)).pack(side="left", padx=4)
-        form["alloc_info"] = tk.Label(bar, text="Choose the customer / supplier to see the open invoices", bg=LIGHT, fg=MUTED); form["alloc_info"].pack(side="left", padx=8)
+        form["alloc_info"] = tk.Label(bar, text="Choose the customer / supplier to see the open invoices", bg=LIGHT, fg=MUTED,
+                                      font=("Segoe UI",9,"bold")); form["alloc_info"].pack(side="left", padx=8)
         flow_toolbars(bar)
         from desktop_brains import EditableSheet
         form["alloc_sheet"] = EditableSheet(self, alloc, [("line", "#", 35, "center"), ("number", "Document", 140, "w"), ("date", "Date", 90, "center"), ("type", "Type", 90, "w"),
             ("currency", "Cur.", 50, "center"), ("total", "Total", 110, "e"), ("open", "Open", 110, "e"), ("allocate", "Allocate", 110, "e")], ["allocate"],
-            lambda iid, key, text: self.allocation_changed(form, iid, text), height=4)
+            lambda iid, key, text: self.allocation_changed(form, iid, text), height=6)
         buttons = tk.Frame(box, bg=LIGHT); buttons.pack(fill="x", pady=(6, 0))
         self.action_button(buttons, "New", lambda: self.new_payment(form)).pack(side="left", padx=(0, 3))
         tk.Button(buttons, text="Save", command=lambda: self.save_payment(form), bg=GOLD, fg=NAVY, border=0, padx=18, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
