@@ -5,7 +5,15 @@ Non-admin cannot void; editing a posted one = reversal dated on the edit date + 
 import json
 from decimal import Decimal
 
-from tests.pytest_compat import pytest
+from contextlib import contextmanager
+
+
+@contextmanager
+def _raises(kind):
+    """Works with pytest and with plain unittest (the CI 'Tests' job has no pytest)."""
+    try: yield
+    except kind: return
+    raise AssertionError(f"{kind.__name__} was not raised")
 
 DAY = "10-01-2026"
 
@@ -37,7 +45,7 @@ def test_admin_void_keeps_record_and_entry_and_releases_allocation(synthetic_db)
     db = synthetic_db
     party, invoice_id, payment_id = _setup(db)
     before = _tb_totals(db)
-    with pytest.raises(ValueError):
+    with _raises(ValueError):
         db.delete_payment(payment_id, 1, reason="", role="admin")  # a reason is required
     result = db.delete_payment(payment_id, 1, reason="Bounced cheque", role="admin")
     assert result["voided"] == payment_id
@@ -46,7 +54,7 @@ def test_admin_void_keeps_record_and_entry_and_releases_allocation(synthetic_db)
     assert len(_entries(db, payment_id)) == 1  # the posted entry is NOT deleted
     assert _tb_totals(db) == before  # ledger unchanged (owner accepted)
     docs = {d["id"]: d for d in db.open_documents(party["id"])}
-    assert docs[invoice_id]["open_amount"] == pytest.approx(100.0)  # allocation released -> invoice open again
+    assert abs(docs[invoice_id]["open_amount"] - 100.0) < 0.005  # allocation released -> invoice open again
     statement = db.statement_of_account(party["id"]) if hasattr(db, "statement_of_account") else None
     if statement is not None:
         text = json.dumps(statement, default=str)
@@ -56,13 +64,13 @@ def test_admin_void_keeps_record_and_entry_and_releases_allocation(synthetic_db)
     details = json.loads(audit["details"])
     assert details["reason"] == "Bounced cheque" and details["journal_lines"] and details["allocations"][0]["invoice_id"] == invoice_id
     assert [r["payment_number"] for r in db.voided_payments_in_gl()][0] == row["payment_number"]
-    with pytest.raises(ValueError):
+    with _raises(ValueError):
         db.delete_payment(payment_id, 1, reason="again", role="admin")
 
 
 def test_non_admin_cannot_void_posted_payment(synthetic_db):
     _party, _invoice, payment_id = _setup(synthetic_db)
-    with pytest.raises(PermissionError):
+    with _raises(PermissionError):
         synthetic_db.delete_payment(payment_id, 1, reason="x", role="accountant")
     assert next(r for r in synthetic_db.list_payments() if r["id"] == payment_id)["status"] == "Active"
 
@@ -93,7 +101,7 @@ def test_closed_period_blocks_void(synthetic_db):
     with synthetic_db.connect() as c:
         c.execute("INSERT OR IGNORE INTO fiscal_years(year,status,opened_at) VALUES(2026,'closed','2026-01-01T00:00:00')")
         c.execute("UPDATE fiscal_years SET status='closed' WHERE year=2026")
-    with pytest.raises(ValueError):
+    with _raises(ValueError):
         synthetic_db.delete_payment(payment_id, 1, reason="late", role="admin")
     assert next(r for r in synthetic_db.list_payments() if r["id"] == payment_id)["status"] == "Active"
 
@@ -102,3 +110,37 @@ def test_migration_adds_void_columns_idempotently(synthetic_db):
     with synthetic_db.connect() as c:
         cols = {r[1] for r in c.execute("PRAGMA table_info(payments)")}
     assert {"voided_at", "voided_by", "void_reason", "reversal_entry_number", "replaced_by"} <= cols
+
+
+def test_books_lock_blocks_void_and_edit(synthetic_db):
+    party, _invoice, payment_id = _setup(synthetic_db)
+    with synthetic_db.connect() as c:
+        c.execute("INSERT INTO app_settings(key,value) VALUES('books_locked_until','2026-01-31') "
+                  "ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+    with _raises(ValueError):
+        synthetic_db.delete_payment(payment_id, 1, reason="locked", role="admin")
+    with _raises(ValueError):
+        synthetic_db.update_payment(payment_id, {"party_id": party["id"], "payment_date": DAY, "currency": "USD", "amount": "60.00"}, 1)
+    assert next(r for r in synthetic_db.list_payments() if r["id"] == payment_id)["status"] == "Active"
+
+
+# The CI "Tests" job runs unittest discovery: the same checks as a TestCase (a fresh synthetic company for each).
+import tempfile as _tempfile  # noqa: E402
+import unittest as _unittest  # noqa: E402
+from pathlib import Path as _Path  # noqa: E402
+
+
+class PaymentVoidRulesTest(_unittest.TestCase):
+    def _run(self, check):
+        from database import Database
+        with _tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            db = Database(_Path(folder) / "synthetic-company.db"); db.initialize("Synthetic-Only-Test-Password-2026")
+            try: check(db)
+            finally: db.release()
+
+    def test_admin_void(self): self._run(test_admin_void_keeps_record_and_entry_and_releases_allocation)
+    def test_non_admin_refused(self): self._run(test_non_admin_cannot_void_posted_payment)
+    def test_edit_reverses(self): self._run(test_edit_posted_payment_reverses_and_posts_new_number)
+    def test_closed_year(self): self._run(test_closed_period_blocks_void)
+    def test_books_lock(self): self._run(test_books_lock_blocks_void_and_edit)
+    def test_migration(self): self._run(test_migration_adds_void_columns_idempotently)
