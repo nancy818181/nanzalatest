@@ -28,7 +28,8 @@ class SplitTest(unittest.TestCase):
             party = db.save_party({"kind": "supplier", "name": "BFG"}, user)
             payment = db.add_payment({"kind": "supplier_payment", "payment_date": "15-03-2025", "amount": "100", "currency": "USD", "party_id": party["id"], "cash_account": "531"}, user)
             db.update_payment(payment, {"kind": "supplier_payment", "payment_date": "16-03-2025", "amount": "80", "currency": "USD", "party_id": party["id"], "cash_account": "531"}, user)
-            self.assertEqual([float(p["amount"]) for p in db.list_payments()], [80.0])
+            # 2.9.136 (F1): the posted original stays (Reversed); only the corrected one is active
+            self.assertEqual([float(p["amount"]) for p in db.list_payments() if p["status"] == "Active"], [80.0])
 
 
 class DatesTest(unittest.TestCase):

@@ -276,7 +276,7 @@ def test_saved_vat_quarter_payment_service_mutation_behavior(synthetic_db, kind,
         }, 1)
         assert new_id
     else:
-        assert synthetic_db.delete_payment(payment_id, 1)["deleted"] == payment_id
+        assert synthetic_db.delete_payment(payment_id, 1, reason="Synthetic test", role="admin")["voided"] == payment_id  # 2.9.136 (F1)
 
 
 @pytest.mark.parametrize("operation", ["edit", "cancel"])

@@ -62,3 +62,40 @@ class ErrorHandlingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DocumentedAssetsLinkTest(unittest.TestCase):
+    """2.9.136 (F3): AI_RULES.md tells Linux users to make the link `assets -> Assets`; a copy without git must not fail on
+    that one link, while any other link (or the same name pointing elsewhere) and cache files still fail."""
+
+    def _copy(self, folder):
+        import os
+        root = Path(folder)
+        (root / "Assets").mkdir(); (root / "Assets" / "logo.txt").write_text("x", encoding="utf-8")
+        (root / "main.py").write_text("x = 1\n", encoding="utf-8")
+        return root, os
+
+    def test_documented_link_allowed_others_rejected(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder, patch.object(release_check.subprocess, "run", side_effect=OSError("no git")):
+            root, os = self._copy(folder)
+            try: os.symlink(root / "Assets", root / "assets", target_is_directory=True)
+            except (OSError, NotImplementedError): self.skipTest("symbolic links are not available here")
+            paths = {path for path, _mode in release_check.tracked_files(root)}
+            self.assertNotIn("assets", paths); self.assertIn("Assets/logo.txt", paths)
+            os.symlink(root / "main.py", root / "other_link.py")
+            modes = dict(release_check.tracked_files(root))
+            self.assertEqual(modes.get("other_link.py"), "120000")
+            (root / "__pycache__").mkdir(); (root / "__pycache__" / "m.pyc").write_bytes(b"x")
+            self.assertIn("__pycache__/m.pyc", dict(release_check.tracked_files(root)))
+
+    def test_same_name_pointing_elsewhere_is_rejected(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder, patch.object(release_check.subprocess, "run", side_effect=OSError("no git")):
+            root, os = self._copy(folder)
+            (root / "elsewhere").mkdir()
+            try: os.symlink(root / "elsewhere", root / "assets", target_is_directory=True)
+            except (OSError, NotImplementedError): self.skipTest("symbolic links are not available here")
+            self.assertEqual(dict(release_check.tracked_files(root)).get("assets"), "120000")

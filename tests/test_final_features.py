@@ -514,11 +514,15 @@ class Stage3PaymentsPurchasesExpensesTest(unittest.TestCase):
         self.assertEqual(rows[receipt]["party_account"], self.client_party["account_number"])  # the customer's own account
         self.assertEqual(self.db.next_document_number("customer_receipt", "01-04-2025"), "RV-2025-000002")
         new_id = self.db.update_payment(receipt, {"party_id": self.client_party["id"], "payment_date": "10-03-2025", "currency": "USD", "amount": "150"}, self.user)
+        # 2.9.136 (F1, owner decision): editing a POSTED receipt reverses it and posts a NEW number; the original stays
         edited = next(r for r in self.db.list_payments() if r["id"] == new_id)
-        self.assertEqual((edited["payment_number"], edited["amount"]), ("RV-2025-000001", 150))
-        self.assertEqual(len([e for e in self.db.journal() if e["entry_number"] == "RV-2025-000001"]), 2)
-        self.db.delete_payment(payment, self.user)
-        self.assertFalse([e for e in self.db.journal() if e["entry_number"] == "PV-2025-000001"])
+        self.assertEqual((edited["payment_number"], edited["amount"]), ("RV-2025-000002", 150))
+        original = next(r for r in self.db.list_payments() if r["id"] == receipt)
+        self.assertEqual((original["status"], original["reversal_entry_number"]), ("Reversed", "REV-RV-2025-000001"))
+        # 2.9.136: an administrator VOIDS a posted payment (reason required); its entry stays in the journal
+        self.db.delete_payment(payment, self.user, reason="Synthetic test", role="admin")
+        self.assertTrue([e for e in self.db.journal() if e["entry_number"] == "PV-2025-000001"])
+        self.assertEqual(next(r for r in self.db.list_payments() if r["id"] == payment)["status"], "Void")
 
     def test_expense_edit_delete_keeps_attachments(self):
         expense = self.db.add_expense({"expense_date": "05-03-2025", "description": "Rent", "currency": "USD", "with_vat_subtotal": "500", "vat": "55"}, self.user)
