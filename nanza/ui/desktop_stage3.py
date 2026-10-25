@@ -908,14 +908,28 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         selected = form["tree"].selection()
         if len(selected) > 1:  # 2.9.69: several selected
             items = [(form["rows"][iid]["id"], form["rows"][iid].get("payment_number") or iid) for iid in selected if iid in form.get("rows", {})]
-            if not messagebox.askyesno("Payment & Receipt", f"Delete {len(items)} payments / receipts and their journal entries?"): return
-            bulk_action("Payment & Receipt", items, self.client.delete_payment)
+            if not messagebox.askyesno("Payment & Receipt", f"Void {len(items)} payments / receipts? Posted ones stay in the journal, marked Void."): return
+            reason = self._void_reason()
+            if reason is None: return
+            bulk_action("Payment & Receipt", items, lambda payment_id: self.client.delete_payment(payment_id, reason))
             self.load_transactions(); self.new_payment(form); self.load_journal(); self.load_trial(); return
         if not form["id"]: return messagebox.showwarning("Payment & Receipt", "Double-click a saved line to open it first")
-        if not messagebox.askyesno("Payment & Receipt", f"Delete {form['vars']['number'].get()} and its journal entry?"): return
-        try: self.client.delete_payment(form["id"])
+        if not messagebox.askyesno("Payment & Receipt", f"Void {form['vars']['number'].get()}? A posted one stays in the journal, marked Void "
+                                   "(administrator only). To correct it, edit it instead: it is reversed and a new number is posted."): return
+        reason = self._void_reason()
+        if reason is None: return
+        try: self.client.delete_payment(form["id"], reason)
         except Exception as exc: return messagebox.showerror("Payment & Receipt", str(exc))
         self.load_transactions(); self.new_payment(form); self.load_journal(); self.load_trial()
+
+    def _void_reason(self):
+        """2.9.136 (F1): the reason kept in the audit log when a posted receipt / payment is voided."""
+        from tkinter import simpledialog
+        reason = simpledialog.askstring("Payment & Receipt", "Reason for voiding (kept in the audit log):", parent=self)
+        if reason is None: return None
+        if not reason.strip():
+            messagebox.showwarning("Payment & Receipt", "Enter a reason"); return None
+        return reason.strip()
 
     def load_transactions(self):
         if hasattr(self, "payment_forms") and all(f["tree"].winfo_exists() for f in self.payment_forms.values()):
