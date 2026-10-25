@@ -2,6 +2,19 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.137 (posted invoices voided, exact report totals, certified reports)
+
+Details and validation: `docs/RELEASE_2.9.137.md`; owner decision: `docs/decisions/F1_invoice_void.md`.
+
+- **Invoices (F1, owner decision):** a posted sales / purchase invoice is never removed. An administrator *voids* it (reason required): the invoice, its number and its original entry stay, a linked reversing entry dated on the void date and the stock reversal are posted. Refused when its VAT return is saved, the period is closed or the books are locked. Drafts are deleted as before. Multi-select in the invoice list asks one reason.
+- **Reports keep void invoices consistent:** trial balance, financial statements, ledger reports, AI accountant and Books Health Check include the original and its reversal (they net to zero); VAT return / ledger, open documents, ageing and duplicate checks leave a void invoice out.
+- **Exact amounts (F4):** report totals are summed in Decimal (`DSUM_EXACT`), so very large LBP amounts keep their cents.
+- **Custom report builder (G3):** filters bound as parameters, totals equal the trial balance per account and currency, voided payments reconcile.
+- **Company / year isolation (F7):** HTTP tests prove a user of company A cannot read or write company B.
+- **Payment reversals** copy every multi-currency column of the original lines.
+- **Screens:** compact purchase and payment forms; the Purchases & Expenses page no longer fails to open (2.9.137 fix).
+- Schema: `invoices` gets `voided_at`, `voided_by`, `void_reason`, added on start; existing data is kept. No VAT, rounding or other posting rule changed.
+
 ## Version 2.9.136 (posted receipts / payments never deleted, screens that fit, Phase 1 checks)
 
 Details and validation: `docs/RELEASE_2.9.136.md`; owner decision: `docs/decisions/F1_payment_void.md`.
@@ -196,7 +209,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.135. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.137. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 
