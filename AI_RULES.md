@@ -13,7 +13,7 @@ Read this file first. Saber Accounting is used for real accounting data: nothing
 - Keep the folder name `Assets` (with its `fonts` and the logo) exactly as it is; the build and the Arabic PDFs need it.
 
 ## 3. Test before delivering
-Run all tests (on Linux create the link first: `ln -s Assets assets`):
+Run all tests (on Linux create the link first: `ln -s Assets assets`; the release check accepts only this exact link in a copy without git - never commit it):
 
     python -m unittest discover -p "test_*.py"
 
