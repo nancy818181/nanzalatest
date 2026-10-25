@@ -51,7 +51,7 @@ def _load_lines(db, options):
         conditions.append(f"{normalized_date}<=?"); parameters.append(iso_date(options["date_to"]))
     status = options.get("posting_status", "posted")
     # Cancelled invoices keep their original entry; the reversal entry cancels it out.
-    if status == "posted": conditions.append("(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL))")
+    if status == "posted": conditions.append("(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled','void') OR i.status IS NULL))")
     elif status == "review": conditions.append("(e.source_type='invoice' AND i.status='review')")
     def ids(single, many):  # 2.9.62: several branches / departments / projects can be ticked
         values = [int(v) for v in (options.get(many) or []) if str(v).strip().lstrip("-").isdigit()]

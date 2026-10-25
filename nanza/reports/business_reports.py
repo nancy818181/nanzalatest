@@ -44,9 +44,10 @@ def _documents(db, kind, start, end, options, lines=True):
     """The posted documents of a kind in the period; lines=False (totals only) does not read the invoice lines (2.9.120)."""
     statuses = ("posted", "review") if options.get("include_review") else ("posted",)
     only = str(options.get("only_currency") or "").upper()
+    marks = ",".join("?" for _ in statuses)
     with db.connect() as connection:
         invoices = [dict(r) for r in connection.execute("""SELECT i.*,p.name party_name,p.account_number,p.tax_number party_vat_number,p.mof_number party_mof_number FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
-            WHERE i.kind=? AND i.status<>'cancelled'""", (kind,))]
+            WHERE i.kind=? AND i.status IN (""" + marks + ")", (kind, *statuses))]
         items = {}
         for row in (connection.execute("SELECT x.* FROM invoice_items x JOIN invoices i ON i.id=x.invoice_id WHERE i.kind=? ORDER BY x.id", (kind,))
                     if lines else ()):  # 2.9.91: only this kind

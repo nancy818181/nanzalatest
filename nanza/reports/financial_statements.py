@@ -372,7 +372,7 @@ def load_period(db, start, end, basis):
         rows = [dict(r) for r in conn.execute("""SELECT j.*,a.code,a.name_en,a.name_fr,a.name_ar,e.entry_date,e.source_type,e.voucher_type,e.description entry_description,e.currency
           FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
           LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
-          WHERE (e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL)
+          WHERE (e.source_type!='invoice' OR i.status IN ('posted','cancelled','void') OR i.status IS NULL)
             AND COALESCE(e.posting_status,'posted')='posted'""")]  # 2.9.132 (H-01): posted entries only
     closing = defaultdict(lambda: ZERO); opening = defaultdict(lambda: ZERO); pnl = defaultdict(lambda: ZERO); before = defaultdict(lambda: ZERO)
     names = {}; names_all = {}; count = 0
