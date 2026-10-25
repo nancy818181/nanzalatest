@@ -2105,7 +2105,23 @@
     "Unsupported language": "Unsupported language",
     "Replace ALL Tax & NSSF periods with the configured Lebanese payroll rules from 01-01-2024?\n\n- Budget Law 2024 brackets and family deductions\n- Transport exempt 450,000 LBP/day, schooling 6M/year\n- Tax rounded up to 10,000 LBP from 25-11-2024\n- NSSF sickness & maternity ceiling: 45M -> 90M (04-2024) -> 120M (08-2025); family 12M -> 18M (07-2025) -> 28M (05-2026)\n- Family benefits: 600k/330k from 01-2024, 1.2M/660k from 07-2025, 2.1M/1.155M from 05-2026 (spouse/child)\n\nRates, employee eligibility, and any part-month minimum-wage treatment must be confirmed with CNSS / your accountant. These reports are preparation worksheets, not official filings. Posting accounts are kept. Already saved payroll is NOT recalculated.": "Replace ALL Tax & NSSF periods with the configured Lebanese payroll rules from 01-01-2024?\n\n- Budget Law 2024 brackets and family deductions\n- Transport exempt 450,000 LBP/day, schooling 6M/year\n- Tax rounded up to 10,000 LBP from 25-11-2024\n- NSSF sickness & maternity ceiling: 45M -> 90M (04-2024) -> 120M (08-2025); family 12M -> 18M (07-2025) -> 28M (05-2026)\n- Family benefits: 600k/330k from 01-2024, 1.2M/660k from 07-2025, 2.1M/1.155M from 05-2026 (spouse/child)\n\nRates, employee eligibility, and any part-month minimum-wage treatment must be confirmed with CNSS / your accountant. These reports are preparation worksheets, not official filings. Posting accounts are kept. Already saved payroll is NOT recalculated.",
     "Create the payment entry (Dr cash or bank / Cr customer, or Dr supplier / Cr cash or bank) for every invoice marked as paid that does not have one yet?\n\nCash goes to 531 and other methods to 512, unless an account was chosen on the invoice (Edit Selected > Cash / Bank Account).": "Create the payment entry (Dr cash or bank / Cr customer, or Dr supplier / Cr cash or bank) for every invoice marked as paid that does not have one yet?\n\nCash goes to 531 and other methods to 512, unless an account was chosen on the invoice (Edit Selected > Cash / Bank Account).",
-    "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept.": "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept."
+    "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept.": "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept.",
+    "Custom reports": "Custom reports",
+    "All products": "All products",
+    "Report type": "Report type",
+    "Reporting currencies": "Reporting currencies",
+    "Exact 9-digit accounts": "Exact 9-digit accounts",
+    "Select account": "Select account",
+    "Add account": "Add account",
+    "Select an account from the list": "Select an account from the list",
+    "Dimensions": "Dimensions",
+    "Drag a filter heading to reorder it; type to search choices": "Drag a filter heading to reorder it; type to search choices",
+    "Export all matching results — Ctrl+E": "Export all matching results — Ctrl+E",
+    "Export all matching results to PDF": "Export all matching results to PDF",
+    "Save template": "Save template",
+    "Save these filters as a reusable template": "Save these filters as a reusable template",
+    "Excel": "Excel",
+    "PDF": "PDF"
   },
   "ar": {
     "Handwritten invoices (experimental, offline)": "فواتير خط اليد (تجريبي، دون إنترنت)",
@@ -4213,6 +4229,22 @@
     "Unsupported language": "اللغة غير مدعومة",
     "Replace ALL Tax & NSSF periods with the configured Lebanese payroll rules from 01-01-2024?\n\n- Budget Law 2024 brackets and family deductions\n- Transport exempt 450,000 LBP/day, schooling 6M/year\n- Tax rounded up to 10,000 LBP from 25-11-2024\n- NSSF sickness & maternity ceiling: 45M -> 90M (04-2024) -> 120M (08-2025); family 12M -> 18M (07-2025) -> 28M (05-2026)\n- Family benefits: 600k/330k from 01-2024, 1.2M/660k from 07-2025, 2.1M/1.155M from 05-2026 (spouse/child)\n\nRates, employee eligibility, and any part-month minimum-wage treatment must be confirmed with CNSS / your accountant. These reports are preparation worksheets, not official filings. Posting accounts are kept. Already saved payroll is NOT recalculated.": "هل تريد استبدال جميع فترات الضريبة والضمان بالقواعد اللبنانية المضبوطة من 01-01-2024؟\n\n- شرائح وتنزيلات الأسرة وفق موازنة 2024\n- النقل المعفى 450,000 ل.ل./يوم، والتعليم 6M/سنة\n- تقريب الضريبة إلى الأعلى لأقرب 10,000 ل.ل. من 25-11-2024\n- سقف المرض والأمومة: 45M -> 90M (04-2024) -> 120M (08-2025)؛ العائلي 12M -> 18M (07-2025) -> 28M (05-2026)\n- التعويضات العائلية: 600k/330k من 01-2024، و1.2M/660k من 07-2025، و2.1M/1.155M من 05-2026 (الزوج/الطفل)\n\nيجب تأكيد النسب وأهلية الموظف ومعالجة الحد الأدنى للأجر للشهر الجزئي مع الضمان / محاسبك. هذه التقارير أوراق تحضير وليست تصريحات رسمية. تُحفظ حسابات الترحيل. ولا تُعاد حسابات الرواتب المحفوظة.",
     "Create the payment entry (Dr cash or bank / Cr customer, or Dr supplier / Cr cash or bank) for every invoice marked as paid that does not have one yet?\n\nCash goes to 531 and other methods to 512, unless an account was chosen on the invoice (Edit Selected > Cash / Bank Account).": "هل تريد إنشاء قيد الدفع (مدين صندوق أو مصرف / دائن عميل، أو مدين مورد / دائن صندوق أو مصرف) لكل فاتورة معلّمة كمدفوعة ولا يوجد لها قيد؟\n\nيُسجّل النقد في 531 والطرق الأخرى في 512، إلا إذا اختير حساب في الفاتورة (تعديل المحدد > حساب الصندوق / المصرف).",
-    "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept.": "هل تريد استعادة الأسعار اليومية لجميع عملات الإعدادات، من 01-01-2024 حتى اليوم؟\n\nتأتي أسعار EUR وGBP وCHF وCAD ... من البنك المركزي الأوروبي (يتطلب الإنترنت)؛ وتستخدم AED وSAR وQAR وBHD وOMR وJOD أسعار ربطها الثابتة بالدولار الأميركي؛ ويبقى LBP عند 89,500. تُحفظ الأسعار التي أدخلتها يدوياً."
+    "Restore the daily rates of ALL the currencies of Settings, from 01-01-2024 until today?\n\nEUR, GBP, CHF, CAD ... come from the European Central Bank (internet needed); AED, SAR, QAR, BHD, OMR and JOD use their fixed US dollar rate; LBP stays at 89,500. Rates you typed yourself are kept.": "هل تريد استعادة الأسعار اليومية لجميع عملات الإعدادات، من 01-01-2024 حتى اليوم؟\n\nتأتي أسعار EUR وGBP وCHF وCAD ... من البنك المركزي الأوروبي (يتطلب الإنترنت)؛ وتستخدم AED وSAR وQAR وBHD وOMR وJOD أسعار ربطها الثابتة بالدولار الأميركي؛ ويبقى LBP عند 89,500. تُحفظ الأسعار التي أدخلتها يدوياً.",
+    "Custom reports": "تقارير مخصصة",
+    "All products": "كل الأصناف",
+    "Report type": "نوع التقرير",
+    "Reporting currencies": "عملات التقرير",
+    "Exact 9-digit accounts": "رموز الحسابات الدقيقة من 9 أرقام",
+    "Select account": "اختر حساباً لإضافته",
+    "Add account": "إضافة حساب",
+    "Select an account from the list": "اختر حساباً من القائمة",
+    "Dimensions": "الأبعاد",
+    "Drag a filter heading to reorder it; type to search choices": "اسحب عنوان المرشح لإعادة ترتيبه؛ اكتب للبحث في الخيارات",
+    "Export all matching results — Ctrl+E": "تصدير كل النتائج المطابقة — Ctrl+E",
+    "Export all matching results to PDF": "تصدير كل النتائج المطابقة إلى PDF",
+    "Save template": "حفظ القالب",
+    "Save these filters as a reusable template": "حفظ هذه الفلاتر كقالب لإعادة استخدامها",
+    "Excel": "Excel",
+    "PDF": "PDF"
   }
 }

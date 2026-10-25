@@ -51,33 +51,75 @@ class PurchasesMixin:
         f["discount_percent"] = tk.StringVar(value="0"); f["discount_amount"] = tk.StringVar(value="0"); f["discount_mode"] = "percent"
         f["doc"] = tk.StringVar(value="Invoice")  # 2.9.54: Invoice / Return (goods back to the supplier) / Debit Note / Credit Note
         import desktop_design as design  # 2.9.134: a framed panel with a gold-marked title instead of the plain group box
-        box_outer, box = design.panel(page, "Purchase Invoice", pady=6); box_outer.pack(fill="x", padx=8, pady=(2, 3))
-        # 2.9.94: the buttons sit under the fields (on the right they were pushed off a laptop screen: Save could not be seen)
+        box_outer, box = design.panel(page, pady=5); box_outer.pack(fill="x", padx=8, pady=(2, 3))
+        # Title and lookup/import actions share one wrapping row to reduce the repeated heading space.
+        heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 3))
+        tk.Label(heading, text="Purchase Invoice", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 8))
+        find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", fill="x", expand=True)
+        f["find"] = tk.StringVar()
+        tk.Label(find, text="Find purchase", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
+        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=36); f["find_box"].pack(side="left", padx=5)
+        f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_found()); f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_purchases())
+        f["find_box"].bind("<Return>", lambda _e: self.purchase_found())
+        self.action_button(find, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(5, 3))
+        self.action_button(find, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
+        from desktop_common import flow_toolbar
+        flow_toolbar(find)
+        # The existing controls and callbacks stay in the same order below.
         actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x", pady=(4, 2))
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
-        r1 = tk.Frame(fields, bg=LIGHT); r1.pack(fill="x")
-        tk.Label(r1, text="Supplier", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        f["supplier_box"] = ttk.Combobox(r1, textvariable=v["supplier"], width=27); f["supplier_box"].pack(side="left", padx=(4, 8))
+        metadata = tk.Frame(fields, bg=LIGHT); metadata.pack(fill="x")
+        purchase_fields=[]
+        def field(label, make_widget):
+            cell=tk.Frame(metadata,bg=LIGHT)
+            caption=tk.Label(cell,text=label,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")); caption.pack(anchor="w",padx=3)
+            widget=make_widget(cell); widget.pack(fill="x",expand=True,padx=3,pady=(1,2))
+            purchase_fields.append(cell)
+            return widget
+        f["supplier_box"] = field("Supplier",lambda parent:ttk.Combobox(parent,textvariable=v["supplier"],width=30))
         f["supplier_box"].bind("<KeyRelease>", lambda _e: self.filter_suppliers()); f["supplier_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_supplier_chosen())
-        tk.Label(r1, text="Supplier Invoice No.", bg=LIGHT).pack(side="left"); tk.Entry(r1, textvariable=v["number"], width=13).pack(side="left", padx=(4, 8))
-        tk.Label(r1, text="Date", bg=LIGHT).pack(side="left"); self.date_entry(r1, v["date"], 10).pack(side="left", padx=(4, 8))
-        tk.Label(r1, text="Due", bg=LIGHT).pack(side="left"); self.date_entry(r1, v["due"], 10).pack(side="left", padx=(4, 8))
-        tk.Label(r1, text="Currency", bg=LIGHT).pack(side="left")
-        ttk.Combobox(r1, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=6).pack(side="left", padx=(4, 8))
-        tk.Label(r1, text="Type", bg=LIGHT).pack(side="left")
-        ttk.Combobox(r1, textvariable=v["type"], values=["Purchases", "Assets"], state="readonly", width=9).pack(side="left", padx=(4, 8))
-        tk.Label(r1, text="Document", bg=LIGHT).pack(side="left")
-        doc_box = ttk.Combobox(r1, textvariable=f["doc"], values=list(PURCHASE_DOCUMENTS), state="readonly", width=11); doc_box.pack(side="left", padx=4)
-        doc_box.bind("<<ComboboxSelected>>", lambda _e: self.purchase_doc_changed())
-        accounts_row = tk.Frame(fields, bg=LIGHT); accounts_row.pack(fill="x", pady=(2, 0))
-        tk.Label(accounts_row, text="Cost / Asset A/C", bg=LIGHT).pack(side="left"); self.account_search_box(accounts_row, v["account"], 34).pack(side="left", padx=(4, 16))
-        tk.Label(accounts_row, text="VAT A/C", bg=LIGHT).pack(side="left"); self.account_search_box(accounts_row, v["vat_account"], 30).pack(side="left", padx=4)
-        # Keep payment fields beside the posting accounts; the toolbar wraps only when the window is narrow.
-        f["paid_by"] = tk.StringVar(value=PAID_BY[0]); f["paid_account"] = tk.StringVar()
-        tk.Label(accounts_row, text="Paid", bg=LIGHT).pack(side="left", padx=(14, 0))
-        ttk.Combobox(accounts_row, textvariable=f["paid_by"], values=PAID_BY, state="readonly", width=20).pack(side="left", padx=(4, 10))
-        tk.Label(accounts_row, text="from A/C", bg=LIGHT).pack(side="left"); self.account_search_box(accounts_row, f["paid_account"], 24).pack(side="left", padx=4)
-        tk.Label(accounts_row, text="(empty: 531 cash / 512 bank)", bg=LIGHT, fg=MUTED).pack(side="left")
+        field("Supplier Invoice No.",lambda parent:tk.Entry(parent,textvariable=v["number"],width=16))
+        field("Date",lambda parent:self.date_entry(parent,v["date"],11))
+        field("Due",lambda parent:self.date_entry(parent,v["due"],11))
+        field("Currency",lambda parent:ttk.Combobox(parent,textvariable=v["currency"],values=self.currency_codes,state="readonly",width=9))
+        field("Type",lambda parent:ttk.Combobox(parent,textvariable=v["type"],values=["Purchases","Assets"],state="readonly",width=12))
+        doc_box=field("Document",lambda parent:ttk.Combobox(parent,textvariable=f["doc"],values=list(PURCHASE_DOCUMENTS),state="readonly",width=14))
+        doc_box.bind("<<ComboboxSelected>>",lambda _e:self.purchase_doc_changed())
+        responsive={"columns":0,"pending":False}
+        def arrange_purchase_fields(_event=None):
+            if responsive["pending"]: return
+            responsive["pending"]=True
+            def apply():
+                responsive["pending"]=False
+                if not metadata.winfo_exists(): return
+                width=max(1,metadata.winfo_width())
+                columns=3 if width>=900 else 2 if width>=570 else 1
+                if responsive["columns"]==columns: return
+                responsive["columns"]=columns
+                for index,cell in enumerate(purchase_fields):
+                    cell.grid(row=index//columns,column=index%columns,sticky="ew",padx=2,pady=1)
+                for column in range(3): metadata.grid_columnconfigure(column,weight=1 if column<columns else 0)
+            metadata.after_idle(apply)
+        metadata.bind("<Configure>",arrange_purchase_fields,add="+")
+        arrange_purchase_fields()
+        # Keep account captions visible and let each lookup grow with its cell width.
+        accounts_row=tk.Frame(fields,bg=LIGHT); accounts_row.pack(fill="x",pady=(2,0))
+        account_cells=[]
+        for label,var,width in (("Cost / Asset A/C",v["account"],40),("VAT A/C",v["vat_account"],36)):
+            cell=tk.Frame(accounts_row,bg=LIGHT); tk.Label(cell,text=label,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(anchor="w",padx=3)
+            self.account_search_box(cell,var,width).pack(fill="x",expand=True,padx=3,pady=(1,2)); account_cells.append(cell)
+        accounts_row.grid_columnconfigure(0,weight=1,uniform="purchase-accounts"); accounts_row.grid_columnconfigure(1,weight=1,uniform="purchase-accounts")
+        for column,cell in enumerate(account_cells): cell.grid(row=0,column=column,sticky="ew",padx=2)
+        # Payment mode and account stay together on one horizontal line.
+        paid_row=tk.Frame(fields,bg=LIGHT); paid_row.pack(fill="x",pady=(2,0))
+        f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
+        tk.Label(paid_row,text="Paid",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).grid(row=0,column=0,sticky="w",padx=(3,4),pady=2)
+        ttk.Combobox(paid_row,textvariable=f["paid_by"],values=PAID_BY,state="readonly",width=22).grid(row=0,column=1,sticky="ew",padx=(0,16),pady=2)
+        tk.Label(paid_row,text="from A/C",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).grid(row=0,column=2,sticky="w",padx=(0,4),pady=2)
+        self.account_search_box(paid_row,f["paid_account"],36).grid(row=0,column=3,sticky="ew",padx=(0,4),pady=2)
+        tk.Label(paid_row,text="(empty = automatic cash / bank)",bg=LIGHT,fg=MUTED).grid(row=0,column=4,sticky="w",padx=4,pady=2)
+        paid_row.grid_columnconfigure(1,weight=1,uniform="purchase-paid")
+        paid_row.grid_columnconfigure(3,weight=2,uniform="purchase-paid")
         totals_box = tk.LabelFrame(totals_parent or page, text="Purchase totals", bg="#dfe6ee", padx=10, pady=4)
         r2 = tk.Frame(totals_box, bg="#dfe6ee"); r2.pack(fill="x", pady=(2, 4))
         for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11), ("VAT %", "rate", 5), ("VAT", "vat", 11)):
@@ -94,23 +136,16 @@ class PurchasesMixin:
         percent_entry.bind("<KeyRelease>",lambda _e:self.purchase_discount_changed("percent"))
         amount_entry.bind("<KeyRelease>",lambda _e:self.purchase_discount_changed("amount"))
         f["discount_summary"] = tk.Label(summary,text="Total HT: 0.00",bg="#dfe6ee",fg=NAVY,font=("Segoe UI",9,"bold")); f["discount_summary"].pack(side="right",padx=8)
-        r3 = tk.Frame(fields, bg=LIGHT); r3.pack(fill="x", pady=(2, 0))
-        self.dimension_selectors(r3, f["department"], f["project"])
-        tk.Label(r3, text="VAT use", bg=LIGHT).pack(side="left")
-        use_box = ttk.Combobox(r3, textvariable=f["use"], values=list(PURCHASE_USES), state="readonly", width=23)
-        use_box.pack(side="left", padx=(4, 6))
-        use_box.bind("<<ComboboxSelected>>", lambda _e: self.purchase_amounts_changed("use"))
-        tk.Label(r3, text="Mixed prorates input VAT by taxable / total use.", bg=LIGHT, fg=MUTED).pack(side="left", padx=4)
-        tk.Checkbutton(r3, text="Reverse charge", variable=f["reverse"], bg=LIGHT).pack(side="left")
-        f["not_deductible"] = tk.BooleanVar(value=False); place_tick(tax_tick(r3, f["not_deductible"], LIGHT), side="left", padx=(10, 0))
-        flow_toolbars(r1, accounts_row, r3)
-        find = tk.Frame(page, bg=LIGHT); find.pack(fill="x", padx=8, pady=(0, 2), before=box_outer); f["find"] = tk.StringVar()
-        tk.Label(find, text="Find purchase (No., supplier, date)", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=48); f["find_box"].pack(side="left", padx=6)
-        f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_found()); f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_purchases())
-        f["find_box"].bind("<Return>", lambda _e: self.purchase_found())
-        self.action_button(find, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(12, 3))
-        self.action_button(find, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
+        tax_options=tk.LabelFrame(fields,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3); tax_options.pack(fill="x",pady=(3,0))
+        dimensions=tk.Frame(tax_options,bg=LIGHT); dimensions.pack(fill="x")
+        self.dimension_selectors(dimensions,f["department"],f["project"])
+        treatment=tk.Frame(tax_options,bg=LIGHT); treatment.pack(fill="x",pady=(2,0))
+        tk.Label(treatment,text="VAT use",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left")
+        use_box=ttk.Combobox(treatment,textvariable=f["use"],values=list(PURCHASE_USES),state="readonly",width=23)
+        use_box.pack(side="left",padx=(4,6)); use_box.bind("<<ComboboxSelected>>",lambda _e:self.purchase_amounts_changed("use"))
+        tk.Label(treatment,text="Mixed prorates input VAT by taxable / total use.",bg=LIGHT,fg=MUTED).pack(side="left",padx=4)
+        tk.Checkbutton(treatment,text="Reverse charge",variable=f["reverse"],bg=LIGHT).pack(side="left")
+        f["not_deductible"]=tk.BooleanVar(value=False); place_tick(tax_tick(treatment,f["not_deductible"],LIGHT),side="left",padx=(10,0))
         items = tk.LabelFrame(page, text="Purchase Invoice Items · F2 to find an item · double-click a cell to edit", bg=LIGHT, padx=6, pady=2)
         items.pack(fill="both",expand=True,padx=8,pady=2,after=box_outer)
         if totals_parent is not None: totals_box.pack(fill="x", padx=8, pady=(2,4))
@@ -195,7 +230,7 @@ class PurchasesMixin:
         self.action_button(report_bar, "Cost breakdown PDF", lambda: self.landed_cost_report("pdf")).pack(side="left", padx=3)
         self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
         f["pdf_label"].configure(wraplength=600,justify="left")
-        flow_toolbars(r1,accounts_row,r3,r4,r5,find,wh,r2,summary,
+        flow_toolbars(heading,find,paid_row,treatment,r4,r5,wh,r2,summary,
                       settings,c2,payment,actions,attachments,report_bar)
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
         f["tree"].bind("<<TreeviewSelect>>", lambda _e: self.purchase_selected())

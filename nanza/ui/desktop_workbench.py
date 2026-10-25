@@ -9,7 +9,7 @@ from tkinter import ttk, filedialog, messagebox, simpledialog
 from datetime import date, datetime
 from decimal import Decimal
 from client import ApiClient
-from desktop_common import NAVY, GOLD, LIGHT, flow_toolbars
+from desktop_common import NAVY, GOLD, LIGHT, flow_toolbar, flow_toolbars
 from i18n import tr
 
 LOG = logging.getLogger("nanza.workbench")
@@ -397,12 +397,18 @@ class AgeingWindow(WorkbenchWindow):
 
 class CustomReportWindow(WorkbenchWindow):
     def __init__(self, app):
-        super().__init__(app, tr(app.language.get(), "custom_reports_title"))
+        self.language = app.language.get()
+        super().__init__(app, tr(self.language, "Custom reports"))
+        self.after_idle(self._maximize_window)
         self.pending = None
         self.page = 0
         self.result = None
         self.matches = {}
         self._applying = False
+        self._controls_resize_pending = False
+        screen_width = max(1, self.winfo_screenwidth())
+        screen_height = max(1, self.winfo_screenheight())
+        self.minsize(min(780, screen_width), min(500, screen_height))
         self.vars = {
             k: tk.StringVar()
             for k in ("date_from", "date_to", "customer", "product", "warehouse", "currency")
@@ -413,19 +419,37 @@ class CustomReportWindow(WorkbenchWindow):
         day = parse_user_date(today).date()
         self.vars["date_from"].set(day.replace(day=1).isoformat())
         self.vars["date_to"].set(day.isoformat())
-        self.filters_bar = tk.Frame(self, bg=LIGHT)
-        self.filters_bar.pack(fill="x", padx=8, pady=6)
+        self.controls_viewport = tk.Frame(self, bg=LIGHT)
+        self.controls_viewport.pack(side="top", fill="x", padx=8, pady=(6, 0))
+        self.controls_canvas = tk.Canvas(self.controls_viewport, bg=LIGHT, highlightthickness=0)
+        self.controls_scrollbar = ttk.Scrollbar(
+            self.controls_viewport, orient="vertical", command=self.controls_canvas.yview
+        )
+        self.controls_canvas.configure(yscrollcommand=self.controls_scrollbar.set)
+        self.controls_canvas.pack(side="left", fill="both", expand=True)
+        self.controls_scrollbar.pack(side="right", fill="y")
+        self.controls_inner = tk.Frame(self.controls_canvas, bg=LIGHT)
+        self.controls_window = self.controls_canvas.create_window(
+            (0, 0), window=self.controls_inner, anchor="nw"
+        )
+        self.controls_inner.bind("<Configure>", self._controls_content_changed, add="+")
+        self.controls_canvas.bind("<Configure>", self._controls_canvas_resized, add="+")
+        self.bind("<Configure>", self._schedule_controls_resize, add="+")
+        self.filters_bar = tk.Frame(self.controls_inner, bg=LIGHT)
+        self.filters_bar.pack(fill="x", padx=0, pady=(0, 4))
+        self.filters_bar.bind("<Configure>", self.arrange_filter_cards, add="+")
         self.cards = []
         self.boxes = {}
         self.dragging = None
         labels = {
-            "date_from": "From / من",
-            "date_to": "To / إلى",
-            "customer": "Customer / العميل",
-            "product": "Product / الصنف",
-            "warehouse": "Warehouse / المستودع",
-            "currency": "Currency / العملة",
+            "date_from": tr(self.language, "Date From"),
+            "date_to": tr(self.language, "Date To"),
+            "customer": tr(self.language, "Customer"),
+            "product": tr(self.language, "Product"),
+            "warehouse": tr(self.language, "Warehouse"),
+            "currency": tr(self.language, "Currency"),
         }
+        self.all_products_label = tr(self.language, "All products")
         for k, var in self.vars.items():
             card = tk.Frame(
                 self.filters_bar,
@@ -435,12 +459,12 @@ class CustomReportWindow(WorkbenchWindow):
                 highlightthickness=1,
                 highlightbackground="#dce2eb",
             )
-            card.grid(sticky="ew", padx=3, pady=3)
+            card.grid(row=0, column=len(self.cards), sticky="ew", padx=3)
             grip = tk.Label(card, text="⋮⋮ " + labels[k], bg="white", fg=NAVY, cursor="fleur")
             grip.pack(anchor="w")
             grip.bind("<ButtonPress-1>", lambda _e, c=card: setattr(self, "dragging", c))
             grip.bind("<ButtonRelease-1>", self.drop_filter)
-            tooltip(grip, "اسحب عنوان الفلتر لترتيبه؛ اكتب للبحث والقائمة تتحدّث تلقائياً")
+            tooltip(grip, tr(self.language, "Drag a filter heading to reorder it; type to search choices"))
             entry = (
                 ttk.Entry(card, textvariable=var, width=12)
                 if k.startswith("date_")
@@ -452,24 +476,25 @@ class CustomReportWindow(WorkbenchWindow):
             if not k.startswith("date_"):
                 entry.bind("<KeyRelease>", lambda _e, field=k: self.search_choices(field))
             var.trace_add("write", self.changed)
-        self.filters_bar.bind("<Configure>", self.arrange_filter_cards, add="+")
-        self.arrange_filter_cards()
         self.ledger_controls()
+        self.arrange_filter_cards()
         actions = tk.Frame(self, bg=LIGHT)
+        self.actions = actions
         actions.pack(fill="x", padx=8)
-        button(actions, "Excel", lambda: self.export("xlsx"), "تصدير كل النتائج المطابقة — Ctrl+E")
-        button(actions, "PDF", lambda: self.export("pdf"), "تصدير كل النتائج المطابقة إلى PDF")
-        button(actions, "Save template / حفظ", self.save_template, "حفظ الفلاتر باسم لإعادة استخدامها")
+        button(actions, tr(self.language, "Excel"), lambda: self.export("xlsx"), tr(self.language, "Export all matching results — Ctrl+E"))
+        button(actions, tr(self.language, "PDF"), lambda: self.export("pdf"), tr(self.language, "Export all matching results to PDF"))
+        button(actions, tr(self.language, "Save template"), self.save_template, tr(self.language, "Save these filters as a reusable template"))
         self.template = tk.StringVar()
         self.template_box = ttk.Combobox(actions, textvariable=self.template, state="readonly", width=24)
         self.template_box.pack(side="left", padx=4)
         self.template_box.bind("<<ComboboxSelected>>", self.apply_template)
         button(actions, "←", lambda: self.change_page(-1), "الصفحة السابقة")
         button(actions, "→", lambda: self.change_page(1), "الصفحة التالية")
-        flow_toolbars(actions)
+        flow_toolbar(actions)
         from nanza_delivery.custom_report_builder import HEADERS
 
         self.tree = table(self, HEADERS)
+        self._schedule_controls_resize()
         self.bind("<Control-e>", lambda _e: self.export("xlsx"))
         # Metadata owner is separate: preview requests must not cancel dropdown population.
         self.meta_owner = tk.Frame(self)
@@ -481,6 +506,7 @@ class CustomReportWindow(WorkbenchWindow):
                 "products": c.inventory_items(),
                 "warehouses": c.warehouses(),
                 "currencies": c.currencies(),
+                "accounts": c.accounts(),
                 "templates": c.workbench("templates")["items"],
             },
             self.metadata,
@@ -488,68 +514,125 @@ class CustomReportWindow(WorkbenchWindow):
         )
         self.changed()
 
+    def _maximize_window(self):
+        try:
+            self.state("zoomed")
+        except tk.TclError:
+            # Window managers without a zoomed state still get the full display bounds.
+            self.update_idletasks()
+            self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
+
+    def _controls_canvas_resized(self, event):
+        self.controls_canvas.itemconfigure(self.controls_window, width=event.width)
+        self._schedule_controls_resize()
+
+    def _controls_content_changed(self, _event=None):
+        self.controls_canvas.configure(scrollregion=self.controls_canvas.bbox("all"))
+        self._schedule_controls_resize()
+
+    def _schedule_controls_resize(self, _event=None):
+        if self._controls_resize_pending:
+            return
+        self._controls_resize_pending = True
+        self.after_idle(self._resize_controls_viewport)
+
+    def _resize_controls_viewport(self):
+        self._controls_resize_pending = False
+        if not self.winfo_exists():
+            return
+        self.update_idletasks()
+        content_height = self.controls_inner.winfo_reqheight()
+        available = (
+            self.winfo_height()
+            - self.status.winfo_height()
+            - self.actions.winfo_height()
+            - 156
+        )
+        # Keep a usable results area while allowing the filter/options panel to scroll.
+        viewport_height = min(content_height, max(120, available))
+        self.controls_canvas.configure(height=viewport_height)
+        self.controls_canvas.configure(scrollregion=self.controls_canvas.bbox("all"))
+
     def arrange_filter_cards(self, _event=None):
-        """Lay filters out in readable columns while keeping their saved drag order."""
-        width = self.filters_bar.winfo_width()
-        columns = 3 if width >= 900 or width <= 1 else 2 if width >= 620 else 1
-        for column in range(6):
-            self.filters_bar.grid_columnconfigure(column, weight=0, uniform="")
-        for column in range(columns):
-            self.filters_bar.grid_columnconfigure(column, weight=1, uniform="custom_report_filters")
-        for index, card in enumerate(self.cards):
-            card.grid(row=index // columns, column=index % columns, sticky="ew", padx=3, pady=3)
+        width=max(1,self.filters_bar.winfo_width())
+        columns=3 if width>=900 else 2 if width>=560 else 1
+        for column in range(6): self.filters_bar.grid_columnconfigure(column,weight=1 if column<columns else 0)
+        for index,card in enumerate(self.cards):
+            card.grid_configure(row=index//columns,column=index%columns,sticky="ew")
 
     def ledger_controls(self):
         from nanza_delivery.custom_report_builder import LEDGER_DIMENSIONS, LEDGER_MEASURES
-        panel = tk.Frame(self, bg=LIGHT)
-        panel.pack(fill="x", padx=8)
-        self.ledger_controls_panel = panel
-        self.report_kind = tk.StringVar(value="sales")
-        self.reporting_currencies = tk.StringVar(value="native")
-        self.report_accounts = tk.StringVar()
-        self._ledger_control_frames = []
-        for label, variable, choices in (
-            ("Layout / نوع التقرير", self.report_kind, ("sales", "pnl", "balance")),
-            ("Currencies / العملات (USD,LBP)", self.reporting_currencies, None),
-            ("9-digit accounts / الحسابات (comma separated)", self.report_accounts, None),
+        panel=tk.Frame(self.controls_inner,bg=LIGHT); panel.pack(fill="x")
+        self.ledger_panel=panel; self.ledger_cards=[]
+        self.report_kind=tk.StringVar(value="sales")
+        self.reporting_currencies=tk.StringVar(value="native")
+        self.report_accounts=tk.StringVar()
+        self.account_choice=tk.StringVar()
+        self.account_matches={}
+        specifications=(
+            (tr(self.language,"Report type"),self.report_kind,("sales","pnl","balance")),
+            (tr(self.language,"Reporting currencies"),self.reporting_currencies,None),
+            (tr(self.language,"Exact 9-digit accounts"),self.report_accounts,None),
+        )
+        for label,variable,choices in specifications:
+            frame=tk.Frame(panel,bg="white",padx=6,pady=4,highlightthickness=1,highlightbackground="#dce2eb")
+            self.ledger_cards.append(frame)
+            tk.Label(frame,text=label,bg="white",fg=NAVY).pack(anchor="w")
+            widget=ttk.Combobox(frame,textvariable=variable,values=choices,state="readonly",width=16) if choices else ttk.Entry(frame,textvariable=variable,width=24)
+            widget.pack(fill="x",expand=True)
+            variable.trace_add("write",self.changed)
+        account_picker=tk.Frame(panel,bg="white",padx=6,pady=4,highlightthickness=1,highlightbackground="#dce2eb")
+        self.ledger_cards.append(account_picker)
+        tk.Label(account_picker,text=tr(self.language,"Select account"),bg="white",fg=NAVY).pack(anchor="w")
+        self.account_box=ttk.Combobox(account_picker,textvariable=self.account_choice,width=30)
+        self.account_box.pack(fill="x",expand=True)
+        self.account_box.bind("<KeyRelease>",self.search_accounts)
+        self.account_box.bind("<<ComboboxSelected>>",lambda _e:self.add_selected_account())
+        self.account_box.bind("<Return>",lambda _e:(self.add_selected_account(),"break")[1])
+        self.add_account_button=button(account_picker,tr(self.language,"Add account"),self.add_selected_account)
+        self.layout_boxes={}
+        for field,values,label in (
+            ("group_by",LEDGER_DIMENSIONS,tr(self.language,"Dimensions")),
+            ("columns",LEDGER_MEASURES,tr(self.language,"Columns")),
         ):
-            frame = tk.Frame(panel, bg=LIGHT)
-            frame.grid(sticky="nw", padx=4, pady=3)
-            tk.Label(frame, text=label, bg=LIGHT).pack(anchor="w")
-            widget = ttk.Combobox(frame, textvariable=variable, values=choices, state="readonly", width=12) if choices else ttk.Entry(frame, textvariable=variable, width=22)
-            widget.pack(fill="x")
-            variable.trace_add("write", self.changed)
-            self._ledger_control_frames.append(frame)
-        self.layout_boxes = {}
-        for field, values, label in (
-            ("group_by", LEDGER_DIMENSIONS, "Dimensions: select + drag / الأبعاد"),
-            ("columns", LEDGER_MEASURES, "Columns: select + drag / الأعمدة"),
-        ):
-            frame = tk.Frame(panel, bg=LIGHT)
-            frame.grid(sticky="nw", padx=4, pady=3)
-            tk.Label(frame, text=label, bg=LIGHT).pack(anchor="w")
-            box = tk.Listbox(frame, height=3, width=24, selectmode="extended", exportselection=False)
-            box.insert("end", *values)
-            box.selection_set(0 if field == "group_by" else len(values) - 1)
-            box.pack()
-            box.bind("<<ListboxSelect>>", self.changed)
-            box.bind("<ButtonPress-1>", lambda e, b=box: setattr(b, "_drag_index", b.nearest(e.y)), add="+")
-            box.bind("<ButtonRelease-1>", lambda e, b=box: self.drop_layout(e, b))
-            self.layout_boxes[field] = box
-            self._ledger_control_frames.append(frame)
-        panel.bind("<Configure>", self.arrange_ledger_controls, add="+")
+            frame=tk.Frame(panel,bg="white",padx=6,pady=4,highlightthickness=1,highlightbackground="#dce2eb")
+            self.ledger_cards.append(frame)
+            tk.Label(frame,text=label,bg="white",fg=NAVY).pack(anchor="w")
+            box=tk.Listbox(frame,height=3,width=24,selectmode="extended",exportselection=False)
+            box.insert("end",*values)
+            box.selection_set(0 if field=="group_by" else len(values)-1)
+            box.pack(fill="x",expand=True)
+            box.bind("<<ListboxSelect>>",self.changed)
+            box.bind("<ButtonPress-1>",lambda e,b=box:setattr(b,"_drag_index",b.nearest(e.y)),add="+")
+            box.bind("<ButtonRelease-1>",lambda e,b=box:self.drop_layout(e,b))
+            self.layout_boxes[field]=box
+        panel.bind("<Configure>",self.arrange_ledger_controls,add="+")
         self.arrange_ledger_controls()
 
-    def arrange_ledger_controls(self, _event=None):
-        """Keep report type, currency, account and layout selectors on screen."""
-        width = self.ledger_controls_panel.winfo_width()
-        columns = 3 if width >= 1000 or width <= 1 else 2 if width >= 650 else 1
-        for column in range(5):
-            self.ledger_controls_panel.grid_columnconfigure(column, weight=0, uniform="")
-        for column in range(columns):
-            self.ledger_controls_panel.grid_columnconfigure(column, weight=1, uniform="ledger_controls")
-        for index, frame in enumerate(self._ledger_control_frames):
-            frame.grid(row=index // columns, column=index % columns, sticky="nw", padx=4, pady=3)
+    def arrange_ledger_controls(self,_event=None):
+        width=max(1,self.ledger_panel.winfo_width())
+        columns=5 if width>=1450 else 3 if width>=800 else 1
+        for column in range(5): self.ledger_panel.grid_columnconfigure(column,weight=1 if column<columns else 0)
+        for index,card in enumerate(self.ledger_cards):
+            card.grid_configure(row=index//columns,column=index%columns,sticky="nsew",padx=3,pady=3)
+
+    def search_accounts(self,event=None):
+        if event is not None and event.keysym in ("Up","Down","Return","Escape","Tab"): return
+        query=self.account_choice.get().strip().casefold()
+        self.account_box.configure(values=[label for label in self.account_matches if not query or query in label.casefold()])
+
+    def add_selected_account(self):
+        value=self.account_choice.get().strip()
+        code=self.account_matches.get(value)
+        if code is None:
+            code=value.split(" - ",1)[0].strip()
+            if code not in set(self.account_matches.values()):
+                self.status.configure(text=tr(self.language,"Select an account from the list"),fg="#a32032")
+                return
+        codes=[item.strip() for item in self.report_accounts.get().split(",") if item.strip()]
+        if code not in codes: codes.append(code)
+        self.report_accounts.set(",".join(codes)); self.account_choice.set("")
+        self.status.configure(text="")
 
     def drop_layout(self, event, box):
         source = getattr(box, "_drag_index", None)
@@ -592,16 +675,25 @@ class CustomReportWindow(WorkbenchWindow):
             "warehouse": {f"{r['code']} · {r['name']}": str(r["id"]) for r in data["warehouses"]},
             "currency": {r["code"]: r["code"] for r in data["currencies"]},
         }
+        self.account_matches={}
+        for account in data.get("accounts",[]):
+            code=str(account.get("code") or "")
+            if len(code)!=9 or not code.isdigit(): continue
+            name=account.get("name_ar") if self.language=="ar" else account.get("name_en")
+            self.account_matches[f"{code} · {name or ''}"]=code
+        self.account_box.configure(values=list(self.account_matches))
         for field, choices in self.matches.items():
-            self.boxes[field].configure(values=["", *choices])
+            extra=[self.all_products_label] if field=="product" else []
+            self.boxes[field].configure(values=["",*extra,*choices])
         self.templates = {r["name"]: r["filters"] for r in data["templates"]}
         self.template_box.configure(values=list(self.templates))
         self.changed()
 
     def search_choices(self, field):
         text = self.vars[field].get().casefold()
+        extra=[self.all_products_label] if field=="product" else []
         self.boxes[field].configure(
-            values=["", *(label for label in self.matches.get(field, {}) if text in label.casefold())]
+            values=["",*extra,*(label for label in self.matches.get(field,{}) if text in label.casefold())]
         )
 
     def filters(self):
@@ -617,14 +709,14 @@ class CustomReportWindow(WorkbenchWindow):
             layout = validate_definition(layout)
             return {**dates, "definition": json.dumps(layout, ensure_ascii=False)}
         filters = {}
-        for k, var in self.vars.items():
-            value = var.get().strip()
+        for k,var in self.vars.items():
+            value=var.get().strip()
+            if k=="product" and value==self.all_products_label: continue
             if value and k in self.matches:
                 if value not in self.matches[k]:
                     raise ValueError("Select a matching " + k + " / اختر قيمة من القائمة")
-                value = self.matches[k][value]
-            if value:
-                filters[k] = value
+                value=self.matches[k][value]
+            if value: filters[k]=value
         return filters
 
     def changed(self, *_):
@@ -728,9 +820,12 @@ class CustomReportWindow(WorkbenchWindow):
                 box.delete(0, "end")
                 box.insert("end", *values)
                 box.selection_set(0, len(selected) - 1)
-        for k, var in self.vars.items():
-            raw = str(filters.get(k, ""))
-            var.set(next((label for label, value in self.matches.get(k, {}).items() if value == raw), raw))
+        for k,var in self.vars.items():
+            raw=str(filters.get(k,""))
+            if k=="product" and not raw:
+                var.set(self.all_products_label)
+            else:
+                var.set(next((label for label,value in self.matches.get(k,{}).items() if value==raw),raw))
         self._applying = False
         self.changed()
 

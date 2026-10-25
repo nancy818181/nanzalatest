@@ -8,26 +8,43 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
 
 class SettingsMixin:
     def build_accounts(self):
-        controls=tk.Frame(self.accounts_tab,bg=LIGHT); controls.pack(fill="x",padx=10,pady=(10,0))
-        self.new_account_code=tk.StringVar(); self.new_account_name=tk.StringVar(); self.new_account_parent=tk.StringVar(); self.new_account_type=tk.StringVar(value="expense")
-        tk.Label(controls,text="Account (4-digit prefix = automatic):",bg=LIGHT,font=("Segoe UI",9,"bold"),fg=NAVY).pack(side="left",padx=(0,4))
-        self.new_account_code_entry=tk.Entry(controls,textvariable=self.new_account_code,width=11); self.new_account_code_entry.pack(side="left",padx=3)
-        self.new_account_code_entry.bind("<FocusOut>",self.preview_new_account_number); self.new_account_code_entry.bind("<Return>",self.preview_new_account_number)
-        tk.Entry(controls,textvariable=self.new_account_name,width=22).pack(side="left",padx=3)
-        tk.Entry(controls,textvariable=self.new_account_parent,width=9).pack(side="left",padx=3)
-        ttk.Combobox(controls,textvariable=self.new_account_type,values=["asset","liability","equity","income","expense"],state="readonly",width=9).pack(side="left",padx=3)
-        self.action_button(controls,"Create Account",self.save_new_account).pack(side="left",padx=5)
-        tk.Button(controls,text="Edit Selected Account",command=self.edit_selected_account,bg=GOLD,fg=NAVY,border=0,padx=12,pady=6,font=("Segoe UI",9,"bold")).pack(side="left",padx=5)
-        self.account_tool_buttons(controls)  # 2.9.66: delete (one or many), delete unused, move / transfer
-        if (self.current_user or {}).get("role")=="admin": self.action_button(controls,"Import from Excel",self.import_chart_from_excel).pack(side="left",padx=5)  # 2.9.116
+        # Separate browsing from account creation; existing save, lookup and maintenance callbacks are retained.
+        nested=ttk.Notebook(self.accounts_tab); nested.pack(fill="both",expand=True,padx=8,pady=6)
+        self.accounts_notebook=nested
+        listing=tk.Frame(nested,bg=LIGHT); create=tk.Frame(nested,bg=LIGHT)
+        nested.add(listing,text="Chart of Accounts"); nested.add(create,text="Create Account")
+        self.accounts_list_page=listing
+        self.account_search=tk.StringVar()
+        controls=tk.Frame(listing,bg=LIGHT); controls.pack(fill="x",padx=10,pady=(8,4))
+        tk.Label(controls,text="Search accounts",bg=LIGHT,fg=NAVY).pack(side="left",padx=(0,4))
+        search_box=tk.Entry(controls,textvariable=self.account_search,width=26)
+        search_box.pack(side="left",padx=(0,8)); search_box.bind("<KeyRelease>",lambda _e:self.filter_accounts())
+        tk.Button(controls,text="Edit Selected Account",command=self.edit_selected_account,bg=GOLD,fg=NAVY,border=0,padx=12,pady=6,font=("Segoe UI",9,"bold")).pack(side="left",padx=3)
+        self.account_tool_buttons(controls)
+        if (self.current_user or {}).get("role")=="admin": self.action_button(controls,"Import from Excel",self.import_chart_from_excel).pack(side="left",padx=3)
         self.action_button(controls,tr(self.language.get(),"refresh"),self.load_accounts).pack(side="right")
-        self.accounts_tree=self.table(self.accounts_tab,[
-            ("code","Account",100),("parent","Parent",80),("english","English",270),
-            ("french","French",270),("arabic","Arabic",270),("type","Type",90)])
+        flow_toolbars(controls)
+        self.accounts_tree=self.table(listing,[
+            ("code","Account",110),("parent","Parent",90),("english","English",270),
+            ("french","French",240),("arabic","Arabic",240),("type","Type",100)])
         self.accounts_tree.bind("<Double-1>",lambda _event:self.edit_selected_account())
         self.accounts_tree.bind("<Return>",lambda _event:self.edit_selected_account())
         self.accounts_tree.bind("<Delete>",lambda _event:self.delete_selected_accounts())
-        flow_toolbars(controls)
+
+        self.new_account_code=tk.StringVar(); self.new_account_name=tk.StringVar(); self.new_account_parent=tk.StringVar(); self.new_account_type=tk.StringVar(value="expense")
+        form=tk.LabelFrame(create,text="New account",bg=LIGHT,padx=12,pady=10); form.pack(fill="x",padx=12,pady=10)
+        form.grid_columnconfigure(1,weight=1)
+        self.new_account_code_entry=tk.Entry(form,textvariable=self.new_account_code,width=18)
+        self.new_account_code_entry.bind("<FocusOut>",self.preview_new_account_number); self.new_account_code_entry.bind("<Return>",self.preview_new_account_number)
+        tk.Label(form,text="9-digit Account Code (enter a 4-digit prefix to auto-generate)",bg=LIGHT,font=("Segoe UI",9,"bold"),fg=NAVY).grid(row=0,column=0,sticky="w",padx=5,pady=5)
+        self.new_account_code_entry.grid(row=0,column=1,sticky="w",padx=5,pady=5)
+        tk.Label(form,text="Account name",bg=LIGHT).grid(row=1,column=0,sticky="w",padx=5,pady=5)
+        tk.Entry(form,textvariable=self.new_account_name,width=42).grid(row=1,column=1,sticky="ew",padx=5,pady=5)
+        tk.Label(form,text="Parent account",bg=LIGHT).grid(row=2,column=0,sticky="w",padx=5,pady=5)
+        tk.Entry(form,textvariable=self.new_account_parent,width=18).grid(row=2,column=1,sticky="w",padx=5,pady=5)
+        tk.Label(form,text="Account type",bg=LIGHT).grid(row=3,column=0,sticky="w",padx=5,pady=5)
+        ttk.Combobox(form,textvariable=self.new_account_type,values=["asset","liability","equity","income","expense"],state="readonly",width=14).grid(row=3,column=1,sticky="w",padx=5,pady=5)
+        self.action_button(form,"Create Account",self.save_new_account).grid(row=4,column=1,sticky="w",padx=5,pady=(8,3))
         self.load_accounts()
 
     def import_chart_from_excel(self):
@@ -52,7 +69,12 @@ class SettingsMixin:
         except Exception as exc: return messagebox.showerror("Chart of Accounts",str(exc))
         self._account_cache=None
         if hasattr(self,"_all_accounts"): self._all_accounts[account["code"]]=account["name_en"]
-        self.new_account_code.set(""); self.new_account_name.set(""); self.new_account_parent.set(""); self.load_accounts()
+        self.new_account_code.set(""); self.new_account_name.set(""); self.new_account_parent.set("")
+        self.account_search.set(""); self.load_accounts()
+        self.accounts_notebook.select(self.accounts_list_page)
+        for iid in self.accounts_tree.get_children():
+            if str(self.accounts_tree.item(iid,"values")[0])==str(account["code"]):
+                self.accounts_tree.selection_set(iid); self.accounts_tree.see(iid); break
         messagebox.showinfo("Chart of Accounts",f'Account {account["code"]} created successfully')
 
     def preview_new_account_number(self,_event=None):
@@ -108,11 +130,20 @@ class SettingsMixin:
             rows=self.client.accounts()
         except Exception as exc:
             return messagebox.showerror("Error",str(exc))
+        self._account_rows=rows
         self._all_accounts={str(row["code"]):row["name_en"] for row in rows}
+        self.filter_accounts()
+
+    def filter_accounts(self):
+        """Filter the loaded chart locally; typing in search does not issue another API request."""
+        rows=getattr(self,"_account_rows",())
+        query=getattr(self,"account_search",None)
+        query=query.get().strip().casefold() if query is not None else ""
         self.accounts_tree.delete(*self.accounts_tree.get_children())
         for row in rows:
-            self.accounts_tree.insert("","end",values=(row["code"],row.get("parent_code") or "",
-                row["name_en"],row.get("name_fr") or "",row.get("name_ar") or "",row["type"]))
+            values=(row["code"],row.get("parent_code") or "",row["name_en"],row.get("name_fr") or "",row.get("name_ar") or "",row["type"])
+            if query and not any(query in str(value).casefold() for value in values): continue
+            self.accounts_tree.insert("","end",values=values)
 
     def build_settings(self):
         nested=ttk.Notebook(self.settings_tab); self.settings_notebook=nested; nested.pack(fill="both",expand=True,padx=10,pady=10)

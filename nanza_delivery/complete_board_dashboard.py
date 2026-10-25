@@ -839,14 +839,9 @@ def open_board(app):
             self.figure = None
             self.canvas = None
             self.title("NANZA | The Complete Board Dashboard")
-            scale = max(1.0, self._get_window_scaling())
-            # Leave room around the dashboard on ordinary laptop displays and account
-            # for Windows display scaling before CustomTkinter applies its geometry.
-            width = min(1180, int((self.winfo_screenwidth() - 80) / scale))
-            height = min(790, int((self.winfo_screenheight() - 120) / scale))
-            width = max(760, width); height = max(560, height)
-            self.geometry(f"{width}x{height}")
-            self.minsize(min(950, width), min(650, height))
+            # Start maximized, using the window manager's usable work area. The figure
+            # below already tracks the holder size, so it follows later resizes too.
+            self.after_idle(self._maximize_window)
             self.bar = ctk.CTkFrame(self, fg_color=BLACK, corner_radius=0, height=35)
             self.bar.pack(fill="x")
             initial_day = parse_user_date(app.fiscal_today()).date()
@@ -886,6 +881,13 @@ def open_board(app):
                 command=self.export,
             )
             self.pdf_button.pack(side="right", padx=4)
+            self.update_idletasks()
+            screen_width=max(1,self.winfo_screenwidth())
+            screen_height=max(1,self.winfo_screenheight())
+            self.minsize(
+                min(max(620,self.bar.winfo_reqwidth()),screen_width),
+                min(max(400,self.bar.winfo_reqheight()+300),screen_height),
+            )
             tooltip(self.refresh_button, "تحديث بيانات الشركة والسنة المختارتين؛ لا يتم ترحيل أي قيد")
             tooltip(
                 self.configure_button,
@@ -902,6 +904,16 @@ def open_board(app):
             self.bind("<Control-e>", lambda _e: self.export())
             self._scope_timer = self.after(300, self.check_scope)
             self.load()
+
+        def _maximize_window(self):
+            try:
+                self.state("zoomed")
+            except tk.TclError:
+                try:
+                    self.attributes("-zoomed", True)
+                except (tk.TclError, TypeError):
+                    self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
+            self.lift()
 
         def check_scope(self):
             if context_key(app) != self.scope:

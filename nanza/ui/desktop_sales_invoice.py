@@ -61,7 +61,7 @@ class SalesInvoiceMixin:
     def build_sales_invoice(self):
         self.sales_items=[]; self.sales_edit_id=None
         import desktop_design as design  # 2.9.134: framed panel with a gold-marked title (same controls and bindings as before)
-        header_outer,header=design.panel(self.sales_tab,"Sales Invoice",pady=6); header_outer.pack(fill="x",padx=10,pady=(2,3))
+        header_outer,header=design.panel(self.sales_tab,pady=5); header_outer.pack(fill="x",padx=10,pady=(2,3))
         self.sales_no=tk.StringVar(); self.sales_date=tk.StringVar(value=self.fiscal_today())
         self.sales_party=tk.StringVar(); self.sales_kind=tk.StringVar(value="sales"); self.sales_currency=tk.StringVar(value="USD")
         self.sales_supplier_account=tk.StringVar(value="")
@@ -73,9 +73,10 @@ class SalesInvoiceMixin:
         self.sales_due_date=tk.StringVar(); self.sales_payment_method=tk.StringVar(value="On Account (Not Cash)"); self.sales_amount_paid=tk.StringVar(value="0"); \
             self.sales_branch=tk.StringVar(value="Head Office")
         self.sales_open_choice=tk.StringVar(); self.sales_doc_type=tk.StringVar(value="Invoice"); self.sales_category=tk.StringVar(value="Services")
-        # 2.9.95: "Find invoice" is a slim row above the form (beside it, it made the screen wider than a laptop)
+        # Keep the title, invoice lookup, navigation, numbering and new action in one wrapping toolbar.
         nav=tk.Frame(header,bg=LIGHT); nav.pack(fill="x",pady=(0,4))
-        tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,6))
+        tk.Label(nav,text="Sales Invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",11,"bold")).pack(side="left",padx=(0,8))
+        tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,4))
         tabs_row=tk.Frame(header,bg=LIGHT); tabs_row.pack(fill="x")
         self.sales_open_box=ttk.Combobox(nav,textvariable=self.sales_open_choice,width=34); self.sales_open_box.pack(side="left",padx=(0,4))
         self.sales_open_box.bind("<<ComboboxSelected>>",lambda _event:self.open_sales_invoice()); self.sales_open_box.bind("<KeyRelease>",self.search_open_sales)
@@ -85,7 +86,8 @@ class SalesInvoiceMixin:
         self.sales_next=tk.Button(nav,text="Next ▶",command=lambda:self.navigate_sales_invoice(1),bg=NAVY,fg="white",border=0,padx=7,pady=3)
         self.sales_next.pack(side="left",padx=2)
         if (self.current_user or {}).get("role") == "admin":
-            self.action_button(nav,"Numbering",self.open_numbering_settings).pack(side="left",padx=4)
+            self.action_button(nav,"Numbering",self.open_numbering_settings).pack(side="left",padx=3)
+        self.action_button(nav,"New Invoice",self.new_sales_invoice).pack(side="left",padx=3)
         details=ttk.Notebook(tabs_row); details.pack(side="left",fill="x",expand=True)
         invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT)
         details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
@@ -142,7 +144,8 @@ class SalesInvoiceMixin:
         _responsive_invoice_details(form,detail_fields,dims)
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
         self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
-        self.sales_mode_label.pack(side="right",padx=(12,4))
+        self.sales_mode_label.pack(side="right",padx=(6,2))
+        flow_toolbar(nav)
         # 2.9.113: income not subject to income tax (already taxed / exempt by law) - the legal reason is required; Settings switches it on
         from tax_adjustments import EXEMPT_REASONS
         self.sales_exempt_reason=tk.StringVar(); self.sales_exempt_article=tk.StringVar()
@@ -164,7 +167,6 @@ class SalesInvoiceMixin:
 
         self.sales_discount_percent=tk.StringVar(value="0"); self.sales_discount_amount=tk.StringVar(value="0")
         toolbar=tk.Frame(self.sales_tab,bg=LIGHT); toolbar.pack(fill="x",padx=10,pady=(2,0))
-        self.action_button(toolbar,"New",self.new_sales_invoice).pack(side="left",padx=2)
         self.action_button(toolbar,"Add Line",self.add_sales_item).pack(side="left",padx=2)
         tk.Button(toolbar,text="Delete Line",command=self.remove_sales_item,bg="#8B1E1E",fg="white",border=0,padx=10,pady=4).pack(side="left",padx=2)
         tk.Button(toolbar,text="Save",command=lambda:self.save_sales_invoice(True),bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=14,pady=4).pack(side="left",padx=(8,2))
