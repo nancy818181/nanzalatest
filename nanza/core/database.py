@@ -1289,6 +1289,9 @@ def _schema_fingerprint():
         for constant in code.co_consts:
             if isinstance(constant, str): texts.append(constant)
             elif hasattr(constant, "co_consts"): collect(constant)
+            # 2.9.136: column names listed in tuples (e.g. the payments void columns) count too - they were missed, so an
+            # existing file was not upgraded ("no such column: x.voided_at")
+            elif isinstance(constant, (tuple, frozenset)): texts.append(repr(sorted(map(repr, constant))))
     functions = [getattr(Database, name, None) for name in ("_initialize", "_install_accounting_controls",
                  "_auto_lebanese_payroll_rules", "_upgrade_default_family_allowance_periods")]
     functions += [inventory.migrate, fixed_assets.migrate, bank_rec.migrate, payroll_extras.migrate, chart_extra.ensure_accounts,
