@@ -373,6 +373,19 @@ class ReportsMixin:
                   padx=12,pady=7,font=("Segoe UI",9),cursor="hand2").pack(side="left")
         actions.pack(side="right",padx=(6,0),pady=(12,0))
         flow_toolbars(ranges_row)
+        preset_row=tk.Frame(filter_card,bg="white"); preset_row.pack(fill="x",pady=(4,0))
+        tk.Label(preset_row,text="Saved report layouts",bg="white",fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(2,6))
+        self.financial_preset_name=tk.StringVar()
+        self.financial_preset_box=ttk.Combobox(preset_row,textvariable=self.financial_preset_name,state="readonly",width=24)
+        self.financial_preset_box.pack(side="left",padx=(0,5))
+        self.action_button(preset_row,"Save current",self.save_financial_preset).pack(side="left",padx=2)
+        self.action_button(preset_row,"Use",self.apply_financial_preset).pack(side="left",padx=2)
+        self.action_button(preset_row,"Delete",self.delete_financial_preset).pack(side="left",padx=2)
+        self.action_button(preset_row,"Reset filters",self.reset_financial_preset).pack(side="left",padx=2)
+        tk.Label(preset_row,text="Saved per company, year, and user",bg="white",fg=MUTED).pack(side="left",padx=8)
+        flow_toolbars(preset_row)
+        self._financial_default_range=(self.report_from_date.get(),self.report_to_date.get())
+        self.refresh_financial_presets()
         # 2.9.49: optional filters - only the ones ticked in "Choose filters..." appear (kept on this computer).
         self.fin_filter_row=tk.Frame(self.reports_tab,bg=LIGHT); self.fin_filter_row.pack(fill="x",padx=10,pady=(0,4))
         self.fin_filters={key:tk.StringVar(value="All") for key in FIN_FILTERS}; self.fin_filter_boxes={}
@@ -525,13 +538,107 @@ class ReportsMixin:
 
     # ------------------------------------------------------------ optional filters (2.9.49)
     def _financial_filter_file(self):
-        import app_runtime
-        return app_runtime.data_dir()/"report_filters.json"
+        import app_runtime, hashlib
+        company=(getattr(self,"current_company",None) or {}).get("id") or getattr(getattr(self,"client",None),"company_id","") or "company"
+        user=getattr(self,"current_user",None) or {}
+        username=user.get("id") or user.get("username") or "user"
+        year=getattr(self,"current_fiscal_year","") or getattr(getattr(self,"client",None),"fiscal_year","") or "year"
+        scope="\0".join(str(value) for value in (company,year,username))
+        return app_runtime.data_dir()/"report_preferences"/(hashlib.sha256(scope.encode("utf-8")).hexdigest()+".json")
+
+    def _read_financial_preferences(self):
+        try:
+            path=self._financial_filter_file()
+            value=json.loads(path.read_text(encoding="utf-8"))
+            return value if isinstance(value,dict) else {}
+        except FileNotFoundError:
+            # Carry forward the old computer-wide visible-filter choice into this scoped preference file.
+            try:
+                import app_runtime
+                legacy=json.loads((app_runtime.data_dir()/"report_filters.json").read_text(encoding="utf-8"))
+                return {"shown_filters":legacy} if isinstance(legacy,list) else {}
+            except (OSError,UnicodeError,ValueError,TypeError): return {}
+        except (OSError,UnicodeError,ValueError,TypeError): return {}
+
+    def _write_financial_preferences(self,value):
+        path=self._financial_filter_file()
+        path.parent.mkdir(parents=True,exist_ok=True)
+        temporary=path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(value,ensure_ascii=False,sort_keys=True),encoding="utf-8")
+        temporary.replace(path)
 
     def shown_financial_filters(self):
-        try: chosen=json.loads(self._financial_filter_file().read_text(encoding="utf-8"))
-        except Exception: chosen=["branch","party"]
+        chosen=self._read_financial_preferences().get("shown_filters") or ["branch","party"]
+        if not isinstance(chosen,list): chosen=["branch","party"]
         return [key for key in FIN_FILTERS if key in chosen]
+
+    def refresh_financial_presets(self):
+        presets=self._read_financial_preferences().get("presets") or {}
+        if not isinstance(presets,dict): presets={}
+        names=sorted((str(name) for name in presets if str(name).strip()),key=str.casefold)
+        if hasattr(self,"financial_preset_box") and self.financial_preset_box.winfo_exists():
+            self.financial_preset_box.configure(values=names)
+            if self.financial_preset_name.get() not in names: self.financial_preset_name.set(names[0] if names else "")
+        return names
+
+    def save_financial_preset(self):
+        from tkinter import simpledialog
+        name=simpledialog.askstring("Save report layout","Name this report layout:",parent=self)
+        if name is None: return
+        name=name.strip()[:60]
+        if not name: return messagebox.showwarning("Report layout","Enter a name for this layout")
+        preferences=self._read_financial_preferences(); presets=preferences.setdefault("presets",{})
+        if not isinstance(presets,dict): presets={}; preferences["presets"]=presets
+        if name in presets and not messagebox.askyesno("Report layout",f"Replace '{name}'?",parent=self): return
+        presets[name]={"date_from":self.report_from_date.get(),"date_to":self.report_to_date.get(),
+            "account_from":self.report_account_from.get(),"account_to":self.report_account_to.get(),
+            "shown_filters":self.shown_financial_filters(),"filters":{key:var.get() for key,var in self.fin_filters.items()},
+            "view_currency":self.view_currency.get(),
+            "tab":self.financial_notebook.tab(self.financial_notebook.select(),"text") if self.financial_notebook.select() else ""}
+        try: self._write_financial_preferences(preferences)
+        except OSError as exc: return messagebox.showerror("Report layout",str(exc))
+        self.financial_preset_name.set(name); self.refresh_financial_presets()
+
+    def apply_financial_preset(self):
+        name=self.financial_preset_name.get()
+        preset=(self._read_financial_preferences().get("presets") or {}).get(name)
+        if not isinstance(preset,dict): return messagebox.showwarning("Report layout","Choose a saved layout first")
+        self.report_from_date.set(preset.get("date_from",self.report_from_date.get()))
+        self.report_to_date.set(preset.get("date_to",self.report_to_date.get()))
+        self.report_account_from.set(preset.get("account_from","")); self.report_account_to.set(preset.get("account_to",""))
+        for key,var in self.fin_filters.items(): var.set((preset.get("filters") or {}).get(key,"All"))
+        if preset.get("view_currency") in ["All Currencies"]+list(getattr(self,"currency_codes",[])): self.view_currency.set(preset["view_currency"])
+        preferences=self._read_financial_preferences(); shown=preset.get("shown_filters",[])
+        preferences["shown_filters"]=[key for key in shown if key in FIN_FILTERS] if isinstance(shown,list) else ["branch","party"]
+        try: self._write_financial_preferences(preferences)
+        except OSError as exc: return messagebox.showerror("Report layout",str(exc))
+        self.build_financial_filter_row()
+        tab=preset.get("tab")
+        if tab:
+            for child in self.financial_notebook.tabs():
+                if self.financial_notebook.tab(child,"text")==tab: self.financial_notebook.select(child); break
+        self.load_financial_reports()
+
+    def delete_financial_preset(self):
+        name=self.financial_preset_name.get()
+        preferences=self._read_financial_preferences(); presets=preferences.get("presets") or {}
+        if not isinstance(presets,dict): presets={}
+        if name not in presets: return messagebox.showwarning("Report layout","Choose a saved layout first")
+        if not messagebox.askyesno("Delete report layout",f"Delete '{name}'?",parent=self): return
+        presets.pop(name,None); preferences["presets"]=presets
+        try: self._write_financial_preferences(preferences)
+        except OSError as exc: return messagebox.showerror("Report layout",str(exc))
+        self.financial_preset_name.set(""); self.refresh_financial_presets()
+
+    def reset_financial_preset(self):
+        date_from,date_to=getattr(self,"_financial_default_range",("",""))
+        self.report_from_date.set(date_from); self.report_to_date.set(date_to)
+        self.report_account_from.set(""); self.report_account_to.set("")
+        for var in self.fin_filters.values(): var.set("All")
+        preferences=self._read_financial_preferences(); preferences["shown_filters"]=["branch","party"]
+        try: self._write_financial_preferences(preferences)
+        except OSError as exc: return messagebox.showerror("Report layout",str(exc))
+        self.build_financial_filter_row(); self.load_financial_reports()
 
     def build_financial_filter_row(self):
         self._fill_financial_filter_row(); flow_toolbars(self.fin_filter_row)  # 2.9.59: wraps on small screens
@@ -570,7 +677,8 @@ class ReportsMixin:
         for key,(label,_field) in FIN_FILTERS.items(): tk.Checkbutton(window,text=label,variable=flags[key],bg=LIGHT).pack(anchor="w",padx=24)
         def save():
             chosen=[key for key,var in flags.items() if var.get()]
-            try: self._financial_filter_file().write_text(json.dumps(chosen),encoding="utf-8")
+            preferences=self._read_financial_preferences(); preferences["shown_filters"]=chosen
+            try: self._write_financial_preferences(preferences)
             except OSError as exc: return messagebox.showerror("Filters",str(exc),parent=window)
             for key in FIN_FILTERS:
                 if key not in chosen: self.fin_filters[key].set("All")
@@ -1085,6 +1193,9 @@ class ReportsMixin:
         self.ai_accountant_question=tk.StringVar()
         tk.Entry(controls,textvariable=self.ai_accountant_question,width=64).pack(side="left",fill="x",expand=True,padx=(0,8))
         self.action_button(controls,tr(language,"ai_run_analysis"),self.run_ai_accountant_query).pack(side="left")
+        flow_toolbars(controls)
+        tk.Label(page,text="Human-reviewed analysis from this company’s ledger. Confidence is a rule score, not measured accuracy; open the listed evidence before acting. No posting is done here. No verified Lebanese law, tax, IFRS, or IAS source pack is integrated. NEEDS ACCOUNTANT SIGN-OFF.",
+                 bg="#FFF8E6",fg=NAVY,anchor="w",justify="left",wraplength=1150).pack(fill="x",padx=12,pady=(0,6))
         self.ai_accountant_info=tk.Label(page,text=tr(language,"ai_accountant_prompt"),
                                          bg=LIGHT,fg=NAVY,anchor="w"); self.ai_accountant_info.pack(fill="x",padx=12)
         self.ai_accountant_viewer=self.report_viewer(page); self.ai_accountant_report=None

@@ -41,10 +41,8 @@ def _dd(value):
 
 
 def auto_upload_on(app):
-    """2.9.50: 'Save automatically after upload' ticked (screens built without it keep the old manual flow)."""
-    var = getattr(app, "auto_upload_var", None)
-    try: return bool(var().get()) if callable(var) else False
-    except Exception: return False
+    """OCR/import suggestions require an explicit user action before they can be posted."""
+    return False
 
 
 SIMILAR_ITEM_WARNING = 0.90  # 2.9.86 (owner): 90% of the name the same -> warning, the user decides
@@ -323,6 +321,29 @@ def checked_handwriting_fields(data, values):
     return result
 
 
+def reviewed_invoice_checks(app, data):
+    """Add review warnings without changing any extracted or user-corrected amounts."""
+    from decimal import Decimal, InvalidOperation
+    warnings=list(data.get("review_warnings") or [])
+    currency=str(data.get("currency") or "").upper()
+    allowed=getattr(app,"currency_codes",None)
+    if currency and allowed and currency not in {str(value).upper() for value in allowed}:
+        warnings.append("Currency is not enabled in this company’s settings; verify before saving")
+    if data.get("duplicate_candidates"):
+        warnings.append("Possible duplicate invoice found in this company; compare before saving")
+    try:
+        amount=lambda key: Decimal(str(data.get(key)).replace(",", "")) if data.get(key) not in (None, "") else None
+        subtotal,vat,total=(amount(key) for key in ("subtotal","vat","total"))
+        if data.get("taxable_subtotal") is not None and data.get("exempt_subtotal") is not None:
+            subtotal=Decimal(str(data["taxable_subtotal"]))+Decimal(str(data["exempt_subtotal"]))
+        if subtotal is not None and vat is not None and total is not None and abs(subtotal+vat-total)>max(Decimal("0.05"),abs(total)*Decimal("0.005")):
+            warnings.append("Subtotal, VAT, and total do not reconcile; verify against the source before saving")
+    except (InvalidOperation,ValueError,TypeError):
+        warnings.append("One or more amounts could not be checked; verify them against the source")
+    data["review_warnings"]=list(dict.fromkeys(warnings))
+    return data
+
+
 def handwriting_review_image(path, page=0):
     """Keep photograph detail for human review; model-sized previews lose small digits."""
     from PIL import Image, ImageOps
@@ -350,14 +371,16 @@ def handwriting_review_image(path, page=0):
         with Image.open(preview) as source: return source.copy()
 
 
-def review_handwriting(app, path, data):
-    """Review a local vision suggestion beside the image before it can fill an entry form."""
+def review_handwriting(app, path, data, force=False):
+    """Review extracted values beside the source before they can fill an entry form."""
     if not data: return data
     from pdf_import import IMAGE_SUFFIXES
     photo_review = Path(path).suffix.lower() in IMAGE_SUFFIXES and (data.get("review_required") or data.get("ocr_used"))
+    needs_review = bool(force or data.get("reader") == "vision-local" or photo_review or data.get("review_required"))
     if not isinstance(app, tk.Misc):
-        if data.get("reader") != "vision-local" and not photo_review: return data
+        if not needs_review: return data
         return None  # no UI means no implicit confirmation
+    if not needs_review: return data
     from PIL import Image, ImageTk
     import vision_reader
     from desktop_invoice_intake import annotate, review_items, validate_reviewed_items
@@ -365,14 +388,20 @@ def review_handwriting(app, path, data):
     try:
         picture = handwriting_review_image(path,max(0,int((data.get("pages") or [1])[0])-1))
     except (OSError, ValueError, vision_reader.VisionReaderError) as exc:
-        messagebox.showerror("Handwriting review", f"Could not show the original for review: {exc}")
+        messagebox.showerror("Invoice review", f"Could not show the original for review: {exc}")
         return None
     window = tk.Toplevel(app); window.title("Check the invoice reading"); window.configure(bg=LIGHT); window.transient(app)
     width = min(1160, max(700, app.winfo_screenwidth() - 80))
     height = min(820, max(520, app.winfo_screenheight() - 100))
     window.geometry(f"{width}x{height}")
-    tk.Label(window, text="The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm.",
+    tk.Label(window, text="The reader can get amounts and dates wrong. Compare with the source document, correct the fields, then confirm.",
              bg=LIGHT, fg=RED, wraplength=width - 40, justify="left").pack(fill="x", padx=12, pady=8)
+    warnings=list(data.get("review_warnings") or [])
+    if data.get("duplicate_candidates") and not any("duplicate" in str(note).casefold() for note in warnings):
+        warnings.append("Possible duplicate invoice found in this company; compare before saving")
+    if warnings:
+        tk.Label(window,text="Review checks: " + " | ".join(str(note) for note in warnings),bg="#FFF1F0",fg=RED,
+                 wraplength=width-40,justify="left").pack(fill="x",padx=12,pady=(0,6))
     body = tk.Frame(window, bg=LIGHT); body.pack(fill="both", expand=True, padx=12)
     image_frame = tk.Frame(body, bg=LIGHT); image_frame.pack(side="left", fill="both", expand=True)
     canvas = tk.Canvas(image_frame, bg="#d9dee3", highlightthickness=0)
@@ -425,12 +454,12 @@ def review_handwriting(app, path, data):
              bg=LIGHT,fg=NAVY,wraplength=280,justify="left").pack(fill="x",pady=4)
     tk.Button(form,text="Review invoice lines",command=lambda:review_items(window,data)).pack(fill="x",pady=3)
     confirmed = tk.BooleanVar(master=window, value=False)
-    tk.Checkbutton(form, text="I checked these fields against the image", variable=confirmed, bg=LIGHT,
+    tk.Checkbutton(form, text="I checked these fields against the source document", variable=confirmed, bg=LIGHT,
                    wraplength=260, justify="left").pack(anchor="w", pady=8)
     answer = []
     def accept():
         if not confirmed.get():
-            messagebox.showwarning("Handwriting review", "Check the image and tick the confirmation first", parent=window)
+            messagebox.showwarning("Invoice review", "Check the source and tick the confirmation first", parent=window)
             return
         try:
             if document_type.get() in ("unknown","quotation","delivery_note"):
@@ -438,10 +467,11 @@ def review_handwriting(app, path, data):
             validate_reviewed_items(data)
             result = checked_handwriting_fields(data, {key: var.get() for key, var in variables.items()})
             result["document_type"]=document_type.get()
+            result=reviewed_invoice_checks(app,result)
             result["intake_reviewed"]=True
             result.pop("_review_accounts",None)
         except ValueError as exc:
-            messagebox.showwarning("Handwriting review", str(exc), parent=window)
+            messagebox.showwarning("Invoice review", str(exc), parent=window)
             return
         answer.append(result); window.destroy()
     tk.Button(form_actions, text="Use checked fields", command=accept, bg=GOLD, fg=NAVY, border=0, padx=12, pady=7).pack(fill="x", pady=4)

@@ -9,7 +9,10 @@ Details and validation: `docs/RELEASE_2.9.135.md`.
 - **Screen layouts:** compact Sales Invoice actions and responsive fields; Purchase Invoice header and account rows; clearer receipt/payment fields; compact Trial Balance and Statement of Account controls; separate Chart of Accounts and Create Account areas.
 - **Customs Report:** grouped, responsive filters and clearer account/item selection while preserving its existing data and report behavior.
 - **Complete Board Dashboard:** opens maximized and adapts to the available window size, with scrolling for longer content.
-- No accounting calculations, posting, VAT rules, stored data, or database schema changed.
+- **Reports and review controls:** financial report layouts can be saved per company, year, and user; audit exports include a clearly identified control sheet for reviewer follow-up.
+- **OCR safety:** extracted purchase, expense, and sales values remain suggestions for review; OCR does not automatically save or post a transaction.
+- **PDF dependency:** `pypdf` is updated to `6.21.2`, with a CI audit for declared dependencies.
+- No accounting calculations, VAT rules, stored data, or database schema changed. OCR imports now require review and an explicit save before posting.
 
 ## Version 2.9.134 (duplicate guard, balance-sheet class 4, password hardening, not-taxable benefits, cleaner layouts)
 
@@ -177,7 +180,7 @@ See `mobile/README.md`. The ZIP contains `lib/main.dart` and `pubspec.yaml`, not
 
 ## Compliance and known limits
 
-NANZA is Lebanon-oriented. No ZATCA Phase 2, UAE FAF, Saudi GOSI or other GCC statutory certification is claimed. Payroll rules are aids requiring category/date-specific review; EOS is an accounting estimate. Existing custom reports are constrained sales reports, not a general formula/pivot designer. Mobile OCR queue processing is incomplete in this snapshot. See `audit/TOP_20_FINDINGS.md` for verified defects and release blockers.
+NANZA is Lebanon-oriented. No ZATCA Phase 2, UAE FAF, Saudi GOSI or other GCC statutory certification is claimed. Payroll rules are aids requiring category/date-specific review; EOS is an accounting estimate. Existing custom reports are constrained sales reports, not a general formula/pivot designer. Mobile OCR queue processing is incomplete in this snapshot. See the [historical accounting engineering audit](docs/accountant-engineering-audit-2026-10-17.md) and [handwriting-reader validation notes](docs/handwriting-reader-work.md); both document earlier checkpoints and must be read with their dates and limitations.
 
 Optional external OCR exists in `azure_reader.py`; do not describe all available OCR modes as permanently local. Enable external transfer only through the existing explicit opt-in flow. The proposed free AI path needs no paid API, but model downloads, compute and licenses still need review.
 
@@ -189,9 +192,7 @@ Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source ar
 
 ## Analytic audit and Arabic handwriting status
 
-Read [ANALYTIC REPORT.md](ANALYTIC%20REPORT.md) for the payroll/VAT check-up tables,
-custom-report status and the explicit handwritten-Arabic OCR benchmark limitation.
-The supplied handwritten Arabic image and ground truth are in `tests/data/`. The review-policy test passes; real model accuracy is not yet measured.
-The original snapshot audit, 161-row matrix, architecture/schema proposals and
-candidate fixes are under `audit/`. Real-model CER/WER is not represented by the
-mocked-inference unit-test pass count.
+The [handwriting-reader work log](docs/handwriting-reader-work.md) records the
+current OCR experiments and explicitly states that real-model accuracy is not
+measured. The supplied handwritten Arabic image and ground truth are in
+`tests/data/`; mocked-inference tests do not establish real-model CER/WER.

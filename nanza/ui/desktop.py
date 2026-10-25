@@ -1129,6 +1129,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         # Keep the workbench shortcuts near the top of the Dashboard so reports and
         # day-to-day tools do not disappear below the charts on laptop screens.
         self.build_workbench_tools(self.dashboard_tab)
+        tk.Label(self.dashboard_tab,text="KEY FIGURES",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),anchor="w").pack(fill="x",padx=14,pady=(2,0))
         self.dashboard_cards=tk.Frame(self.dashboard_tab,bg=LIGHT); self.dashboard_cards.pack(fill="x",padx=12)
         self.dashboard_chart=tk.Canvas(self.dashboard_tab,height=105,bg="white",highlightthickness=0)
         # 2.9.60: the small monthly strip repeated the "by month" chart below; it is kept (exports use it) but not shown
