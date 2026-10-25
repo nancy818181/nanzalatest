@@ -858,7 +858,7 @@ class InventoryTest(unittest.TestCase):
             self.db.create_manual_invoice({"invoice_date": "16-03-2024", "party_name": "Tower Client", "kind": "sales", "currency": "USD", "status": "posted"},
                                           [{"description": "HPL", "quantity": 500, "unit_price": 120, "item_code": "ITM-00001"}], self.user)
         self.assertEqual(len(self.db.list_invoices()), 1)  # the refused invoice is not kept
-        self.db.delete_invoice(self.invoice, self.user); self.assertEqual(self.item("ITM-00001")["quantity"], 100)
+        self.db.delete_invoice(self.invoice, self.user, reason="synthetic stock correction"); self.assertEqual(self.item("ITM-00001")["quantity"], 100)
 
     def test_sales_credit_note_returns_stock_as_receipt(self):
         # After the sale of 30, HPL is at 70 on hand (avg cost 90).
@@ -875,7 +875,7 @@ class InventoryTest(unittest.TestCase):
         self.assertEqual(hpl["quantity"], 80)  # 70 back up to 80
         self.assertEqual(hpl["average_cost"], 90)
         # Deleting the credit note removes the return movement again.
-        self.db.delete_invoice(credit, self.user)
+        self.db.delete_invoice(credit, self.user, reason="synthetic return correction")
         self.assertEqual(self.item("ITM-00001")["quantity"], 70)
 
     def test_unlinked_legacy_credit_note_can_return_stock_under_fifo(self):

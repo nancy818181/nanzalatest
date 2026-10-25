@@ -16,7 +16,7 @@ def reference_trial_balance(db, from_date, to_date):
     from_date = datetime.strptime(from_date, "%d-%m-%Y").strftime("%Y-%m-%d"); to_date = datetime.strptime(to_date, "%d-%m-%Y").strftime("%Y-%m-%d")
     normalized = "CASE WHEN e.entry_date GLOB '??-??-????' THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2) ELSE e.entry_date END"
     with db.connect() as connection:
-        raw = [dict(r) for r in connection.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_date,DSUM(CAST(j.debit AS REAL)) debit,DSUM(CAST(j.credit AS REAL)) credit
+        raw = [dict(r) for r in connection.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_date,DSUM_EXACT(j.debit) debit,DSUM_EXACT(j.credit) credit
             FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
             LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
             WHERE {normalized}<=? AND (e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled')))
@@ -62,7 +62,7 @@ class PerformanceKeepsFiguresTest(unittest.TestCase):
         for row in rows:
             want = expected[(row["code"], row["currency"])]
             for field, value in want.items():
-                self.assertEqual(Decimal(str(row[field])), Decimal(str(float(value))), (row["code"], row["currency"], field))
+                self.assertEqual(Decimal(str(row[field])), Decimal(str(value)), (row["code"], row["currency"], field))
         self.assertTrue(any(row["usd_opening"] for row in rows))         # the opening period is exercised
 
     def test_general_ledger_balances_match_the_journal(self):

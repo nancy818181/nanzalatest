@@ -94,7 +94,7 @@ class EarlierYearsTest(unittest.TestCase):
             # an accountant can save in the company file (2.9.52: the user row is copied there)
             with self.assertRaises(Exception) as refused: clerk.delete_invoice(invoice_id)
             self.assertIn("permission to delete", str(refused.exception))
-            client.delete_invoice(invoice_id)   # the administrator can
+            client.delete_invoice(invoice_id, reason="synthetic test void")   # the administrator can
         finally:
             app_runtime.LOCAL_URL, app_runtime.LOCAL_KEY = old
             for name, value in saved.items(): setattr(server.ApiHandler, name, value)

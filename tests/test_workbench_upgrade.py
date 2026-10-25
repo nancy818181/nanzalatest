@@ -210,6 +210,10 @@ class WorkbenchDatabaseTest(unittest.TestCase):
         report = build_report(self.db, dict(self.filters, customer=party["id"], product="SKU-A"))
         self.assertEqual(len(report["rows"]), 1)
         self.assertEqual(report["totals"]["USD"], Decimal("100"))
+        # An SQL-looking product value is treated as data, bound as a filter,
+        # and cannot broaden the result set or raise a SQL error.
+        malicious = build_report(self.db, dict(self.filters, product="1' OR '1'='1"))
+        self.assertEqual(malicious["rows"], [])
 
     def test_review_invoices_not_reported(self):
         self.invoice(status="review")

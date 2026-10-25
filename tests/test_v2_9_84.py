@@ -113,11 +113,11 @@ class VatLockTest(_Book):
             self.db.add_expense({"expense_date": "15-03-2025", "description": "Rent", "currency": "USD", "with_vat_subtotal": "100", "vat": "11",
                                  "expense_account": "6263.1", "payment_account": "531"}, 1)
         with self.assertRaisesRegex(ValueError, "VAT return is saved"): self.db.cancel_invoice(invoice, "late", 1)
-        with self.assertRaisesRegex(ValueError, "VAT return is saved"): self.db.delete_invoice(invoice, 1)
+        with self.assertRaisesRegex(ValueError, "VAT return is saved"): self.db.delete_invoice(invoice, 1, reason="synthetic void")
         self.db.add_expense({"expense_date": "15-04-2025", "description": "Rent", "currency": "USD", "with_vat_subtotal": "100", "vat": "11",
                              "expense_account": "6263.1", "payment_account": "531"}, 1)  # Q2 is open
         vat_return.reopen_return(self.db, 2025, 1, 1)
-        self.db.delete_invoice(invoice, 1)
+        self.db.delete_invoice(invoice, 1, reason="synthetic void")
 
 
 class AssetBeforeSaberTest(_Book):

@@ -86,7 +86,8 @@ class LedgerReportingTests(unittest.TestCase):
         self.db.initialize('Report-tests-2026!')
         self.addCleanup(self.db.release)
         for code, name, kind in [('626340001','EDL Electricity','expense'), ('701100001','Sales','income'),
-                                  ('531000001','Cash','asset'), ('401100001','Supplier','liability')]:
+                                  ('531000001','Cash','asset'), ('401100001','Supplier','liability'),
+                                  ('121000001','Fixed Asset','asset')]:
             if not any(a['code'] == code for a in self.db.list_accounts()):
                 self.db.save_account({'code':code,'name_en':name,'type':kind},1)
         self.department = self.db.save_department({'code':'D1','name':'Store'},1)['id']
@@ -147,6 +148,90 @@ class LedgerReportingTests(unittest.TestCase):
         report=build_ledger_report(self.db,definition)
         self.assertEqual(report['currency_summaries']['USD']['debit'],Decimal('100'))
         self.assertEqual(report['currency_summaries']['USD']['credit'],Decimal('100'))
+
+    def test_custom_balance_reconciles_to_trial_balance_with_reversal_draft_and_books_lock(self):
+        self.db.save_exchange_rate({'rate_date':'2026-01-02','from_currency':'USD','to_currency':'LBP','rate':'89500'},1)
+        self.voucher(entry_date='2026-01-02',debit='121000001',credit='531000001',amount='100')
+        self.voucher(entry_date='2026-01-03',debit='531000001',credit='401100001',amount='150')
+        reversed_entry=self.voucher(entry_date='2026-01-04',debit='401100001',credit='531000001',amount='25')['voucher']['id']
+        self.db.reverse_journal_voucher(reversed_entry,'2026-01-05',1)
+        # This posted entry is dated on the lock boundary, so it exercises the
+        # application's documented books_locked_until closed-period rule.
+        self.db.save_journal_voucher({'entry_date':'2026-02-01','currency':'LBP','description':'Synthetic LBP'},
+            [{'account_code':'531000001','debit':'8950000','credit':'0'},
+             {'account_code':'401100001','debit':'0','credit':'8950000'}],1)
+        self.db.save_journal_voucher({'entry_date':'2026-02-02','currency':'USD','description':'Synthetic draft'},
+            [{'account_code':'531000001','debit':'999','credit':'0'},
+             {'account_code':'401100001','debit':'0','credit':'999'}],1,defer_posting=True)
+        with self.db.connect() as connection:
+            connection.execute("INSERT INTO app_settings(key,value) VALUES('books_locked_until','2026-02-01') "
+                               "ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+        definition=layout(); definition.update(kind='balance',date_to='2026-12-31',
+            group_by=['account'],columns=['debit','credit','balance'],currencies=['native'],account_codes=[])
+        report=build_ledger_report(self.db,definition)
+        trial=self.db.trial_balance(to_date='2026-12-31')
+        report_by_account={(r['currency'],r['dimensions'][0]):r for r in report['records']}
+        trial_by_account={(r['currency'],r['code']):r for r in trial
+                          if str(r['code']).startswith(('1','2','3','4','5')) and len(str(r['code'])) == 9}
+        self.assertEqual(set(report_by_account),set(trial_by_account))
+        for key,record in report_by_account.items():
+            expected=trial_by_account[key]
+            with self.subTest(currency=key[0],account=key[1]):
+                self.assertEqual(record['debit'],Decimal(str(expected['debit'])))
+                self.assertEqual(record['credit'],Decimal(str(expected['credit'])))
+                self.assertEqual(record['balance'],Decimal(str(expected['debit']))-Decimal(str(expected['credit'])))
+        for currency,summary in report['currency_summaries'].items():
+            self.assertEqual(summary['debit'],summary['credit'],currency)
+
+    def test_custom_ledger_account_filter_selects_exact_three_accounts(self):
+        self.voucher(debit='626340001',credit='531000001',amount='100')
+        self.voucher(debit='531000001',credit='401100001',amount='20')
+        self.voucher(debit='121000001',credit='401100001',amount='30')
+        definition=layout(); definition.update(kind='balance',columns=['debit','credit','balance'],
+            account_codes=['121000001','531000001','401100001'])
+        report=build_ledger_report(self.db,definition)
+        self.assertEqual({r['dimensions'][-1] for r in report['records']},
+                         {'121000001','531000001','401100001'})
+
+    def test_custom_balance_keeps_void_and_reversal_lines_equal_to_trial_balance(self):
+        from settlements import posted_payment_sql
+
+        self.db.save_account({'code':'411100001','name_en':'Synthetic Receivable','type':'asset'},1)
+        party=self.db.save_party({'name':'Synthetic receipt party','kind':'customer'},1)
+        base={'kind':'customer_receipt','party_id':party['id'],'payment_date':'2026-03-01',
+              'currency':'USD','cash_account':'531000001','party_account':'411100001'}
+        voided=self.db.add_payment({**base,'amount':'25.00'},1)
+        self.db.delete_payment(voided,1,reason='Synthetic void retained in GL',role='admin')
+        replaced=self.db.add_payment({**base,'amount':'40.00'},1)
+        replacement=self.db.update_payment(replaced,{**base,'amount':'30.00'},1)
+
+        with self.db.connect() as connection:
+            payment_entries=[dict(r) for r in connection.execute(
+                "SELECT source_type,reversal_of FROM journal_entries WHERE source_id IN (?,?) "
+                "AND source_type IN ('payment','payment_reversal') ORDER BY id",(voided,replaced))]
+            active_ids={r[0] for r in connection.execute(
+                f"SELECT x.id FROM payments x WHERE {posted_payment_sql()} ORDER BY x.id")}
+        self.assertEqual([r['source_type'] for r in payment_entries],
+                         ['payment','payment','payment_reversal'])
+        self.assertIsNotNone(payment_entries[2]['reversal_of'])
+        self.assertNotIn(voided,active_ids)
+        self.assertNotIn(replaced,active_ids)
+        self.assertIn(replacement,active_ids)
+
+        definition=layout(); definition.update(kind='balance',group_by=['account'],
+            columns=['debit','credit','balance'],currencies=['native'])
+        custom=build_ledger_report(self.db,definition)
+        trial=self.db.trial_balance(to_date='2026-12-31')
+        custom_by_account={(r['currency'],r['dimensions'][0]):r for r in custom['records']}
+        trial_by_account={(r['currency'],r['code']):r for r in trial
+            if str(r['code']).startswith(('1','2','3','4','5')) and len(str(r['code']))==9}
+        self.assertEqual(set(custom_by_account),set(trial_by_account))
+        for key,record in custom_by_account.items():
+            self.assertEqual((record['debit'],record['credit']),
+                             (Decimal(str(trial_by_account[key]['debit'])),
+                              Decimal(str(trial_by_account[key]['credit']))),key)
+        for currency,summary in custom['currency_summaries'].items():
+            self.assertEqual(summary['debit'],summary['credit'],currency)
 
     def test_unknown_account_and_bad_currency_rejected(self):
         for change in ({'account_codes':['699999999']},{'currencies':['ZZZ']}):

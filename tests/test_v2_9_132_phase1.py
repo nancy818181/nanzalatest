@@ -99,17 +99,17 @@ class NewUserDeleteTest(_Books):
 
 
 class PostedInvoiceDeleteAuditTest(_Books):
-    """H-02: the audit log keeps the amounts and journal lines of a removed posted invoice."""
-    def test_audit_keeps_what_is_removed(self):
+    """H-02: a posted invoice is voided and the audit retains its original lines."""
+    def test_audit_keeps_what_is_voided(self):
         invoice = self.db.import_invoice({"invoice_number": "S-1", "kind": "sale", "invoice_date": "10-02-2026", "party_name": "C", "currency": "USD",
                                           "subtotal": "100", "vat": "11", "total": "111", "status": "posted"}, self.user)
-        self.db.mark_invoice_deleted(invoice, self.user)
+        self.db.mark_invoice_deleted(invoice, self.user, reason="synthetic test void")
         with self.db.connect() as connection:
-            details = json.loads(connection.execute("SELECT details FROM audit_log WHERE action='mark_deleted'").fetchone()[0])
+            details = json.loads(connection.execute("SELECT details FROM audit_log WHERE action='void'").fetchone()[0])
         self.assertEqual(Decimal(details["invoice"]["total"]), Decimal("111"))
-        lines = {(l["account"], Decimal(l["debit"]), Decimal(l["credit"])) for l in details["journal_lines_removed"]}
+        lines = {(l["account_code"], Decimal(l["debit"]), Decimal(l["credit"])) for l in details["journal_lines"]}
         self.assertIn(("4427", Decimal("0"), Decimal("11")), lines)
-        self.assertEqual(len(lines), 3)
+        self.assertEqual(len(lines), 6)  # original and reversal snapshots
 
 
 class ServerControlsTest(unittest.TestCase):
@@ -150,9 +150,20 @@ class ServerControlsTest(unittest.TestCase):
 
     def test_non_admin_cannot_delete_a_posted_invoice_admin_can(self):
         invoice = self.sale("SYN-DEL-1")
-        with self.assertRaisesRegex(Exception, "administrator"): self.clerk.delete_invoice(invoice)
-        self.admin.delete_invoice(invoice)
-        self.assertEqual(next(i for i in self.admin.invoices() if i["id"] == invoice)["status"], "deleted")
+        statuses=[]; send=self.clerk._send
+        def record_status(*args,**kwargs):
+            result=send(*args,**kwargs); statuses.append(result[0]); return result
+        self.clerk._send=record_status
+        with self.assertRaisesRegex(Exception, "administrator"): self.clerk.delete_invoice(invoice, reason="synthetic test void")
+        self.assertEqual(statuses[-1], 403)
+        statuses.clear(); admin_send=self.admin._send
+        def record_admin_status(*args,**kwargs):
+            result=admin_send(*args,**kwargs); statuses.append(result[0]); return result
+        self.admin._send=record_admin_status
+        with self.assertRaisesRegex(Exception, "reason"): self.admin.delete_invoice(invoice)
+        self.assertEqual(statuses[-1], 400)
+        self.admin.delete_invoice(invoice, reason="synthetic test void")
+        self.assertEqual(next(i for i in self.admin.invoices() if i["id"] == invoice)["status"], "void")
 
     def test_non_admin_cannot_change_a_posted_sale(self):
         invoice = self.sale("SYN-EDIT-1")

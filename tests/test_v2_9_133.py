@@ -91,7 +91,7 @@ class ExactProfitAndLossTest(unittest.TestCase):
 
 
 class InvoiceDeleteAuditTest(unittest.TestCase):
-    def test_delete_of_a_posted_invoice_keeps_its_journal_lines_in_the_audit_trail(self):
+    def test_void_of_a_posted_invoice_keeps_its_journal_lines_and_reverses_them(self):
         with tempfile.TemporaryDirectory() as tmp:
             db = Database(Path(tmp) / "books.db")
             db.initialize("Synthetic-Only-Password-2026!")
@@ -101,15 +101,19 @@ class InvoiceDeleteAuditTest(unittest.TestCase):
                     {"invoice_number": "SYN-DEL-1", "invoice_date": "05-01-2026", "party_name": "Synthetic customer",
                      "kind": "sales", "currency": "USD", "status": "posted"},
                     [{"description": "Service", "quantity": 1, "unit_price": "100.00", "vat_rate": 11}], 1)
-                db.delete_invoice(invoice_id, 1)
+                db.delete_invoice(invoice_id, 1, reason="synthetic correction")
                 with db.connect() as c:
-                    details = json.loads(c.execute("SELECT details FROM audit_log WHERE action='delete' AND entity='invoice' ORDER BY id DESC LIMIT 1").fetchone()["details"])
+                    details = json.loads(c.execute("SELECT details FROM audit_log WHERE action='void' AND entity='invoice' ORDER BY id DESC LIMIT 1").fetchone()["details"])
                     left = c.execute("SELECT COUNT(*) n FROM journal_lines").fetchone()["n"]
-                self.assertEqual(left, 0)
-                lines = details["journal_lines_removed"]
-                self.assertEqual(len(lines), 3)
+                    original = c.execute("SELECT COUNT(*) n FROM journal_entries WHERE source_type='invoice' AND source_id=?", (invoice_id,)).fetchone()["n"]
+                    reverse = c.execute("SELECT COUNT(*) n FROM journal_entries WHERE source_type='invoice_void' AND source_id=?", (invoice_id,)).fetchone()["n"]
+                self.assertEqual(original, 1)
+                self.assertEqual(reverse, 1)
+                self.assertEqual(left, 6)
+                lines = details["journal_lines"]
+                self.assertEqual(len(lines), 6)
                 self.assertEqual(sum(Decimal(l["debit"]) for l in lines), sum(Decimal(l["credit"]) for l in lines))
-                self.assertEqual(sum(Decimal(l["debit"]) for l in lines), Decimal("111.00"))
+                self.assertEqual(sum(Decimal(l["debit"]) for l in lines), Decimal("222.00"))
                 self.assertEqual(details["invoice_number"], "SYN-DEL-1")
             finally:
                 db.release()

@@ -111,19 +111,26 @@ class MultiDeleteAndColumnsTest(unittest.TestCase):
         import desktop
         for name in ("showerror", "showwarning", "showinfo", "askyesno"):
             patch = mock.patch(f"tkinter.messagebox.{name}", return_value=True); patch.start(); self.addCleanup(patch.stop)
+        reason = mock.patch("tkinter.simpledialog.askstring", return_value="Synthetic bulk void reason")
+        reason_dialog = reason.start(); self.addCleanup(reason.stop)
         patch = mock.patch("app_runtime.data_dir", return_value=Path(self.folder.name)); patch.start(); self.addCleanup(patch.stop)
         import gc; self.addCleanup(gc.collect)
         app = desktop.SaberApp(); self.addCleanup(app.destroy)
         app.server.set(self.url); app.password.set("admin12345"); app.login()
         app.client.select_company_year(self.company["id"], self.year); app.current_company = self.company; app.current_fiscal_year = int(self.year)
+        app.client.import_invoices([{"invoice_number":"DRAFT-MULTI", "invoice_date":f"01-02-{self.year}",
+            "party_name":"Draft party", "kind":"sales", "entry_type":"sales", "currency":"USD",
+            "subtotal":"100", "vat":"0", "total":"100", "status":"review"}], False)
         app.main_screen(); app.select_main_tab(app.invoices_tab); app.update()
         tree = app.invoice_tree
         by_number = {tree.item(i, "values")[0]: i for i in tree.get_children()}
-        tree.selection_set((by_number["N1"], by_number["N2"]))
+        tree.selection_set((by_number["N1"], by_number["N2"], by_number["DRAFT-MULTI"]))
         app.delete_selected_invoice()
         status = {r["invoice_number"]: r["status"] for r in app.invoice_rows.values()}
-        self.assertEqual((status["N1"], status["N2"]), ("deleted", "deleted"))
+        self.assertEqual((status["N1"], status["N2"]), ("void", "void"))
+        self.assertEqual(status["DRAFT-MULTI"], "deleted")
         self.assertNotEqual(status["N0"], "deleted"); self.assertNotEqual(status["N3"], "deleted")
+        reason_dialog.assert_called_once()
         toggles = tree._column_toggles
         self.assertEqual(set(toggles), {"branch", "kind", "debit", "credit"})
         toggles["branch"].set(False); toggles["debit"].set(False)

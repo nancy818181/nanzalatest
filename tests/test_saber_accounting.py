@@ -581,7 +581,8 @@ class SaberAccountingTest(unittest.TestCase):
             db.import_invoice(first,user["id"]); result=db.clear_invoices(user["id"]); db.import_invoice(second,user["id"])
             self.assertEqual(result["deleted"],1); self.assertTrue(Path(result["backup"]).exists())
             invoices=db.list_invoices(); self.assertEqual(len(invoices),1); self.assertEqual(invoices[0]["invoice_number"],"2")
-            db.delete_invoice(invoices[0]["id"],user["id"]); self.assertFalse(db.list_invoices())
+            db.delete_invoice(invoices[0]["id"],user["id"],reason="synthetic test void")
+            self.assertEqual(db.list_invoices()[0]["status"],"void")
 
     def test_multi_company_and_separate_fiscal_year_databases(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -279,7 +279,7 @@ class InvoiceReturnTest(unittest.TestCase):
             doc_ids=[row["id"] for row in conn.execute("SELECT id FROM stock_documents WHERE invoice_id=?",(credit["id"],))]
             journals=[tuple(row) for row in conn.execute("SELECT id,source_type FROM journal_entries WHERE source_id=? ORDER BY id",(credit["id"],))]
         with self.assertRaisesRegex(ValueError,"would make later stock negative"):
-            self.db.mark_invoice_deleted(credit["id"],self.user["id"])
+            self.db.mark_invoice_deleted(credit["id"],self.user["id"],reason="synthetic test void")
         self.assertEqual(self.db.get_invoice(credit["id"])["status"],"posted")
         with self.db.connect() as conn:
             self.assertEqual([row["id"] for row in conn.execute("SELECT id FROM stock_documents WHERE invoice_id=?",(credit["id"],))],doc_ids)

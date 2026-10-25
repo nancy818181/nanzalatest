@@ -65,9 +65,10 @@ class CashSettlementTest(unittest.TestCase):
         self.db.cancel_invoice(other, "wrong customer", self.user)
         self.assertEqual(self.entry(other)[0], [])
         third = self.invoice("S-6")
-        self.db.delete_invoice(third, self.user)
+        self.db.delete_invoice(third, self.user, reason="synthetic correction")
         with self.db.connect() as db:
-            self.assertIsNone(db.execute("SELECT 1 FROM journal_entries WHERE source_type='invoice_payment' AND source_id=?", (third,)).fetchone())
+            self.assertIsNotNone(db.execute("SELECT 1 FROM journal_entries WHERE source_type='invoice_payment' AND source_id=?", (third,)).fetchone())
+            self.assertIsNotNone(db.execute("SELECT 1 FROM journal_entries WHERE source_type='invoice_void' AND source_id=?", (third,)).fetchone())
 
     def test_invoices_saved_before_get_their_missing_entry_once(self):
         old = self.invoice("OLD-1"); locked = self.invoice("OLD-2", invoice_date="05-01-2026")
