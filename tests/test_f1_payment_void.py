@@ -144,3 +144,35 @@ class PaymentVoidRulesTest(_unittest.TestCase):
     def test_closed_year(self): self._run(test_closed_period_blocks_void)
     def test_books_lock(self): self._run(test_books_lock_blocks_void_and_edit)
     def test_migration(self): self._run(test_migration_adds_void_columns_idempotently)
+    def test_old_file_upgraded(self): self._run(test_existing_file_gets_the_void_columns_on_open)
+    def test_fingerprint_tuples(self): self._run(test_schema_fingerprint_sees_columns_listed_in_tuples)
+
+
+def test_existing_file_gets_the_void_columns_on_open(synthetic_db):
+    """2.9.136 regression: a file made by 2.9.135 was not upgraded ('no such column: x.voided_at') because the schema
+    fingerprint ignored column names listed in tuples. A stale schema stamp must bring the columns back."""
+    import database
+    with synthetic_db.connect() as c:
+        for column in ("voided_at", "voided_by", "void_reason", "reversal_entry_number", "replaced_by"):
+            c.execute(f"ALTER TABLE payments DROP COLUMN {column}")
+        c.execute("UPDATE app_settings SET value='old' WHERE key='startup_schema_version'")
+    synthetic_db.initialize_if_needed("Synthetic-Only-Test-Password-2026")
+    with synthetic_db.connect() as c:
+        cols = {r[1] for r in c.execute("PRAGMA table_info(payments)")}
+    assert {"voided_at", "reversal_entry_number"} <= cols
+    synthetic_db.list_payments()
+
+
+def test_schema_fingerprint_sees_columns_listed_in_tuples(synthetic_db):
+    """The fingerprint must change when a column is added inside a tuple of the upgrade code."""
+    import database
+    original = database.Database._initialize
+    before = database._schema_fingerprint()
+    def changed(self, admin_password):
+        _probe = (("payments_probe_column", "TEXT"),)  # noqa: F841 - only its presence in the code matters
+        return original(self, admin_password)
+    try:
+        database.Database._initialize = changed
+        assert database._schema_fingerprint() != before
+    finally:
+        database.Database._initialize = original
