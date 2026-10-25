@@ -24,7 +24,7 @@ class BalanceReportsMixin:
                  ("balance_sheet_only", False), ("profit_loss_only", False), ("tax_basis", False), ("balance_format", False), ("carry_forward", True), ("monthly", False),
                  ("without_opening", False), ("without_closing", False))}
         currencies = {code: tk.BooleanVar(value=True) for code in self.currency_codes}
-        box = tk.LabelFrame(page, text="Statement of Account - options" if statement else "Balance des Comptes - options", bg=LIGHT, padx=8, pady=6)
+        box = tk.LabelFrame(page, text="Statement of Account - options" if statement else "Balance des Comptes - options", bg=LIGHT, padx=6, pady=4)
         box.pack(fill="x", padx=10, pady=(8, 4))
         row0 = tk.Frame(box, bg=LIGHT); row0.pack(fill="x")
         if statement:
@@ -59,7 +59,7 @@ class BalanceReportsMixin:
         tk.Label(row1, text="Branch", bg=LIGHT).pack(side="left"); self.branch_multi_selector(row1, v["branch"]).pack(side="left", padx=(4, 8))
         ttk.Combobox(row1, textvariable=v["posting"], values=["Posted only", "Posted + Review", "Review only"], state="readonly", width=15).pack(side="left", padx=4)
 
-        options = tk.Frame(box, bg=LIGHT); options.pack(fill="x", pady=(6, 0))
+        options = tk.Frame(box, bg=LIGHT); options.pack(fill="x", pady=(4, 0))
         groups = [("Lines", [("summary", "Summary (Resume)"), ("by_due_date", "By Due Date"), ("reference", "Reference"), ("with_branch", "With Branch")]),
                   ("Accounts", [("detailed", "Detailed Account (statement)"), ("include_zero", "All accounts"), ("order_by_description",
                           "Order by Description"), ("non_zero_only", "Non-zero Balances only")]),
@@ -67,13 +67,34 @@ class BalanceReportsMixin:
                                 ("tax_basis", "P&L tax basis (without non-deductible expenses)")]),
                   ("Format", [("balance_format", "Format Balance (Dr / Cr balance)"), ("carry_forward", "With Carry Forward (opening)"), ("monthly", "Monthly"),
                               ("without_opening", "Without Opening entries"), ("without_closing", "Without Closing entries")])]
+        option_frames=[]
         for title, items in groups:
-            frame = tk.LabelFrame(options, text=title, bg=LIGHT, padx=4); frame.pack(side="left", fill="y", padx=(0, 6))
-            for name, label in items: tk.Checkbutton(frame, text=label, variable=flags[name], bg=LIGHT, anchor="w").pack(anchor="w")
+            frame = tk.LabelFrame(options, text=title, bg=LIGHT, padx=4, pady=1)
+            option_frames.append(frame)
+            for name, label in items:
+                tk.Checkbutton(frame, text=label, variable=flags[name], bg=LIGHT, anchor="w", justify="left", padx=2, pady=0).pack(anchor="w")
             if title == "Grouping":
                 digits = tk.Frame(frame, bg=LIGHT); digits.pack(anchor="w")
                 tk.Label(digits, text="Summary digits", bg=LIGHT).pack(side="left"); ttk.Combobox(digits, textvariable=v["summary_digits"], values=["1", "2",
                         "3", "4", "5", "6"], width=3, state="readonly").pack(side="left", padx=3)
+        option_layout={"columns":None,"pending":False}
+        def arrange_options(_event=None):
+            if option_layout["pending"]: return
+            option_layout["pending"]=True
+            def apply():
+                option_layout["pending"]=False
+                if not options.winfo_exists(): return
+                width=max(1,options.winfo_width())
+                columns=4 if width>=1400 else 2 if width>=700 else 1
+                if option_layout["columns"]==columns: return
+                option_layout["columns"]=columns
+                for frame in option_frames: frame.grid_forget()
+                for index,frame in enumerate(option_frames):
+                    frame.grid(row=index//columns,column=index%columns,sticky="nsew",padx=3,pady=2)
+                for column in range(4): options.grid_columnconfigure(column,weight=1 if column<columns else 0)
+            options.after_idle(apply)
+        options.bind("<Configure>",arrange_options,add="+")
+        arrange_options()
         row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(4, 0))
         for title, key, choices in (("1st Column", "first_column", (("account", "Account Currency"),)+tuple((code,code) for code in self.currency_codes)),
                                     ("2nd Column", "second_column", (("account", "Account Currency"),)+tuple((code,code) for code in self.currency_codes)+(("none", "None"),))):
@@ -85,7 +106,7 @@ class BalanceReportsMixin:
         self.add_dimension_options(state, box)
         tk.Label(state["dimension_row"], text="Currencies", bg=LIGHT).pack(side="left", padx=(10, 0))
         for code, var in currencies.items(): tk.Checkbutton(state["dimension_row"], text=code, variable=var, bg=LIGHT).pack(side="left")
-        actions = tk.Frame(box, bg=LIGHT); actions.pack(fill="x", pady=(4, 0), padx=2)
+        actions = tk.Frame(box, bg=LIGHT); actions.pack(fill="x", pady=(3, 0), padx=2)
         tk.Button(actions, text="Show", command=lambda: self.run_balance_report(state), bg=GOLD, fg=NAVY, border=0, padx=22, pady=7, font=("Segoe UI", 10, "bold")).pack(side="left", padx=3)
         for text, fmt in (("Print", "print"), ("Excel", "xlsx"), ("PDF", "pdf")):
             self.action_button(actions, text, lambda f=fmt: self.export_balance_report(state, f)).pack(side="left", padx=3)

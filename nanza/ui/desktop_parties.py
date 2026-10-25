@@ -35,14 +35,31 @@ class PartiesMixin:
         put(4,0,"Due days from invoice",tk.Entry(form,textvariable=self.party_due_days,width=8))
         self.party_account_hint=tk.Label(form,text="Enter the first 4 account digits; the next available full account number fills automatically.",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=900)
         self.party_account_hint.grid(row=5,column=0,columnspan=4,sticky="ew",padx=4,pady=(2,4))
-        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=6,column=0,columnspan=4,sticky="w",padx=4,pady=(6,0))
-        self.action_button(buttons,"New",self.new_party_account).pack(side="left",padx=3)
-        tk.Button(buttons,text="Save",command=self.save_party,bg=GOLD,fg=NAVY,font=("Segoe UI",9,"bold"),border=0,padx=18,pady=7).pack(side="left",padx=3)
-        self.action_button(buttons,"Edit Selected",self.edit_selected_party).pack(side="left",padx=3)
-        self.action_button(buttons,"Legal Documents",self.party_documents_dialog).pack(side="left",padx=3)
-        self.action_button(buttons,"Customer / Supplier Ageing",self.open_party_ageing).pack(side="left",padx=3)
-        self.action_button(buttons,"Client Items: Qty & Value",self.open_client_items_report).pack(side="left",padx=3)
-        flow_toolbars(buttons)
+        buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=6,column=0,columnspan=4,sticky="ew",padx=4,pady=(6,0))
+        actions=(self.action_button(buttons,"New",self.new_party_account),
+                 tk.Button(buttons,text="Save",command=self.save_party,bg=GOLD,fg=NAVY,font=("Segoe UI",9,"bold"),border=0,padx=18,pady=7),
+                 self.action_button(buttons,"Edit Selected",self.edit_selected_party),
+                 self.action_button(buttons,"Legal Documents",self.party_documents_dialog),
+                 self.action_button(buttons,"Customer / Supplier Ageing",self.open_party_ageing),
+                 self.action_button(buttons,"Client Items: Qty & Value",self.open_client_items_report))
+        for column in range(6): buttons.grid_columnconfigure(column,weight=0)
+        layout={"columns":None,"pending":False}
+        def arrange_party_actions(_event=None):
+            if layout["pending"]: return
+            layout["pending"]=True
+            def apply():
+                layout["pending"]=False
+                if not buttons.winfo_exists(): return
+                width=max(1,buttons.winfo_width())
+                columns=6 if width>=900 else 3 if width>=620 else 2 if width>=440 else 1
+                if layout["columns"]==columns: return
+                layout["columns"]=columns
+                for widget in actions: widget.grid_forget()
+                for index,widget in enumerate(actions):
+                    widget.grid(row=index//columns,column=index%columns,sticky="w",padx=3,pady=2)
+            buttons.after_idle(apply)
+        buttons.bind("<Configure>",arrange_party_actions,add="+")
+        arrange_party_actions()
         self.parties_tree=self.table(self.parties_tab,[("id","ID",55),("account","9-Digit Account",115),("name","Name",180),("kind","Type",85),("tax",
                 "Tax Number",110),("mof","MOF Number",110),("address","Address",180),("contact","Contact",110),("currency","Currency",70),("due_days",
                 "Due Days",80)])
