@@ -88,7 +88,7 @@ def _possible_duplicate(db, kind, party, number):
     key = InvoiceStore.invoice_number_key(number); wanted = _party_key(party)
     with db.connect() as connection:
         for row in connection.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.total,i.currency,i.status,p.name FROM invoices i
-                JOIN parties p ON p.id=i.party_id WHERE i.kind=? AND i.status NOT IN ('cancelled','deleted')""", (kind,)):
+                JOIN parties p ON p.id=i.party_id WHERE i.kind=? AND i.status NOT IN ('cancelled','deleted','void')""", (kind,)):
             if _party_key(row["name"]) == wanted and InvoiceStore.invoice_number_key(row["invoice_number"]) == key:
                 return {"invoice_id": row["id"], "invoice_number": row["invoice_number"], "date": row["invoice_date"], "status": row["status"]}
     return None

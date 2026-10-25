@@ -67,7 +67,7 @@ def query_expenses(database, question, user=None, today=None):
                 "intent": parsed["intent"], "filters_applied": [], "rows": [], "totals": {}}
 
     conditions = ["a.type='expense'", "COALESCE(a.active,1)=1", "e.posting_status='posted'",
-                  "(e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL)"]
+                  "(e.source_type!='invoice' OR i.status IN ('posted','cancelled','void') OR i.status IS NULL)"]
     parameters = []
     filters = []
     with database.connect() as connection:
@@ -191,7 +191,7 @@ def _aging(database, kind, today=None, currency=None):
                   AND {normalized_day}<=?
                   AND (e.source_type!='invoice' OR EXISTS(
                     SELECT 1 FROM invoices i WHERE i.id=e.source_id
-                      AND i.status IN ('posted','cancelled')))
+                      AND i.status IN ('posted','cancelled','void')))
                 GROUP BY e.currency""", (*control_accounts, as_of)).fetchall()
         else:
             balances = []
