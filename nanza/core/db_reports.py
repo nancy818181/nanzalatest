@@ -168,6 +168,8 @@ class ReportsStore:
                 WHERE {' AND '.join(conditions)} GROUP BY e.currency,a.id ORDER BY e.currency,a.code""", parameters)]
         for row in rows:
             row["amount"] = _exact_amount(row["credit"], row["debit"]) if row["type"] == "income" else _exact_amount(row["debit"], row["credit"])
+            # 2.9.137 fix: DSUM_EXACT returns text; callers (P&L page, exports) expect numbers as before
+            row["debit"] = _report_number(Decimal(str(row["debit"] or 0))); row["credit"] = _report_number(Decimal(str(row["credit"] or 0)))
         return rows
 
     def close_fiscal_year(self, year, user_id):
