@@ -601,6 +601,10 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self.bind_all("<F1>",lambda _e: self.open_user_guide())  # 2.9.106: F1 opens the guide (tabs like the menu, with a search box)
         self.update_notice_bar=top; self.start_update_check()
         tk.Button(top,text="Switch Company / Year",command=self.company_selection_screen,bg=GOLD,fg=NAVY,border=0,padx=10,pady=5).pack(side="right",padx=5)
+        # 2.9.136 (owner): Board Dashboard on the same top line, next to Switch Company / Year (it was at the bottom of the side menu)
+        self.board_nav_button=tk.Button(top,text="📊 Board Dashboard",command=self.open_board_dashboard,
+            bg=GOLD,fg=NAVY,relief="flat",border=0,padx=10,pady=5,cursor="hand2")
+        self.board_nav_button.pack(side="right",padx=5)
         self.alerts_button=tk.Button(top,text="Document Alerts",command=self.show_document_alerts,bg=NAVY,fg="white",border=1,padx=10,pady=5)
         self.alerts_button.pack(side="right",padx=5)
         tk.Label(top,text=f'{getattr(self,"current_company",{}).get("name","")} · {getattr(self,"current_fiscal_year","")}',bg=NAVY,fg="white",font=("Segoe UI",9,"bold")).pack(side="right",padx=8)
@@ -707,10 +711,6 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self._page_attributes=[attribute for attribute,_name in shown]
         self.bind("<Control-b>",lambda _event:self.open_board_dashboard())
         self.bind("<Control-B>",lambda _event:self.open_board_dashboard())
-        board_parent=menu_holder if side_menu else top
-        self.board_nav_button=tk.Button(board_parent,text="📊 Board Dashboard",command=self.open_board_dashboard,
-            bg=GOLD,fg=NAVY,relief="flat",pady=7,cursor="hand2")
-        self.board_nav_button.pack(side="bottom" if side_menu else "right",fill="x" if side_menu else "none",padx=5,pady=4)
         if side_menu:
             nav_buttons.extend(desktop_layout.build_side_menu(self,menu_holder,self._page_attributes,self.main_tab_pages,self.tab_names))
         else:
