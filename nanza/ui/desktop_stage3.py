@@ -4,14 +4,14 @@ from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as pl
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
-    asset_pdf_details, auto_upload_on, bulk_action, datetime, EXPENSE_VAT, filedialog, GOLD, LIGHT, messagebox,
+    asset_pdf_details, bulk_action, datetime, EXPENSE_VAT, filedialog, GOLD, LIGHT, messagebox,
     METHODS, MUTED, NAVY, notify_new_items, Path, prepare_pdf_reading, PURCHASE_VAT, read_expenses,
     read_invoice_pdf_pages, read_invoices, RED, resolve_item, run_with_progress, SALES_VAT, threading, tk, ttk, TYPES
 )
 from desktop_stage3_common import simpledialog  # noqa: F401 - desktop_stage3.simpledialog is patched by tests
 from desktop_common import main_currency  # 2.9.71
 from desktop_stage3_common import _dd, _num
-from desktop_common import flow_toolbars
+from desktop_common import flow_toolbar, flow_toolbars
 from desktop_common import account_label, account_code  # 2.9.79
 from i18n import tr
 from desktop_purchases import PurchasesMixin
@@ -50,7 +50,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         tk.Button(bar, text="Apply", command=self.populate_import_preview, bg=GOLD, fg=NAVY, border=0, padx=10, pady=5).pack(side="left", padx=4)
         self.file_label = tk.Label(page, text="No file selected. Excel: one invoice per row. PDF: each file becomes one invoice and is attached to it.", bg=LIGHT, fg=MUTED, anchor="w")
         self.file_label.pack(fill="x", padx=12)
-        tk.Label(page,text="PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves.",
+        tk.Label(page,text="PDF: review each row's Type and use Review original document before saving. Account cells: F2 / Down / right-click searches the chart; Tab saves.",
                  bg=LIGHT,fg=MUTED,anchor="w").pack(fill="x",padx=12,pady=(2,0))
         tk.Label(page, text="Select preview rows with Ctrl / Shift (Ctrl+A or Select All = every row), choose a VAT A/C below, then apply it to the selection.",
                  bg=LIGHT, fg=MUTED, anchor="w").pack(fill="x", padx=12)
@@ -65,8 +65,6 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         tk.Checkbutton(bottom, text="Replace ALL previous invoices (a safety backup is made first)", variable=self.import_replace, bg=LIGHT, fg=RED).pack(side="left")
         tk.Button(bottom, text="Auto Calculate Totals", command=self.import_auto_calculate, bg=NAVY, fg="white", border=0, padx=14, pady=8).pack(side="right", padx=6)  # 2.9.89
         tk.Button(bottom, text="Review & Save Import", command=self.send_import, bg=GOLD, fg=NAVY, font=("Segoe UI", 10, "bold"), border=0, padx=26, pady=8).pack(side="right")
-        tk.Checkbutton(bottom, text="Save automatically after reading", variable=self.auto_upload_var(), command=self.remember_auto_upload,
-                       bg=LIGHT, fg=NAVY).pack(side="right", padx=8)
         tk.Button(bottom, text="Remove Row", command=lambda: self.import_sheet.delete_selected(), bg=RED, fg="white", border=0, padx=12, pady=8).pack(side="right", padx=6)
         self.import_status = tk.Label(bottom, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")); self.import_status.pack(side="right", padx=10)
         tk.Button(bottom, text="Select All", command=self.select_all_import_rows,
@@ -95,7 +93,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         data=dict(row.get("_reading") or {})
         data.update({key:row.get(key) for key in ("invoice_number","invoice_date","party_name","currency","subtotal","vat","total")})
         data["items"]=row.get("_items") or []
-        result=review_handwriting(self,row["_path"],data)
+        result=review_handwriting(self,row["_path"],data,force=True)
         if result is None: return
         for key in ("invoice_number","invoice_date","party_name","currency","subtotal","vat","total"): row[key]=result.get(key)
         row["_items"]=result.get("items") or [];row["_reading"]=result;row["_human_reviewed"]=True
@@ -200,7 +198,6 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                         for r in read_invoices(path, default_currency=self.currency.get(), default_kind=kind,allowed_currencies=self.currency_codes)]
         except Exception as exc: return messagebox.showerror("Import", f"The Excel file could not be read: {exc}")
         self.import_mode = "excel"; self.import_rows = rows; self.file_label.config(text=f"Excel: {path}", fg=NAVY); self.populate_import_preview()
-        if rows and auto_upload_on(self): self.after_idle(self.auto_send_import)
 
     def choose_import_pdfs(self):
         paths = filedialog.askopenfilenames(filetypes=[("PDF invoices or photos", "*.pdf *.png *.jpg *.jpeg"), ("PDF invoices", "*.pdf")])
@@ -241,7 +238,6 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                     if note: rows[-1]["notes"] = f"{note}; {rows[-1]['notes']}".strip("; ")
         self.import_mode = "pdf"; self.import_rows = rows
         self.file_label.config(text=f"{len(paths)} PDF file(s). Confirm each Type and amount; VAT 0 if none. Expenses are paid transactions.", fg=NAVY); self.populate_import_preview()
-        if rows and auto_upload_on(self): self.after_idle(self.auto_send_import)
 
     def populate_import_preview(self):
         self.import_sheet.clear(); selected = self.import_view_currency.get()
@@ -262,22 +258,9 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         row["_display"] = {k: (f"{float(row[k]):,.2f}" if row.get(k) not in (None, "") else "") for k in ("subtotal", "vat", "total", "deductible", "non_deductible")}
 
     def auto_send_import(self):
-        """2.9.50: called right after reading the file - rows that are complete are saved and posted at once
-        (no confirmation questions); rows that need a correction stay in the preview with the reason."""
-        rows = self.import_sheet.ordered()
-        if self.import_mode=="pdf":
-            self.import_status.config(text="PDF/photo readings require human review; use Review original document, then Review & Save Import")
-            return
-        if not rows or self.import_replace.get(): return  # replacing all previous invoices always needs the explicit button
-        default = self.import_type.get() if self.import_type.get() in TYPES else "Purchases"
-        for r in rows:
-            if self.import_mode == "pdf" and r.get("entry_type") not in TYPES: r["entry_type"] = default
-        ready, waiting = self.split_ready_import_rows(rows)
-        for iid in self.import_sheet.rows: self.import_sheet.refresh(iid)
-        if not ready:
-            self.import_status.config(text=f"Not saved automatically: {len(waiting)} row(s) need a check (see Check column), then press Review & Save Import")
-            return
-        return self.send_import(auto=True, rows=ready)
+        """Compatibility callback: imports stay in the editable preview until explicitly saved."""
+        if hasattr(self, "import_status"):
+            self.import_status.config(text="Review the preview and select Review & Save Import to post.")
 
     def import_duplicates(self, rows, default_entry_type="purchases"):
         """{id(row): (row, [saved invoices])} for preview rows already in the books (2.9.51). Expenses are not invoices."""
@@ -380,6 +363,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         return self.client.create_manual_invoice({**invoice, "duplicate_ok": True}, lines)["invoice_id"]  # checked with the upload
 
     def send_import(self, auto=False, rows=None):
+        if auto:
+            return messagebox.showwarning("Import", "Automatic saving is disabled. Review the preview and use Review & Save Import.")
         rows = rows if rows is not None else self.import_sheet.ordered()
         if not rows: return messagebox.showwarning("Import", "Choose an Excel or PDF file first")
         asset_rows=[r for r in rows if self.import_mode=="pdf" and r.get("entry_type")=="Assets"]
@@ -399,6 +384,10 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                     "Asset register review is unavailable. The preview row was kept and no invoice was posted.")
             reviewer(row)
             return
+        if self.import_mode=="pdf":
+            unreviewed=[str(r.get("line", "?")) for r in rows if not r.get("_human_reviewed")]
+            if unreviewed:
+                return messagebox.showwarning("Import",f"Review the original PDF/photo for row(s) {', '.join(unreviewed[:10])} before saving.")
         kind, entry_type = TYPES[self.import_type.get()]
         if self.import_mode == "pdf":
             missing = [str(r.get("line", "")) for r in rows if not r.get("party_name") or r.get("total") in (None, "")]
@@ -669,6 +658,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(3, 0))
         self.dimension_selectors(row3, form["department"], form["project"])
         form["balance"] = tk.Label(row3, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")); form["balance"].pack(side="left", padx=10)
+        flow_toolbar(row3)
         alloc = tk.LabelFrame(page, text="Allocation - which invoices this " + ("receipt settles" if kind == "customer_receipt" else "payment settles"), bg=LIGHT, padx=6, pady=2)
         alloc.pack(fill="x", padx=8, pady=(0, 3))
         bar = tk.Frame(alloc, bg=LIGHT); bar.pack(fill="x")

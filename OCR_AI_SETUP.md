@@ -1,4 +1,4 @@
-# Local OCR and AI — light source package, NANZA 2.9.131
+# Local OCR and AI — light source package, NANZA 2.9.135
 
 No OpenAI API or paid AI service is used. There is no Qwen2-VL-7B backend and no
 qwen-vl-utils or accelerate requirement in this delivery. Existing NANZA AI and

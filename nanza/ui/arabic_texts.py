@@ -2,6 +2,21 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'KEY FIGURES': 'الأرقام الرئيسية',
+    'Saved report layouts': 'تخطيطات التقارير المحفوظة',
+    'Save current': 'حفظ الحالي',
+    'Reset filters': 'إعادة ضبط عوامل التصفية',
+    'Saved per company, year, and user': 'تُحفظ حسب الشركة والسنة والمستخدم',
+    'Invoice review': 'مراجعة الفاتورة',
+    'The reader can get amounts and dates wrong. Compare with the source document, correct the fields, then confirm.':
+        'قد يخطئ القارئ في المبالغ والتواريخ. قارن المستند الأصلي وصحّح الخانات ثم أكّد المراجعة.',
+    'Check the source and tick the confirmation first': 'راجع المستند الأصلي وحدّد خانة التأكيد أولاً',
+    'Review OCR values, then press Save Purchase. OCR never posts automatically.':
+        'راجع القيم المستخرجة ثم اضغط حفظ الشراء. لا تُرحّل القراءة الآلية تلقائياً.',
+    'Control Sheet (Excel)': 'ورقة رقابة (Excel)',
+    'Control Sheet (PDF)': 'ورقة رقابة (PDF)',
+    'Human-reviewed analysis from this company’s ledger. Confidence is a rule score, not measured accuracy; open the listed evidence before acting. No posting is done here. No verified Lebanese law, tax, IFRS, or IAS source pack is integrated. NEEDS ACCOUNTANT SIGN-OFF.':
+        'تحليل بمراجعة بشرية من دفتر هذه الشركة. مستوى الثقة نتيجة قواعد وليس دقة مقاسة؛ افتح الأدلة المذكورة قبل اتخاذ إجراء. لا يحدث ترحيل هنا. لا تتوفر مجموعة مصادر موثقة للقوانين أو الضرائب اللبنانية أو IFRS أو IAS. يحتاج إلى اعتماد المحاسب.',
     'Handwritten invoices (experimental, offline)': 'فواتير خط اليد (تجريبي، دون إنترنت)',
     'Handwritten invoices': 'فواتير خط اليد',
     'Handwriting review': 'مراجعة قراءة خط اليد',
@@ -12,7 +27,7 @@ AR = {
     'Subtotal': 'المجموع الفرعي',
     'Blank means unreadable, not zero.\nNo accounting entry is saved here.':
         'الخانة الفارغة تعني أنها غير مقروءة، وليس صفراً.\nلا يُحفظ أي قيد محاسبي هنا.',
-    'I checked these fields against the image': 'راجعت هذه الخانات مقارنةً بالصورة',
+    'I checked these fields against the source document': 'راجعت هذه الخانات مقارنةً بالمستند الأصلي',
     'Use checked fields': 'استخدام الخانات المراجَعة',
     'Check the image and tick the confirmation first': 'راجع الصورة ثم حدّد خانة التأكيد أولاً',
     'Zoom +': 'تكبير +',
@@ -25,7 +40,7 @@ AR = {
     'One-time download. You can stop it and use Install / Repair later to resume.':
         'تنزيل لمرة واحدة. يمكنك إيقافه ثم استخدام التثبيت / الإصلاح لاحقاً لاستكماله.',
     'The reader can get amounts and dates wrong. Compare with the image, correct the fields, then confirm.':
-        'قد يخطئ القارئ في المبالغ والتواريخ. قارن بالصورة وصحّح الخانات ثم أكّد المراجعة.',
+        'قد يخطئ القارئ في المبالغ والتواريخ. قارن بالمستند الأصلي وصحّح الخانات ثم أكّد المراجعة.',
     ('Two independent readers (4B + 2B): optional download of about 4.5 GB; allow 5 GB of disk space '
      'and about 6 GB of free RAM. They run one after another and can take a few minutes. '
      'Photos stay on this computer: no account, API key or per-invoice fee. '

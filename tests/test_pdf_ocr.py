@@ -135,7 +135,7 @@ class OcrPageTests(unittest.TestCase):
             import_type=types.SimpleNamespace(get=lambda: "Purchases"),
             import_mode="pdf", client=client,
         )
-        row = {**result, "line": "1", "party_name": "شركة المورد", "currency": "LBP"}
+        row = {**result, "line": "1", "party_name": "شركة المورد", "currency": "LBP", "_human_reviewed": True}
         client.import_invoices.assert_not_called()
         # Missing values cannot be filled from the other two amounts during import.
         row["vat"] = None
@@ -377,7 +377,7 @@ class OcrPageTests(unittest.TestCase):
 
     def test_pdf_import_requires_explicit_vat_and_reconciled_totals(self):
         row = {"line": "1", "invoice_number": "45", "invoice_date": "15-03-2026",
-               "party_name": "Supplier Co", "currency": "USD", "source": "scan.pdf - Page 1",
+               "party_name": "Supplier Co", "currency": "USD", "source": "scan.pdf - Page 1", "_human_reviewed": True,
                "subtotal": 100.0, "vat": None, "total": 111.0}
         screen = types.SimpleNamespace(
             import_sheet=types.SimpleNamespace(ordered=lambda: [row]),
@@ -473,7 +473,7 @@ class OcrPageTests(unittest.TestCase):
 
     def test_pdf_type_or_paid_account_must_be_chosen_before_posting(self):
         row={"line":"001","invoice_number":"1","invoice_date":"15-03-2026","party_name":"Supplier",
-             "subtotal":100.0,"vat":0.0,"total":100.0,"entry_type":"","supplier_account":"","expense_account":""}
+             "subtotal":100.0,"vat":0.0,"total":100.0,"entry_type":"","supplier_account":"","expense_account":"","_human_reviewed":True}
         screen=types.SimpleNamespace(import_sheet=types.SimpleNamespace(ordered=lambda:[row]),
             import_type=types.SimpleNamespace(get=lambda:"Purchases"),import_mode="pdf",
             import_replace=types.SimpleNamespace(get=lambda:False),
@@ -672,6 +672,7 @@ class OcrPageTests(unittest.TestCase):
             with patch("desktop_stage3.filedialog.askopenfilename",return_value=str(path)), \
                  patch("desktop_purchases.read_invoice_pdf",return_value=data), \
                  patch("desktop_expenses.read_invoice_pdf",return_value=data), \
+                 patch("desktop_stage3_common.review_handwriting",side_effect=lambda _app,_path,value,force=False:{**value,"intake_reviewed":True}), \
                  patch("desktop_stage3.simpledialog.askstring",return_value=None):
                 Stage3Mixin.choose_purchase_pdf(purchase)
                 Stage3Mixin.choose_expense_pdf(expense)
@@ -713,7 +714,8 @@ class OcrPageTests(unittest.TestCase):
                 {"description": "Blue pens", "quantity": 2, "unit_price": 10, "unit": "box"}],
                 "subtotal": 20, "vat": 0, "notes": "Read from PDF - please check"}
             with patch("desktop_stage3.filedialog.askopenfilename", return_value=str(path)), \
-                 patch("desktop_purchases.read_invoice_pdf", return_value=data):
+                 patch("desktop_purchases.read_invoice_pdf", return_value=data), \
+                 patch("desktop_stage3_common.review_handwriting",side_effect=lambda _app,_path,value,force=False:{**value,"intake_reviewed":True}):
                 Stage3Mixin.choose_purchase_pdf(screen)
             self.assertEqual(rows[0]["item_code"], "ITM-00001")
             self.assertEqual(rows[0]["name"], "Blue pens")
@@ -825,12 +827,14 @@ class OcrPageTests(unittest.TestCase):
                 "party_name": "Supplier Co", "currency": "USD", "subtotal": 100, "notes": "Please check"}
         with patch("desktop_v22.filedialog.askopenfilename", return_value="sales.pdf"), \
              patch("pdf_import.read_invoice_pdf", return_value=data), \
+             patch("desktop_stage3_common.review_handwriting",side_effect=lambda _app,_path,value,force=False:{**value,"intake_reviewed":True}), \
              patch("desktop_v22.messagebox.showinfo"):
             V22Mixin.import_sales_pdf(screen)
         self.assertEqual(number.get(), "SUP-42")
 
         screen.run_ai_task = lambda _worker, show: show(data)
         with patch("desktop_stage3.filedialog.askopenfilename", return_value="sales.pdf"), \
+             patch("desktop_stage3_common.review_handwriting",side_effect=lambda _app,_path,value,force=False:{**value,"intake_reviewed":True}), \
              patch("desktop_stage3.messagebox.showinfo"):
             Stage3Mixin.ai_read_sales_pdf(screen)
         self.assertEqual(number.get(), "SUP-42")
@@ -839,6 +843,7 @@ class OcrPageTests(unittest.TestCase):
         data["invoice_number"] = ""
         with patch("desktop_v22.filedialog.askopenfilename", return_value="sales.pdf"), \
              patch("pdf_import.read_invoice_pdf", return_value=data), \
+             patch("desktop_stage3_common.review_handwriting",side_effect=lambda _app,_path,value,force=False:{**value,"intake_reviewed":True}), \
              patch("desktop_v22.messagebox.showinfo"):
             V22Mixin.import_sales_pdf(screen)
         self.assertEqual(number.get(), "AUTO-FROM-DATE")

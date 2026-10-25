@@ -19,6 +19,35 @@ class ReadingSafetyTest(unittest.TestCase):
         digital = {"total": 60}
         self.assertIs(review_handwriting(SimpleNamespace(), "invoice.pdf", digital), digital)
 
+    def test_forced_document_review_cannot_be_bypassed_without_a_window(self):
+        from desktop_stage3_common import review_handwriting, auto_upload_on
+        data={"total":60}
+        self.assertIsNone(review_handwriting(SimpleNamespace(),"invoice.pdf",data,force=True))
+        self.assertFalse(auto_upload_on(SimpleNamespace(auto_upload_var=lambda:SimpleNamespace(get=lambda:True))))
+
+    def test_reviewed_amount_checks_warn_without_rewriting_values(self):
+        from desktop_stage3_common import reviewed_invoice_checks
+        data={"currency":"USD","subtotal":"100.00","vat":"11.00","total":"120.00","duplicate_candidates":[{"id":1}]}
+        reviewed_invoice_checks(SimpleNamespace(currency_codes=["USD","LBP"]),data)
+        self.assertEqual((data["subtotal"],data["vat"],data["total"]),("100.00","11.00","120.00"))
+        self.assertTrue(any("do not reconcile" in warning for warning in data["review_warnings"]))
+        self.assertTrue(any("duplicate" in warning for warning in data["review_warnings"]))
+
+    def test_batch_import_compatibility_callback_cannot_post(self):
+        from desktop_stage3 import Stage3Mixin
+        with patch("desktop_stage3.messagebox.showwarning") as warning:
+            Stage3Mixin.send_import(SimpleNamespace(),auto=True)
+        warning.assert_called_once()
+
+    def test_pdf_batch_needs_original_review_before_manual_save(self):
+        from desktop_stage3 import Stage3Mixin
+        client=SimpleNamespace(import_invoices=Mock())
+        screen=SimpleNamespace(import_mode="pdf",import_sheet=SimpleNamespace(ordered=lambda:[{"line":"1"}]),client=client)
+        with patch("desktop_stage3.messagebox.showwarning") as warning:
+            Stage3Mixin.send_import(screen)
+        self.assertIn("Review the original",warning.call_args.args[1])
+        client.import_invoices.assert_not_called()
+
     def test_cancelled_expense_review_keeps_the_previous_attachment(self):
         from desktop_expenses import ExpensesMixin
         form = {"id": None, "pdf": "previous.pdf", "pdf_suggested_type": "Expenses"}

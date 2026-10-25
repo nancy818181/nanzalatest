@@ -5,7 +5,7 @@ from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as pl
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
-    ask_new_item_details, asked_item_details, auto_upload_on, bulk_action, filedialog, GOLD, LIGHT, messagebox,
+    ask_new_item_details, asked_item_details, bulk_action, filedialog, GOLD, LIGHT, messagebox,
     mimetypes, MUTED, NAVY, notify_new_items, Path, prepare_pdf_reading, PURCHASE_USES, read_customs_costs,
     read_invoice_pdf, RED, resolve_item, run_with_progress, simpledialog, tk, ttk
 )
@@ -187,8 +187,8 @@ class PurchasesMixin:
         free_read = self.action_button(r5, "Free PDF Read", self.ai_read_purchase_pdf); free_read.pack(side="left", padx=3)
         self.action_button(r5, "Attachments", lambda: self.purchase_attachments()).pack(side="left", padx=3)
         self.azure_button(r5, self.azure_read_purchase, free_read)  # 2.9.120: only where Azure is set up
-        tk.Checkbutton(r5, text="Save automatically after upload", variable=self.auto_upload_var(), bg=LIGHT, fg=NAVY,
-                       command=self.remember_auto_upload).pack(side="left", padx=6)
+        tk.Label(r5, text="Review OCR values, then press Save Purchase. OCR never posts automatically.",
+                 bg=LIGHT, fg=RED, wraplength=380, justify="left").pack(side="left", padx=6)
         f["pdf_label"].pack(side="left", padx=8)
         cost = tk.LabelFrame(cost_parent or page, text="Cost on Purchase (customs / freight / insurance) for the selected purchase", bg=LIGHT, padx=8, pady=4); cost.pack(fill="x", padx=8, pady=3)
         f["lc"] = {k: tk.StringVar() for k in ("freight", "insurance", "customs_duties", "customs_group_1", "customs_group_2", "broker_fees", "other_costs",
@@ -500,7 +500,7 @@ class PurchasesMixin:
     def _apply_purchase_pdf(self, path, data):
         from desktop_stage3_common import review_handwriting
         if data is not None:
-            data = review_handwriting(self, path, data)
+            data = review_handwriting(self, path, data, force=True)
             if data is None: return
         f = self.purchase_form; v = f["vars"]
         if data and data.get("intake_reviewed") and "doc" in f:
@@ -541,7 +541,6 @@ class PurchasesMixin:
                                   (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
                                    "; Type unclear; review Purchases vs Assets before Save") +
                                   f"; {item_note}; PDF attaches when you press Save", fg=NAVY)
-            if not f["id"] and auto_upload_on(self): self.after_idle(self.auto_save_purchase_upload)
         else:
             item_note = self.add_purchase_pdf_items({"items": [], "subtotal": None})
             f["pdf_label"].config(text=f"{Path(path).name}: {item_note}; attachment saves with purchase on Save", fg=NAVY)
@@ -558,8 +557,6 @@ class PurchasesMixin:
             # 2.9.90: the lines read do not make the invoice (a page missing from the file): the invoice amounts are kept
             return (f"item lines not added: the {len(items)} line(s) read total {sum(line_total(i) for i in items):,.2f} but the invoice says "
                     f"{float(subtotal):,.2f} before VAT (a page may be missing from the PDF) - add the lines by hand or use Auto Calculate")
-        if not items and auto_upload_on(self):
-            return "no item line read from the PDF; the invoice is posted on its amount (add item lines and Save to move stock)"
         if not items:
             name = simpledialog.askstring(
                 "Purchase PDF item",
@@ -601,7 +598,7 @@ class PurchasesMixin:
         from ai_service import read_invoice_pdf as read_ai_pdf
         def show(data):
             from desktop_stage3_common import review_handwriting
-            data=review_handwriting(self,path,data)
+            data=review_handwriting(self,path,data,force=True)
             if data is None: return
             f=self.purchase_form; v=f["vars"]; f["pdf"]=path
             if data.get("intake_reviewed") and "doc" in f:
@@ -627,7 +624,6 @@ class PurchasesMixin:
             if rule_note: item_note = f"{item_note}; {rule_note}"
             if reader: item_note = f"{data.get('notes') or ''}; {item_note}"
             f["pdf_label"].config(text=f"{'Read' if reader else 'Local preview of page 1'}: {Path(path).name} — {item_note}; PDF attaches on Save",fg=NAVY)
-            if not f["id"] and auto_upload_on(self): self.after_idle(self.auto_save_purchase_upload)
         if reader: return reader(show)
         self.run_ai_task(lambda key:read_ai_pdf(path,key),show)
 
@@ -636,6 +632,9 @@ class PurchasesMixin:
         if not path: return
         from ai_service import read_invoice_pdf as read_ai_pdf
         def show(data):
+            from desktop_stage3_common import review_handwriting
+            data=review_handwriting(self,path,data,force=True)
+            if data is None: return
             self.new_sales_invoice(confirm=False)
             if data.get("invoice_date"): self.sales_date.set(data["invoice_date"])
             if data.get("invoice_number"): self.sales_no.set(str(data["invoice_number"]).strip())
@@ -740,16 +739,12 @@ class PurchasesMixin:
     # ------------------------------------------------------------ 2.9.50: upload = saved, posted and in stock
     def auto_upload_var(self):
         if getattr(self, "_auto_upload", None) is None:
-            import app_runtime, json as _json
-            try: value = bool(_json.loads((app_runtime.data_dir() / "upload_settings.json").read_text(encoding="utf-8")).get("auto_save", True))
-            except (OSError, UnicodeError, ValueError, TypeError, AttributeError): value = True
-            self._auto_upload = tk.BooleanVar(master=self, value=value)
+            self._auto_upload = tk.BooleanVar(master=self, value=False)
         return self._auto_upload
 
     def remember_auto_upload(self):
-        import app_runtime, json as _json
-        try: (app_runtime.data_dir() / "upload_settings.json").write_text(_json.dumps({"auto_save": bool(auto_upload_on(self))}), encoding="utf-8")
-        except OSError: pass
+        """Compatibility method for old UI bindings; automatic OCR posting is disabled."""
+        self.auto_upload_var().set(False)
 
     def purchase_upload_missing(self):
         f = self.purchase_form; v = f["vars"]; missing = []
@@ -763,20 +758,16 @@ class PurchasesMixin:
         return missing
 
     def auto_save_purchase_upload(self):
-        """After an upload: save, post the entry and receive the items at once when everything needed was read."""
+        """Compatibility callback: keep OCR output in review until the user presses Save Purchase."""
         f = self.purchase_form
-        if f.get("id"): return
-        warnings = f.get("pdf_review_warnings") or []
-        if warnings:
-            f["pdf_label"].config(text="Not saved automatically - review the original invoice: " + "; ".join(warnings) + "; then press Save Purchase", fg=RED)
-            return
-        missing = self.purchase_upload_missing()
-        if missing:
-            f["pdf_label"].config(text=f"Not saved automatically - complete: {', '.join(missing)}; then press Save Purchase", fg=RED)
-            return
-        self.save_purchase(auto=True)
+        if f.get("pdf_label"):
+            warnings=f.get("pdf_review_warnings") or []
+            detail=(" Checks: " + "; ".join(str(item) for item in warnings)) if warnings else ""
+            f["pdf_label"].config(text="OCR is a suggestion. Review the original, then press Save Purchase to post."+detail, fg=RED)
 
     def save_purchase(self, auto=False):
+        if auto:
+            return messagebox.showwarning("Purchase OCR", "Automatic saving is disabled. Review the invoice and press Save Purchase.")
         f = self.purchase_form
         pending_id = f.get("pdf_pending_invoice_id")
         if pending_id and f.get("id") == pending_id and f.get("pdf"):

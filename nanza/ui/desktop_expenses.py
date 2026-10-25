@@ -134,7 +134,7 @@ class ExpensesMixin:
     def fill_expense_from_reading(self, path, data):
         """The reading of the PDF (local, or 2.9.120 Azure) in the new expense."""
         from desktop_stage3_common import review_handwriting
-        data = review_handwriting(self, path, data)
+        data = review_handwriting(self, path, data, force=True)
         if data is None: return
         f = self.expense_form; v = f["vars"]; f["pdf"] = path
         f["pdf_suggested_type"] = data.get("suggested_type") or ""

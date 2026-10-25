@@ -125,7 +125,7 @@ class AssetRegisterMixin:
 
     def _apply_asset_pdf(self, path, data):
         from desktop_stage3_common import review_handwriting
-        data = review_handwriting(self, path, data)
+        data = review_handwriting(self, path, data, force=True)
         if data is None: return
         details=asset_pdf_details(data)
         self.new_asset()

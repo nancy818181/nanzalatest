@@ -3,6 +3,7 @@ Stock Card from Items, the Inventory Analysis (3D) options, mouse-wheel page scr
 right-click search in fields."""
 import tests_setup  # noqa: F401  2.9.74: the sample company of the tests (a new installation has none)
 import socket
+import secrets
 import tempfile
 import threading
 import time
@@ -32,14 +33,15 @@ class ProgramWindowFixesTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.folder = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        cls.test_password = secrets.token_urlsafe(24)
         database = Path(cls.folder.name) / "SaberAccounting" / "saber.db"; database.parent.mkdir(parents=True)
         probe = socket.socket(); probe.bind(("127.0.0.1", 0)); port = probe.getsockname()[1]; probe.close()
-        threading.Thread(target=run_server, kwargs={"host": "127.0.0.1", "port": port, "database": str(database), "admin_password": "admin12345"}, daemon=True).start()
+        threading.Thread(target=run_server, kwargs={"host": "127.0.0.1", "port": port, "database": str(database), "admin_password": cls.test_password}, daemon=True).start()
         cls.url = f"http://127.0.0.1:{port}"
         for _ in range(100):
-            try: ApiClient(cls.url).login("admin", "admin12345"); break
+            try: ApiClient(cls.url).login("admin", cls.test_password); break
             except Exception: time.sleep(0.1)
-        api = ApiClient(cls.url); api.login("admin", "admin12345")
+        api = ApiClient(cls.url); api.login("admin", cls.test_password)
         company = api.companies()[0]; api.select_company_year(company["id"], company["years"][0]["year"])
         api.save_inventory_item({"sku": "ITM-1", "name": "Test Panel", "unit": "unit", "sales_price": "10", "default_vat": "11"})
         cls.company = company
@@ -57,7 +59,7 @@ class ProgramWindowFixesTest(unittest.TestCase):
         # Tk objects must be freed on this (main) thread, never by a data-service thread's garbage collection.
         import gc; self.addCleanup(gc.collect)
         self.app = desktop.SaberApp(); self.addCleanup(self.app.destroy)
-        self.app.server.set(self.url); self.app.password.set("admin12345"); self.app.login()
+        self.app.server.set(self.url); self.app.password.set(self.test_password); self.app.login()
         year = self.company["years"][0]["year"]
         self.app.client.select_company_year(self.company["id"], year); self.app.current_company = self.company; self.app.current_fiscal_year = int(year)
         self.app.main_screen(); self.app.update()
@@ -229,7 +231,7 @@ class ProgramWindowFixesTest(unittest.TestCase):
             {"invoice_number": f"PDF-{index}", "invoice_date": "25-09-2026",
              "party_name": "Supplier", "currency": "USD", "subtotal": 100.0,
              "vat": 11.0, "total": 111.0, "entry_type": "Purchases",
-             "source": f"test.pdf - Page {index}"}
+             "source": f"test.pdf - Page {index}", "_human_reviewed": True}
             for index in range(2)
         ]
         app.populate_import_preview()
@@ -265,7 +267,7 @@ class ProgramWindowFixesTest(unittest.TestCase):
             {"invoice_number": f"PDF-{index}", "invoice_date": "25-09-2026",
              "party_name": "Supplier", "currency": "USD", "subtotal": 100.0,
              "vat": 11.0, "total": 111.0, "entry_type": "Purchases",
-             "source": f"test.pdf - Page {index}", "_path": __file__}
+             "source": f"test.pdf - Page {index}", "_path": __file__, "_human_reviewed": True}
             for index in range(3)
         ]
         app.populate_import_preview(); app.update()
