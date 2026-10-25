@@ -1,6 +1,7 @@
 """Journal, profit & loss, fiscal year and financial reports screens. (moved out of desktop.py in 2.9.41, unchanged)."""
 from __future__ import annotations
 import logging
+from decimal import Decimal
 
 from desktop_common import (  # 2.9.102: the names this module uses (no more 'import *')
     bulk_action, chosen_values, company_settings, datetime, export_excel, export_pdf, filedialog, flow_toolbars, GOLD, json, LIGHT,
@@ -274,12 +275,13 @@ class ReportsMixin:
         try: rows=self.client.profit_loss(dates[0],dates[1],currency)
         except Exception as exc: return messagebox.showerror("Profit & Loss",str(exc))
         self.pnl_rows=rows; self.pnl_tree.delete(*self.pnl_tree.get_children())
+        exact=lambda value: Decimal(str(value or 0))  # 2.9.137: a very large amount arrives as exact text (JSON), not a float
         for row in rows: self.pnl_tree.insert("","end",values=(row["currency"],row["type"],row["code"],row["name_en"],
-            f'{row["debit"]:,.2f}',f'{row["credit"]:,.2f}',f'{row["amount"]:,.2f}'))
+            f'{exact(row["debit"]):,.2f}',f'{exact(row["credit"]):,.2f}',f'{exact(row["amount"]):,.2f}'))
         totals={}
         for row in rows:
-            totals.setdefault(row["currency"],0)
-            totals[row["currency"]]+=row["amount"] if row["type"]=="income" else -row["amount"]
+            totals.setdefault(row["currency"],Decimal("0"))
+            totals[row["currency"]]+=exact(row["amount"]) if row["type"]=="income" else -exact(row["amount"])
         self.pnl_totals.config(text="   ".join(f"{code} Net P&L: {amount:,.2f}" for code,amount in totals.items()) or "No activity")
         self.refresh_fiscal_status()
 
