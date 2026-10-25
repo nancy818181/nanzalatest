@@ -261,8 +261,8 @@ class PDFFormEditor:
 
         self.window = tk.Toplevel(parent)
         self.window.title(f"Review PDF form — {self.source.name}")
-        self.window.geometry("1050x760")
-        self.window.minsize(650, 450)
+        from window_fit import fit_window  # 2.9.136: 1050x760 was taller than a 1280x720 / 1366x768 screen
+        fit_window(self.window, 1050, 760, min_width=650, min_height=450)
         self.window.protocol("WM_DELETE_WINDOW", self.close)
         self.zoom = 1.0
         self.page_gap = 18
