@@ -96,6 +96,87 @@ def test_edit_posted_payment_reverses_and_posts_new_number(synthetic_db):
     assert db.voided_payments_in_gl() == []  # reversed, so the ledger has no leftover
 
 
+def test_multicurrency_payment_reversal_preserves_lbp_and_usd_amounts(synthetic_db):
+    """Declared fixture rate: 1 USD = 1,500 LBP; reversal mirrors stored line values exactly."""
+    db = synthetic_db
+    party, _invoice, payment_id = _setup(db)
+    with db.connect() as c:
+        entry = c.execute("SELECT id FROM journal_entries WHERE source_type='payment' AND source_id=?", (payment_id,)).fetchone()
+        lines = c.execute("SELECT id,debit,credit FROM journal_lines WHERE entry_id=? ORDER BY id", (entry["id"],)).fetchall()
+        for line in lines:
+            amount = Decimal(str(line["debit"] or line["credit"]))
+            c.execute("""UPDATE journal_lines SET line_currency='USD',amount=?,amount_lbp=?,amount_usd=?,rate_lbp='1500',rate_usd='1'
+                         WHERE id=?""", (str(amount), str(amount * Decimal("1500")), str(amount), line["id"]))
+    new_id = db.update_payment(payment_id, {"party_id": party["id"], "payment_date": DAY, "currency": "USD", "amount": "60.00"}, 1)
+    with db.connect() as c:
+        pair = c.execute("""SELECT e.source_type,j.* FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
+                           WHERE e.source_id=? AND e.source_type IN ('payment','payment_reversal') ORDER BY e.id,j.id""", (payment_id,)).fetchall()
+        self_rows = c.execute("SELECT currency,amount FROM payments WHERE id=?", (new_id,)).fetchone()
+    assert self_rows["currency"] == "USD"
+    totals = {"USD": Decimal("0"), "LBP": Decimal("0")}
+    for row in pair:
+        sign = Decimal("1") if Decimal(str(row["debit"] or 0)) else Decimal("-1")
+        totals["USD"] += sign * Decimal(str(row["amount_usd"] or 0))
+        totals["LBP"] += sign * Decimal(str(row["amount_lbp"] or 0))
+    assert totals == {"USD": Decimal("0"), "LBP": Decimal("0")}
+    trial = db.trial_balance(to_date=DAY)
+    assert sum((Decimal(str(row["debit"])) - Decimal(str(row["credit"])) for row in trial), Decimal("0")) == 0
+    assert sum((Decimal(str(row["usd_debit"])) - Decimal(str(row["usd_credit"])) for row in trial), Decimal("0")) == 0
+    assert sum((Decimal(str(row["lbp_debit"])) - Decimal(str(row["lbp_credit"])) for row in trial), Decimal("0")) == 0
+
+
+def test_void_audit_snapshot_contains_every_journal_line_column(synthetic_db):
+    db = synthetic_db
+    _party, _invoice, payment_id = _setup(db)
+    with db.connect() as c:
+        line = c.execute("SELECT id FROM journal_lines WHERE entry_id=(SELECT id FROM journal_entries WHERE source_type='payment' AND source_id=?) LIMIT 1", (payment_id,)).fetchone()
+        c.execute("""UPDATE journal_lines SET line_currency='USD',amount='100',amount_lbp='150000',amount_usd='100',
+                     rate_lbp='1500',rate_usd='1',reference='REF-1' WHERE id=?""", (line["id"],))
+    db.delete_payment(payment_id, 1, reason="Audit snapshot", role="admin")
+    with db.connect() as c:
+        details = json.loads(c.execute("SELECT details FROM audit_log WHERE action='void' AND entity_id=?", (payment_id,)).fetchone()[0])
+        expected = {row["name"] for row in c.execute("PRAGMA table_info(journal_lines)")}
+    assert expected <= set(details["journal_lines"][0])
+
+
+def test_payment_void_http_role_and_reason():
+    import tempfile, threading
+    from http.server import ThreadingHTTPServer
+    from pathlib import Path
+    from company_manager import CompanyManager
+    from client import ApiClient
+    from database import Database
+    from server import ApiHandler
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+        master_path = Path(folder) / "master.db"
+        master = Database(master_path); master.initialize("Synthetic-Http-F1-2026")
+        manager = CompanyManager(master_path)
+        company = manager.create_company({"name": "Synthetic F1 HTTP", "year": 2026}, master)
+        handler = type("PaymentVoidHttpHandler", (ApiHandler,), dict(db=master, master_db=master,
+                       company_manager=manager))
+        http = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        thread = threading.Thread(target=http.serve_forever, daemon=True); thread.start()
+        try:
+            admin = ApiClient(f"http://127.0.0.1:{http.server_port}"); admin.login("admin", "Synthetic-Http-F1-2026")
+            admin.select_company_year(company["id"], int(company["years"][0]["year"]))
+            admin.save_user({"username":"f1staff", "password":"F1-Staff-2026!", "role":"accountant"})
+            staff = ApiClient(admin.base_url); staff.login("f1staff", "F1-Staff-2026!")
+            staff.select_company_year(company["id"], int(company["years"][0]["year"]))
+            db = manager.database(company["id"], int(company["years"][0]["year"]))
+            party, _invoice, payment_id = _setup(db)
+            for client, reason, expected in ((staff, "attempt", "administrator"), (admin, None, "reason")):
+                try:
+                    client.delete_payment(payment_id, reason)
+                except RuntimeError as exc:
+                    assert expected in str(exc).lower()
+                else:
+                    raise AssertionError(f"HTTP DELETE should have failed with {expected}")
+            result = admin.delete_payment(payment_id, "HTTP approved reason")
+            assert result.get("voided")
+        finally:
+            http.shutdown(); http.server_close(); thread.join(5); master.release()
+
+
 def test_closed_period_blocks_void(synthetic_db):
     _party, _invoice, payment_id = _setup(synthetic_db)
     with synthetic_db.connect() as c:
@@ -146,6 +227,9 @@ class PaymentVoidRulesTest(_unittest.TestCase):
     def test_migration(self): self._run(test_migration_adds_void_columns_idempotently)
     def test_old_file_upgraded(self): self._run(test_existing_file_gets_the_void_columns_on_open)
     def test_fingerprint_tuples(self): self._run(test_schema_fingerprint_sees_columns_listed_in_tuples)
+    def test_multicurrency_reversal(self): self._run(test_multicurrency_payment_reversal_preserves_lbp_and_usd_amounts)
+    def test_full_void_audit_snapshot(self): self._run(test_void_audit_snapshot_contains_every_journal_line_column)
+    def test_http_void_role_and_reason(self): test_payment_void_http_role_and_reason()
 
 
 def test_existing_file_gets_the_void_columns_on_open(synthetic_db):
