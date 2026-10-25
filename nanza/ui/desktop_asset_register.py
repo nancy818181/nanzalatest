@@ -1,7 +1,7 @@
 """Fixed assets page of Purchases & Expenses (moved out of desktop_stage3.py in 2.9.42, unchanged)."""
 from __future__ import annotations
 import logging
-from desktop_common import add_search_bar, flow_toolbars  # 2.9.78; 2.9.134 responsive asset actions
+from desktop_common import account_label, add_search_bar, flow_toolbars  # 2.9.78; 2.9.134 responsive asset actions
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
     asset_pdf_details, export_excel, export_pdf, filedialog, GOLD, LIGHT, messagebox, MUTED, NAVY, os, Path,
@@ -19,6 +19,9 @@ class AssetRegisterMixin:
                   "currency":"USD","cost":"","residual":"0","useful_months":"60","frequency":"monthly",
                   "asset_account":"","depreciation_account":"","accumulated_account":"","invoice_id":"","opening_date":""}
         self.asset_fields={key:tk.StringVar(value=value) for key,value in defaults.items()}
+        self.asset_supplier_display=tk.StringVar()
+        self.asset_vat_account_display=tk.StringVar()
+        self.asset_vat_display=tk.StringVar()
         self.asset_rate=tk.StringVar(value="")
         form=tk.LabelFrame(page,text="Asset",bg=LIGHT,padx=10,pady=6); form.pack(fill="x",padx=8,pady=(6,0))
         layout=[[("Asset code","asset_code",14),("Description","name",34),("Currency","currency",8)],
@@ -40,9 +43,18 @@ class AssetRegisterMixin:
                     widget.bind("<FocusOut>",lambda _event:self.show_asset_invoice_details(),add="+")
                     self.action_button(invoice_cell,"Show supplier / VAT",self.show_asset_invoice_details).pack(side="left",padx=(4,0))
                 widget.grid(row=row,column=column+1,sticky="w",padx=(2,14),pady=3) if key!="invoice_id" else invoice_cell.grid(row=row,column=column+1,sticky="w",padx=(2,8),pady=3)
-        self.asset_invoice_info=tk.Label(form,text="Supplier and VAT details appear here when a posted Assets purchase invoice is linked.",
+        linked=tk.LabelFrame(form,text="Linked supplier invoice (shown from the posted Assets purchase invoice)",bg=LIGHT,padx=6,pady=2)
+        linked.grid(row=3,column=0,columnspan=6,sticky="ew",padx=4,pady=(0,3))
+        for column,(caption,var,width) in enumerate((("Supplier",self.asset_supplier_display,32),
+                                                      ("VAT A/C",self.asset_vat_account_display,34),
+                                                      ("VAT amount",self.asset_vat_display,16))):
+            cell=tk.Frame(linked,bg=LIGHT); cell.grid(row=0,column=column,sticky="ew",padx=3,pady=1)
+            tk.Label(cell,text=caption,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(anchor="w")
+            ttk.Entry(cell,textvariable=var,width=width,state="readonly").pack(fill="x",expand=True)
+            linked.grid_columnconfigure(column,weight=1)
+        self.asset_invoice_info=tk.Label(linked,text="Enter a posted Assets purchase invoice ID above to show its supplier and VAT details.",
                                          bg=LIGHT,fg="#5f6b76",anchor="w")
-        self.asset_invoice_info.grid(row=3,column=0,columnspan=6,sticky="ew",padx=4,pady=(0,3))
+        self.asset_invoice_info.grid(row=1,column=0,columnspan=3,sticky="ew",padx=3,pady=(2,0))
         rules=tk.LabelFrame(page,text="Depreciation (filled from the asset account in tab 1 - change only if needed)",bg=LIGHT,padx=10,pady=4); rules.pack(fill="x",padx=8,pady=(4,0))
         tk.Label(rules,text="Rate % / year",bg=LIGHT).grid(row=0,column=0,sticky="w",padx=4)
         tk.Entry(rules,textvariable=self.asset_rate,width=8).grid(row=0,column=1,sticky="w",padx=(2,14))
@@ -109,6 +121,7 @@ class AssetRegisterMixin:
                      "useful_months":"60","frequency":"monthly"}.get(key,""))
         if hasattr(self,"asset_invoice_info"):
             self.asset_invoice_info.config(text="Supplier and VAT details appear here when a posted Assets purchase invoice is linked.")
+            self.asset_supplier_display.set(""); self.asset_vat_account_display.set(""); self.asset_vat_display.set("")
         if getattr(self,"asset_schedule_tree",None) is not None: self.asset_schedule_tree.delete(*self.asset_schedule_tree.get_children())
 
     def choose_asset_pdf(self):
@@ -310,6 +323,7 @@ class AssetRegisterMixin:
 
     def show_asset_invoice_details(self):
         """Display supplier and VAT from the linked invoice; the asset record stores only its existing invoice ID."""
+        self.asset_supplier_display.set(""); self.asset_vat_account_display.set(""); self.asset_vat_display.set("")
         invoice_id=self.asset_fields["invoice_id"].get().strip()
         if not invoice_id:
             self.asset_invoice_info.config(text="No supplier invoice linked. Enter the ID of a posted Assets purchase invoice.")
@@ -326,8 +340,11 @@ class AssetRegisterMixin:
             self.asset_invoice_info.config(text="This is not a posted Assets purchase invoice. Choose a posted invoice with Type = Assets.")
             return
         amount=float(invoice.get("vat") or 0)
-        self.asset_invoice_info.config(text=(f"Supplier: {invoice.get('party_name') or '—'}   ·   VAT: {amount:,.2f} {invoice.get('currency') or ''}   ·   "
-                                              f"VAT account: {invoice.get('vat_account') or '—'}   ·   Invoice: {invoice.get('invoice_number') or invoice_id}"))
+        self.asset_supplier_display.set(invoice.get("party_name") or "—")
+        vat_account=invoice.get("vat_account")
+        self.asset_vat_account_display.set(account_label(self,vat_account) if vat_account else "—")
+        self.asset_vat_display.set(f"{amount:,.2f} {invoice.get('currency') or ''}".strip())
+        self.asset_invoice_info.config(text=f"Invoice: {invoice.get('invoice_number') or invoice_id}. To edit supplier or VAT, edit this linked purchase invoice.")
 
     def select_asset(self):
         selected=self.asset_list.selection()

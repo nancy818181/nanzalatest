@@ -1,6 +1,7 @@
 """Sales invoice screen (split from desktop_invoices.py in 2.9.94, no change in behaviour)."""
 from __future__ import annotations
 from pathlib import Path
+from tkinter import simpledialog
 
 from desktop_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, export_excel, export_pdf, filedialog, flow_toolbar, formatted_user_date, GOLD, LIGHT, messagebox, NAVY,
@@ -28,9 +29,9 @@ def _responsive_invoice_details(form, fields, dimensions):
         label_width = max(label.winfo_reqwidth() for label, _widget in fields)
         field_width = max(widget.winfo_reqwidth() for _label, widget in fields)
         gap = max(16, round(form.winfo_fpixels("0.16i")))
-        # Four compact field groups fit the supplied 1920px layout; reduce columns as the
-        # usable page width shrinks so labels and account values remain readable.
-        columns = 4 if width >= 1450 else 3 if width >= 1050 else 2 if width >= 650 else 1
+        # Keep three roomy groups on typical desktop widths so the last account/payment
+        # controls do not run into the viewport edge. Use four only on extra-wide pages.
+        columns = 4 if width >= 1700 else 3 if width >= 1050 else 2 if width >= 650 else 1
         if columns == state["columns"] and width == state["width"]: return
         state.update(columns=columns, width=width)
         for column in range(8):
@@ -827,9 +828,15 @@ class SalesInvoiceMixin:
     def delete_sales_invoice(self):
         if not self.sales_edit_id: return messagebox.showwarning("Sales Invoice","Open a saved invoice first")
         number=self.sales_no.get()
-        if not messagebox.askyesno("Delete Invoice",f"Mark invoice {number} DELETED? Its number stays in the invoice list; the journal entry is removed."):
+        row=next((item for item in self.sales_open_map.values() if item.get("id")==self.sales_edit_id),{})
+        posted=row.get("status")=="posted"
+        reason = simpledialog.askstring("Void Invoice", f"Reason for voiding {number} (required):", parent=self) if posted else None
+        if posted and reason is None: return
+        prompt=(f"Void invoice {number}? Its number and original journal entries will remain; reversing entries will be added."
+                if posted else f"Delete draft invoice {number}?")
+        if not messagebox.askyesno("Void Invoice" if posted else "Delete Invoice", prompt):
             return
-        try: self.client.delete_invoice(self.sales_edit_id)
+        try: self.client.delete_invoice(self.sales_edit_id, reason=reason)
         except Exception as exc: return messagebox.showerror("Sales Invoice",str(exc))
         self.new_sales_invoice(confirm=False)
         self.load_invoices(); self.load_dashboard(); self.load_journal(); self.load_trial()

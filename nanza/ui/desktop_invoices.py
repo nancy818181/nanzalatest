@@ -7,6 +7,7 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
     formatted_user_date, GOLD, LIGHT, messagebox, mimetypes, natural_sort_value, NAVY, PURCHASE_USES, resource_path,
     ROUND_HALF_UP, SALE_TREATMENTS, sortable_date, TAXABLE_LABEL, tk, tr, ttk, uuid
 )
+from tkinter import simpledialog
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 from desktop_common import main_currency  # 2.9.71
 from desktop_sales_invoice import SalesInvoiceMixin  # 2.9.94: the sales invoice screen
@@ -415,13 +416,20 @@ class InvoicesMixin(SalesInvoiceMixin):
         return int(selected[0])
 
     def delete_selected_invoice(self):
-        """2.9.69: every selected row (Ctrl / Shift / drag) is marked DELETED in one go."""
-        selected=[iid for iid in self.invoice_tree.selection() if self.invoice_rows.get(iid,{}).get("status")!="deleted"]
+        """Delete drafts and void posted invoices selected with Ctrl / Shift / drag."""
+        selected=[iid for iid in self.invoice_tree.selection()
+                  if self.invoice_rows.get(iid,{}).get("status") not in ("deleted", "cancelled", "void")]
         if not selected: return messagebox.showwarning("Invoices","Select the invoice rows first (Ctrl / Shift or drag the mouse for several)")
         names=[(int(iid),self.invoice_rows.get(iid,{}).get("invoice_number") or iid) for iid in selected]
         shown=", ".join(str(n) for _i,n in names[:10])+(f" ... (+{len(names)-10})" if len(names)>10 else "")
-        if not messagebox.askyesno("Delete Invoice",f"Mark {len(names)} invoice(s) DELETED?\n{shown}\n\nTheir numbers and details stay visible; their journal entries are removed."): return
-        bulk_action("Delete Uploaded Data",names,self.client.delete_invoice)
+        posted=any(self.invoice_rows.get(iid,{}).get("status")=="posted" for iid in selected)
+        reason=simpledialog.askstring("Void Invoices", "Reason for voiding selected posted invoices (required):", parent=self) if posted else None
+        if posted and not str(reason or "").strip(): return
+        action="Void" if posted else "Delete"
+        explanation=("Original entries remain; reversing entries will be added." if posted
+                     else "Draft invoices will be deleted.")
+        if not messagebox.askyesno("Invoices",f"{action} {len(names)} selected invoice(s)?\n{shown}\n\n{explanation}"): return
+        bulk_action("Invoices",names,lambda invoice_id:self.client.delete_invoice(invoice_id,reason=reason))
         self.load_invoices(); self.load_dashboard(); self.load_journal(); self.load_trial()
 
     INVOICE_ACCOUNT_FIELDS = (("expense_account","Purchases / Expense / Sales account"),("vat_account","VAT account"),

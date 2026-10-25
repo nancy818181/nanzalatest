@@ -60,7 +60,9 @@ class PurchasesMixin:
         find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", fill="x", expand=True)
         f["find"] = tk.StringVar()
         tk.Label(find, text="Find purchase", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=36); f["find_box"].pack(side="left", padx=5)
+        # Keep the title, lookup, and Excel actions on one compact toolbar at desktop
+        # sizes; the flow toolbar wraps them when the available width is smaller.
+        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=24); f["find_box"].pack(side="left", padx=4)
         f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_found()); f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_purchases())
         f["find_box"].bind("<Return>", lambda _e: self.purchase_found())
         self.action_button(find, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(5, 3))
@@ -109,24 +111,39 @@ class PurchasesMixin:
             metadata.after_idle(apply)
         metadata.bind("<Configure>",arrange_purchase_fields,add="+")
         arrange_purchase_fields()
-        # Keep account captions visible and let each lookup grow with its cell width.
-        accounts_row=tk.Frame(fields,bg=LIGHT); accounts_row.pack(fill="x",pady=(2,0))
-        account_cells=[]
-        for label,var,width in (("Cost / Asset A/C",v["account"],40),("VAT A/C",v["vat_account"],36)):
-            cell=tk.Frame(accounts_row,bg=LIGHT); tk.Label(cell,text=label,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(anchor="w",padx=3)
-            self.account_search_box(cell,var,width).pack(fill="x",expand=True,padx=3,pady=(1,2)); account_cells.append(cell)
-        accounts_row.grid_columnconfigure(0,weight=1,uniform="purchase-accounts"); accounts_row.grid_columnconfigure(1,weight=1,uniform="purchase-accounts")
-        for column,cell in enumerate(account_cells): cell.grid(row=0,column=column,sticky="ew",padx=2)
-        # Payment mode and account stay together on one horizontal line.
-        paid_row=tk.Frame(fields,bg=LIGHT); paid_row.pack(fill="x",pady=(2,0))
+        # Put both accounting choices and payment details in one responsive row. This
+        # frees a line for the item grid on wide screens, and stacks into two columns
+        # when the page is narrower.
         f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
-        tk.Label(paid_row,text="Paid",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).grid(row=0,column=0,sticky="w",padx=(3,4),pady=2)
-        ttk.Combobox(paid_row,textvariable=f["paid_by"],values=PAID_BY,state="readonly",width=22).grid(row=0,column=1,sticky="ew",padx=(0,16),pady=2)
-        tk.Label(paid_row,text="from A/C",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).grid(row=0,column=2,sticky="w",padx=(0,4),pady=2)
-        self.account_search_box(paid_row,f["paid_account"],36).grid(row=0,column=3,sticky="ew",padx=(0,4),pady=2)
-        tk.Label(paid_row,text="(empty = automatic cash / bank)",bg=LIGHT,fg=MUTED).grid(row=0,column=4,sticky="w",padx=4,pady=2)
-        paid_row.grid_columnconfigure(1,weight=1,uniform="purchase-paid")
-        paid_row.grid_columnconfigure(3,weight=2,uniform="purchase-paid")
+        account_payment_row=tk.Frame(fields,bg=LIGHT); account_payment_row.pack(fill="x",pady=(2,0))
+        account_payment_cells=[]
+        for label,make_widget in (
+            ("Cost / Asset A/C",lambda parent:self.account_search_box(parent,v["account"],32)),
+            ("VAT A/C",lambda parent:self.account_search_box(parent,v["vat_account"],30)),
+            ("Paid",lambda parent:ttk.Combobox(parent,textvariable=f["paid_by"],values=PAID_BY,state="readonly",width=22)),
+            ("from A/C · empty = automatic cash / bank",lambda parent:self.account_search_box(parent,f["paid_account"],30)),
+        ):
+            cell=tk.Frame(account_payment_row,bg=LIGHT)
+            tk.Label(cell,text=label,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(anchor="w",padx=3)
+            make_widget(cell).pack(fill="x",expand=True,padx=3,pady=(1,2))
+            account_payment_cells.append(cell)
+        account_payment_layout={"columns":None,"pending":False}
+        def arrange_account_payment(_event=None):
+            if account_payment_layout["pending"]: return
+            account_payment_layout["pending"]=True
+            def apply_account_payment_layout():
+                account_payment_layout["pending"]=False
+                if not account_payment_row.winfo_exists(): return
+                width=max(1,account_payment_row.winfo_width())
+                columns=4 if width>=1450 else 2 if width>=650 else 1
+                if account_payment_layout["columns"]==columns: return
+                account_payment_layout["columns"]=columns
+                for index,cell in enumerate(account_payment_cells):
+                    cell.grid(row=index//columns,column=index%columns,sticky="ew",padx=2,pady=1)
+                for column in range(4): account_payment_row.grid_columnconfigure(column,weight=1 if column<columns else 0)
+            account_payment_row.after_idle(apply_account_payment_layout)
+        account_payment_row.bind("<Configure>",arrange_account_payment,add="+")
+        arrange_account_payment()
         totals_box = tk.LabelFrame(totals_parent or page, text="Purchase totals", bg="#dfe6ee", padx=10, pady=4)
         r2 = tk.Frame(totals_box, bg="#dfe6ee"); r2.pack(fill="x", pady=(2, 4))
         for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11), ("VAT %", "rate", 5), ("VAT", "vat", 11)):
@@ -241,7 +258,7 @@ class PurchasesMixin:
         self.action_button(report_bar, "Cost breakdown PDF", lambda: self.landed_cost_report("pdf")).pack(side="left", padx=3)
         self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
         f["pdf_label"].configure(wraplength=600,justify="left")
-        flow_toolbars(heading,find,paid_row,treatment,r4,r5,wh,r2,summary,
+        flow_toolbars(heading,find,treatment,r4,r5,wh,r2,summary,
                       settings,c2,payment,actions,attachments,report_bar)
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
         f["tree"].bind("<<TreeviewSelect>>", lambda _e: self.purchase_selected())
@@ -936,13 +953,21 @@ class PurchasesMixin:
         f = self.purchase_form; selected = f["tree"].selection()
         if len(selected) > 1:  # 2.9.69: several selected
             items = [(f["rows"][iid]["id"], f["rows"][iid]["invoice_number"]) for iid in selected if iid in f["rows"]]
-            if not messagebox.askyesno("Purchases", f"Mark {len(items)} purchases DELETED? Their numbers stay in the invoice list; their journal entries are removed."): return
-            bulk_action("Purchases", items, self.client.delete_invoice)
+            posted = any(f["rows"][iid].get("status")=="posted" for iid in selected if iid in f["rows"])
+            reason = simpledialog.askstring("Void Purchases", "Reason for voiding selected posted purchases (required):", parent=self) if posted else None
+            if posted and reason is None: return
+            action="Void" if posted else "Delete"
+            if not messagebox.askyesno("Purchases", f"{action} {len(items)} selected purchases? Original entries and numbers will remain when posted."): return
+            bulk_action("Purchases", items, lambda invoice_id: self.client.delete_invoice(invoice_id, reason=reason))
             self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial(); return
         row = self.selected_purchase() if not self.purchase_form["id"] else self.purchase_form["rows"].get(str(self.purchase_form["id"]))
         if not row: return messagebox.showwarning("Purchases", "Select a purchase first")
-        if not messagebox.askyesno("Purchases", f"Mark purchase {row['invoice_number']} DELETED? Its number stays in the invoice list; the journal entry is removed."): return
-        try: self.client.delete_invoice(row["id"])
+        posted = row.get("status")=="posted"
+        reason = simpledialog.askstring("Void Purchase", f"Reason for voiding {row['invoice_number']} (required):", parent=self) if posted else None
+        if posted and reason is None: return
+        action="Void" if posted else "Delete"
+        if not messagebox.askyesno("Purchases", f"{action} purchase {row['invoice_number']}? Original entries and its number will remain when posted."): return
+        try: self.client.delete_invoice(row["id"], reason=reason)
         except Exception as exc: return messagebox.showerror("Purchases", str(exc))
         self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
 

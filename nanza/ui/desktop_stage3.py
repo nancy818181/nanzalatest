@@ -646,10 +646,10 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         # 2.9.79: bank commission and exchange difference, each on the account chosen here (number - name)
         section=design.section_label(grid, "Bank commission and exchange difference", 6, columns=9); section.grid_configure(pady=(3,1))
         put(7, 0, "Bank Commission", tk.Entry(grid, textvariable=v["bank_commission"], width=13))
-        put(7, 1, "Commission A/C", self.account_search_box(grid, v["commission_account"], 25))
+        put(7, 1, "Commission A/C", self.account_search_box(grid, v["commission_account"], 42))
         put(7, 2, "Exchange Difference (+ / -)", tk.Entry(grid, textvariable=v["exchange_difference"], width=13))
-        put(8, 0, "Exchange Gain A/C", self.account_search_box(grid, v["exchange_gain_account"], 25))
-        put(8, 1, "Exchange Loss A/C", self.account_search_box(grid, v["exchange_loss_account"], 25))
+        put(8, 0, "Exchange Gain A/C", self.account_search_box(grid, v["exchange_gain_account"], 42))
+        put(8, 1, "Exchange Loss A/C", self.account_search_box(grid, v["exchange_loss_account"], 42))
         form["preview"] = tk.Label(box, text="", bg="#eef3f8", fg=NAVY, anchor="w", justify="left", font=("Consolas", 9))
         form["preview"].pack(fill="x", pady=(3, 0))
         self.reset_payment_accounts(form)
@@ -658,7 +658,6 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(3, 0))
         self.dimension_selectors(row3, form["department"], form["project"])
         form["balance"] = tk.Label(row3, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")); form["balance"].pack(side="left", padx=10)
-        flow_toolbar(row3)
         alloc = tk.LabelFrame(page, text="Allocation - which invoices this " + ("receipt settles" if kind == "customer_receipt" else "payment settles"), bg=LIGHT, padx=6, pady=2)
         alloc.pack(fill="x", padx=8, pady=(0, 3))
         bar = tk.Frame(alloc, bg=LIGHT); bar.pack(fill="x")
@@ -671,12 +670,14 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         form["alloc_sheet"] = EditableSheet(self, alloc, [("line", "#", 35, "center"), ("number", "Document", 140, "w"), ("date", "Date", 90, "center"), ("type", "Type", 90, "w"),
             ("currency", "Cur.", 50, "center"), ("total", "Total", 110, "e"), ("open", "Open", 110, "e"), ("allocate", "Allocate", 110, "e")], ["allocate"],
             lambda iid, key, text: self.allocation_changed(form, iid, text), height=6)
-        buttons = tk.Frame(box, bg=LIGHT); buttons.pack(fill="x", pady=(6, 0))
+        # Keep primary actions beside the dimensions so the open-document allocation
+        # table rises into view sooner below this compact payment header.
+        buttons = tk.Frame(row3, bg=LIGHT); buttons.pack(side="left", padx=(8, 0))
         self.action_button(buttons, "New", lambda: self.new_payment(form)).pack(side="left", padx=(0, 3))
         tk.Button(buttons, text="Save", command=lambda: self.save_payment(form), bg=GOLD, fg=NAVY, border=0, padx=18, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
         tk.Button(buttons, text="Delete", command=lambda: self.delete_payment(form), bg=RED, fg="white", border=0, padx=12, pady=7).pack(side="left", padx=3)
         tk.Label(buttons, text="Double-click a line in the list to edit it.", bg=LIGHT, fg=MUTED).pack(side="left", padx=10)
-        flow_toolbars(buttons)
+        flow_toolbar(row3)
         find_bar = tk.Frame(page, bg=LIGHT); find_bar.pack(fill="x", padx=8, pady=(4, 0))
         tk.Label(find_bar, text="Find", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
         form["find"] = tk.StringVar()

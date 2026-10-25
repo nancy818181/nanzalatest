@@ -3802,6 +3802,15 @@ AR.update({  # 2.9.134 (layout headings)
     'Money paid to a supplier': 'مبلغ مدفوع لمورد',
 })
 
+AR.update({  # linked supplier/VAT details in fixed-asset entry
+    'Linked supplier invoice (shown from the posted Assets purchase invoice)': 'فاتورة المورد المرتبطة (من فاتورة شراء الأصول المرحلة)',
+    'VAT amount': 'مبلغ الضريبة',
+    'Enter a posted Assets purchase invoice ID above to show its supplier and VAT details.':
+        'أدخل رقم فاتورة شراء أصول مرحلة أعلاه لعرض المورد وتفاصيل الضريبة.',
+    'To edit supplier or VAT, edit this linked purchase invoice.':
+        'لتعديل المورد أو الضريبة، عدّل فاتورة الشراء المرتبطة.',
+})
+
 AR.update({  # 2.9.135 (custom report controls)
     'Custom reports': 'تقارير مخصصة',
     'All products': 'كل الأصناف',
