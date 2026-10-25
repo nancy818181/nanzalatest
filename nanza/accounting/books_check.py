@@ -68,6 +68,7 @@ def run(db, year=None, quick=False):
         _entries(db, connection, add)
         _documents_have_entries(connection, add)
         _orphan_entries(connection, add)
+        _voided_payments(connection, add)
         _invoice_arithmetic(connection, add)
         _numbering(connection, add)
         _accounts(connection, add)
@@ -137,6 +138,19 @@ def _orphan_entries(connection, add):
         add(ERROR, "No entry without its document", f"{len(orphans)} entr{'y' if len(orphans) == 1 else 'ies'} of a document that no longer exists: " + _quote(orphans),
             "General Journal: check them with the documents; delete the entry if the document was deleted on purpose", orphans)
     else: add(OK, "No entry without its document", "Every invoice, receipt / payment and expense entry has its document")
+
+
+def _voided_payments(connection, add):
+    """2.9.136 (F1, owner decision): a receipt / payment voided by an administrator keeps its entry in the ledger, while the
+    statement of account and the ageing leave it out - shown here so the difference is never silent."""
+    if "voided_at" not in _columns(connection, "payments"): return
+    rows = [dict(r) for r in connection.execute("""SELECT x.id, x.payment_number number, x.currency, x.amount FROM payments x
+        WHERE x.voided_at IS NOT NULL AND x.reversal_entry_number IS NULL ORDER BY x.payment_date, x.id""")]
+    if rows:
+        add(WARNING, "Voided receipts / payments still in the ledger",
+            f"{len(rows)} voided document(s) keep their posted entry in the trial balance but are left out of statements and ageing: " + _quote(rows),
+            "Report: Voided payments still in GL. If the ledger should not include them, post a reversal with a journal voucher", rows)
+    else: add(OK, "Voided receipts / payments still in the ledger", "No voided receipt / payment")
 
 
 # ---------------------------------------------------------------- 4. invoice arithmetic

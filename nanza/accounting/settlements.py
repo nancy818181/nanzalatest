@@ -7,6 +7,7 @@ def posted_payment_sql(alias="x"):
     if alias not in ("x", "pay"):
         raise ValueError("Unsupported payment alias")
     return (
+        f"{alias}.voided_at IS NULL AND "  # 2.9.136: a voided / reversed payment settles nothing
         f"EXISTS (SELECT 1 FROM journal_entries pe WHERE pe.source_type='payment' "
         f"AND pe.source_id={alias}.id AND COALESCE(pe.approval_status,'')<>'review' "
         "AND EXISTS (SELECT 1 FROM journal_lines pl WHERE pl.entry_id=pe.id))"
