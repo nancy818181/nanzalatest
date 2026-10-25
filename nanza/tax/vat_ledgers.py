@@ -164,7 +164,7 @@ def test_vat_accounts(db):
                 if code.startswith(ledger["vat"]) and len(code) == 9 and code not in parties:
                     problems.append({"type": "orphan", "account": code, "detail": f"{code} {name}: no customer / supplier with this number"})
         wrong = connection.execute("""SELECT i.invoice_number,i.supplier_account,i.vat_account,p.name FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
-            WHERE i.status NOT IN ('cancelled','deleted') AND CAST(COALESCE(i.vat,'0') AS REAL)<>0""").fetchall()
+            WHERE i.status NOT IN ('cancelled','deleted','void') AND CAST(COALESCE(i.vat,'0') AS REAL)<>0""").fetchall()
         for row in wrong:
             own, _ledger = vat_code_for(ledgers, row["supplier_account"])
             vat = str(row["vat_account"] or "")

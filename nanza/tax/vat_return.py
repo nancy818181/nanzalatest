@@ -124,7 +124,7 @@ def _documents(db, start, end, currency, include_review, memo=None):
     else:
         with db.connect() as connection:
             invoices = [dict(row) for row in connection.execute("""SELECT i.*,p.name party_name,COALESCE(NULLIF(p.mof_number,''),p.tax_number) party_mof FROM invoices i
-                LEFT JOIN parties p ON p.id=i.party_id WHERE i.status NOT IN ('cancelled','deleted')""")]
+                LEFT JOIN parties p ON p.id=i.party_id WHERE i.status NOT IN ('cancelled','deleted','void')""")]
             expenses = [dict(row) for row in connection.execute("SELECT * FROM expenses")]
             # 2.9.132 (H-05): the posting status of each document's journal entry - a document whose entry is a draft
             # is not in the books, so it is not on the return
