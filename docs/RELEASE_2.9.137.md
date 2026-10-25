@@ -18,6 +18,10 @@ Date: 26-10-2026. Previous version: 2.9.136.
 - **Layout:** compact purchase and payment forms. Fixed in review: the Purchases & Expenses page referenced a removed
   `paid_row` frame and failed to open.
 
+- **Fixed before publishing (CI):** the Profit & Loss page failed to open ("Unknown format code 'f' for object of type
+  'str'") because the exact sums came back as text; P&L rows are numbers again and the page formats exact text safely
+  (`tests/test_v2_9_137_pnl_numbers.py`).
+
 ## Schema
 `invoices`: `voided_at`, `voided_by`, `void_reason` (idempotent `ALTER TABLE` on start, existing data kept).
 
