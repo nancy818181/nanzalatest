@@ -172,6 +172,8 @@ class PaymentsStore:
                 CAST(x.amount AS REAL) amount,x.cash_account,x.party_account,x.reference,x.description,x.payment_method,
                 CAST(x.bank_commission AS REAL) bank_commission,x.commission_account,CAST(x.exchange_difference AS REAL) exchange_difference,
                 x.exchange_gain_account,x.exchange_loss_account,
+                x.voided_at,x.void_reason,x.reversal_entry_number,x.replaced_by,
+                CASE WHEN x.voided_at IS NULL THEN 'Active' WHEN x.reversal_entry_number IS NOT NULL THEN 'Reversed' ELSE 'Void' END status,
                 d.code department,pr.code project
                 FROM payments x JOIN parties p ON p.id=x.party_id LEFT JOIN departments d ON d.id=x.department_id LEFT JOIN projects pr ON pr.id=x.project_id
                 ORDER BY x.id DESC""")]
@@ -314,29 +316,121 @@ class PaymentsStore:
         db.execute("DELETE FROM journal_entries WHERE source_type=? AND source_id=?", (source_type, int(source_id)))
         for number in extra_numbers: db.execute("DELETE FROM journal_entries WHERE entry_number=?", (number,))
 
+    # 2.9.136 (F1, owner decision 25-10-2026): a POSTED receipt / payment is never removed from the books.
+    # - Admin "Delete" = VOID: the record, its number and its posted journal entry stay; it leaves the statement of account,
+    #   the ageing and the open allocations; a reason is required and the audit log keeps every line and allocation.
+    #   Only in an open period. The ledger keeps the voided entry (owner accepted) - see voided_payments_in_gl().
+    # - Anyone else corrects a posted receipt / payment by EDITING it: the original entry is reversed (dated on the edit date,
+    #   linked with reversal_of) and a new document with a NEW number is posted.
+    # - A draft (never posted) is still deleted as before.
+    def _payment_entry(self, db, payment_id):
+        return db.execute("SELECT * FROM journal_entries WHERE source_type='payment' AND source_id=? ORDER BY id LIMIT 1", (int(payment_id),)).fetchone()
+
+    def _payment_is_posted(self, db, payment_id):
+        entry = self._payment_entry(db, payment_id)
+        return bool(entry and entry["posting_status"] == "posted"
+                    and db.execute("SELECT 1 FROM journal_lines WHERE entry_id=? LIMIT 1", (entry["id"],)).fetchone())
+
+    def _payment_snapshot(self, db, row, entry):
+        lines = [dict(r) for r in db.execute("""SELECT a.code account,j.party_id,j.debit,j.credit,j.department_id,j.project_id
+            FROM journal_lines j JOIN accounts a ON a.id=j.account_id WHERE j.entry_id=? ORDER BY j.id""", (entry["id"],))] if entry else []
+        allocations = [dict(r) for r in db.execute("""SELECT a.invoice_id,i.invoice_number,a.amount FROM payment_allocations a
+            LEFT JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=? ORDER BY a.id""", (int(row["id"]),))]
+        return {"number": row["payment_number"], "kind": row["kind"], "date": row["payment_date"], "party_id": row["party_id"],
+                "currency": row["currency"], "amount": row["amount"], "entry_number": entry["entry_number"] if entry else None,
+                "journal_lines": lines, "allocations": allocations}
+
     @atomic  # 2.9.121
-    def delete_payment(self, payment_id, user_id):
+    def delete_payment(self, payment_id, user_id, reason=None, role="admin"):
         with self.connect() as db:
             row = db.execute("SELECT * FROM payments WHERE id=?", (int(payment_id),)).fetchone()
             if not row: raise KeyError("Payment not found")
+            if row["voided_at"]: raise ValueError(f"{row['payment_number']} is already void")
+            posted = self._payment_is_posted(db, payment_id)
         self._assert_period_open(row["payment_date"])
-        with self.connect() as db:
+        if posted:
+            if role != "admin":
+                raise PermissionError("Only an administrator can void a posted receipt / payment. Edit it instead: "
+                                      "the original is reversed and a new document is posted.")
+            reason = str(reason or "").strip()
+            if not reason: raise ValueError("Enter the reason for voiding this receipt / payment")
+            with self.connect() as db:
+                entry = self._payment_entry(db, payment_id)
+                snapshot = self._payment_snapshot(db, row, entry)
+                db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))  # released; kept in the audit log
+                db.execute("UPDATE payments SET voided_at=?,voided_by=?,void_reason=? WHERE id=?", (utcnow(), user_id, reason, int(payment_id)))
+                db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                    (user_id, "void", "payment", int(payment_id), json.dumps({**snapshot, "reason": reason}, default=str), utcnow()))
+            return {"voided": int(payment_id), "number": row["payment_number"]}
+        with self.connect() as db:  # a draft: no posted entry - removed as before, with its full content in the audit log
+            snapshot = self._payment_snapshot(db, row, self._payment_entry(db, payment_id))
             self._remove_entries(db, "payment", payment_id); db.execute("DELETE FROM payments WHERE id=?", (int(payment_id),))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (user_id, "delete", "payment", int(payment_id), json.dumps({"number": row["payment_number"], "amount": row["amount"]}), utcnow()))
+                (user_id, "delete", "payment", int(payment_id), json.dumps(snapshot, default=str), utcnow()))
         return {"deleted": int(payment_id)}
 
     def update_payment(self, payment_id, item, user_id):
         return self._safe_replacement("payment", payment_id, item, user_id)
 
+    def _reverse_payment_entry(self, db, row, user_id, reversal_date):
+        """A balanced opposite entry of the payment's posted entry (debit <-> credit), linked with reversal_of."""
+        entry = self._payment_entry(db, row["id"])
+        if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=? LIMIT 1", (entry["id"],)).fetchone():
+            raise ValueError(f"{row['payment_number']} has already been reversed")
+        lines = [dict(r) for r in db.execute("SELECT * FROM journal_lines WHERE entry_id=? ORDER BY id", (entry["id"],))]
+        if any(line.get(k) not in (None, "") for line in lines for k in ("amount", "amount_lbp", "amount_usd", "revalue_amount")):
+            raise ValueError("This entry has currency amounts per line - reverse it with a journal voucher (needs accountant review)")
+        number = f"REV-{row['payment_number']}"
+        new = db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,created_by,created_at,
+            posting_status,posted_at,posted_by,reversal_of) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (number, reversal_date, f"Reversal of {row['payment_number']}", "payment_reversal", int(row["id"]), entry["currency"],
+             user_id, utcnow(), "posted", utcnow(), user_id, entry["id"])).lastrowid
+        total_debit = total_credit = Decimal("0")
+        for line in lines:
+            debit, credit = Decimal(str(line["credit"] or 0)), Decimal(str(line["debit"] or 0))
+            total_debit += debit; total_credit += credit
+            db.execute("""INSERT INTO journal_lines(entry_id,account_id,party_id,description,debit,credit,department_id,project_id,reference)
+                VALUES(?,?,?,?,?,?,?,?,?)""", (new, line["account_id"], line["party_id"], line["description"], str(debit), str(credit),
+                                              line["department_id"], line["project_id"], line["reference"]))
+        if total_debit != total_credit: raise ValueError("Reversal does not balance - nothing was saved")
+        return number
+
     def _replace_payment_on_stage(self, payment_id, item, user_id):
         with self.connect() as db:
             row = db.execute("SELECT * FROM payments WHERE id=?", (int(payment_id),)).fetchone()
             if not row: raise KeyError("Payment not found")
-        item = {**item, "kind": row["kind"], "payment_number": row["payment_number"]}
+            if row["voided_at"]: raise ValueError(f"{row['payment_number']} is void and cannot be edited")
+            posted = self._payment_is_posted(db, payment_id)
         self._assert_period_open(row["payment_date"])
-        self.delete_payment(payment_id, user_id)
-        return self.add_payment(item, user_id)
+        if not posted:  # a draft keeps its number and is replaced as before
+            item = {**item, "kind": row["kind"], "payment_number": row["payment_number"]}
+            self.delete_payment(payment_id, user_id)
+            return self.add_payment(item, user_id)
+        reversal_date = display_date(datetime.now().date())
+        self._assert_period_open(reversal_date)
+        item = {**item, "kind": row["kind"]}; item.pop("payment_number", None)  # the corrected document gets a NEW number
+        new_id = self.add_payment(item, user_id)
+        with self.connect() as db:
+            entry = self._payment_entry(db, payment_id); snapshot = self._payment_snapshot(db, row, entry)
+            reversal = self._reverse_payment_entry(db, row, user_id, reversal_date)
+            new_number = db.execute("SELECT payment_number FROM payments WHERE id=?", (new_id,)).fetchone()[0]
+            db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))
+            db.execute("UPDATE payments SET voided_at=?,voided_by=?,void_reason=?,reversal_entry_number=?,replaced_by=? WHERE id=?",
+                       (utcnow(), user_id, f"Corrected by {new_number}", reversal, new_id, int(payment_id)))
+            db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+                (user_id, "reverse_and_replace", "payment", int(payment_id),
+                 json.dumps({**snapshot, "reversal_entry": reversal, "reversal_date": reversal_date, "new_payment_id": new_id,
+                             "new_number": new_number}, default=str), utcnow()))
+        return new_id
+
+    def voided_payments_in_gl(self):
+        """2.9.136: payments voided WITHOUT a reversal - their entry is still in the ledger (owner decision), per account and currency."""
+        with self.connect() as db:
+            return [dict(r) for r in db.execute("""SELECT x.payment_number,x.payment_date,x.currency,x.void_reason,a.code account,
+                CAST(j.debit AS REAL) debit,CAST(j.credit AS REAL) credit FROM payments x
+                JOIN journal_entries e ON e.source_type='payment' AND e.source_id=x.id JOIN journal_lines j ON j.entry_id=e.id
+                JOIN accounts a ON a.id=j.account_id WHERE x.voided_at IS NOT NULL AND x.reversal_entry_number IS NULL
+                ORDER BY x.payment_date,x.payment_number,j.id""")]
 
     def _safe_replacement(self, kind, record_id, item, user_id):
         """Validate destructive edits on a snapshot; publish only a complete result."""

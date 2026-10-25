@@ -34,8 +34,14 @@ def tracked_files(root=ROOT):
             entries.append((path, meta.split()[0]))
         return entries
     except (OSError, subprocess.CalledProcessError):
+        # 2.9.136 (F3): a copy without git - the ONE test-setup link that AI_RULES.md tells Linux users to make
+        # (assets -> Assets, at the top) is not part of the program; any other link still fails the check
+        def documented_link(p):
+            try: return p.is_symlink() and p.parent == root and p.name == "assets" and p.resolve() == (root / "Assets").resolve()
+            except OSError: return False
         return [(str(p.relative_to(root)).replace("\\", "/"), "120000" if p.is_symlink() else "100644")
-                for p in root.rglob("*") if p.is_file() or p.is_symlink()]
+                for p in root.rglob("*") if (p.is_file() or p.is_symlink()) and not documented_link(p)
+                and not (p.relative_to(root).parts[0] == "assets" and documented_link(root / "assets"))]
 
 
 def versions(root=ROOT):

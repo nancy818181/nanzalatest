@@ -238,7 +238,7 @@ class ReportsStore:
                 ORDER BY {normalized_date},i.id""", parameters)]
             # 2.9.84: receipts and payments are on the statement too (they were missing, so it showed invoices only)
             if not branch_id:
-                pay_filters = ["x.party_id=?"]; pay_parameters = [party_id]
+                pay_filters = ["x.party_id=?", "x.voided_at IS NULL"]; pay_parameters = [party_id]  # 2.9.136: void ones are not shown
                 if currency: pay_filters.append("x.currency=?"); pay_parameters.append(currency)
                 for pay in db.execute(f"""SELECT x.id,x.payment_number,x.payment_date,x.kind,x.currency,
                         CAST(x.amount AS REAL)+CAST(COALESCE(x.exchange_difference,'0') AS REAL) total FROM payments x WHERE {' AND '.join(pay_filters)}""", pay_parameters):

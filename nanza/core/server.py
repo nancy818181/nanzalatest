@@ -1768,7 +1768,10 @@ class ApiHandler(BaseHTTPRequestHandler):
             elif path.startswith("/api/production/recipes/"):
                 import production; from urllib.parse import unquote
                 result=production.delete_bom(self.db,unquote(path.rsplit("/",1)[-1]),user["id"])
-            elif path.startswith("/api/payments/"): result=self.db.delete_payment(int(path.rsplit("/",1)[-1]),user["id"])
+            elif path.startswith("/api/payments/"):  # 2.9.136 (F1): a posted one is voided by an administrator, with a reason
+                reason=self._body().get("reason") if int(self.headers.get("Content-Length") or 0) else None
+                try: result=self.db.delete_payment(int(path.rsplit("/",1)[-1]),user["id"],reason=reason,role=user["role"])
+                except PermissionError as exc: return self._json(403,{"error":str(exc)})
             elif path.startswith("/api/expenses/"): result=self.db.delete_expense(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/invoices/"):
                 # 2.9.132 (H-02, owner decision): only an administrator removes a POSTED invoice (open period; the audit log keeps

@@ -493,7 +493,8 @@ class ApiClient:
         query={k:v for k,v in {"kind":kind,"date":date,"branch":branch}.items() if v}
         return self.request("GET","/api/documents/next-number?"+urlencode(query))["number"]
     def update_payment(self,payment_id,item): return self.request("PUT",f"/api/payments/{payment_id}",item)["id"]
-    def delete_payment(self,payment_id): return self.request("DELETE",f"/api/payments/{payment_id}")
+    def delete_payment(self,payment_id,reason=None):  # 2.9.136: a posted one is voided (administrator, reason required)
+        return self.request("DELETE",f"/api/payments/{payment_id}",{"reason":reason} if reason else None)
     def update_expense(self,expense_id,item): return self.request("PUT",f"/api/expenses/{expense_id}",item)["id"]
     def delete_expense(self,expense_id): return self.request("DELETE",f"/api/expenses/{expense_id}")
     def expense_attachments(self,expense_id): return self.request("GET",f"/api/expenses/{expense_id}/attachments")["items"]
