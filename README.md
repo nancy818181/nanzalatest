@@ -2,6 +2,15 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.135 (responsive accounting screens and full-window dashboard)
+
+Details and validation: `docs/RELEASE_2.9.135.md`.
+
+- **Screen layouts:** compact Sales Invoice actions and responsive fields; Purchase Invoice header and account rows; clearer receipt/payment fields; compact Trial Balance and Statement of Account controls; separate Chart of Accounts and Create Account areas.
+- **Customs Report:** grouped, responsive filters and clearer account/item selection while preserving its existing data and report behavior.
+- **Complete Board Dashboard:** opens maximized and adapts to the available window size, with scrolling for longer content.
+- No accounting calculations, posting, VAT rules, stored data, or database schema changed.
+
 ## Version 2.9.134 (duplicate guard, balance-sheet class 4, password hardening, not-taxable benefits, cleaner layouts)
 
 Details, evidence and the pre-push checklist: `docs/RELEASE_2.9.134.md`; trial plan: `docs/TRIAL_PLAN.md`.
@@ -174,7 +183,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.134. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.135. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 
