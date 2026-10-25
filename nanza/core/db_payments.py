@@ -323,6 +323,13 @@ class PaymentsStore:
     # - Anyone else corrects a posted receipt / payment by EDITING it: the original entry is reversed (dated on the edit date,
     #   linked with reversal_of) and a new document with a NEW number is posted.
     # - A draft (never posted) is still deleted as before.
+    def _assert_books_unlocked(self, value):
+        """The books lock (closed month / quarter): a document dated on or before it cannot be voided or edited."""
+        with self.connect() as db:
+            row = db.execute("SELECT value FROM app_settings WHERE key='books_locked_until' AND value<>''").fetchone()
+        if row and iso_date(value, "Date") <= str(row[0])[:10]:
+            raise ValueError("PERIOD LOCKED: the books are closed up to this date. An administrator must unlock the period first")
+
     def _payment_entry(self, db, payment_id):
         return db.execute("SELECT * FROM journal_entries WHERE source_type='payment' AND source_id=? ORDER BY id LIMIT 1", (int(payment_id),)).fetchone()
 
@@ -347,7 +354,7 @@ class PaymentsStore:
             if not row: raise KeyError("Payment not found")
             if row["voided_at"]: raise ValueError(f"{row['payment_number']} is already void")
             posted = self._payment_is_posted(db, payment_id)
-        self._assert_period_open(row["payment_date"])
+        self._assert_period_open(row["payment_date"]); self._assert_books_unlocked(row["payment_date"])
         if posted:
             if role != "admin":
                 raise PermissionError("Only an administrator can void a posted receipt / payment. Edit it instead: "
@@ -401,7 +408,7 @@ class PaymentsStore:
             if not row: raise KeyError("Payment not found")
             if row["voided_at"]: raise ValueError(f"{row['payment_number']} is void and cannot be edited")
             posted = self._payment_is_posted(db, payment_id)
-        self._assert_period_open(row["payment_date"])
+        self._assert_period_open(row["payment_date"]); self._assert_books_unlocked(row["payment_date"])
         if not posted:  # a draft keeps its number and is replaced as before
             item = {**item, "kind": row["kind"], "payment_number": row["payment_number"]}
             self.delete_payment(payment_id, user_id)
