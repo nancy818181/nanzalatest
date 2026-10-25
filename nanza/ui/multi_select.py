@@ -37,8 +37,11 @@ class MultiSelect(tk.Frame):
         if not self.text(): self.setvar(self._var_name, ALL)
         self.entry = ttk.Entry(self, textvariable=self._var_name, width=width, state="readonly", cursor="hand2")
         self.entry.pack(side="left")
-        self.button = tk.Button(self, text="▾", command=self.open, border=0, padx=4, cursor="hand2")
-        self.button.pack(side="left")
+        # 2.9.136: the arrow sits inside the box like a drop-down (it looked like a separate empty button on Windows)
+        self.button = tk.Button(self, text="▾", command=self.open, width=2, border=0, relief="flat", padx=0, pady=0, cursor="hand2",
+                                bg="white", fg="#102a43", activebackground="#eef2f6", font=("Segoe UI", 9), highlightthickness=0)
+        self.button._saber_keep = True  # the design pass leaves it as it is
+        self.button.pack(side="left", fill="y", padx=0)
         self.entry.bind("<Button-1>", lambda _e: self.open())
         self.entry.bind("<Return>", lambda _e: self.open()); self.entry.bind("<space>", lambda _e: self.open())
         self.popup = None

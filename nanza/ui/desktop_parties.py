@@ -16,11 +16,11 @@ class PartiesMixin:
             self.party_tax=tk.StringVar(); self.party_mof=tk.StringVar(); self.party_address=tk.StringVar(); self.party_contact=tk.StringVar(); \
                 self.party_currency=tk.StringVar(value="USD"); self.party_due_days=tk.StringVar(value="0")
         for column in (1, 3): form.grid_columnconfigure(column, weight=1)
-        def put(row, column, label, widget, bold=False):
+        def put(row, column, label, widget, bold=False, stretch=True):
             base = column * 2
             tk.Label(form, text=label, bg=LIGHT, font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)).grid(
                 row=row, column=base, sticky="w", padx=(4, 8), pady=4)
-            widget.grid(row=row, column=base + 1, sticky="ew", padx=4, pady=4)
+            widget.grid(row=row, column=base + 1, sticky="ew" if stretch else "w", padx=4, pady=4)
             return widget
         kind_box=put(0,0,"Type",ttk.Combobox(form,textvariable=self.party_kind,values=["client","supplier","asset_supplier","other_payable"],state="readonly",width=15))
         kind_box.bind("<<ComboboxSelected>>",lambda _event:self.suggest_party_prefix())
@@ -32,7 +32,7 @@ class PartiesMixin:
         put(2,1,"MOF Number",tk.Entry(form,textvariable=self.party_mof,width=18))
         put(3,0,"Address",tk.Entry(form,textvariable=self.party_address,width=32))
         put(3,1,"Contact Number",tk.Entry(form,textvariable=self.party_contact,width=18))
-        put(4,0,"Due days from invoice",tk.Entry(form,textvariable=self.party_due_days,width=8))
+        put(4,0,"Due days from invoice",tk.Entry(form,textvariable=self.party_due_days,width=8),stretch=False)
         self.party_account_hint=tk.Label(form,text="Enter the first 4 account digits; the next available full account number fills automatically.",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=900)
         self.party_account_hint.grid(row=5,column=0,columnspan=4,sticky="ew",padx=4,pady=(2,4))
         buttons=tk.Frame(form,bg=LIGHT); buttons.grid(row=6,column=0,columnspan=4,sticky="ew",padx=4,pady=(6,0))

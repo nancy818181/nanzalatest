@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import tkinter as tk
+from tkinter import ttk
 from datetime import datetime
 
 NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
@@ -88,10 +89,32 @@ def build_side_menu(app, holder, attributes, pages, names):
     try: holder.configure(width=width)
     except tk.TclError: pass
     canvas = tk.Canvas(holder, bg=MENU_BG, highlightthickness=0, width=width)
+    # 2.9.136: a thin scroll bar shows only when the menu is taller than the window (the last groups were hidden at 125-150 %)
+    bar = ttk.Scrollbar(holder, orient="vertical", command=canvas.yview); canvas.configure(yscrollcommand=bar.set)
     canvas.pack(side="left", fill="both", expand=True)
     inner = tk.Frame(canvas, bg=MENU_BG); window = canvas.create_window((0, 0), window=inner, anchor="nw", width=width)
-    inner.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
-    canvas.bind("<Configure>", lambda e: canvas.itemconfigure(window, width=e.width))
+
+    pending = {"id": None}
+    try:  # mirrored in Arabic: the bar stays on the edge next to the page
+        import arabic_ui
+        bar_side = "left" if arabic_ui.active() else "right"
+    except ImportError: bar_side = "right"
+
+    def fit_menu(_event=None):  # many <Configure> events -> one idle update
+        if pending["id"] is None:
+            try: pending["id"] = canvas.after_idle(apply_fit)
+            except tk.TclError: pass
+
+    def apply_fit():
+        pending["id"] = None
+        try:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            if inner.winfo_reqheight() > canvas.winfo_height() + 1:
+                if not bar.winfo_ismapped(): bar.pack(side=bar_side, fill="y", before=canvas)  # pack only when it changes
+            elif bar.winfo_ismapped(): bar.pack_forget(); canvas.yview_moveto(0)
+        except tk.TclError: pass
+    inner.bind("<Configure>", fit_menu)
+    canvas.bind("<Configure>", lambda e: (canvas.itemconfigure(window, width=e.width), fit_menu()))
     canvas._saber_scroll_page = True  # the mouse wheel scrolls it like the pages
     buttons = {}; folded = set(layout_settings()["folded"]); app.side_menu_groups = {}
 
