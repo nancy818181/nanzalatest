@@ -2,6 +2,16 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.136 (posted receipts / payments never deleted, screens that fit, Phase 1 checks)
+
+Details and validation: `docs/RELEASE_2.9.136.md`; owner decision: `docs/decisions/F1_payment_void.md`.
+
+- **Receipts / payments (F1, owner decision):** a posted receipt / payment is never removed. An administrator *voids* it (reason required, open period only): the record, its number and its journal entry stay, it leaves the statement of account, ageing and open allocations, and the audit log keeps every line. Other users correct it by *editing*: the original is reversed (`REV-<number>`, dated on the edit date) and a new document with a new number is posted. Drafts are deleted as before. Books Health Check lists voided payments still in the ledger.
+- **Screens:** the side menu shows a scroll bar when it is taller than the window; Branch / Department / Project drop-down arrow sits inside its box; the Due days field is no longer stretched; the PDF form review window fits 1280x720 screens. Includes the responsive layouts of PR #7.
+- **Release check (F3):** a copy without git accepts only the documented `assets -> Assets` test link.
+- **Screen check tool:** `python tools/run_ui_check.py` saves a picture of every screen (demo company, English and Arabic) in `ui_check_out/`.
+- Schema: `payments` gets five columns (`voided_at`, `voided_by`, `void_reason`, `reversal_entry_number`, `replaced_by`), added on start; existing data is kept. Posted invoices keep the 2.9.132 rule. No VAT, rounding or other posting rule changed.
+
 ## Version 2.9.135 (responsive accounting screens and full-window dashboard)
 
 Details and validation: `docs/RELEASE_2.9.135.md`.
