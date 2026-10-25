@@ -602,6 +602,9 @@ class CustomReportWindow(WorkbenchWindow):
             box.insert("end",*values)
             box.selection_set(0 if field=="group_by" else len(values)-1)
             box.pack(fill="x",expand=True)
+            if field=="group_by":
+                tk.Label(frame,text=tr(self.language,"dimension_selection_hint"),
+                         bg="white",fg="#5f6b76",justify="left",wraplength=260).pack(anchor="w",pady=(3,0))
             box.bind("<<ListboxSelect>>",self.changed)
             box.bind("<ButtonPress-1>",lambda e,b=box:setattr(b,"_drag_index",b.nearest(e.y)),add="+")
             box.bind("<ButtonRelease-1>",lambda e,b=box:self.drop_layout(e,b))

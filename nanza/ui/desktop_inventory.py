@@ -141,7 +141,10 @@ class InventoryMixin:
                 layout_state["scheduled"] = False
                 if not form.winfo_exists(): return
                 width = max(1, form.winfo_width())
-                columns = 3 if width >= 1320 else 2 if width >= 820 else 1
+                # Keep the item editor shallow on wide screens so the stock
+                # list gets more of the available height. Drop columns before
+                # the labels and full account names become cramped.
+                columns = 4 if width >= 1450 else 3 if width >= 1050 else 2 if width >= 690 else 1
                 if layout_state["columns"] != columns:
                     layout_state["columns"] = columns
                     for column in range(6): form.grid_columnconfigure(column, weight=0, uniform="")
@@ -161,6 +164,8 @@ class InventoryMixin:
         self.items_tree = self.table(page, [("sku", "Item Code", 95), ("name", "Item", 200), ("category", "Category", 95), ("subcategory", "Subcategory", 95),
                 ("brand", "Brand", 90), ("supplier", "Supplier", 120),
             ("unit", "Unit", 50), ("qty", "On Hand", 80), ("cost", "Cost Price (avg)", 100), ("value", "Stock Value", 100), ("price", "Sales Price", 85), ("status", "Status", 65)])
+        self.items_tree.column("name", width=250, minwidth=180, stretch=True)
+        self.items_tree.column("supplier", width=180, minwidth=130, stretch=True)
         self.items_tree.tag_configure("reorder", foreground=RED); self.items_tree.bind("<Double-1>", lambda _e: self.edit_item())
 
     # 2.9.79: stock account (class 3) linked to the cost account and the year-end variation accounts
