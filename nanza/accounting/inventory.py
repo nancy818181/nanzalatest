@@ -256,7 +256,7 @@ def _landed_cost_per_unit(database):
     currency = settings(database)["currency"]
     with database.connect() as db:
         costs = [dict(r) for r in db.execute("""SELECT id,linked_invoice_id,currency,invoice_date,CAST(subtotal AS REAL) subtotal FROM invoices
-            WHERE source_file='Customs Case' AND linked_invoice_id IS NOT NULL AND status NOT IN ('cancelled','deleted')""")]
+            WHERE source_file='Customs Case' AND linked_invoice_id IS NOT NULL AND status NOT IN ('cancelled','deleted','void')""")]
         if not costs: return {}
         receipts = [dict(r) for r in db.execute("""SELECT m.id,m.quantity,m.unit_cost,d.invoice_id,COALESCE(i.customs_group,'') customs_group
             FROM stock_movements m JOIN stock_documents d ON d.id=m.document_id LEFT JOIN inventory_items i ON i.id=m.item_id

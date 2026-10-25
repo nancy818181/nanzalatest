@@ -113,7 +113,7 @@ def _entries(db, connection, add):
 def _documents_have_entries(connection, add):
     missing = []
     missing += [dict(r, type="Invoice") for r in connection.execute("""SELECT i.id, i.invoice_number number FROM invoices i
-        WHERE i.status IN ('posted','cancelled') AND NOT EXISTS (SELECT 1 FROM journal_entries e WHERE e.source_type='invoice' AND e.source_id=i.id)""")]
+        WHERE i.status IN ('posted','cancelled','void') AND NOT EXISTS (SELECT 1 FROM journal_entries e WHERE e.source_type='invoice' AND e.source_id=i.id)""")]
     payment_number = "COALESCE(x.payment_number, 'payment ' || x.id)" if "payment_number" in _columns(connection, "payments") else "'payment ' || x.id"
     missing += [dict(r, type="Receipt / payment") for r in connection.execute(f"""SELECT x.id, {payment_number} number FROM payments x
         WHERE NOT EXISTS (SELECT 1 FROM journal_entries e WHERE e.source_type='payment' AND e.source_id=x.id)""")]
@@ -198,12 +198,12 @@ def _invoice_arithmetic(connection, add):
 # ---------------------------------------------------------------- 5. numbering
 def _numbering(connection, add):
     duplicates = [dict(r) for r in connection.execute("""SELECT invoice_number number, COUNT(*) n FROM invoices
-        WHERE kind='sale' AND status<>'review' GROUP BY invoice_number HAVING COUNT(*)>1""")]
+        WHERE kind='sale' AND status NOT IN ('review','cancelled','deleted','void') GROUP BY invoice_number HAVING COUNT(*)>1""")]
     if "payment_number" in _columns(connection, "payments"):
         duplicates += [dict(r) for r in connection.execute("""SELECT payment_number number, COUNT(*) n FROM payments
             WHERE COALESCE(payment_number,'')<>'' GROUP BY payment_number HAVING COUNT(*)>1""")]
     supplier = [dict(r) for r in connection.execute("""SELECT i.invoice_number || ' (' || COALESCE(p.name,'') || ')' number, COUNT(*) n
-        FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.kind='purchase' AND i.status<>'cancelled'
+        FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.kind='purchase' AND i.status NOT IN ('cancelled','deleted','void')
         GROUP BY i.party_id, i.invoice_number HAVING COUNT(*)>1""")]
     if duplicates: add(ERROR, "No duplicate numbers", f"{len(duplicates)} number(s) used twice: " + _quote(duplicates),
                        "Settings > Numbering > Renumber, or correct the document", duplicates)
