@@ -508,7 +508,7 @@ class PaymentsStore:
                 CAST(COALESCE(i.amount_paid,'0') AS REAL) paid,
                 (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
                  WHERE a.invoice_id=i.id AND {posted_payment_sql()}) allocated
-                FROM invoices i WHERE i.party_id=? AND i.status NOT IN ('cancelled','deleted') ORDER BY i.id""", (int(party_id),))]
+                FROM invoices i WHERE i.party_id=? AND i.status NOT IN ('cancelled','deleted','void') ORDER BY i.id""", (int(party_id),))]
         for row in rows:
             sign = -1 if row.get("doc_subtype") == "credit_note" else 1
             row["open_amount"] = round(sign * (row["total"] - row["paid"] - row["allocated"]), 2)

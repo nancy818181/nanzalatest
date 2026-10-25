@@ -397,8 +397,16 @@ class DecimalSum:
         return int(self.total) if self.whole else float(self.total)
 
 
+class ExactDecimalSum(DecimalSum):
+    """SQL aggregate DSUM_EXACT(x): return the exact sum as text for report callers."""
+    def finalize(self):
+        if not self.seen: return None
+        return format(self.total, "f")
+
+
 def register_money_functions(connection):
     connection.create_aggregate("DSUM", 1, DecimalSum)
+    connection.create_aggregate("DSUM_EXACT", 1, ExactDecimalSum)
     return connection
 
 

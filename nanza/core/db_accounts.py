@@ -338,7 +338,7 @@ class AccountsStore:
         with self.connect() as db:
             rows = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.party_id,p.name party_name,i.currency,i.total,
                 i.supplier_account,i.expense_account,i.vat_account FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
-                WHERE i.kind='sale' AND i.status NOT IN ('cancelled','deleted') ORDER BY i.id""")]
+                WHERE i.kind='sale' AND i.status NOT IN ('cancelled','deleted','void') ORDER BY i.id""")]
             for row in rows:
                 fixes = {}; reasons = []
                 party = db.execute("SELECT * FROM parties WHERE id=?", (row["party_id"],)).fetchone() if row["party_id"] else None

@@ -238,7 +238,7 @@ class ApiClient:
     def update_invoice(self, invoice_id, invoice): return self.request("PUT", f"/api/invoices/{invoice_id}", {"invoice": invoice})
     def invoice_duplicates(self, items): return self.request("POST","/api/invoices/duplicates",{"items":items})["items"]
     def create_missing_invoice_payments(self): return self.request("POST","/api/invoices/payment-entries",{})
-    def delete_invoice(self,invoice_id): return self.request("DELETE",f"/api/invoices/{invoice_id}")
+    def delete_invoice(self,invoice_id,reason=None): return self.request("DELETE",f"/api/invoices/{invoice_id}",{"reason":reason} if reason is not None else None)
     def delete_journal_voucher(self,entry_id): return self.request("DELETE",f"/api/journal/{entry_id}")
     def delete_opening_voucher(self,entry_id): return self.request("DELETE",f"/api/opening-vouchers/{entry_id}")
     def journal_voucher(self,entry_id): return self.request("GET",f"/api/journal-vouchers/{entry_id}")

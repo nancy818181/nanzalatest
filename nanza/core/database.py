@@ -383,6 +383,8 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             expense_cols={row["name"] for row in db.execute("PRAGMA table_info(expenses)")}
             if "expense_number" not in expense_cols: db.execute("ALTER TABLE expenses ADD COLUMN expense_number TEXT")
             invoice_cols={row["name"] for row in db.execute("PRAGMA table_info(invoices)")}
+            for column, definition in (("voided_at", "TEXT"), ("voided_by", "INTEGER REFERENCES users(id)"), ("void_reason", "TEXT")):
+                if column not in invoice_cols: db.execute(f"ALTER TABLE invoices ADD COLUMN {column} {definition}")
             if "linked_invoice_id" not in invoice_cols: db.execute("ALTER TABLE invoices ADD COLUMN linked_invoice_id INTEGER")
             if "vat_treatment" not in invoice_cols: db.execute("ALTER TABLE invoices ADD COLUMN vat_treatment TEXT NOT NULL DEFAULT 'standard'")
             if "vat_use" not in invoice_cols: db.execute("ALTER TABLE invoices ADD COLUMN vat_use TEXT NOT NULL DEFAULT 'mixed'")
@@ -1145,7 +1147,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             for row in db.execute("""SELECT j.debit,j.credit,j.line_currency,j.amount,e.currency,e.entry_date FROM journal_lines j
                     JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
                     LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
-                    WHERE a.code=? AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled') OR i.status IS NULL)""", (code,)):
+                    WHERE a.code=? AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled','void') OR i.status IS NULL)""", (code,)):
                 try:
                     if iso_date(row["entry_date"]) > day: continue
                 except ValueError: continue

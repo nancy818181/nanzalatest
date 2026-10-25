@@ -12,7 +12,7 @@ from settlements import posted_payment_sql, invoice_kind as payment_invoice_kind
 # 2.9.132 (H-01): the statements read POSTED entries only - the same rule as the trial balance (a draft voucher or the
 # entry of an invoice in Review is not in the books yet; a cancelled invoice keeps its posted entry and its reversal).
 POSTED_ONLY = ("(COALESCE(e.posting_status,'posted')='posted' AND (e.source_type!='invoice' OR EXISTS("
-               "SELECT 1 FROM invoices pi WHERE pi.id=e.source_id AND pi.status IN ('posted','cancelled'))))")
+               "SELECT 1 FROM invoices pi WHERE pi.id=e.source_id AND pi.status IN ('posted','cancelled','void'))))")
 
 
 def _present_class4_by_sign(rows):
@@ -32,7 +32,19 @@ def _present_class4_by_sign(rows):
 def _exact_amount(positive, negative):
     """2.9.133 (MONEY-FLOAT-001): positive - negative worked out as exact Decimals, then turned into a number once.
     Subtracting two floats gave 110.47999999999999 instead of 110.48; both inputs are already exact to 6 decimals (DSUM)."""
-    return float(Decimal(str(positive or 0)) - Decimal(str(negative or 0)))
+    return _report_number(Decimal(str(positive or 0)) - Decimal(str(negative or 0)))
+
+
+def _report_number(value):
+    """Keep float output when it preserves the exact value; otherwise retain Decimal."""
+    amount = value if isinstance(value, Decimal) else Decimal(str(value or 0))
+    number = float(amount)
+    try:
+        if Decimal(repr(number)) == amount:
+            return number
+    except (ArithmeticError, ValueError):
+        pass
+    return amount
 
 
 class ReportsStore:
@@ -151,7 +163,7 @@ class ReportsStore:
         if project_id is not None: conditions.append("e.project_id=?"); parameters.append(int(project_id))
         with self.connect() as db:
             rows = [dict(row) for row in db.execute(f"""SELECT e.currency,a.code,a.name_en,a.type,
-                DSUM(CAST(j.debit AS REAL)) debit,DSUM(CAST(j.credit AS REAL)) credit
+                DSUM_EXACT(j.debit) debit,DSUM_EXACT(j.credit) credit
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
                 WHERE {' AND '.join(conditions)} GROUP BY e.currency,a.id ORDER BY e.currency,a.code""", parameters)]
         for row in rows:
@@ -186,19 +198,19 @@ class ReportsStore:
             invoice_rows=db.execute(f"""SELECT kind,currency,
                 DSUM({sales_amount}) subtotal,
                 DSUM(CAST(total AS REAL)-CAST(COALESCE(amount_paid,'0') AS REAL)) outstanding
-                FROM invoices WHERE status NOT IN ('cancelled','deleted')
+                FROM invoices WHERE status NOT IN ('cancelled','deleted','void')
                 GROUP BY kind,currency""").fetchall()
             expense_rows=db.execute("""SELECT currency,DSUM(CAST(subtotal AS REAL)) subtotal
                 FROM expenses GROUP BY currency""").fetchall()
             # Preserve the existing DD-MM-YYYY due date interpretation.
             overdue_rows=db.execute("""SELECT currency,COUNT(*) overdue FROM invoices
-                WHERE status NOT IN ('cancelled','deleted')
+                WHERE status NOT IN ('cancelled','deleted','void')
                   AND CAST(total AS REAL)>CAST(COALESCE(amount_paid,'0') AS REAL)
                   AND due_date GLOB '??-??-????'
                   AND substr(due_date,7,4)||'-'||substr(due_date,4,2)||'-'||substr(due_date,1,2)<?
                 GROUP BY currency""",(datetime.now().strftime("%Y-%m-%d"),)).fetchall()
             monthly=[dict(row) for row in db.execute(f"""SELECT substr(CASE WHEN invoice_date GLOB '??-??-????' THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2) ELSE invoice_date END,1,7) month,
-                currency,kind,DSUM(CAST(subtotal AS REAL)) amount FROM invoices WHERE status NOT IN ('cancelled','deleted')
+                currency,kind,DSUM(CAST(subtotal AS REAL)) amount FROM invoices WHERE status NOT IN ('cancelled','deleted','void')
                 {not_opening} GROUP BY month,currency,kind ORDER BY month""")]  # 2.9.119: not the open invoices brought in
         for row in invoice_rows:
             values=metric(row["currency"]); amount=float(row["subtotal"] or 0)
@@ -241,11 +253,11 @@ class ReportsStore:
                 pay_filters = ["x.party_id=?", "x.voided_at IS NULL"]; pay_parameters = [party_id]  # 2.9.136: void ones are not shown
                 if currency: pay_filters.append("x.currency=?"); pay_parameters.append(currency)
                 for pay in db.execute(f"""SELECT x.id,x.payment_number,x.payment_date,x.kind,x.currency,
-                        CAST(x.amount AS REAL)+CAST(COALESCE(x.exchange_difference,'0') AS REAL) total FROM payments x WHERE {' AND '.join(pay_filters)}""", pay_parameters):
+                        x.amount,COALESCE(x.exchange_difference,'0') exchange_difference FROM payments x WHERE {' AND '.join(pay_filters)}""", pay_parameters):
                     day = _soft_iso(pay["payment_date"])
                     if to_date and day > to_date: continue
                     rows.append({"id": pay["id"], "invoice_number": pay["payment_number"], "invoice_date": day, "kind": pay["kind"], "currency": pay["currency"],
-                                 "total": pay["total"], "branch_id": None, "doc_subtype": "payment"})
+                                 "total": Decimal(str(pay["amount"] or 0)) + Decimal(str(pay["exchange_difference"] or 0)), "branch_id": None, "doc_subtype": "payment"})
                 rows.sort(key=lambda r: (_soft_iso(r["invoice_date"]) or "", r["doc_subtype"] == "payment"))
         opening = {}
         items = []
@@ -269,13 +281,13 @@ class ReportsStore:
             items.append({**row, "source_currency":row["currency"],"currency":output_currency,
                           "description": ({"customer_receipt": "Receipt", "supplier_payment": "Payment"}.get(row["kind"]) or
                                           ("Credit note" if row.get("doc_subtype") == "credit_note" else f"{row['kind'].title()} invoice")) + f" {row['invoice_number']}",
-                          "debit": float(debit), "credit": float(credit)})
+                          "debit": _report_number(debit), "credit": _report_number(credit)})
         balances = dict(opening)
         for row in items:
             code = row["currency"]
             balances[code] = balances.get(code, Decimal("0")) + Decimal(str(row["debit"])) - Decimal(str(row["credit"]))
-            row["balance"] = float(balances[code])
-        return {"party": dict(party), "opening": {key: float(value) for key,value in opening.items()}, "items": items}
+            row["balance"] = _report_number(balances[code])
+        return {"party": dict(party), "opening": {key: _report_number(value) for key,value in opening.items()}, "items": items}
 
     def list_accounts(self):
         with self.connect() as db:
@@ -361,7 +373,7 @@ class ReportsStore:
                 DSUM(CAST(vat AS REAL)) vat,DSUM(CAST(total AS REAL)) total,COUNT(*) count,
                 DSUM(CASE WHEN kind='sale' THEN CAST(total AS REAL) ELSE 0 END) debit,
                 DSUM(CASE WHEN kind='purchase' THEN CAST(total AS REAL) ELSE 0 END) credit
-                FROM invoices WHERE status NOT IN ('cancelled','deleted') AND COALESCE(source_file,'')<>'Opening balances' GROUP BY kind,currency""").fetchall()
+                FROM invoices WHERE status NOT IN ('cancelled','deleted','void') AND COALESCE(source_file,'')<>'Opening balances' GROUP BY kind,currency""").fetchall()
             return [dict(r) for r in rows]
 
     def journal(self, from_date=None, to_date=None, currency=None, limit=None, branch_id=None, entry_number=None, account_code=None, source_type=None,
@@ -402,7 +414,7 @@ class ReportsStore:
                      WHEN e.source_type='invoice' AND i.kind='sale' THEN 'Sales'
                      WHEN e.source_type='invoice' AND COALESCE(i.entry_type,i.kind)='expenses' THEN 'Expenses'
                      WHEN e.source_type='invoice' THEN 'Purchases' ELSE 'Other' END journal_category,
-                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,CAST(j.debit AS REAL) debit,CAST(j.credit AS REAL) credit,j.id line_id,
+                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,j.debit debit,j.credit credit,j.id line_id,
                 COALESCE(pr.code,'') project_code,COALESCE(dp.code,'') department_code
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id
                 JOIN accounts a ON a.id=j.account_id LEFT JOIN parties p ON p.id=j.party_id LEFT JOIN branches b ON b.id=e.branch_id
@@ -413,10 +425,12 @@ class ReportsStore:
         balances = {}
         for row in rows:
             row.pop("line_id", None)
+            row["debit"] = _report_number(Decimal(str(row["debit"] or 0)))
+            row["credit"] = _report_number(Decimal(str(row["credit"] or 0)))
             if not running_balance: continue  # 2.9.132 (performance): the general ledger computes its own balances
             key = (row["currency"], row["account_code"])
             balances[key] = balances.get(key, Decimal("0")) + Decimal(str(row["debit"] or 0)) - Decimal(str(row["credit"] or 0))
-            row["balance"] = float(balances[key])
+            row["balance"] = _report_number(balances[key])
         return rows
 
     def trial_balance(self, from_date=None, to_date=None, account_code=None, include_subaccounts=True, account_from=None, account_to=None, branch_id=None, posting_status="posted"):
@@ -438,13 +452,13 @@ class ReportsStore:
         if account_to:
             conditions.append("CAST(REPLACE(a.code,'.','') AS INTEGER)<=?"); parameters.append(int(''.join(c for c in str(account_to) if c.isdigit())))
         if branch_id: conditions.append("e.branch_id=?"); parameters.append(int(branch_id))
-        if posting_status=="posted": conditions.append("(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled')))")  # cancelled invoices retain their posted entry and reversal
+        if posting_status=="posted": conditions.append("(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled','void')))")  # cancelled / void invoices retain their original posted entry and reversal
         elif posting_status=="review": conditions.append("(e.source_type='invoice' AND i.status='review')")
         where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
         with self.connect() as db:
             # 2.9.58: summed per account, currency and day by the database (one row per day instead of per line)
             raw=[dict(r) for r in db.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_date,
-                DSUM(CAST(j.debit AS REAL)) debit,DSUM(CAST(j.credit AS REAL)) credit
+                DSUM_EXACT(j.debit) debit,DSUM_EXACT(j.credit) credit
                 FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
                 LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
                 {where_clause} GROUP BY a.code,a.name_en,e.currency,e.entry_date ORDER BY e.currency,a.code""",parameters)]
@@ -485,7 +499,7 @@ class ReportsStore:
             item["usd_closing_balance"]=item["usd_opening"]+item["usd_balance"]
             item["lbp_closing_balance"]=item["lbp_opening"]+item["lbp_balance"]
             for field,value in list(item.items()):
-                if isinstance(value,Decimal): item[field]=float(value)
+                if isinstance(value,Decimal): item[field]=_report_number(value)
         return list(totals.values())
 
     def general_ledger(self, account_code=None, from_date=None, to_date=None, currency=None):
@@ -503,7 +517,9 @@ class ReportsStore:
             if from_date and normalized<from_date:
                 opening[key]=opening.get(key,Decimal("0"))+movement; continue
             balances[key]=balances.get(key,opening.get(key,Decimal("0")))+movement
-            row["balance"]=float(balances[key]); items.append(row)
+            row["debit"] = _report_number(Decimal(str(row["debit"] or 0)))
+            row["credit"] = _report_number(Decimal(str(row["credit"] or 0)))
+            row["balance"]=_report_number(balances[key]); items.append(row)
         return {"opening":[{"currency":k[0],"account_code":k[1],"amount":float(v)} for k,v in opening.items()],"items":items}
 
     def balance_sheet(self, to_date=None, currency=None):
@@ -517,10 +533,13 @@ class ReportsStore:
         if currency: conditions.append("e.currency=?"); parameters.append(currency)
         with self.connect() as db:
             rows=[dict(row) for row in db.execute(f"""SELECT e.currency,a.code,a.name_en,a.type,
-                DSUM(CAST(j.debit AS REAL)) debit,DSUM(CAST(j.credit AS REAL)) credit,
-                DSUM(CAST(j.debit AS REAL)-CAST(j.credit AS REAL)) balance
+                DSUM_EXACT(j.debit) debit,DSUM_EXACT(j.credit) credit
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id JOIN accounts a ON a.id=j.account_id
                 WHERE {' AND '.join(conditions)} GROUP BY e.currency,a.id ORDER BY e.currency,a.type,a.code""",parameters)]
+        for row in rows:
+            row["balance"] = _report_number(Decimal(str(row["debit"] or 0)) - Decimal(str(row["credit"] or 0)))
+            row["debit"] = _report_number(Decimal(str(row["debit"] or 0)))
+            row["credit"] = _report_number(Decimal(str(row["credit"] or 0)))
         pnl=self.profit_and_loss(None,to_date,currency)
         current_results={}
         for row in pnl:
@@ -530,7 +549,7 @@ class ReportsStore:
         for code,result in current_results.items():
             if result:
                 rows.append({"currency":code,"code":"13","name_en":"Current Year Net Result","type":"equity",
-                    "debit":float(-result) if result<0 else 0.0,"credit":float(result) if result>0 else 0.0,"balance":float(-result)})
+                    "debit":_report_number(-result) if result<0 else 0.0,"credit":_report_number(result) if result>0 else 0.0,"balance":_report_number(-result)})
         return _present_class4_by_sign(rows)
 
     def cash_flow(self,from_date=None,to_date=None,currency=None):
@@ -573,13 +592,18 @@ class ReportsStore:
         if kind in ("sale","purchase"): conditions.append("i.kind=?"); parameters.append(kind)
         if currency: conditions.append("i.currency=?"); parameters.append(currency)
         with self.connect() as db:
-            rows=[dict(row) for row in db.execute(f"""SELECT i.id,i.party_id,i.invoice_number,i.invoice_date,i.due_date,i.kind,i.currency,p.name party_name,p.account_number,
-                (CASE WHEN i.doc_subtype='credit_note' THEN -1 ELSE 1 END)*(CAST(i.total AS REAL)-CAST(COALESCE(i.amount_paid,'0') AS REAL)-
-                (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
-                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql()})) outstanding FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
+            rows=[dict(row) for row in db.execute(f"""SELECT i.id,i.party_id,i.invoice_number,i.invoice_date,i.due_date,i.kind,i.currency,i.doc_subtype,p.name party_name,p.account_number,
+                i.total,COALESCE(i.amount_paid,'0') amount_paid,
+                (SELECT COALESCE(DSUM_EXACT(a.amount),'0') FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
+                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql()}) allocated FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
                 WHERE {' AND '.join(conditions)} ORDER BY p.name,i.due_date,i.invoice_date""",parameters)]
+        for row in rows:
+            sign = Decimal("-1") if row.get("doc_subtype") == "credit_note" else Decimal("1")
+            row["outstanding"] = sign * (Decimal(str(row["total"] or 0)) - Decimal(str(row["amount_paid"] or 0)) - Decimal(str(row["allocated"] or 0)))
+            row.pop("total", None); row.pop("amount_paid", None); row.pop("allocated", None)
         rows=self._apply_unallocated(rows,as_of.isoformat(),kind,currency)  # 2.9.80
-        rows=[row for row in rows if abs(row["outstanding"])>=0.01]
+        rows=[row for row in rows if abs(row["outstanding"])>=Decimal("0.01")]
+        for row in rows: row["outstanding"] = _report_number(row["outstanding"])
         for row in rows:
             raw=row.get("due_date") or row.get("invoice_date"); due=as_of
             for pattern in ("%d-%m-%Y","%Y-%m-%d"):
@@ -596,16 +620,17 @@ class ReportsStore:
         payment_day="CASE WHEN x.payment_date GLOB '??-??-????' THEN substr(x.payment_date,7,4)||'-'||substr(x.payment_date,4,2)||'-'||substr(x.payment_date,1,2) ELSE x.payment_date END"
         with self.connect() as db:
             payments=[dict(r) for r in db.execute(f"""SELECT x.party_id,x.kind,x.currency,x.party_account,p.kind party_kind,p.name party_name,p.account_number,
-                CAST(x.amount AS REAL)+CAST(COALESCE(x.exchange_difference,'0') AS REAL)-COALESCE((SELECT DSUM(CAST(a.amount AS REAL)) FROM payment_allocations a WHERE a.payment_id=x.id),0) free
+                x.amount,COALESCE(x.exchange_difference,'0') exchange_difference,COALESCE((SELECT DSUM_EXACT(a.amount) FROM payment_allocations a WHERE a.payment_id=x.id),'0') allocated
                 FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=? AND {posted_payment_sql()}""",(as_of,))]
             party_of={r["id"]:r["party_id"] for r in rows}
         credits={}  # (party_id, kind, currency) -> amount that settles invoices
         for pay in payments:
             target_kind=payment_invoice_kind(pay)
-            if (kind and target_kind!=kind) or (currency and pay["currency"]!=currency) or abs(pay["free"] or 0)<0.005: continue
+            free = Decimal(str(pay["amount"] or 0)) + Decimal(str(pay["exchange_difference"] or 0)) - Decimal(str(pay["allocated"] or 0))
+            if (kind and target_kind!=kind) or (currency and pay["currency"]!=currency) or abs(free)<Decimal("0.005"): continue
             key=(pay["party_id"],target_kind,pay["currency"])
-            entry=credits.setdefault(key,{"amount":0.0,"party_name":pay["party_name"],"account_number":pay["account_number"]})
-            entry["amount"]+=float(pay["free"])*settlement_sign(pay,target_kind)
+            entry=credits.setdefault(key,{"amount":Decimal("0"),"party_name":pay["party_name"],"account_number":pay["account_number"]})
+            entry["amount"]+=free*settlement_sign(pay,target_kind)
         def day(row):
             for value in (row.get("due_date"),row.get("invoice_date")):
                 try: return _soft_iso(value) or ""
@@ -616,18 +641,18 @@ class ReportsStore:
         notes=sorted([row for row in rows if row["outstanding"]<0],key=day)
         def settle(key,amount):
             for row in invoices:
-                if amount<=0.005: break
-                if key_of(row)!=key or row["outstanding"]<=0.005: continue
-                used=min(amount,row["outstanding"]); row["outstanding"]=round(row["outstanding"]-used,2); amount-=used
+                if amount<=Decimal("0.005"): break
+                if key_of(row)!=key or row["outstanding"]<=Decimal("0.005"): continue
+                used=min(amount,row["outstanding"]); row["outstanding"]-=used; amount-=used
             return amount
         for note in notes:  # an open credit note settles the oldest invoices; what is left stays on the note
-            note["outstanding"]=-round(settle(key_of(note),-note["outstanding"]),2)
+            note["outstanding"]=-settle(key_of(note),-note["outstanding"])
         kept=list(rows)
         for (party_id,invoice_kind,code),entry in credits.items():  # receipts / payments not allocated
             left=settle((party_id,invoice_kind,code),entry["amount"]) if entry["amount"]>0 else entry["amount"]
             if abs(left)<0.005: continue
             kept.append({"id":None,"invoice_number":"On account (not allocated)","invoice_date":as_of,"due_date":as_of,"kind":invoice_kind,"currency":code,
-                         "party_name":entry["party_name"],"account_number":entry["account_number"],"outstanding":-round(left,2)})
+                         "party_name":entry["party_name"],"account_number":entry["account_number"],"outstanding":_report_number(-left)})
         return kept
 
     def comparative_reports(self,from_date,to_date,currency=None,prior_db=None):
@@ -659,7 +684,7 @@ class ReportsStore:
         normalized="""CASE WHEN e.entry_date GLOB '??-??-????'
             THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2)
             ELSE e.entry_date END"""
-        conditions=["(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled')))"]; parameters=[]
+        conditions=["(e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled','void')))"]; parameters=[]
         if currency: conditions.append("e.currency=?"); parameters.append(currency)
         totals={}
         with self.connect() as db:

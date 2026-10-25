@@ -1774,13 +1774,14 @@ class ApiHandler(BaseHTTPRequestHandler):
                 except PermissionError as exc: return self._json(403,{"error":str(exc)})
             elif path.startswith("/api/expenses/"): result=self.db.delete_expense(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/invoices/"):
-                # 2.9.132 (H-02, owner decision): only an administrator removes a POSTED invoice (open period; the audit log keeps
-                # its amounts and journal lines); anyone else cancels it or issues a credit note
+                # 2.9.132 / owner decision: a posted invoice is retained and voided with a mandatory reason.
                 with self.db.connect() as connection:
                     row=connection.execute("SELECT status FROM invoices WHERE id=?",(int(path.rsplit("/",1)[-1]),)).fetchone()
                 if row and row["status"]=="posted" and user["role"]!="admin":
-                    return self._json(403,{"error":"Only an administrator can delete a posted invoice. Cancel it or issue a credit note instead."})
-                result=self.db.mark_invoice_deleted(int(path.rsplit("/",1)[-1]),user["id"])
+                    return self._json(403,{"error":"Only an administrator can void a posted invoice."})
+                body=self._body() if int(self.headers.get("Content-Length") or 0) else {}
+                try: result=self.db.mark_invoice_deleted(int(path.rsplit("/",1)[-1]),user["id"],reason=body.get("reason"),role=user["role"])
+                except PermissionError as exc: return self._json(403,{"error":str(exc)})
             elif path.startswith("/api/journal/"): result=self.db.delete_journal_voucher(int(path.rsplit("/",1)[-1]),user["id"])
             elif path.startswith("/api/posting-rules/"):
                 import posting_rules
