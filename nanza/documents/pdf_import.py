@@ -259,58 +259,17 @@ def _without_copies(texts):
     return kept
 
 
+# 2.9.138 consolidation: image preparation helpers live in ocr_image.py; the names stay importable from here.
+from ocr_image import (  # noqa: F401
+    _fix_ocr_text, _is_photo, _otsu, _remove_table_lines, _tesseract_text, _upright, _word_count,
+)
+
+
 def _trim_ocr_name(name):
     """2.9.97: OCR reads the Arabic half of a bilingual letterhead as Latin noise after the company name
     ('DIWAN GROUP C.S. LS GF Sl gall ASE'): keep the name up to its company form (C.S., S.A.L., SARL, LLC, FZE ...)."""
     match = re.match(r"^(.*?\b(?:s\.a\.r\.l|s\.a\.l|sarl|sal|llc|ltd|limited|inc|c\.s|fze|fzco|co)\.?)(?=\s|$)", name.strip(), re.I)
     return match.group(1).strip() if match and len(match.group(1)) >= 4 else name
-
-
-def _word_count(text):
-    return sum(1 for word in str(text or "").split() if len(word) > 2 and sum(ch.isalnum() for ch in word) >= len(word) * 0.7)
-
-
-def _is_photo(image):
-    """2.9.97: a photo, not a scan: a dark border / background around the paper (a scan is white around the text)."""
-    try:
-        import numpy as np
-        gray = np.array(image.convert("L").resize((200, max(1, int(200 * image.height / max(1, image.width))))))
-        edges = np.concatenate([gray[:6].ravel(), gray[-6:].ravel(), gray[:, :6].ravel(), gray[:, -6:].ravel()])
-        return float(edges.mean()) < 150 or float((gray < 160).mean()) > 0.35
-    except Exception:
-        return False
-
-
-def _upright(pytesseract, image):
-    """The page turned upright: Tesseract's orientation check when its data is there, else the better of 90 / 270 degrees."""
-    try:
-        osd = pytesseract.image_to_osd(image, timeout=30)
-        angle = int(re.search(r"Rotate:\s*(\d+)", osd).group(1))
-        return image.rotate(-angle, expand=True) if angle else None
-    except Exception:
-        best, best_words = None, 0
-        try:
-            for angle in (90, 270, 180):
-                turned = image.rotate(angle, expand=True)
-                words = _word_count(_tesseract_text(pytesseract, turned.resize((turned.width // 2, turned.height // 2)), lang="eng", config="--psm 6"))
-                if words > best_words: best, best_words = turned, words
-        except Exception:
-            return None  # not an image that can be turned (or no OCR engine): keep the page as it is
-        return best if best_words >= 15 else None
-
-
-def _otsu(gray):
-    import numpy as np
-    from PIL import Image
-    values = np.array(gray); histogram = np.bincount(values.ravel(), minlength=256).astype(float)
-    total = values.size; weighted = np.dot(np.arange(256), histogram); best, threshold, w0, s0 = 0.0, 128, 0.0, 0.0
-    for level in range(256):
-        w0 += histogram[level]
-        if w0 == 0 or w0 == total: continue
-        s0 += level * histogram[level]; m0 = s0 / w0; m1 = (weighted - s0) / (total - w0)
-        between = w0 * (total - w0) * (m0 - m1) ** 2
-        if between > best: best, threshold = between, level
-    return Image.fromarray(((values > threshold) * 255).astype("uint8"))
 
 
 def _read_photo(pytesseract, image, language):
@@ -347,12 +306,6 @@ def _read_photo(pytesseract, image, language):
     return max(candidates,key=_photo_reading_score) if candidates else ""
 
 
-
-def _tesseract_text(engine, image, **options):
-    """Terminate a stalled OCR subprocess instead of waiting indefinitely."""
-    return engine.image_to_string(image, timeout=30, **options)
-
-
 def _photo_reading_score(text):
     parsed=_parse_invoice_text(Path("photo.pdf"),text)
     score=_ocr_invoice_score(Path("photo.pdf"),text)-4*len(parsed.get("inferred") or [])
@@ -363,29 +316,6 @@ def _photo_reading_score(text):
             if not 2000 <= year <= 2100: score -= 6
         except ValueError: score -= 6
     return score
-
-def _remove_table_lines(image):
-    """2.9.97: whiten the long horizontal / vertical rules of a table before OCR (they make Tesseract skip the rows)."""
-    try:
-        import numpy as np
-        from PIL import Image
-        gray = np.array(image.convert("L")); dark = gray < 160
-        height, width = dark.shape
-        rows, columns = dark.sum(axis=1) > width * 0.35, dark.sum(axis=0) > height * 0.25
-        if rows.mean() > 0.2 or columns.mean() > 0.2: return image  # not table rules: a dark photo - leave it
-        clean = gray.copy()
-        clean[rows, :] = 255
-        clean[:, columns] = 255
-        return Image.fromarray(clean)
-    except Exception:
-        return image
-
-
-def _fix_ocr_text(text):
-    """2.9.97: common OCR misreads on invoices: 'SJ2025...' read as '$J2025...', 'Currency' as 'Curreney'."""
-    text = re.sub(r"\$(?=[A-Z]\s?\d{6,})", "S", text)
-    text = re.sub(r"(?i)\bcurr[ec]n[ec]y\b", "Currency", text)
-    return text
 
 
 def _ocr_invoice_score(path, text):
@@ -905,114 +835,11 @@ def _total_first_row(line):
     return None
 
 
-EXPENSE_ACCOUNT_HINTS = (  # 2.9.87: a starting point for the expense account (Lebanese chart); the user confirms it
-    (r"\b(?:office\s+)?rent(?:al)?\b|loyer|إيجار", "6263.1"), (r"\bwater\b|مياه", "6263.3"),
-    (r"maintenance|repair|entretien|صيانة", "6262"), (r"telephone|mobile\s+line|internet|telecom|courier|postage|اتصالات|هاتف", "6261.5"),
-    (r"insurance|assurance|تأمين", "6268"), (r"advertis|publicit|marketing|إعلان", "6269.3"),
-    (r"stationery|office\s+supplies|papeterie|قرطاسية", "6269.4"), (r"legal|lawyer|consult|audit\s+fee|accounting\s+fee|avocat|محام|استشار", "6265.3"),
-    (r"travel|hotel|air\s*ticket|flight|accommodation|سفر|فندق", "6264.2"), (r"subscription|abonnement|اشتراك", "6266.2"),
-    (r"bank\s+charges?|commission\s+bancaire", "6739"), (r"transport(?:ation)?|freight|shipping|clearance|customs\s+formalities|نقل|شحن", "6261.1"),
+# 2.9.138 consolidation: the keyword classification lives in invoice_classification.py; the names stay importable from here.
+from invoice_classification import (  # noqa: F401
+    EXPENSE_ACCOUNT_HINTS, EXPENSE_CATEGORIES, _GENERIC_MAIL, expense_category, expense_classification,
+    suggest_expense_account, suggest_invoice_type, supplier_from_email,
 )
-# 2.9.97: scored categories - every keyword found counts, the strongest category wins ("TRAVEL INSURANCE" on an air-ticket
-# invoice is travel, not insurance). Each category has its 9-digit expense account, opened automatically when missing.
-EXPENSE_CATEGORIES = (
-    ("Travel", "6264.2", "626420000", "Travel & Accommodation Expenses",
-     (r"\btravel", r"\btickets?\b", r"\bflights?\b", r"\bair(?:line|ways|\s*ticket)", r"\bhotel", r"accommodation", r"\bvisa\b",
-      r"\b[A-Z0-9]{2}-?\d{3,4}\b(?=.*\b[A-Z]{3}/[A-Z]{3})", r"\b[A-Z]{3}/[A-Z]{3}\b", r"سفر", r"تذكرة", r"فندق")),
-    ("Electricity", "6263.4", "626340000", "Electricity Expenses",
-     (r"electricit", r"électricit", r"\bEDL\b", r"ed[li]\W{0,2}[gq]ov", r"\bkwh\b", r"\bgenerator\b", r"\bampere", r"\btranches?\b", r"\bbranchement",
-      r"\bconsommation\b", r"\bcompteur\b", r"كهرباء", r"مولد", r"عداد", r"اشتراك\s+كهرباء")),
-    ("Commissions", "6265.2", "626520000", "Commissions Paid to Agents",
-     (r"\bcommissions?\b(?!\s+bancaire)", r"\baffiliate", r"\bbrokerage\b", r"\bcourtage", r"عمولة")),
-    ("Rent", "6263.1", "626310000", "Rent Expenses", (r"\b(?:office\s+)?rent(?:al)?\b", r"\bloyer", r"إيجار")),
-    ("Water", "6263.3", "626330000", "Water Expenses", (r"\bwater\b", r"مياه")),
-    ("Telecom", "6261.5", "626150000", "Telephone, Internet & Postage", (r"telephone", r"mobile\s+line", r"internet", r"telecom", r"courier", r"postage", r"اتصالات", r"هاتف")),
-    ("Maintenance", "6262", "626200000", "Maintenance & Repairs", (r"maintenance", r"\brepair", r"entretien", r"صيانة", r"تصليح", r"[إا]صلاح", r"بواجي", r"بوجي")),
-    ("Insurance", "6268", "626800000", "Insurance Premium", (r"insurance\s+(?:premium|policy)", r"\bpolicy\s+no", r"\bassurance", r"تأمين")),
-    ("Advertising", "6269.3", "626930000", "Advertising & Marketing", (r"advertis", r"publicit", r"marketing", r"[إا]علان", r"دعاي[ةه]", r"تسويق")),
-    ("Stationery", "6269.4", "626940000", "Stationery & Office Supplies", (r"stationery", r"office\s+supplies", r"papeterie", r"قرطاسية")),
-    ("Professional fees", "6265.3", "626530000", "Legal & Consulting Fees", (r"\blegal\b", r"lawyer", r"consult", r"audit\s+fee", r"accounting\s+fee", r"avocat", r"محام", r"استشار")),
-    ("Subscriptions", "6266.2", "626620000", "Subscriptions", (r"subscription", r"abonnement")),
-    ("Transport", "6261.1", "626110000", "Transport & Shipping", (r"\btransport(?:ation)?\b", r"freight", r"shipping", r"clearance", r"نقل", r"شحن")),
-    ("Bank charges", "6739", "673900000", "Bank Commissions", (r"bank\s+charges?", r"commission\s+bancaire")),
-)
-
-
-def expense_classification(text):
-    """Explain keyword evidence. Scores rank suggestions; they are not accuracy probabilities."""
-    candidates = []
-    for category in EXPENSE_CATEGORIES:
-        evidence = [match.group(0) for pattern in category[4]
-                    if (match := re.search(pattern, text or "", re.I))]
-        if evidence and not (category[0] == "Travel" and len(evidence) < 2):
-            candidates.append({"category": category[:4], "score": len(evidence),
-                               "evidence": list(dict.fromkeys(evidence))})
-    candidates.sort(key=lambda item: item["score"], reverse=True)
-    ambiguous = len(candidates) > 1 and candidates[0]["score"] == candidates[1]["score"]
-    return {"status": "ambiguous" if ambiguous else "suggested" if candidates else "unknown",
-            "category": candidates[0]["category"] if candidates and not ambiguous else None,
-            "candidates": candidates, "review_required": True}
-
-
-def expense_category(text):
-    """Return a single supported category; ties require a choice by the user."""
-    return expense_classification(text)["category"]
-
-
-def suggest_expense_account(text):
-    classification = expense_classification(text)
-    if classification["status"] == "ambiguous": return ""
-    found = classification["category"]
-    if found: return found[1]
-    for pattern, code in EXPENSE_ACCOUNT_HINTS:
-        if re.search(pattern, text or "", re.I): return code
-    return ""
-
-
-_GENERIC_MAIL = {"info", "support", "sales", "admin", "contact", "accounts", "accounting", "billing", "noreply", "no-reply", "office", "mail", "hello", "finance"}
-
-
-def supplier_from_email(text):
-    """2.9.97: the issuer of the document from its e-mail address ('Pegasus@pegasuslb.com' -> Pegasus, 'support@eaugroup.co' ->
-    the 'EAU Group' written in the text). The name printed in the header is often the CUSTOMER (the buyer's company)."""
-    for local, domain in re.findall(r"([A-Za-z0-9._-]+)@([A-Za-z0-9-]+)\.", text or ""):
-        if domain.lower() in ("gmail", "hotmail", "yahoo", "outlook", "icloud", "live"): continue
-        if local.lower() not in _GENERIC_MAIL and len(local) >= 3 and local.isalpha(): return local[0].upper() + local[1:]
-        squashed = domain.lower().replace("-", "")
-        tokens = re.findall(r"[A-Za-z&]+", re.sub(r"\S+@\S+|www\.\S+|https?://\S+", " ", text))  # not the address itself
-        for size in range(1, 5):  # every run of 1-4 words, overlapping ('EAU Group' inside 'EAU Group Affiliate')
-            for start in range(len(tokens) - size + 1):
-                words = tokens[start:start + size]
-                if re.sub(r"[^a-z]", "", "".join(words).lower()) == squashed: return " ".join(words)
-        return domain[0].upper() + domain[1:]
-    return ""
-
-
-def suggest_invoice_type(text):
-    """Conservative PDF category suggestion, never a posting decision.
-
-    An invoice alone does not establish whether an expense has been paid or
-    whether goods are held for resale. Conflicting or weak clues need review.
-    """
-    clues = {
-        "Assets": (
-            r"\bfixed assets?\b", r"\bcapital (?:asset|expenditure)\b",
-            r"\boffice (?:furniture|equipment)\b", r"أصول ثابتة", r"موجودات ثابتة",
-            r"immobilisation(?:s)?",
-        ),
-        "Purchases": (
-            r"\b(?:goods|stock) for resale\b", r"\braw materials?\b",
-            r"\bmerchandise\b", r"بضاعة", r"مواد أولية", r"marchandises",
-        ),
-        "Expenses": (
-            r"\b(?:office|monthly) rent\b", r"\belectricity\b", r"\binternet service\b",
-            r"\bconsulting (?:fee|service)\b", r"\bmaintenance (?:fee|service)\b",
-            r"إيجار", r"كهرباء", r"اشتراك انترنت", r"loyer", r"électricité",
-        ),
-    }
-    found = [category for category, patterns in clues.items()
-             if any(re.search(pattern, text or "", re.I) for pattern in patterns)]
-    return found[0] if len(found) == 1 else ""
 
 
 def _page_count(path):

@@ -1,6 +1,8 @@
-"""Invoices: import, manual invoices, edits, returns, cancellations, attachments, duplicates, landed costs.
+"""Invoices: import, manual invoices, edits, cancellations, voids, approvals, invoice list.
 
-Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from InvoicesStore."""
+Part of the Database class (split out of database.py in 2.9.63, code unchanged): Database inherits from InvoicesStore.
+2.9.138 consolidation: returns (db_invoice_returns), attachments and history (db_invoice_attachments), number identity and
+duplicates (db_invoice_numbers) and landed costs (db_landed_costs) are base classes of InvoicesStore, moved unchanged."""
 from __future__ import annotations
 from database_common import atomic  # 2.9.121
 import logging
@@ -11,9 +13,14 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
 )
 from database_common import _soft_iso  # noqa: F401
 from settlements import posted_payment_sql
+# 2.9.138 consolidation: cohesive parts of the invoice store in their own modules (same Database object and methods)
+from db_invoice_attachments import InvoiceAttachmentsStore
+from db_invoice_numbers import InvoiceNumbersStore
+from db_invoice_returns import InvoiceReturnsStore
+from db_landed_costs import LandedCostStore
 
 
-class InvoicesStore:
+class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbersStore, LandedCostStore):
     def next_invoice_number(self, kind="sale", invoice_date=None, branch=None):
         prefix = {"sale":"SAL","sales":"SAL","credit_note":"CN","debit_note":"DN","supplier_credit_note":"SCN","supplier_debit_note":"SDN"}.get(str(kind).lower(),"PUR")
         if prefix in ("SAL", "PUR"):  # 2.9.116: the prefix (and branch) chosen in Settings > Numbering
@@ -877,227 +884,6 @@ class InvoicesStore:
                 FROM invoice_items ii WHERE ii.invoice_id=? ORDER BY ii.id""",(invoice_id,invoice_id,invoice_id,invoice_id,invoice_id))]
         return {"invoice":invoice,"items":items}
 
-    def create_invoice_return(self, invoice_id, returns, return_date, user_id, request_id):
-        request_id=str(request_id or "").strip()
-        if not request_id or len(request_id)>128:
-            raise ValueError("A stable return request ID is required")
-        request_hash=hashlib.sha256(json.dumps({"invoice_id":int(invoice_id),"items":returns,"return_date":return_date},
-            sort_keys=True,separators=(",",":"),default=str).encode("utf-8")).hexdigest()
-        with self.connect() as db:
-            if not db.in_transaction: db.execute("BEGIN IMMEDIATE")  # its own transaction (2.9.121: or the one of a larger save)
-            previous=db.execute("SELECT * FROM invoices WHERE return_request_id=?",(request_id,)).fetchone()
-            if previous:
-                if int(previous["linked_invoice_id"] or 0)!=int(invoice_id):
-                    raise ValueError("This return request ID was already used for a different invoice")
-                if previous["return_request_hash"]!=request_hash:
-                    raise ValueError("This return request ID was already used with different return details")
-                return self.get_invoice(previous["id"])
-            return self._create_invoice_return_locked(invoice_id,returns,return_date,user_id,request_id,request_hash)
-
-    def _create_invoice_return_locked(self, invoice_id, returns, return_date, user_id, request_id, request_hash):
-        """Post a linked credit note for reviewed quantities; never create a payment or allocation."""
-        from decimal import ROUND_HALF_UP
-        source=self.get_invoice(int(invoice_id))
-        if source.get("status")!="posted":
-            raise ValueError("Returns can only be created from a posted invoice")
-        if source.get("doc_subtype")=="credit_note":
-            raise ValueError("A credit note cannot itself be returned")
-        try:
-            source_exchange_rate=Decimal(str(source.get("exchange_rate") or "0"))
-            if not source_exchange_rate.is_finite() or source_exchange_rate<=0: raise ValueError
-        except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
-            raise ValueError("The original invoice has no valid positive exchange rate; return not posted") from exc
-        originals=self.invoice_detail(int(invoice_id))["items"]
-        if not originals: raise ValueError("This invoice has no item lines to return; no return was created")
-        with self.connect() as db:
-            stock_source=db.execute("""SELECT w.code FROM stock_documents d JOIN warehouses w ON w.id=d.warehouse_id
-                WHERE d.invoice_id=? ORDER BY d.id DESC LIMIT 1""",(int(invoice_id),)).fetchone()
-        warehouse_code=stock_source["code"] if stock_source else "MAIN"
-        if not isinstance(returns,list) or not returns: raise ValueError("Select at least one return quantity")
-        by_id={int(row["id"]):row for row in originals}; requested={}
-        for row in returns:
-            try:
-                item_id=int(row["item_id"]); qty=Decimal(str(row["quantity"]))
-            except (ArithmeticError, ValueError, TypeError, KeyError) as exc:
-                raise ValueError("Return lines need a valid invoice item and quantity") from exc
-            if item_id not in by_id or qty<=0:
-                raise ValueError("Return quantities must be positive and belong to the original invoice")
-            if item_id in requested: raise ValueError("A return line may only be selected once")
-            original=by_id[item_id]
-            remaining=Decimal(str(original["quantity"]))-Decimal(str(original["returned_quantity"] or 0))
-            if qty>remaining: raise ValueError(f"{original['description']}: only {remaining} remains returnable")
-            requested[item_id]=qty
-        cent=Decimal("0.01"); micro=Decimal("0.000001"); lines=[]
-        for item_id,qty in requested.items():
-            original=by_id[item_id]
-            remaining_qty=Decimal(str(original["quantity"]))-Decimal(str(original["returned_quantity"] or 0))
-            ratio=qty/remaining_qty
-            def part(field):
-                remainder=Decimal(str(original.get(field) or 0))-Decimal(str(original.get("returned_"+field) or 0))
-                return (remainder*ratio).quantize(cent,rounding=ROUND_HALF_UP)
-            deductible=part("deductible_subtotal"); non_deductible=part("non_deductible_subtotal"); vat=part("vat")
-            price=(deductible+non_deductible)/qty
-            lines.append({"description":original["description"],"quantity":str(qty),
-                "unit_price":str(price.quantize(micro,rounding=ROUND_HALF_UP)),
-                "deductible_subtotal":str(deductible),"non_deductible_subtotal":str(non_deductible),
-                "vat_rate":str(original["vat_rate"]),"vat":str(vat),"item_code":original.get("item_code"),
-                "unit":original.get("unit"),"discount_percent":"0","warehouse":warehouse_code,"origin_item_id":item_id})
-        is_sale=source["kind"]=="sale"; date=iso_date(return_date or source["invoice_date"],"Return date")
-        def opposite(side,default):
-            return "C" if str(side or default).upper()=="D" else "D"
-        invoice={"invoice_number":self.next_invoice_number("credit_note" if is_sale else "supplier_credit_note",date),
-            "invoice_date":date,"party_name":source["party_name"],"kind":"sales" if is_sale else "purchases",
-            "currency":source["currency"],"exchange_rate":str(source_exchange_rate),"status":"posted","source_file":"Sales Return" if is_sale else "Purchase Return",
-            "supplier_account":source["supplier_account"],"vat_account":source["vat_account"],
-            "expense_account":source["expense_account"],"expense_no_vat_account":source.get("expense_no_vat_account"),
-            "supplier_side":opposite(source.get("supplier_side"),"D" if is_sale else "C"),
-            "vat_side":opposite(source.get("vat_side"),"C" if is_sale else "D"),
-            "expense_side":opposite(source.get("expense_side"),"C" if is_sale else "D"),
-            "expense_no_vat_side":opposite(source.get("expense_no_vat_side"),"D"),
-            "vat_treatment":source.get("vat_treatment") or "standard","vat_use":source.get("vat_use") or "mixed",
-            "doc_subtype":"credit_note","is_return":True,"amount_paid":"0","payment_method":"On Account (Not Cash)",
-            "notes":f"Return against {source['invoice_number']}","skip_vat_reclass":True,
-            "branch":source.get("branch_name"),"department_id":source.get("department_id"),"project_id":source.get("project_id"),
-            "linked_invoice_id":int(invoice_id)}
-        created=self.create_manual_invoice(invoice,lines,user_id)
-        with self.connect() as db:
-            db.execute("UPDATE invoices SET linked_invoice_id=?,return_request_id=?,return_request_hash=? WHERE id=?",
-                       (int(invoice_id),request_id,request_hash,created))
-            created_item_ids=[row["id"] for row in db.execute("SELECT id FROM invoice_items WHERE invoice_id=? ORDER BY id",(created,))]
-            for item_id,line in zip(created_item_ids,lines):
-                db.execute("UPDATE invoice_items SET origin_item_id=? WHERE id=?",(line["origin_item_id"],item_id))
-            returned_vat=sum(Decimal(str(line["vat"])) for line in lines)
-            if not is_sale and not source.get("vat_recoverable",1):
-                # Reverse the original non-deductible VAT reclassification (Dr VAT / Cr cost).
-                db.execute("UPDATE invoices SET vat_recoverable=0 WHERE id=?",(created,))
-                if returned_vat:
-                    row=db.execute("SELECT party_id,branch_id,currency,invoice_date,expense_account,vat_account FROM invoices WHERE id=?",(created,)).fetchone()
-                    entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,branch_id,created_by,created_at)
-                        VALUES(?,?,?,?,?,?,?,?,?)""",(f"VATND-INV-{created}",row["invoice_date"],f"Reverse non-deductible VAT {source['invoice_number']}",
-                        "vat_reclass",created,row["currency"],row["branch_id"],user_id,utcnow())).lastrowid
-                    for code,debit,credit in ((row["vat_account"],returned_vat,Decimal("0")),(row["expense_account"],Decimal("0"),returned_vat)):
-                        db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,description,debit,credit) VALUES(?,?,?,?,?,?)",
-                            (entry,self._account_id(db,code),row["party_id"],"Reverse non-deductible VAT reclassification",str(debit),str(credit)))
-        self._store_invoice_format(created,invoice,lines)
-        return self.get_invoice(created)
-
-    def add_attachment(self, invoice_id, file_name, mime_type, content, user_id):
-        if not file_name or not content:
-            raise ValueError("Attachment file is required")
-        if len(content) > 15 * 1024 * 1024:
-            raise ValueError("Attachment cannot exceed 15 MB")
-        with self.connect() as db:
-            if not db.execute("SELECT 1 FROM invoices WHERE id=?", (invoice_id,)).fetchone():
-                raise KeyError(invoice_id)
-            result = db.execute("""INSERT INTO invoice_attachments(invoice_id,file_name,mime_type,content,uploaded_by,uploaded_at)
-                VALUES(?,?,?,?,?,?)""", (invoice_id,file_name,mime_type or "application/octet-stream",content,user_id,utcnow()))
-            db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (user_id,"attach","invoice",invoice_id,json.dumps({"file_name":file_name}),utcnow()))
-            return result.lastrowid
-
-    def list_attachments(self, invoice_id):
-        with self.connect() as db:
-            return [dict(row) for row in db.execute("""SELECT id,file_name,mime_type,length(content) size,uploaded_at
-                FROM invoice_attachments WHERE invoice_id=? ORDER BY id DESC""", (invoice_id,))]
-
-    def get_attachment(self, attachment_id):
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM invoice_attachments WHERE id=?", (attachment_id,)).fetchone()
-            if not row: raise KeyError(attachment_id)
-            return dict(row)
-
-    def invoice_history(self, invoice_id):
-        with self.connect() as db:
-            return [dict(row) for row in db.execute("""SELECT l.id,l.action,l.details,l.created_at,u.username
-                FROM audit_log l LEFT JOIN users u ON u.id=l.user_id
-                WHERE l.entity='invoice' AND l.entity_id=? ORDER BY l.id DESC""", (invoice_id,))]
-
-    # 2.9.51: the same invoice must not be recorded twice by an upload (same customer / supplier and same number)
-    # 2.9.134 (D3): invoice identity. A sales invoice number is unique per document type across all customers (Lebanese sales
-    # invoices are sequential); a purchase / expense document is unique per supplier + supplier's number. Cancelled and deleted
-    # documents are ignored. Number comparison is the one the import screen already uses (INV-0045 = INV45).
-    _NUMBER_SQL = "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(i.invoice_number,'-',''),' ',''),'/',''),'.',''),'_',''))"
-
-    def find_same_invoice_number(self, db, number, kind, party_id, doc_subtype="invoice", exclude_id=None):
-        """The first saved invoice with the same identity, or None. `db` is an open connection."""
-        import re as _re
-        key = self.invoice_number_key(number)
-        if not key: return None
-        digits = max(_re.findall(r"[0-9]+", key), key=len, default="")
-        needle = digits or key  # SQL pre-filter only; the exact comparison is the key below
-        sql = (f"SELECT i.id,i.invoice_number,i.invoice_date,i.party_id,COALESCE(i.doc_subtype,'invoice') st FROM invoices i "
-               f"WHERE i.kind=? AND i.status NOT IN ('cancelled','deleted','void') AND {self._NUMBER_SQL} LIKE ?")
-        args = [kind, f"%{needle}%"]
-        if exclude_id is not None: sql += " AND i.id<>?"; args.append(int(exclude_id))
-        subtype = str(doc_subtype or "invoice").lower()
-        for row in db.execute(sql, args):
-            if str(row["st"] or "invoice").lower() != subtype: continue
-            if self.invoice_number_key(row["invoice_number"]) != key: continue
-            if kind == "purchase" and row["party_id"] != party_id: continue
-            return dict(row)
-        return None
-
-    def _assert_unique_invoice_number(self, db, item, kind, party_id, exclude_id=None):
-        if item.get("allow_duplicate"): return  # only an administrator's request keeps this flag (server._approval_gate)
-        if exclude_id is None and item.get("replaces_invoice_id") not in (None, ""): exclude_id = int(item["replaces_invoice_id"])  # an edit saved as a new document
-        found = self.find_same_invoice_number(db, item.get("invoice_number"), kind, party_id, item.get("doc_subtype"), exclude_id)
-        if found:
-            raise ValueError(f"Duplicate invoice number {str(item.get('invoice_number')).strip()}: already saved as invoice ID {found['id']} "
-                             f"({found['invoice_number']}, {found['invoice_date']}). Use another number; only an administrator can save a duplicate on purpose")
-
-    def duplicate_invoice_report(self):
-        """Report (never a block): groups of saved, not cancelled invoices that share an identity. For the first review of an existing file."""
-        with self.connect() as db:
-            rows = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.kind,i.party_id,i.total,i.currency,
-                COALESCE(i.doc_subtype,'invoice') st FROM invoices i WHERE i.status NOT IN ('cancelled','deleted','void') ORDER BY i.id""")]
-        groups = {}
-        for r in rows:
-            key = self.invoice_number_key(r["invoice_number"])
-            if not key: continue
-            identity = (r["kind"], str(r["st"]).lower(), key) + ((r["party_id"],) if r["kind"] == "purchase" else ())
-            groups.setdefault(identity, []).append(r)
-        return [g for g in groups.values() if len(g) > 1]
-
-    @staticmethod
-    def invoice_number_key(number):
-        import re as _re
-        text = _re.sub(r"[^0-9A-Z]", "", str(number or "").upper())
-        return _re.sub(r"(?<![0-9])0+(?=[0-9])", "", text)  # INV-0045 = INV45 = inv 45
-
-    def find_invoice_duplicates(self, items):
-        """For each {kind, party_name, invoice_number, total, doc_subtype}: the invoices already saved with the same
-        type, the same customer / supplier and the same number (cancelled and deleted ones are ignored)."""
-        with self.connect() as db:
-            saved = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,i.kind,i.currency,CAST(i.total AS REAL) total,
-                COALESCE(i.doc_subtype,'invoice') doc_subtype,p.name party_name FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
-                WHERE i.status NOT IN ('cancelled','deleted','void')""")]
-        index = {}; by_amount = {}
-        for row in saved:
-            party = str(row["party_name"] or "").strip().casefold()
-            key = (row["kind"], party, self.invoice_number_key(row["invoice_number"]), row["doc_subtype"] or "invoice")
-            index.setdefault(key, []).append(row)
-            try: day = iso_date(row["invoice_date"])
-            except Exception: day = str(row["invoice_date"] or "")
-            by_amount.setdefault((row["kind"], party, day, round(float(row["total"] or 0), 2)), []).append(row)
-        result = []
-        for position, item in enumerate(items or []):
-            kind = "sale" if self._entry_type(item) == "sales" else "purchase"
-            party = str(item.get("party_name") or "").strip().casefold()
-            if item.get("by_amount"):
-                # 2.9.55: an Excel file without an invoice number column - the same customer / supplier, date and total
-                try: day = iso_date(item.get("invoice_date"))
-                except Exception: day = str(item.get("invoice_date") or "")
-                try: total = round(float(item.get("total") or 0), 2)
-                except (TypeError, ValueError): total = None
-                found = by_amount.get((kind, party, day, total), []) if total else []
-            else:
-                number = self.invoice_number_key(item.get("invoice_number"))
-                if not number: result.append([]); continue
-                found = index.get((kind, party, number, str(item.get("doc_subtype") or "invoice")), [])
-            result.append([{"id": r["id"], "invoice_number": r["invoice_number"], "invoice_date": r["invoice_date"], "total": r["total"],
-                            "currency": r["currency"], "party_name": r["party_name"]} for r in found])
-        return result
-
     def list_invoices(self, limit=None, _invoice_id=None):
         """Every invoice (2.9.58: the list stopped at the newest 500, so with a big file imported invoices, the
         purchases list, opening an entry and other screens could not find older ones)."""
@@ -1169,101 +955,6 @@ class InvoicesStore:
             except (sqlite3.Error, ValueError, KeyError, TypeError):
                 logging.getLogger("saber").warning("Change of invoice %s not written to the audit trail", invoice_id, exc_info=True)
             return new_id
-
-    @atomic  # 2.9.121
-    def add_landed_cost(self, purchase_id, item, user_id):
-        """Customs / freight / insurance on a purchase, booked as a linked 'Customs Case' invoice so import VAT reaches the VAT return."""
-        with self.connect() as db:
-            purchase = db.execute("SELECT i.*,p.name party_name FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.id=?", (int(purchase_id),)).fetchone()
-        if not purchase or purchase["kind"] != "purchase": raise ValueError("Choose a purchase invoice first")
-        from landed_costs import normalize
-        item, source_amounts = normalize(item, purchase["currency"])
-        components = (("freight", "Freight"), ("insurance", "Insurance"), ("customs_group_1", "Customs per item"), ("customs_duties", "Customs fees"),
-                      ("customs_group_2", "Customs - group 2"), ("broker_fees", "Customs broker fees"), ("other_costs", "Other landed costs"))
-        lines = []
-        for key, label in components:
-            try: amount = Decimal(str(item.get(key) or 0).replace(",", ""))
-            except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError(f"{label} must be a number") from exc
-            if amount < 0: raise ValueError(f"{label} cannot be negative")
-            if amount: lines.append({"description": f"{label} - {purchase['invoice_number']}", "quantity": 1, "unit_price": str(amount), "deductible_subtotal": str(amount), "vat_rate": 0, "vat": 0})
-        try: import_vat = Decimal(str(item.get("import_vat") or 0).replace(",", ""))
-        except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Import VAT must be a number") from exc
-        if not lines and not import_vat: raise ValueError("Enter at least one landed-cost amount")
-        if not lines: lines.append({"description": f"Import VAT - {purchase['invoice_number']}", "quantity": 1, "unit_price": "0", "deductible_subtotal": "0", "vat_rate": 0, "vat": 0})
-        lines[0]["vat"] = str(import_vat)
-        import chart_extra
-        cost_accounts = {**chart_extra.LANDED_COST_ACCOUNTS, **(item.get("cost_accounts") or {})}
-        for key in ("customs_group_1", "customs_group_2"): cost_accounts.setdefault(key, cost_accounts["customs_duties"])  # 2.9.106: same customs account
-        with self.connect() as db:
-            for key, _label in components:
-                code = str(cost_accounts[key]).split(" - ", 1)[0].strip()
-                account = db.execute("SELECT type FROM accounts WHERE code=? AND active=1", (code,)).fetchone()
-                if not code.isdigit() or len(code) != 9 or not account or account["type"] != "expense":
-                    raise ValueError(f"{key.replace('_', ' ').title()} needs an active 9-digit expense account")
-                cost_accounts[key] = code
-        declaration = str(item.get("customs_declaration_no") or "").strip()
-        supplier_account=None; party_name=str(item.get("party_name") or "Lebanese Customs").strip()
-        if str(item.get("party_id") or "").strip():
-            with self.connect() as db:
-                chosen=db.execute("SELECT * FROM parties WHERE id=?",(int(item["party_id"]),)).fetchone()
-            if chosen:
-                party_name=chosen["name"]
-                supplier_account=chosen["account_number"] or None
-        invoice = {"invoice_number": declaration or f"LC-{purchase['invoice_number']}", "invoice_date": item.get("date") or purchase["invoice_date"],
-                   "party_name": party_name, "kind": "purchases", "currency": item.get("currency") or purchase["currency"],
-                   "expense_account": purchase["expense_account"], "status": "posted", "source_file": "Customs Case",
-                   "description": f"Landed cost of {purchase['invoice_number']} ({purchase['party_name'] or ''})" + (f" - declaration {declaration}" if declaration else ""),
-                   "department_id": purchase["department_id"], "project_id": purchase["project_id"]}
-        method = str(item.get("payment_method") or "On Account (Not Cash)")
-        if method not in ("On Account (Not Cash)", "Cash", "Bank Transfer", "Cheque", "Card"):
-            raise ValueError("Choose a valid cost payment method")
-        invoice["payment_method"] = method
-        if method != "On Account (Not Cash)":
-            cash = str(item.get("cash_account") or "").split(" - ", 1)[0].strip()
-            with self.connect() as db:
-                account = db.execute("SELECT type FROM accounts WHERE code=? AND active=1", (cash,)).fetchone()
-            if not cash.startswith("5") or not account or account["type"] != "asset":
-                raise ValueError("Choose an active cash or bank account for the cost payment")
-            invoice["cash_account"] = cash
-            invoice["amount_paid"] = str(sum((Decimal(line["unit_price"]) for line in lines), Decimal("0")) + import_vat)
-        if supplier_account: invoice["supplier_account"]=supplier_account
-        invoice_id = self.create_manual_invoice(invoice, lines, user_id)
-        # each cost goes to its own 9-digit 6018 account (freight, insurance, duties, broker, other)
-        with self.connect() as db:
-            db.execute("UPDATE invoices SET linked_invoice_id=? WHERE id=?", (int(purchase_id), invoice_id))
-            db.executemany("""INSERT INTO landed_cost_sources(cost_invoice_id,component,currency,amount,conversion_rate,converted_amount)
-                VALUES(?,?,?,?,?,?)""", [(invoice_id, *source) for source in source_amounts])
-            db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
-                (user_id, "landed_cost", "invoice", invoice_id, json.dumps({"purchase_id": int(purchase_id),
-                 "currency": item["currency"], "source_amounts": source_amounts, "usd_lbp_rate": item.get("usd_lbp_rate")}), utcnow()))
-            for key, _label in components:  # 2.9.106: the parts, so customs of a group go to the items of that group only
-                amount = Decimal(str(item.get(key) or 0).replace(",", ""))
-                if amount: db.execute("INSERT INTO landed_cost_parts(cost_invoice_id,component,amount) VALUES(?,?,?)", (invoice_id, key, str(amount)))
-            entry = db.execute("SELECT id FROM journal_entries WHERE source_type='invoice' AND source_id=?", (invoice_id,)).fetchone()
-            cost_account = self._account_id(db, purchase["expense_account"])
-            parts = [(cost_accounts[key], Decimal(str(item.get(key) or 0).replace(",", ""))) for key, _label in components]
-            parts = [(code, amount) for code, amount in parts if amount]
-            if entry and parts:
-                line = db.execute("SELECT * FROM journal_lines WHERE entry_id=? AND account_id=? AND CAST(debit AS REAL)>0 ORDER BY id LIMIT 1", (entry["id"], cost_account)).fetchone()
-                if line:
-                    db.execute("DELETE FROM journal_lines WHERE id=?", (line["id"],))
-                    for code, amount in parts:
-                        db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,description,debit,credit,department_id,project_id) VALUES(?,?,?,?,?,?,?,?)",
-                            (entry["id"], self._account_id(db, code), line["party_id"], f"Cost on purchase {purchase['invoice_number']}", str(amount), "0", line["department_id"], line["project_id"]))
-        return invoice_id
-
-    def landed_costs(self, purchase_id):
-        with self.connect() as db:
-            rows = [dict(r) for r in db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,i.currency,CAST(i.subtotal AS REAL) subtotal,
-                CAST(i.vat AS REAL) vat,CAST(i.total AS REAL) total FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.linked_invoice_id=? AND i.source_file='Customs Case'
-                AND i.status NOT IN ('cancelled','deleted','void') ORDER BY i.id""",
-                        (int(purchase_id),))]
-            sources = {}
-            for row in db.execute("""SELECT s.* FROM landed_cost_sources s JOIN invoices i ON i.id=s.cost_invoice_id
-                WHERE i.linked_invoice_id=? ORDER BY s.id""", (int(purchase_id),)):
-                sources.setdefault(row["cost_invoice_id"], []).append(dict(row))
-            for row in rows: row["source_amounts"] = sources.get(row["id"], [])
-            return rows
 
     # ---------------------------------------------------------------- invoice format, notes, allocations
     def _store_invoice_format(self, invoice_id, item, line_items):
