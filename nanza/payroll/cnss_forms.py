@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date
 from typing import Any, Callable, Mapping, Sequence
 
@@ -191,10 +192,21 @@ def build_workbook(form_key: str, data: Mapping[str, Any], path=None):
     return form.builder(dict(data), path)
 
 
+def _decimal(value) -> Decimal:
+    """2.9.138 review: an amount or rate as an exact Decimal (empty / unreadable = 0)."""
+    try: return Decimal(str(value if value not in (None, "") else 0).replace(",", ""))
+    except (InvalidOperation, ValueError): return Decimal("0")
+
+
+def _whole(value) -> Decimal:
+    """Whole LBP, half away from zero - the same as the Excel ROUND(x, 0) used in the form (Python round() rounds half to even)."""
+    return _decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+
+
 def summary_rows(form_key: str, data: Mapping[str, Any]) -> list[tuple[str, str]]:
     """What the form will be filled with, for the screen (label, value)."""
     form = FORM_BY_KEY[LEGACY_FORM_KEYS.get(form_key, form_key)]
-    money = lambda value: "" if value in (None, "") else f"{float(value):,.0f}"
+    money = lambda value: "" if value in (None, "") else f"{_whole(value):,.0f}"
     rows = [("Company", _text(data.get("company_name"))), ("Employer NSSF No.", _text(data.get("company_nssf")))]
     if form.kind in ("employee", "company"):
         for label, key in (("MOF No.", "company_mof"), ("Employee", "full_name"), ("Father", "father_name"), ("Mother", "mother_name"),
@@ -214,17 +226,17 @@ def summary_rows(form_key: str, data: Mapping[str, Any]) -> list[tuple[str, str]
             actual = sum((months.get(m) or {}).get(branch) or 0 for months in (data.get("employees") or {}).values() for m in range(1, 13))
             rows.append((f"{names[branch]} — wages per schedule / declared", f"{money(actual)} / {money(declared)}"))
             rows.append((f"{names[branch]} — settlement contribution",
-                         money(round((actual - declared) * float(rates.get(branch) or 0)))))
+                         money((_decimal(actual) - _decimal(declared)) * _decimal(rates.get(branch)))))
         rows.append(("Employees in the schedule", str(len(data.get("employees") or {}))))
         return rows
-    total = 0.0
+    total = Decimal("0")
     rows.append(("Period", _text(data.get("period_text") or data.get("year"))))
     for branch in ("sick", "eos", "family"):
         item = data.get(branch) or {}
-        due = round(float(item.get("wages") or 0) * float(item.get("rate") or 0)); total += due
-        rows.append((names[branch], f"{item.get('count') or 0} employee(s) · wages {money(item.get('wages'))} × {float(item.get('rate') or 0):.2%} = {money(due)}"))
+        due = _whole(_decimal(item.get("wages")) * _decimal(item.get("rate"))); total += due  # each line rounded as in the form
+        rows.append((names[branch], f"{item.get('count') or 0} employee(s) · wages {money(item.get('wages'))} × {_decimal(item.get('rate')):.2%} = {money(due)}"))
     rows.append(("Total contributions", money(total)))
     if form.kind == "period":
         rows.append(("Family allowances paid", money(data.get("allowance"))))
-        rows.append(("Net due to the NSSF", money(total - float(data.get("allowance") or 0))))
+        rows.append(("Net due to the NSSF", money(total - _decimal(data.get("allowance")))))
     return rows

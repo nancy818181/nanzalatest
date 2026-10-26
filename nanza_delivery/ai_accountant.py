@@ -26,7 +26,7 @@ def detect_duplicate(
     found = []
     with database.connect() as connection:
         rows = connection.execute(
-            "SELECT id,invoice_number,invoice_date,total,currency,party_id,kind,status FROM invoices WHERE status NOT IN ('deleted','cancelled')"
+            "SELECT id,invoice_number,invoice_date,total,currency,party_id,kind,status FROM invoices WHERE status NOT IN ('deleted','cancelled','void')"  # F1 (2.9.137): a void invoice is not a duplicate
         )
         for r in rows:
             if exclude_id is not None and r["id"] == int(exclude_id):

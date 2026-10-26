@@ -546,13 +546,20 @@ class ProgramWindowFixesTest(unittest.TestCase):
         import tkinter as tk
         from tkinter import ttk
         app = self.app
-        old_scaling = app.tk.call("tk", "scaling"); old_geometry = app.geometry()
+        old_scaling = app.tk.call("tk", "scaling"); old_geometry = app.geometry(); old_maxsize = app.wm_maxsize()
         def restore():  # the window is shared by the other tests of this class
-            app.tk.call("tk", "scaling", old_scaling); app.geometry(old_geometry); app.update()
+            app.tk.call("tk", "scaling", old_scaling); app.wm_maxsize(*old_maxsize); app.geometry(old_geometry); app.update()
         self.addCleanup(restore)
         app.tk.call("tk", "scaling", 2.0)
+        app.wm_maxsize(1920, 1040)  # 2.9.138 review: Tk's default maximum is the screen size
         app.geometry("1920x1040")
         app.update()
+        # 2.9.138 review: the target is a 1920-pixel laptop screen. A build machine whose display is smaller (a hosted
+        # Windows runner is commonly 1024x768) cannot open a 1920-pixel window, and every page then "overflows" a
+        # window narrower than the target; that is the build machine, not the screen layout, so the check is skipped there.
+        if app.winfo_width() < 1900:
+            self.skipTest(f"display too small for the 1920x1040 laptop target: window {app.winfo_width()}x{app.winfo_height()}, "
+                          f"screen {app.winfo_screenwidth()}x{app.winfo_screenheight()}")
 
         def descendants(widget):
             for child in widget.winfo_children():

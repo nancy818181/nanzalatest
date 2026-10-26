@@ -37,5 +37,15 @@ if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
         _annotate("ERROR", test, error)
         return _add_error(self, test, error)
 
+    _add_subtest = unittest.TestResult.addSubTest
+
+    def _subtest_with_annotation(self, test, subtest, error):
+        # 2.9.138 review: a failure inside self.subTest() goes through addSubTest, not addFailure / addError,
+        # so it left no annotation (and no test name) in the check results.
+        if error is not None:
+            _annotate("FAIL" if issubclass(error[0], test.failureException) else "ERROR", subtest, error)
+        return _add_subtest(self, test, subtest, error)
+
     unittest.TestResult.addFailure = _failure_with_annotation
     unittest.TestResult.addError = _error_with_annotation
+    unittest.TestResult.addSubTest = _subtest_with_annotation

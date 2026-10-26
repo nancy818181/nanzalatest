@@ -3829,3 +3829,9 @@ AR.update({  # 2.9.135 (custom report controls)
     'Excel': 'إكسل',
     'PDF': 'ملف PDF',
 })
+# 2.9.138 review: labels added or renamed in 2.9.138 (purchase lookup, "Paid from A/C", sales Department and Project)
+AR.update({
+    'Find purchase': 'البحث عن مشتريات',
+    'Paid from A/C': 'مدفوع من حساب',
+    'Department and Project': 'القسم والمشروع',
+})
