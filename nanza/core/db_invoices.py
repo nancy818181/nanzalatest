@@ -856,11 +856,10 @@ class InvoicesStore:
         return self.get_invoice(new_id)
 
     def get_invoice(self, invoice_id):
-        rows = self.list_invoices(limit=100000)
-        row = next((item for item in rows if item["id"] == invoice_id), None)
-        if not row:
+        rows = self.list_invoices(limit=1, _invoice_id=int(invoice_id))
+        if not rows:
             raise KeyError(invoice_id)
-        return row
+        return rows[0]
 
     def invoice_detail(self, invoice_id):
         invoice=self.get_invoice(invoice_id)
@@ -1099,10 +1098,13 @@ class InvoicesStore:
                             "currency": r["currency"], "party_name": r["party_name"]} for r in found])
         return result
 
-    def list_invoices(self, limit=None):
+    def list_invoices(self, limit=None, _invoice_id=None):
         """Every invoice (2.9.58: the list stopped at the newest 500, so with a big file imported invoices, the
         purchases list, opening an entry and other screens could not find older ones)."""
         limit = int(limit) if limit else -1  # SQLite: LIMIT -1 = no limit
+        allocation_invoice_filter = " AND a.invoice_id=?" if _invoice_id is not None else ""
+        invoice_filter = "WHERE i.id=?" if _invoice_id is not None else ""
+        parameters = (int(_invoice_id), int(_invoice_id), limit) if _invoice_id is not None else (limit,)
         with self.connect() as db:
             return [dict(r) for r in db.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,
                 i.kind,i.entry_type,i.currency,i.exchange_rate,
@@ -1127,7 +1129,8 @@ class InvoicesStore:
                 i.doc_subtype,i.invoice_discount_percent,i.invoice_discount_amount,i.notes,i.linked_invoice_id,COALESCE(i.is_return,0) is_return,i.payment_account
                 FROM invoices i LEFT JOIN parties p ON p.id=i.party_id LEFT JOIN branches b ON b.id=i.branch_id
                 LEFT JOIN (SELECT a.invoice_id,DSUM(a.amount) allocated FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
-                           WHERE {posted_payment_sql()} GROUP BY a.invoice_id) s ON s.invoice_id=i.id ORDER BY i.id DESC LIMIT ?""", (limit,))]
+                           WHERE {posted_payment_sql()}{allocation_invoice_filter} GROUP BY a.invoice_id) s ON s.invoice_id=i.id
+                {invoice_filter} ORDER BY i.id DESC LIMIT ?""", parameters)]
 
     # ---------------------------------------------------------------- invoices: edit keeping attachments, landed cost
     @atomic  # 2.9.121

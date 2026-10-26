@@ -579,6 +579,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             # this idempotent and it applies to every company database.
             for index_sql in (
                 "CREATE INDEX IF NOT EXISTS idx_invoices_party ON invoices(party_id)",
+                "CREATE INDEX IF NOT EXISTS idx_invoices_party_status_date ON invoices(party_id,status,invoice_date,id)",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_kind ON invoices(kind)",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date)",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_branch ON invoices(branch_id)",
@@ -592,6 +593,7 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 "CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date)",
                 "CREATE INDEX IF NOT EXISTS idx_journal_entries_branch ON journal_entries(branch_id)",
                 "CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id)",
+                "CREATE INDEX IF NOT EXISTS idx_journal_lines_entry_account_amounts ON journal_lines(entry_id,account_id,debit,credit)",
                 "CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines(account_id)",
                 "CREATE INDEX IF NOT EXISTS idx_journal_lines_party ON journal_lines(party_id)",
                 "CREATE INDEX IF NOT EXISTS idx_stock_movements_item ON stock_movements(item_id)",
