@@ -2,6 +2,16 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.138 (invoice and payment screens for 14-inch laptops, faster invoice opening)
+
+Details and validation: `docs/RELEASE_2.9.138.md`.
+
+- **Purchase Invoice:** Find, Import Excel and Excel Template on one line; labels beside their fields like the Sales Invoice; rarely used fields under **More**.
+- **Sales Invoice / Payment & Receipt:** Department, Project and income-exempt moved out of the main grid (Posting accounts / More); one search box on Payment & Receipt; tables fit their width without a sideways scroll bar when they can.
+- **Faster:** opening an invoice reads only that invoice (it read every invoice before); two read indexes added (`idx_invoices_party_status_date`, `idx_journal_lines_entry_account_amounts`), created on start.
+- **Check:** a test builds the three screens at 1920x1040 with Windows 150% scaling (Tk 2.0) and fails if a label is cut or a control runs past the window; it runs on the Windows CI.
+- No schema column, VAT, rounding or posting rule changed.
+
 ## Version 2.9.137 (posted invoices voided, exact report totals, certified reports)
 
 Details and validation: `docs/RELEASE_2.9.137.md`; owner decision: `docs/decisions/F1_invoice_void.md`.
@@ -209,7 +219,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.137. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.138. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 
