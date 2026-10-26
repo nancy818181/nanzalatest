@@ -43,6 +43,19 @@ class EditableSheet:
         frame.grid_rowconfigure(0, weight=1); frame.grid_columnconfigure(0, weight=1)
         # 2.9.95: a wide sheet scrolls sideways inside its frame instead of making the whole screen wider than a laptop
         frame.configure(width=min(760, sum(int(c[2]) for c in columns) + 20), height=int(height) * 27 + 52); frame.grid_propagate(False)
+        base_widths={key:int(width) for key,_label,width,_anchor in columns}
+        def fit_columns(event):
+            available=max(1,event.width-4)
+            total=sum(base_widths.values())
+            scale=min(1.0,available/max(1,total))
+            for key,width in base_widths.items():
+                minimum=max(36,min(128,int(width*0.48)))
+                self.tree.column(key,width=max(minimum,int(width*scale)))
+            used=sum(self.tree.column(key,"width") for key in base_widths)
+            if used <= available:
+                if xscroll.winfo_ismapped(): xscroll.grid_remove()
+            elif not xscroll.winfo_ismapped(): xscroll.grid(row=1,column=0,sticky="ew")
+        self.tree.bind("<Configure>",fit_columns,add="+")
         self.tree.tag_configure("odd", background="#fbf3e4")
         self.tree.bind("<Double-1>", self._clicked); self.tree.bind("<Return>", lambda _e: self.edit(self.tree.focus(), self.editable[0]))
         self.tree.bind("<<TreeviewSelect>>", lambda _e: self.on_select(self.selected()) if self.on_select else None)

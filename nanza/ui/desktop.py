@@ -1009,6 +1009,10 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             if abs(event.width-fitted["width"])<4: return  # only when the window width changes, not after a column drag
             fitted["width"]=event.width; total=sum(planned.values()) or 1; factor=min(1.0,max(0.45,(event.width-4)/total))
             for key,width in planned.items(): tree.column(key,width=max(40,int(width*factor)))
+            used=sum(tree.column(key,"width") for key in planned)
+            if used <= event.width-4:
+                if across.winfo_ismapped(): across.pack_forget()
+            elif not across.winfo_ismapped(): across.pack(side="bottom",fill="x",before=tree)
         tree.bind("<Configure>",fit_columns,add="+")
         # 2.9.66: several rows with Ctrl / Shift or by dragging the mouse; their totals appear above the table
         tree.configure(selectmode="extended"); enable_drag_select(tree)

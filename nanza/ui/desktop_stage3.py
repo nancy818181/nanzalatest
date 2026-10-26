@@ -618,13 +618,12 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         grid = tk.Frame(box, bg=LIGHT); grid.pack(fill="x")
         for column in (1, 4, 7): grid.grid_columnconfigure(column, weight=1)
         form["not_deductible"] = tk.BooleanVar(value=False)
-        place_tick(tax_tick(box, form["not_deductible"], LIGHT), side="bottom", anchor="w")  # 2.9.113 (bank commission / expense lines)
-        def put(row, column, label, widget, bold=False, note=None):
+        def put(row, column, label, widget, bold=False, note=None, parent=grid):
             if label:
-                tk.Label(grid, text=label, bg=LIGHT, fg=NAVY if bold else "#33475B", font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)
-                         ).grid(row=row, column=3 * column, sticky="w", padx=(0 if column == 0 else 12, 6), pady=1)
-            widget.grid(row=row, column=3 * column + 1, sticky="ew", padx=(0, 6), pady=1)
-            if note: tk.Label(grid, text=note, bg=LIGHT, fg=MUTED).grid(row=row, column=3 * column + 2, sticky="w", padx=(2, 0),pady=1)
+                tk.Label(parent, text=label, bg=LIGHT, fg=NAVY if bold else "#33475B", font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)
+                         ).grid(row=row, column=3 * column, sticky="w", padx=(0 if column == 0 else 8, 4), pady=1)
+            widget.grid(row=row, column=3 * column + 1, sticky="ew", padx=(0, 4), pady=1)
+            if note: tk.Label(parent, text=note, bg=LIGHT, fg=MUTED).grid(row=row, column=3 * column + 2, sticky="w", padx=(2, 0),pady=1)
             return widget
         section=design.section_label(grid, "Document", 0, columns=9); section.grid_configure(pady=(3,1))
         put(1, 0, "Number", tk.Entry(grid, textvariable=v["number"], width=16, state="readonly", readonlybackground="white", font=("Segoe UI", 10, "bold")), True)
@@ -643,21 +642,34 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         form["cash_box"] = put(4, 1, "Cash / Bank Account", ttk.Combobox(grid, textvariable=v["cash_account"], width=25, state="readonly"))
         put(4, 2, "Ref. / Cheque", tk.Entry(grid, textvariable=v["reference"], width=16))
         put(5, 0, "Description", tk.Entry(grid, textvariable=v["description"], width=28))
-        # 2.9.79: bank commission and exchange difference, each on the account chosen here (number - name)
-        section=design.section_label(grid, "Bank commission and exchange difference", 6, columns=9); section.grid_configure(pady=(3,1))
-        put(7, 0, "Bank Commission", tk.Entry(grid, textvariable=v["bank_commission"], width=13))
-        put(7, 1, "Commission A/C", self.account_search_box(grid, v["commission_account"], 42))
-        put(7, 2, "Exchange Difference (+ / -)", tk.Entry(grid, textvariable=v["exchange_difference"], width=13))
-        put(8, 0, "Exchange Gain A/C", self.account_search_box(grid, v["exchange_gain_account"], 42))
-        put(8, 1, "Exchange Loss A/C", self.account_search_box(grid, v["exchange_loss_account"], 42))
-        form["preview"] = tk.Label(box, text="", bg="#eef3f8", fg=NAVY, anchor="w", justify="left", font=("Consolas", 9))
-        form["preview"].pack(fill="x", pady=(3, 0))
+        # Rarely used dimensions and exchange adjustments stay available in More.
+        advanced=tk.Frame(box,bg=LIGHT)
+        more_grid=tk.Frame(advanced,bg=LIGHT); more_grid.pack(fill="x")
+        for column in (1,4,7): more_grid.grid_columnconfigure(column,weight=1)
+        section=design.section_label(more_grid, "Bank commission and exchange difference", 0, columns=9)
+        section.grid_configure(pady=(2,1))
+        put(1, 0, "Bank Commission", tk.Entry(more_grid, textvariable=v["bank_commission"], width=9), parent=more_grid)
+        put(1, 1, "Commission A/C", self.account_search_box(more_grid, v["commission_account"], 22), parent=more_grid)
+        put(1, 2, "Exchange Difference", tk.Entry(more_grid, textvariable=v["exchange_difference"], width=9), parent=more_grid)
+        put(2, 0, "Exchange Gain A/C", self.account_search_box(more_grid, v["exchange_gain_account"], 22), parent=more_grid)
+        put(2, 1, "Exchange Loss A/C", self.account_search_box(more_grid, v["exchange_loss_account"], 22), parent=more_grid)
+        dimensions=tk.Frame(advanced,bg=LIGHT); dimensions.pack(fill="x",pady=(2,0))
+        self.dimension_selectors(dimensions, form["department"], form["project"])
+        place_tick(tax_tick(advanced, form["not_deductible"], LIGHT), side="left", padx=(4,0))
         self.reset_payment_accounts(form)
         for key in ("amount", "bank_commission", "exchange_difference", "cash_account", "commission_account", "exchange_gain_account", "exchange_loss_account", "party"):
             v[key].trace_add("write", lambda *_a, f=form: self.update_payment_preview(f))
-        row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(3, 0))
-        self.dimension_selectors(row3, form["department"], form["project"])
+        row3 = tk.Frame(box, bg=LIGHT); row3.pack(fill="x", pady=(2, 0))
         form["balance"] = tk.Label(row3, text="", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")); form["balance"].pack(side="left", padx=10)
+        more_state={"shown":False}
+        def toggle_more():
+            more_state["shown"]=not more_state["shown"]
+            if more_state["shown"]:
+                advanced.pack(fill="x",after=row3,pady=(2,0))
+                more_button.config(text="Less ▴")
+            else:
+                advanced.pack_forget(); more_button.config(text="More ▾")
+        more_button=self.action_button(row3,"More ▾",toggle_more); more_button.pack(side="right",padx=4)
         alloc = tk.LabelFrame(page, text="Allocation - which invoices this " + ("receipt settles" if kind == "customer_receipt" else "payment settles"), bg=LIGHT, padx=6, pady=2)
         alloc.pack(fill="x", padx=8, pady=(0, 3))
         bar = tk.Frame(alloc, bg=LIGHT); bar.pack(fill="x")
@@ -667,8 +679,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
                                       font=("Segoe UI",9,"bold")); form["alloc_info"].pack(side="left", padx=8)
         flow_toolbars(bar)
         from desktop_brains import EditableSheet
-        form["alloc_sheet"] = EditableSheet(self, alloc, [("line", "#", 35, "center"), ("number", "Document", 140, "w"), ("date", "Date", 90, "center"), ("type", "Type", 90, "w"),
-            ("currency", "Cur.", 50, "center"), ("total", "Total", 110, "e"), ("open", "Open", 110, "e"), ("allocate", "Allocate", 110, "e")], ["allocate"],
+        form["alloc_sheet"] = EditableSheet(self, alloc, [("line", "#", 28, "center"), ("number", "Document", 105, "w"), ("date", "Date", 72, "center"), ("type", "Type", 72, "w"),
+            ("currency", "Cur.", 42, "center"), ("total", "Total", 82, "e"), ("open", "Open", 82, "e"), ("allocate", "Allocate", 82, "e")], ["allocate"],
             lambda iid, key, text: self.allocation_changed(form, iid, text), height=6)
         # Keep primary actions beside the dimensions so the open-document allocation
         # table rises into view sooner below this compact payment header.
@@ -678,15 +690,12 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         tk.Button(buttons, text="Delete", command=lambda: self.delete_payment(form), bg=RED, fg="white", border=0, padx=12, pady=7).pack(side="left", padx=3)
         tk.Label(buttons, text="Double-click a line in the list to edit it.", bg=LIGHT, fg=MUTED).pack(side="left", padx=10)
         flow_toolbar(row3)
-        find_bar = tk.Frame(page, bg=LIGHT); find_bar.pack(fill="x", padx=8, pady=(4, 0))
-        tk.Label(find_bar, text="Find", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        form["find"] = tk.StringVar()
-        find_entry = tk.Entry(find_bar, textvariable=form["find"], width=32); find_entry.pack(side="left", padx=(4, 6))
-        find_entry.bind("<KeyRelease>", lambda _e: self.filter_payments(form))
-        tk.Button(find_bar, text="Clear", command=lambda: (form["find"].set(""), self.filter_payments(form)), bg=LIGHT, border=0, fg=NAVY).pack(side="left")
-        flow_toolbars(find_bar)
         form["tree"] = self.table(page, [("number", "Number", 125), ("date", "Date", 90), ("party", "Customer" if kind == "customer_receipt" else "Supplier", 210), ("currency", "Currency", 65),
             ("amount", "Amount", 110), ("method", "Method", 100), ("cash", "Cash / Bank", 220), ("reference", "Reference", 110), ("description", "Description", 200), ("dims", "Dep. / Project", 110)])
+        form["find"] = form["tree"].search_var
+        form["preview"] = tk.Label(box, text="", bg="#eef3f8", fg=NAVY, anchor="w", justify="left", font=("Consolas", 9))
+        # The preview is created after the action row so More can be inserted before it.
+        form["preview"].pack(fill="x", pady=(2, 0))
         form["tree"].bind("<Double-1>", lambda _e: self.edit_payment(form))
         return form
 
@@ -829,7 +838,11 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         if label is None or not label.winfo_exists(): return
         try: lines = self.payment_journal_preview(form)
         except Exception: lines = []
-        if not lines: label.config(text=""); return
+        if not lines:
+            label.config(text="")
+            if label.winfo_manager(): label.pack_forget()
+            return
+        if not label.winfo_manager(): label.pack(fill="x",pady=(2,0))
         text = [f'{"Journal entry:":<63}{"Debit":>14}{"Credit":>14}'] + [f'  {"Dr" if debit else "   Cr"}  {account_label(self, code)[:57]:<{57 if debit else 54}}'
                                                                          f'{(f"{debit:,.2f}" if debit else ""):>14}{(f"{credit:,.2f}" if credit else ""):>14}' for code, debit, credit in lines]
         label.config(text="\n".join(text))

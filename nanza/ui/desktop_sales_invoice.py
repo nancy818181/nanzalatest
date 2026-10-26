@@ -45,8 +45,9 @@ def _responsive_invoice_details(form, fields, dimensions):
             row, column = divmod(index, columns)
             label.grid_configure(row=row, column=2 * column, padx=(0 if column == 0 else gap, 6), pady=2)
             widget.grid_configure(row=row, column=2 * column + 1, sticky="ew", padx=(0, 2), pady=2)
-        dimensions.grid_configure(row=(len(fields) + columns - 1) // columns,
-                                  column=0, columnspan=2 * columns, sticky="ew", pady=(3, 1))
+        if dimensions is not None:
+            dimensions.grid_configure(row=(len(fields) + columns - 1) // columns,
+                                      column=0, columnspan=2 * columns, sticky="ew", pady=(3, 1))
 
     def resized(_event=None):
         if not state["pending"]:
@@ -74,6 +75,7 @@ class SalesInvoiceMixin:
         self.sales_due_date=tk.StringVar(); self.sales_payment_method=tk.StringVar(value="On Account (Not Cash)"); self.sales_amount_paid=tk.StringVar(value="0"); \
             self.sales_branch=tk.StringVar(value="Head Office")
         self.sales_open_choice=tk.StringVar(); self.sales_doc_type=tk.StringVar(value="Invoice"); self.sales_category=tk.StringVar(value="Services")
+        self.sales_department=tk.StringVar(); self.sales_project=tk.StringVar()
         # Keep the title, invoice lookup, navigation, numbering and new action in one wrapping toolbar.
         nav=tk.Frame(header,bg=LIGHT); nav.pack(fill="x",pady=(0,4))
         tk.Label(nav,text="Sales Invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",11,"bold")).pack(side="left",padx=(0,8))
@@ -120,6 +122,9 @@ class SalesInvoiceMixin:
             self.account_search_box(cell,var,26).pack(anchor="w",padx=6,pady=1)
             side_box=ttk.Combobox(cell,textvariable=side,values=["D - Debit","C - Credit"],state="readonly",width=11); side_box.pack(anchor="w",padx=6,pady=(0,3))
             side_box.bind("<<ComboboxSelected>>",lambda _event:self.update_sales_totals())
+        tk.Label(account_details,text="Department and Project",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(anchor="w",padx=4,pady=(4,0))
+        dims=tk.Frame(account_details,bg=LIGHT); dims.pack(fill="x",anchor="w",pady=(0,2))
+        self.dimension_selectors(dims,self.sales_department,self.sales_project); flow_toolbar(dims)
         put(2,1,"Date",self.date_entry(form,self.sales_date,12))
         self.sales_category_box=ttk.Combobox(form,textvariable=self.sales_category,values=["Goods","Products","Services"],state="readonly",width=9)
         put(3,0,"Sales Type",self.sales_category_box); self.sales_category_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_category_changed())
@@ -128,9 +133,6 @@ class SalesInvoiceMixin:
         put(3,1,"Payment Mode",ttk.Combobox(form,textvariable=self.sales_payment_method,values=["On Account (Not Cash)","Cash","Bank Transfer","Cheque","Card","Other"],
                 state="readonly",width=16))
         put(4,0,"Due Date",self.date_entry(form,self.sales_due_date,12))
-        dims=tk.Frame(form,bg=LIGHT); dims.grid(row=7,column=0,columnspan=4,sticky="w",pady=1)
-        self.sales_department=tk.StringVar(); self.sales_project=tk.StringVar(); self.dimension_selectors(dims,self.sales_department,self.sales_project)
-        flow_toolbar(dims)
         vat_row=form
         put(5,0,"Branch",self.branch_selector(form,self.sales_branch,14,False))
         # 2.9.116: the branch can be in the number (Settings > Numbering): a new invoice takes the number of its branch
@@ -142,7 +144,7 @@ class SalesInvoiceMixin:
         self.sales_treatment=tk.StringVar(value=TAXABLE_LABEL)
         treatment_box=put(6,1,"VAT Treatment",ttk.Combobox(form,textvariable=self.sales_treatment,values=list(SALE_TREATMENTS),state="readonly",width=19),True)
         treatment_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_treatment_changed())
-        _responsive_invoice_details(form,detail_fields,dims)
+        _responsive_invoice_details(form,detail_fields,None)
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
         self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
         self.sales_mode_label.pack(side="right",padx=(6,2))
@@ -151,11 +153,11 @@ class SalesInvoiceMixin:
         from tax_adjustments import EXEMPT_REASONS
         self.sales_exempt_reason=tk.StringVar(); self.sales_exempt_article=tk.StringVar()
         self.sales_income_exempt=tk.BooleanVar(value=False)
-        exempt_toggle=tk.Frame(vat_row.master,bg=LIGHT); exempt_toggle.pack(fill="x",after=vat_row,pady=2)
+        exempt_toggle=tk.Frame(account_details,bg=LIGHT); exempt_toggle.pack(fill="x",pady=(4,1))
         self._sales_exempt_after=exempt_toggle
         tk.Checkbutton(exempt_toggle,text="Income exempt from income tax (legal reason required)",
             variable=self.sales_income_exempt,command=self.toggle_sales_income_exempt,bg=LIGHT,fg=NAVY).pack(side="left")
-        self.sales_exempt_row=tk.Frame(vat_row.master,bg=LIGHT)
+        self.sales_exempt_row=tk.Frame(account_details,bg=LIGHT)
         tk.Label(self.sales_exempt_row,text="Income not subject to income tax | إيراد غير خاضع لضريبة الدخل - legal reason",bg=LIGHT,fg=NAVY).pack(side="left")
         ttk.Combobox(self.sales_exempt_row,textvariable=self.sales_exempt_reason,values=("",)+EXEMPT_REASONS,state="readonly",width=46).pack(side="left",padx=4)
         tk.Label(self.sales_exempt_row,text="Article / law",bg=LIGHT).pack(side="left",padx=(8,2))
@@ -197,6 +199,20 @@ class SalesInvoiceMixin:
         self.sales_sheet.grid(row=0,column=0,sticky="nsew"); scroll.grid(row=0,column=1,sticky="ns")
         xscroll.grid(row=1,column=0,sticky="ew")
         sheet_frame.grid_rowconfigure(0,weight=1); sheet_frame.grid_columnconfigure(0,weight=1)
+        original_widths={key:width for key,_label,width in self.sales_columns}
+        minimum_widths={"item_code":62,"description":110,"quantity":42,"unit":42,"unit_price":64,
+                        "gross_amount":68,"discount_percent":52,"vat_rate":42,"total":64}
+        def fit_sales_columns(event):
+            available=max(1,event.width-22)
+            total=sum(original_widths.values())
+            scale=min(1.0,available/max(1,total))
+            for key,base in original_widths.items():
+                self.sales_sheet.column(key,width=max(minimum_widths[key],int(base*scale)))
+            used=sum(self.sales_sheet.column(key,"width") for key in original_widths)
+            if used <= available:
+                if xscroll.winfo_ismapped(): xscroll.grid_remove()
+            elif not xscroll.winfo_ismapped(): xscroll.grid(row=1,column=0,sticky="ew")
+        sheet_frame.bind("<Configure>",fit_sales_columns,add="+")
         self.sales_sheet.bind("<Double-1>",self.edit_sales_cell); self.sales_sheet.bind("<Return>",self.edit_sales_cell)
         self.sales_sheet.bind("<Delete>",lambda _event:self.remove_sales_item())
         self.sales_sheet.bind("<F2>",lambda _event:self.sales_item_lookup())
