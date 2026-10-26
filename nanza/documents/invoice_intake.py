@@ -130,13 +130,18 @@ def chart_suggestion(text, accounts, category):
     prefixes = ("2",) if category == "fixed_asset" else ("6",)
     expected_type = "asset" if category == "fixed_asset" else "expense"
     parent_ids = {a.get("parent_id") for a in accounts or [] if isinstance(a, dict) and a.get("parent_id")}
+    # The company chart from Database.list_accounts / client.accounts() has is_active, is_posting and parent_code
+    # (not active / id / parent_id): read both forms so an inactive or parent (heading) account is never suggested.
+    parent_codes = {str(a.get("parent_code")) for a in accounts or [] if isinstance(a, dict) and a.get("parent_code")}
     for account in accounts or []:
         if not isinstance(account, dict):
             continue
         code = str(account.get("code") or "")
         account_type = str(account.get("type") or "").casefold()
         eligible = account_type == expected_type if account_type else code.startswith(prefixes)
-        if not eligible or not code or not account.get("active", True) or account.get("id") in parent_ids:
+        active = account.get("is_active", account.get("active", True))
+        if (not eligible or not code or active in (0, False, "0") or account.get("is_posting") in (0, False, "0")
+                or account.get("id") in parent_ids or code in parent_codes):
             continue
         names = [normalized(account.get(k)) for k in ("name_en", "name_fr", "name_ar") if account.get(k)]
         score = max(
@@ -162,6 +167,27 @@ def chart_suggestion(text, accounts, category):
         "score_type": "heuristic, not calibrated accuracy",
         "reason": "Description matched an active company account; verify its use",
     }
+
+
+def check_90_percent_rule(items, complete=True):
+    """Coverage of a read invoice's lines by account suggestions (integrated from b04e29c, 18-10-2026).
+
+    A review hint, never OCR accuracy and never permission to post: requires_review is always True and can_post False.
+    Success needs at least 90% of the lines with a suggestion and a complete reading (no omitted rows)."""
+    total = len(items)
+    classified = sum(bool(item.get("suggested_account")) for item in items)
+    percent = classified / total * 100 if total else 0
+    success = bool(total and classified * 10 >= total * 9 and complete)
+    label = f"{percent:.1f}".rstrip("0").rstrip(".")
+    if success:
+        message = f"{label}% of the lines matched an account ({classified}/{total}) - review before Save | تم التعرف على {label}% من البنود تلقائيا - {classified}/{total}"
+    else:
+        message = f"Only {label}% of the lines matched an account ({classified}/{total}) - review the lines | تم التعرف على {label}% فقط - {classified}/{total} - راجع البنود"
+    if not complete:
+        message += " - some lines are unreadable or missing | بعض البنود غير مقروءة أو ناقصة"
+    return {"notify": True, "message": message, "type": "success" if success else "warning",
+            "percent": round(percent, 2), "classified": classified, "total": total,
+            "requires_review": True, "can_post": False, "complete": complete}
 
 
 def enrich(reading, accounts=(), suppliers=(), existing_documents=()):
@@ -260,6 +286,7 @@ def enrich(reading, accounts=(), suppliers=(), existing_documents=()):
         category = category_for(item.get("description"))
         item["classification"] = category
         item["account_suggestion"] = chart_suggestion(item.get("description"), accounts, category["category"])
+        item["suggested_account"] = item["account_suggestion"].get("account_code") or ""
         item["vat_suggestion"] = {
             "treatment": None,
             "confidence": None,
@@ -279,6 +306,8 @@ def enrich(reading, accounts=(), suppliers=(), existing_documents=()):
             warnings.append(f"Item {index}: quantity × price differs from total")
         items.append(item)
     result["items"] = items
+    if items:  # review hint only (never a permission to post): how many lines got a chart suggestion
+        result["notification_90"] = check_90_percent_rule(items, not evidence.get("items_truncated"))
     sub, tax, total = (number(result.get(k)) for k in ("subtotal", "vat", "total"))
     line_totals = [number(item.get("total")) for item in items]
     if line_totals and sub is not None and all(value is not None for value in line_totals):

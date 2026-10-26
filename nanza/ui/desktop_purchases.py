@@ -573,10 +573,17 @@ class PurchasesMixin:
                                                      data.get("text") or "", [i.get("description") for i in data.get("items") or []])
                 if rule_note: item_note = f"{item_note}; {rule_note}"
             suggestion=f["pdf_suggested_type"]
-            f["pdf_label"].config(text=f"{Path(path).name}: {data.get('notes', '')}" +
-                                  (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
-                                   "; Type unclear; review Purchases vs Assets before Save") +
-                                  f"; {item_note}; PDF attaches when you press Save", fg=NAVY)
+            label_text=(f"{Path(path).name}: {data.get('notes', '')}" +
+                        (f"; Suggested Type: {suggestion} (review before Save)" if suggestion else
+                         "; Type unclear; review Purchases vs Assets before Save") +
+                        f"; {item_note}; PDF attaches when you press Save")
+            # Line coverage by account suggestions (from b04e29c): a review hint only, it never posts or allows posting.
+            notification = (data or {}).get("notification_90") or {}
+            if notification.get("notify"):
+                f["pdf_label"].config(text=notification["message"] + " | " + label_text,
+                                      fg="#146b37" if notification.get("type") == "success" else RED)
+            else:
+                f["pdf_label"].config(text=label_text, fg=NAVY)
         else:
             item_note = self.add_purchase_pdf_items({"items": [], "subtotal": None})
             f["pdf_label"].config(text=f"{Path(path).name}: {item_note}; attachment saves with purchase on Save", fg=NAVY)
