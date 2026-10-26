@@ -44,6 +44,45 @@ class PurchasesMixin:
         self.load_purchases(); self.load_expenses()
 
     # ---- purchases
+    @staticmethod
+    def _keep_button_heights_even(row):
+        """Even the row's button heights when it is shown and whenever a button changes size (the design pass adds
+        icons and padding later); once they are equal nothing more changes."""
+        state = {"pending": False}
+        def run():
+            state["pending"] = False
+            PurchasesMixin._even_button_heights(row)
+        def schedule(_event=None):
+            if state["pending"]: return
+            state["pending"] = True
+            row.after_idle(run)
+        row.bind("<Map>", schedule, add="+")
+        for button in row.winfo_children():
+            if isinstance(button, tk.Button): button.bind("<Configure>", schedule, add="+")
+
+    @staticmethod
+    def _even_button_heights(row):
+        """Give every button of a row the height of the tallest one. On Windows a button with an icon (New, Save, Delete)
+        is drawn 2 px lower than a text-only one with the same padding; an icon button's height option is in pixels,
+        a text button grows one pixel of pady at a time. Runs after the design pass (icons and padding are set then)."""
+        try:
+            if not row.winfo_exists(): return
+            buttons = [b for b in row.winfo_children() if isinstance(b, tk.Button) and b.winfo_ismapped()]
+            if len(buttons) < 2: return
+            target = max(b.winfo_reqheight() for b in buttons)
+            for button in buttons:
+                if button.winfo_reqheight() >= target: continue
+                if str(button.cget("image")):
+                    button.configure(height=20); offset = button.winfo_reqheight() - 20  # border, focus ring and padding
+                    button.configure(height=max(1, target - offset))
+                else:
+                    pady = int(round(button.winfo_fpixels(str(button.cget("pady")) or "0")))
+                    for _step in range(8):
+                        if button.winfo_reqheight() >= target: break
+                        pady += 1; button.configure(pady=pady)
+        except (tk.TclError, ValueError):
+            logging.getLogger("saber.ignored").debug("Button heights left as they were", exc_info=True)
+
     def _fit_panel_to_view(self, panel, margin):
         """Keep a full-width panel inside the part of the page the user sees. Another tab of the same notebook can make
         the scrolled page wider than the window; the panel then ends at the visible edge (its toolbars wrap there)
@@ -267,6 +306,7 @@ class PurchasesMixin:
         for row in (heading, r4, r5):  # light, gold and red buttons of these rows keep one height (design pass)
             for button in row.winfo_children():
                 if isinstance(button, tk.Button): button._saber_even = True
+            PurchasesMixin._keep_button_heights_even(row)
         cost = tk.LabelFrame(cost_parent or page, text="Cost on Purchase (customs / freight / insurance) for the selected purchase", bg=LIGHT, padx=8, pady=4); cost.pack(fill="x", padx=8, pady=3)
         f["lc"] = {k: tk.StringVar() for k in ("freight", "insurance", "customs_duties", "customs_group_1", "customs_group_2", "broker_fees", "other_costs",
                                                "import_vat", "customs_declaration_no", "party_name")}

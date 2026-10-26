@@ -131,6 +131,20 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         app = self.open("ar")
         self.check_layout(app, rtl=True)
 
+    def test_icon_and_text_buttons_of_a_row_get_one_height(self):
+        """Windows draws an icon button 2 px lower than a text one with the same padding (CI 26-10-2026: 28 vs 30)."""
+        from desktop_purchases import PurchasesMixin
+        root = tk.Tk(); self.addCleanup(root.destroy)
+        row = tk.Frame(root); row.pack()
+        icon = tk.PhotoImage(master=root, width=12, height=12)
+        short = tk.Button(row, text="New", image=icon, compound="left", pady=1); short.pack(side="left")
+        tall = tk.Button(row, text="Cancel Purchase", pady=6); tall.pack(side="left")
+        lower = tk.Button(row, text="Auto Calculate", pady=2); lower.pack(side="left")
+        root.update()
+        self.assertGreater(tall.winfo_reqheight(), short.winfo_reqheight())
+        PurchasesMixin._even_button_heights(row); root.update()
+        self.assertEqual({b.winfo_height() for b in (short, tall, lower)}, {tall.winfo_height()})
+
     def test_narrow_window_stacks_pairs_instead_of_hiding_fields(self):
         app = self.open("en")
         app.geometry("1024x700")
