@@ -143,8 +143,12 @@ def _polish_button(button):
                              activebackground=OUTLINE_HOVER, activeforeground=NAVY, cursor="hand2")
         else:
             hover, fg = (GOLD_HOVER, NAVY) if kind == "primary" else (DANGER_HOVER, "white")
-            button.configure(font=_BUTTON_FONT, fg=fg, relief="flat", bd=0, highlightthickness=0, padx=padx, pady=pady,
-                             activebackground=hover, activeforeground=fg, cursor="hand2")
+            # A row that asks for even heights (_saber_even) gives gold / red buttons the same 1-px frame as the light
+            # ones, in their own colour, so every button of the row has the same height and padding.
+            even = getattr(button, "_saber_even", False)
+            button.configure(font=_BUTTON_FONT, fg=fg, relief="flat", bd=0, highlightthickness=1 if even else 0, padx=padx,
+                             pady=max(pady, 4) if even else pady, activebackground=hover, activeforeground=fg, cursor="hand2")
+            if even: button.configure(highlightbackground=button.cget("background"), highlightcolor=button.cget("background"))
         button._saber_kind = kind
         _button_icon(button, kind)
     except (tk.TclError, ValueError):

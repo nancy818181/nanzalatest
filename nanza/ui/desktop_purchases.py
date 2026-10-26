@@ -44,6 +44,109 @@ class PurchasesMixin:
         self.load_purchases(); self.load_expenses()
 
     # ---- purchases
+    def _fit_panel_to_view(self, panel, margin):
+        """Keep a full-width panel inside the part of the page the user sees. Another tab of the same notebook can make
+        the scrolled page wider than the window; the panel then ends at the visible edge (its toolbars wrap there)
+        instead of running under the edge. In Arabic the extra space goes on the left (arabic_ui mirrors padx)."""
+        state = {"extra": None, "pending": False}
+
+        def scroll_parts():
+            page = panel
+            while page is not None and not getattr(page.master, "_saber_scroll_page", False): page = page.master
+            return (page, page.master) if page is not None else (None, None)
+
+        def fit():
+            state["pending"] = False
+            page, view = scroll_parts()
+            if page is None or not panel.winfo_exists(): return
+            extra = max(0, page.winfo_width() - view.winfo_width())
+            if extra == state["extra"]: return
+            state["extra"] = extra
+            panel.pack_configure(padx=(margin, margin + extra))
+
+        def schedule(_event=None):
+            if state["pending"]: return
+            state["pending"] = True
+            panel.after_idle(fit)
+        page, view = scroll_parts()
+        if page is not None:
+            page.bind("<Configure>", schedule, add="+"); view.bind("<Configure>", schedule, add="+")
+        schedule()
+
+    def _purchase_header_grid(self, parent, short_fields, wide_fields):
+        """The Purchase Invoice header as ONE grid: label | field pairs in columns of equal width, labels right-aligned
+        next to their field (mirrored in Arabic by arabic_ui), every input the same height. It shows 4, 2 or 1 pairs
+        per row, chosen from the width the page actually shows (not the scrolled page width), so nothing is pushed
+        out of view at 100-200% display scaling. The account / payment fields span a label and a field in 4-pair rows.
+        Widgets are created in the same order as before and kept in purchase_form["header_widgets"] by label."""
+        from tkinter import font as tkfont
+        f = self.purchase_form
+        grid = tk.Frame(parent, bg=LIGHT); grid.pack(side="left", anchor="nw")
+        label_font = ("Segoe UI", 9, "bold")
+        cells = []
+        f["header_widgets"] = widgets = {}
+        for kind, specs in (("short", short_fields), ("wide", wide_fields)):
+            for text, make_widget in specs:
+                label = tk.Label(grid, text=text, bg=LIGHT, fg=NAVY, font=label_font, anchor="e")
+                widget = make_widget(grid)
+                widgets[text] = widget
+                cells.append((kind, label, widget))
+        state = {"key": None, "pending": False}
+
+        def view_width():
+            return max(1, parent.winfo_width())  # the panel is kept inside the visible page width (_fit_panel_to_view)
+
+        def layout():
+            state["pending"] = False
+            if not grid.winfo_exists(): return
+            measure = tkfont.Font(font=label_font)
+            def label_widths(pairs):
+                """Each label column is as wide as its longest label (the labels of one column line up)."""
+                widths = [0] * pairs
+                short_count = sum(1 for c in cells if c[0] == "short")
+                for index, (kind, label, _w) in enumerate(cells):
+                    if kind == "short": column = index % pairs
+                    else: column = ((index - short_count) % max(1, pairs // 2)) * 2 if pairs >= 4 else (index - short_count) % pairs
+                    widths[column] = max(widths[column], label.winfo_reqwidth())
+                return sum(widths)
+            pair_gap = max(10, measure.measure("00"))      # space between two label | field pairs
+            label_gap = max(5, measure.measure("0") // 2 + 3)  # space between a label and its field
+            field_min = max(widget.winfo_reqwidth() for kind, _l, widget in cells if kind == "short")
+            available = view_width()
+            def needed(n): return label_widths(n) + n * (label_gap + field_min) + (n - 1) * pair_gap
+            pairs = next((n for n in (4, 2, 1) if needed(n) <= available), 1)
+            field_width = max(field_min, (available - label_widths(pairs) - pairs * label_gap - (pairs - 1) * pair_gap) // pairs)
+            key = (pairs, field_width)
+            if key == state["key"]: return
+            state["key"] = key
+            target = max((w.winfo_reqheight() for _k, _l, w in cells if isinstance(w, ttk.Combobox)), default=0)
+            for column in range(8):
+                used = column < 2 * pairs
+                grid.grid_columnconfigure(column, weight=0, uniform="nz_field" if used and column % 2 else "",
+                                          minsize=field_width if used and column % 2 else 0)
+            short = [c for c in cells if c[0] == "short"]; wide = [c for c in cells if c[0] == "wide"]
+            def place(label, widget, row, pair, span=1):
+                label.grid(row=row, column=2 * pair, sticky="e", padx=(pair_gap if pair else 0, label_gap), pady=3)
+                extra = {}
+                if isinstance(widget, tk.Entry) and target:  # tk.Entry is shorter than a ttk.Combobox: same height in the row
+                    extra["ipady"] = max(0, (target - widget.winfo_reqheight()) // 2)
+                widget.grid(row=row, column=2 * pair + 1, columnspan=span, sticky="ew", pady=3, **extra)
+            for index, (_k, label, widget) in enumerate(short):
+                place(label, widget, index // pairs, index % pairs)
+            first = (len(short) + pairs - 1) // pairs
+            per_row = max(1, pairs // 2) if pairs >= 4 else pairs
+            span = 3 if pairs >= 4 else 1
+            for index, (_k, label, widget) in enumerate(wide):
+                place(label, widget, first + index // per_row, (index % per_row) * (2 if pairs >= 4 else 1), span)
+
+        def schedule(_event=None):
+            if state["pending"]: return
+            state["pending"] = True
+            grid.after_idle(layout)
+        parent.bind("<Configure>", schedule, add="+")
+        schedule()
+        return grid
+
     def build_purchases_page(self, page, totals_parent=None, cost_parent=None):
         f = {"id": None, "pdf": None, "vars": {k: tk.StringVar() for k in ("supplier", "number", "date", "due", "currency", "type", "taxable", "exempt", "rate", "vat", "account", "vat_account")}}
         v = f["vars"]; v["date"].set(self.fiscal_today()); v["currency"].set(main_currency(self,
@@ -54,104 +157,41 @@ class PurchasesMixin:
         f["doc"] = tk.StringVar(value="Invoice")  # 2.9.54: Invoice / Return (goods back to the supplier) / Debit Note / Credit Note
         import desktop_design as design  # 2.9.134: a framed panel with a gold-marked title instead of the plain group box
         box_outer, box = design.panel(page, pady=5); box_outer.pack(fill="x", padx=8, pady=(2, 3))
-        # Title and lookup/import actions share one wrapping row to reduce the repeated heading space.
-        heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 3))
-        tk.Label(heading, text="Purchase Invoice", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 8))
-        find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", fill="x", expand=True)
+        PurchasesMixin._fit_panel_to_view(self, box_outer, 8)
+        # Title, lookup and Excel actions in one row: the lookup (label + box) stays together and the two Excel
+        # buttons move to a second line only when the row does not fit (flow_toolbars at the end of this method).
+        heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 4))
+        tk.Label(heading, text="Purchase Invoice", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 12))
+        find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", padx=(0, 6))
         f["find"] = tk.StringVar()
-        tk.Label(find, text="Find purchase", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
-        # Keep title, lookup, and Excel actions in one predictable row. The parent
-        # expands across the form, so packing here avoids the flow toolbar shrinking
-        # this nested lookup frame to its narrowest child at high display scaling.
-        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=24); f["find_box"].pack(side="left", padx=4)
+        tk.Label(find, text="Find purchase", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
+        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=24); f["find_box"].pack(side="left")
         f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_found()); f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_purchases())
         f["find_box"].bind("<Return>", lambda _e: self.purchase_found())
-        self.action_button(find, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(5, 3))
-        self.action_button(find, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
+        self.action_button(heading, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(6, 3))
+        self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
         # The existing controls and callbacks stay in the same order below.
-        actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x", pady=(4, 2))
+        actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x", pady=(6, 2))
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
-        metadata = tk.Frame(fields, bg=LIGHT); metadata.pack(fill="x")
-        purchase_fields=[]
-        try:
-            import arabic_ui
-            rtl_fields = arabic_ui.active()
-        except ImportError:
-            rtl_fields = False
-        def field(label, make_widget):
-            cell=tk.Frame(metadata,bg=LIGHT)
-            cell.grid_columnconfigure(0 if not rtl_fields else 1, weight=1)
-            label_col, widget_col = ((1, 0) if rtl_fields else (0, 1))
-            caption=tk.Label(cell,text=label,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),width=14,
-                             anchor="w" if rtl_fields else "e")
-            caption.grid(row=0,column=label_col,sticky="ew",padx=(0,4) if not rtl_fields else (4,0),pady=1)
-            widget=make_widget(cell); widget.grid(row=0,column=widget_col,sticky="ew",padx=2,pady=1)
-            cell.grid_columnconfigure(widget_col,weight=1)
-            purchase_fields.append(cell)
-            return widget
-        f["supplier_box"] = field("Supplier",lambda parent:ttk.Combobox(parent,textvariable=v["supplier"],width=20))
-        f["supplier_box"].bind("<KeyRelease>", lambda _e: self.filter_suppliers()); f["supplier_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_supplier_chosen())
-        field("Supplier Invoice No.",lambda parent:tk.Entry(parent,textvariable=v["number"],width=12))
-        field("Date",lambda parent:self.date_entry(parent,v["date"],9))
-        field("Due",lambda parent:self.date_entry(parent,v["due"],9))
-        field("Currency",lambda parent:ttk.Combobox(parent,textvariable=v["currency"],values=self.currency_codes,state="readonly",width=5))
-        field("Type",lambda parent:ttk.Combobox(parent,textvariable=v["type"],values=["Purchases","Assets"],state="readonly",width=9))
-        doc_box=field("Document",lambda parent:ttk.Combobox(parent,textvariable=f["doc"],values=list(PURCHASE_DOCUMENTS),state="readonly",width=10))
-        doc_box.bind("<<ComboboxSelected>>",lambda _e:self.purchase_doc_changed())
-        responsive={"columns":0,"pending":False}
-        def arrange_purchase_fields(_event=None):
-            if responsive["pending"]: return
-            responsive["pending"]=True
-            def apply():
-                responsive["pending"]=False
-                if not metadata.winfo_exists(): return
-                width=max(1,metadata.winfo_width())
-                columns=4 if width>=1000 else 2 if width>=570 else 1
-                if responsive["columns"]==columns: return
-                responsive["columns"]=columns
-                for index,cell in enumerate(purchase_fields):
-                    row,column=divmod(index,columns)
-                    cell.grid(row=row,column=column,sticky="ew",padx=2,pady=1)
-                for column in range(4): metadata.grid_columnconfigure(column,weight=1 if column<columns else 0)
-            metadata.after_idle(apply)
-        metadata.bind("<Configure>",arrange_purchase_fields,add="+")
-        arrange_purchase_fields()
-        # Put both accounting choices and payment details in one responsive row. This
-        # frees a line for the item grid on wide screens, and stacks into two columns
-        # when the page is narrower.
         f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
-        account_payment_row=tk.Frame(fields,bg=LIGHT); account_payment_row.pack(fill="x",pady=(2,0))
-        account_payment_cells=[]
-        for label,make_widget in (
-            ("Cost / Asset A/C",lambda parent:self.account_search_box(parent,v["account"],26)),
-            ("VAT A/C",lambda parent:self.account_search_box(parent,v["vat_account"],24)),
-            ("Paid",lambda parent:ttk.Combobox(parent,textvariable=f["paid_by"],values=PAID_BY,state="readonly",width=22)),
-            ("Paid from A/C",lambda parent:self.account_search_box(parent,f["paid_account"],24)),
-        ):
-            cell=tk.Frame(account_payment_row,bg=LIGHT)
-            label_col, widget_col = ((1, 0) if rtl_fields else (0, 1))
-            tk.Label(cell,text=label,bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),width=18,
-                     anchor="w" if rtl_fields else "e").grid(row=0,column=label_col,sticky="ew",padx=3,pady=1)
-            make_widget(cell).grid(row=0,column=widget_col,sticky="ew",padx=3,pady=1)
-            cell.grid_columnconfigure(widget_col,weight=1)
-            account_payment_cells.append(cell)
-        account_payment_layout={"columns":None,"pending":False}
-        def arrange_account_payment(_event=None):
-            if account_payment_layout["pending"]: return
-            account_payment_layout["pending"]=True
-            def apply_account_payment_layout():
-                account_payment_layout["pending"]=False
-                if not account_payment_row.winfo_exists(): return
-                width=max(1,account_payment_row.winfo_width())
-                columns=2 if width>=650 else 1
-                if account_payment_layout["columns"]==columns: return
-                account_payment_layout["columns"]=columns
-                for index,cell in enumerate(account_payment_cells):
-                    cell.grid(row=index//columns,column=index%columns,sticky="ew",padx=2,pady=1)
-                for column in range(4): account_payment_row.grid_columnconfigure(column,weight=1 if column<columns else 0)
-            account_payment_row.after_idle(apply_account_payment_layout)
-        account_payment_row.bind("<Configure>",arrange_account_payment,add="+")
-        arrange_account_payment()
+        PurchasesMixin._purchase_header_grid(self, fields, [
+            ("Supplier", lambda parent: ttk.Combobox(parent, textvariable=v["supplier"], width=12)),
+            ("Supplier Invoice No.", lambda parent: tk.Entry(parent, textvariable=v["number"], width=10)),
+            ("Date", lambda parent: self.date_entry(parent, v["date"], 10)),
+            ("Due", lambda parent: self.date_entry(parent, v["due"], 10)),
+            ("Currency", lambda parent: ttk.Combobox(parent, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=6)),
+            ("Type", lambda parent: ttk.Combobox(parent, textvariable=v["type"], values=["Purchases", "Assets"], state="readonly", width=9)),
+            ("Document", lambda parent: ttk.Combobox(parent, textvariable=f["doc"], values=list(PURCHASE_DOCUMENTS), state="readonly", width=10)),
+        ], [
+            ("Cost / Asset A/C", lambda parent: self.account_search_box(parent, v["account"], 18)),
+            ("VAT A/C", lambda parent: self.account_search_box(parent, v["vat_account"], 18)),
+            ("Paid", lambda parent: ttk.Combobox(parent, textvariable=f["paid_by"], values=PAID_BY, state="readonly", width=18)),
+            ("Paid from A/C", lambda parent: self.account_search_box(parent, f["paid_account"], 18)),
+        ])
+        f["supplier_box"] = f["header_widgets"]["Supplier"]
+        f["supplier_box"].bind("<KeyRelease>", lambda _e: self.filter_suppliers()); f["supplier_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_supplier_chosen())
+        doc_box = f["header_widgets"]["Document"]
+        doc_box.bind("<<ComboboxSelected>>",lambda _e:self.purchase_doc_changed())
         totals_box = tk.LabelFrame(totals_parent or page, text="Purchase totals", bg="#dfe6ee", padx=10, pady=4)
         r2 = tk.Frame(totals_box, bg="#dfe6ee"); r2.pack(fill="x", pady=(2, 4))
         for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11), ("VAT %", "rate", 5), ("VAT", "vat", 11)):
@@ -217,13 +257,16 @@ class PurchasesMixin:
         tk.Button(r4, text="Cancel Purchase", command=self.cancel_purchase, bg=RED, fg="white", border=0, padx=12, pady=6).pack(side="left", padx=3)  # 2.9.97
         tk.Button(r4, text="Return (goods back)", command=self.return_open_purchase, bg=NAVY, fg="white", border=0, padx=10, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
         tk.Button(r4, text="Auto Calculate", command=self.purchase_auto_calculate, bg=NAVY, fg="white", border=0, padx=12, pady=6).pack(side="left", padx=3)  # 2.9.90
-        self.action_button(r5, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=3)
+        self.action_button(r5, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=(0, 3))  # level with More ▾ above
         free_read = self.action_button(r5, "Free PDF Read", self.ai_read_purchase_pdf); free_read.pack(side="left", padx=3)
         self.action_button(r5, "Attachments", lambda: self.purchase_attachments()).pack(side="left", padx=3)
         self.azure_button(r5, self.azure_read_purchase, free_read)  # 2.9.120: only where Azure is set up
         tk.Label(r5, text="Review OCR values, then press Save Purchase. OCR never posts automatically.",
                  bg=LIGHT, fg=RED, wraplength=300, justify="left").pack(side="left", padx=6)
         f["pdf_label"].pack(side="left", padx=8)
+        for row in (heading, r4, r5):  # light, gold and red buttons of these rows keep one height (design pass)
+            for button in row.winfo_children():
+                if isinstance(button, tk.Button): button._saber_even = True
         cost = tk.LabelFrame(cost_parent or page, text="Cost on Purchase (customs / freight / insurance) for the selected purchase", bg=LIGHT, padx=8, pady=4); cost.pack(fill="x", padx=8, pady=3)
         f["lc"] = {k: tk.StringVar() for k in ("freight", "insurance", "customs_duties", "customs_group_1", "customs_group_2", "broker_fees", "other_costs",
                                                "import_vat", "customs_declaration_no", "party_name")}
@@ -275,8 +318,7 @@ class PurchasesMixin:
         self.action_button(report_bar, "Cost breakdown PDF", lambda: self.landed_cost_report("pdf")).pack(side="left", padx=3)
         self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
         f["pdf_label"].configure(wraplength=600,justify="left")
-        # Keep the lookup/import controls in one packed row; flow_toolbar(find)
-        # measures each child separately and can wrap them even when this row fits.
+        # The heading wraps as units: title, lookup (label + box together), Import Excel, Excel Template.
         flow_toolbars(heading,treatment,r4,r5,wh,r2,summary,
                       settings,c2,payment,actions,attachments,report_bar)
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
