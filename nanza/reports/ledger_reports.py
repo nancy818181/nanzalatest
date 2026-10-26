@@ -14,6 +14,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from database import display_date, iso_date
 
 ZERO = Decimal("0")
+CENT = Decimal("0.01")
 CURRENCY_CHOICES = ("account", "LBP", "USD", "EUR", "AED")
 CLASS_NAMES = {"1": "Capital accounts", "2": "Fixed assets", "3": "Inventory", "4": "Third-party accounts", "5": "Financial accounts",
                "6": "Expenses", "7": "Revenues", "8": "Special results", "9": "Analytical accounts"}
@@ -33,7 +34,8 @@ def _key(code, fill="0"):
 
 
 def _money(value, places="0.01"):
-    return Decimal(str(value or 0)).quantize(Decimal(places), rounding=ROUND_HALF_UP)
+    quantum = CENT if places == "0.01" else Decimal(places)
+    return Decimal(str(value or 0)).quantize(quantum, rounding=ROUND_HALF_UP)
 
 
 def _truthy(value):
