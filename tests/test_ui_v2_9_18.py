@@ -541,6 +541,52 @@ class ProgramWindowFixesTest(unittest.TestCase):
         self.assertEqual(self.app.payroll_payload()["family_allowance_override"], "3000000")
         self.app.calculate_payroll(); self.assertEqual(self.app.payroll_family_override.get(), "3000000")
 
+    def test_invoice_and_payment_pages_fit_high_scaling_laptop_width(self):
+        """Catch clipped labels and horizontal overflow at the 150% laptop target (Tk scaling 2.0)."""
+        import tkinter as tk
+        from tkinter import ttk
+        app = self.app
+        old_scaling = app.tk.call("tk", "scaling"); old_geometry = app.geometry()
+        def restore():  # the window is shared by the other tests of this class
+            app.tk.call("tk", "scaling", old_scaling); app.geometry(old_geometry); app.update()
+        self.addCleanup(restore)
+        app.tk.call("tk", "scaling", 2.0)
+        app.geometry("1920x1040")
+        app.update()
+
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+
+        cases = (
+            ("Sales Invoice", "sales_tab", None),
+            ("Purchase Invoice", "purchases_tab", "purchase_notebook"),
+            ("Customer Receipt", "transactions_tab", "customer_receipt"),
+            ("Supplier Payment", "transactions_tab", "supplier_payment"),
+        )
+        for title, attribute, inner in cases:
+            with self.subTest(page=title):
+                page_container = app.main_tab_pages[app._page_attributes.index(attribute)]
+                app.select_main_tab(page_container)
+                page = getattr(app, attribute)
+                if inner == "purchase_notebook":
+                    app.purchase_notebook.select(0)
+                elif inner:
+                    notebook = next(widget for widget in descendants(page) if isinstance(widget, ttk.Notebook))
+                    index = 0 if inner == "customer_receipt" else 1
+                    notebook.select(index)
+                app.update_idletasks(); app.update()
+                root_left = app.winfo_rootx(); root_right = root_left + app.winfo_width()
+                for widget in descendants(page):
+                    if not widget.winfo_ismapped():
+                        continue
+                    self.assertLessEqual(widget.winfo_rootx() + widget.winfo_width(), root_right,
+                                         f"{title}: {widget} extends beyond root width")
+                    if isinstance(widget, tk.Label):
+                        self.assertLessEqual(widget.winfo_reqwidth(), widget.winfo_width(),
+                                             f"{title}: label clipped: {widget.cget('text')!r}")
+
 
 if __name__ == "__main__":
     unittest.main()
