@@ -166,7 +166,9 @@ class InvoicesMixin(SalesInvoiceMixin):
         self.load_invoices(); self.load_journal(); self.load_trial()
 
     def load_invoices(self):
-        try: rows=self.client.invoices(); rates=self.client.exchange_rates()
+        # An empty invoice list requires no currency conversion. Avoid a blocking
+        # historical EUR download when opening an empty company offline.
+        try: rows=self.client.invoices(); rates=self.client.exchange_rates() if rows else []
         except Exception as exc: return messagebox.showerror("Error",str(exc))
         account=self.invoice_account_search.get().split(" - ",1)[0].strip()
         if account: rows=[row for row in rows if account in (str(row.get("supplier_account") or ""),str(row.get("vat_account") or ""),
