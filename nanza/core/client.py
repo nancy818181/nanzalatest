@@ -388,7 +388,7 @@ class ApiClient:
     def restore_backup(self,name): return self.request("POST","/api/backups/restore",{"name":name})
     def settings(self): return self.request("GET","/api/settings")
     def save_settings(self,item): return self.request("POST","/api/settings",item)
-    def exchange_rates(self): return self.request("GET","/api/exchange-rates")["items"]
+    def exchange_rates(self, cached=False): return self.request("GET","/api/exchange-rates?cached=1" if cached else "/api/exchange-rates")["items"]
     def currencies(self): return self.request("GET","/api/currencies")["items"]
     def save_currency(self,code,name): return self.request("POST","/api/currencies",{"code":code,"name":name})["currency"]
     def save_exchange_rate(self,item): return self.request("POST","/api/exchange-rates",item)
