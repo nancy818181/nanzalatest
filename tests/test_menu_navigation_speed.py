@@ -145,6 +145,9 @@ class MenuNavigationSpeedTest(unittest.TestCase):
     def test_unknown_lazy_attribute_does_not_build_every_screen(self):
         import desktop
         fake = object.__new__(desktop.SaberApp)
+        # Tk.__getattr__ delegates to self.tk; supply a stub interpreter on
+        # the deliberately uninitialized object so missing names raise normally.
+        fake.__dict__["tk"] = object()
         fake.__dict__["_pending_builders"] = [object() for _ in range(17)]
         with mock.patch.object(desktop.SaberApp, "build_pending_pages") as build:
             with self.assertRaises(AttributeError):
