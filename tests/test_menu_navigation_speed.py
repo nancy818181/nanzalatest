@@ -142,5 +142,27 @@ class MenuNavigationSpeedTest(unittest.TestCase):
         self.assertLessEqual(len(calls),20)
         self.assertEqual(len(tree.get_children()),500)
 
+    def test_unknown_lazy_attribute_does_not_build_every_screen(self):
+        import desktop
+        fake = object.__new__(desktop.SaberApp)
+        fake.__dict__["_pending_builders"] = [object() for _ in range(17)]
+        with mock.patch.object(desktop.SaberApp, "build_pending_pages") as build:
+            with self.assertRaises(AttributeError):
+                getattr(fake, "unknown_optional_widget_from_external_plugin")
+            build.assert_not_called()
+        self.assertEqual(len(fake.__dict__["_pending_builders"]), 17)
+
+    def test_known_lazy_widgets_still_load(self):
+        import desktop
+        fake = object.__new__(desktop.SaberApp)
+        fake.__dict__["_pending_builders"] = [object()]
+        for name in ("sales_sheet", "purchase_form", "statement_state", "financial_notebook", "invoice_tree"):
+            with self.subTest(name=name):
+                fake.__dict__.pop(name, None)
+                def build(): fake.__dict__[name] = object()
+                with mock.patch.object(desktop.SaberApp, "build_pending_pages", side_effect=build) as invoked:
+                    self.assertIsNotNone(getattr(fake, name))
+                    invoked.assert_called_once()
+
 if __name__ == "__main__":
     unittest.main()
