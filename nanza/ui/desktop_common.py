@@ -263,16 +263,22 @@ def _install_column_fit():
             head_font, body_font = fonts(tree)
             base = tree.__dict__.setdefault("_fit_base", {})
             rows = tree.get_children("")[:30]
+            sample_values = [tree.item(row, "values") for row in rows]
+            width_cache = {}
+            def measure(font, value):
+                label = str(value)
+                key = (id(font), label)
+                if key not in width_cache: width_cache[key] = font.measure(label)
+                return width_cache[key]
             widths = {}
             for column in shown:
                 wanted = base.get(column)
                 if wanted is None: wanted = base[column] = int(real_column(tree, column, "width"))
                 if wanted <= 0: continue  # hidden on purpose
-                need = head_font.measure(str(real_heading(tree, column, "text") or "")) + 22
+                need = measure(head_font, str(real_heading(tree, column, "text") or "")) + 22
                 index = columns.index(column)
-                for row in rows:
-                    values = tree.item(row, "values")
-                    if index < len(values): need = max(need, min(320, body_font.measure(str(values[index])) + 16))
+                for values in sample_values:
+                    if index < len(values): need = max(need, min(320, measure(body_font, values[index]) + 16))
                 widths[column] = max(wanted, need)
             if not widths: return
             total = sum(widths.values()) + (int(real_column(tree, "#0", "width")) if "tree" in str(tree.cget("show")) else 0)
