@@ -60,15 +60,18 @@ class RatesStore:
                     created_by=excluded.created_by,created_at=excluded.created_at""",derived)
         return {"date_from":date_from,"date_to":date_to,"days":len(rows),"calculation":"average of manually entered daily rates"}
 
-    def list_exchange_rates(self):
-        loaded=self.settings().get("exchange_history_loaded_through","")
-        expected=(datetime.now().date()-datetime(2024,1,1).date()).days+1
-        with self.connect() as db:
-            eur_days=db.execute("SELECT COUNT(DISTINCT rate_date) count FROM exchange_rates WHERE from_currency='EUR' AND to_currency='USD'").fetchone()["count"]
-        # 2.9.58: the internet is asked at most once every 6 hours. Before, every refresh of a screen that shows rates
-        # (Uploaded Data after each save, sales invoice ...) could wait up to 30 seconds when offline.
-        if (loaded!=datetime.now().date().isoformat() or eur_days<expected) and self._may_download_rates("history"): self.sync_historical_exchange_rates()
-        self._ensure_automatic_rates()
+    def list_exchange_rates(self, refresh=True):
+        # The invoice-list display must never trigger a network update from the Tk thread.
+        # A read-only view uses existing saved rates; callers that need fresh rates keep
+        # the original refresh path (and all posting/valuation rules) unchanged.
+        if refresh:
+            loaded=self.settings().get("exchange_history_loaded_through","")
+            expected=(datetime.now().date()-datetime(2024,1,1).date()).days+1
+            with self.connect() as db:
+                eur_days=db.execute("SELECT COUNT(DISTINCT rate_date) count FROM exchange_rates WHERE from_currency='EUR' AND to_currency='USD'").fetchone()["count"]
+            # 2.9.58: online EUR history download and automatic rates are unchanged.
+            if (loaded!=datetime.now().date().isoformat() or eur_days<expected) and self._may_download_rates("history"): self.sync_historical_exchange_rates()
+            self._ensure_automatic_rates()
         with self.connect() as db:
             return [dict(row) for row in db.execute("""SELECT r.id,r.rate_date,r.from_currency,r.to_currency,CAST(r.rate AS REAL) rate,r.created_at,
                 COALESCE(s.samples,0) samples FROM exchange_rates r
