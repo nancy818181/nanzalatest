@@ -89,5 +89,58 @@ class MenuNavigationSpeedTest(unittest.TestCase):
             desktop.SaberApp.apply_hidden_tabs(fake)
             self.assertEqual(books[1].tab(books[1].tabs()[0], "state"), "hidden")
 
+
+    def test_cached_rate_client_uses_read_only_route(self):
+        from client import ApiClient
+        client = ApiClient("http://127.0.0.1:1")
+        with mock.patch.object(client, "request", return_value={"items":[]}) as request:
+            client.exchange_rates(cached=True)
+            request.assert_called_once_with("GET", "/api/exchange-rates?cached=1")
+            request.reset_mock()
+            client.exchange_rates()
+            request.assert_called_once_with("GET", "/api/exchange-rates")
+
+    def test_saved_rates_do_not_trigger_network(self):
+        from database import Database
+        from pathlib import Path
+        import tempfile
+        with tempfile.TemporaryDirectory(prefix="nanza_nav_rate_") as folder:
+            db = Database(Path(folder) / "synthetic.db")
+            try:
+                db.initialize("synthetic-password-2026")
+                db.save_exchange_rate({"date_from":"01-10-2026","date_to":"01-10-2026",
+                    "from_currency":"EUR","to_currency":"USD","rate":"1.2375"}, 1)
+                with mock.patch.object(db, "sync_historical_exchange_rates", side_effect=AssertionError("online sync")), \
+                     mock.patch.object(db, "_ensure_automatic_rates", side_effect=AssertionError("online check")):
+                    rates = db.list_exchange_rates(refresh=False)
+                self.assertTrue(any(r["from_currency"]=="EUR" and r["to_currency"]=="USD"
+                                    and abs(r["rate"]-1.2375)<0.000001 for r in rates))
+            finally:
+                db.release()
+
+    def test_tree_column_fit_deduplicates_repeated_measurements(self):
+        import tkinter as tk
+        from tkinter import ttk, font as tkfont
+        try: root = tk.Tk()
+        except tk.TclError: self.skipTest("Tk display unavailable")
+        self.addCleanup(root.destroy)
+        root.geometry("310x200")
+        tree = ttk.Treeview(root, columns=("code", "note"), show="headings")
+        tree.pack(fill="both", expand=True)
+        tree.heading("code", text="Code")
+        tree.heading("note", text="Description")
+        tree.column("code", width=70)
+        tree.column("note", width=70)
+        for n in range(500): tree.insert("", "end", iid=str(n), values=("123456789","Repeated description"))
+        actual = tkfont.Font.measure
+        calls = []
+        def measure(font, label, *args, **kwargs):
+            calls.append((str(font),str(label)))
+            return actual(font,label,*args,**kwargs)
+        with mock.patch.object(tkfont.Font, "measure", measure):
+            root.update_idletasks()
+        self.assertLessEqual(len(calls),20)
+        self.assertEqual(len(tree.get_children()),500)
+
 if __name__ == "__main__":
     unittest.main()
