@@ -766,18 +766,33 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self.__dict__["_building_depth"]=self.__dict__.get("_building_depth",0)+1
         try:
             build()
-            try: polish(getattr(self,"main_notebook",self),fold=True)  # 2.9.95: same buttons, cards and inputs on every screen; 2.9.116: More menus
+            # Decorate only the newly built screen, not previously opened pages. Keep
+            # a full-notebook fallback for an unregistered builder.
+            builder_pages = {
+                "build_dashboard": "dashboard_tab", "build_invoices": "invoices_tab",
+                "build_sales_invoice": "sales_tab", "build_manual": "manual_tab",
+                "build_import": "import_tab", "build_parties": "parties_tab",
+                "build_transactions": "transactions_tab", "build_purchases_expenses": "purchases_tab",
+                "build_inventory": "inventory_tab", "build_payroll": "payroll_tab",
+                "build_vat_return": "vat_tab", "build_journal": "journal_tab",
+                "build_trial": "account_reports_tab", "build_statement": "account_reports_tab",
+                "build_accounts": "account_reports_tab", "build_profit_loss": "pnl_tab",
+                "build_financial_reports": "reports_tab", "build_settings": "settings_tab",
+            }
+            attr = builder_pages.get(build.__name__)
+            page = self.__dict__.get(attr) if attr else None
+            try: polish(page if page is not None else getattr(self,"main_notebook",self),fold=True)
             except Exception: log.debug("Design pass skipped", exc_info=True)
             # Bind newly created controls while missing widgets cannot trigger eager loading.
             self.setup_context_f2()
-            self.apply_hidden_tabs()  # 2.9.81
+            self.apply_hidden_tabs(page)  # 2.9.81; scope to this newly built page
         except Exception as exc:
             log.exception("Page %s could not be loaded", build.__name__); messagebox.showerror("Nanza Accounting",
                     f"A page could not be loaded ({build.__name__.replace('build_','').replace('_',' ')}): {exc}\n\nThe other pages are still available.")
         finally: self.__dict__["_building_depth"]-=1
 
-    def apply_hidden_tabs(self):
-        """2.9.81: hide the tabs (Fixed Assets, Production, Bank Reconciliation, the Financial Reports) chosen in Accounting Settings."""
+    def apply_hidden_tabs(self, page=None):
+        """Hide company/user-restricted tabs, scoping to one page during lazy build."""
         import accounting_setup as setup_rules
         from desktop_common import hidden_view
         try: hidden=hidden_view(self)
@@ -793,8 +808,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
                             if child.tab(tab,"text").strip() in names: child.hide(tab)
                         except tk.TclError: pass
                 walk(child)
-        for page in getattr(self,"main_tab_pages",[]):
-            try: walk(page)
+        for root in ([page] if page is not None else getattr(self,"main_tab_pages",[])):
+            try: walk(root)
             except tk.TclError: pass
 
     def _build_next_page(self,generation):
@@ -820,12 +835,46 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def _finish_pages(self):
         self.setup_context_f2()
 
+    @classmethod
+    def _is_known_lazy_ui_name(cls, name):
+        """Conservatively recognize attributes referenced by class/mixin code.
+
+        A missing arbitrary public name should not eagerly construct every
+        pending page. Preserve legacy lazy loading for Nanza widget symbols,
+        including those referenced by nested callbacks and getattr strings.
+        """
+        known = cls.__dict__.get("_lazy_ui_known_names")
+        if known is None:
+            import types
+            known = set()
+            def collect(code):
+                known.update(code.co_names)
+                for value in code.co_consts:
+                    if isinstance(value, types.CodeType): collect(value)
+                    elif isinstance(value, str): known.add(value)
+            for base in cls.__mro__:
+                for candidate in vars(base).values():
+                    if isinstance(candidate, (staticmethod, classmethod)):
+                        candidate = candidate.__func__
+                    if isinstance(candidate, property):
+                        for method in (candidate.fget, candidate.fset, candidate.fdel):
+                            if method is not None and hasattr(method, "__code__"):
+                                collect(method.__code__)
+                    elif hasattr(candidate, "__code__"):
+                        collect(candidate.__code__)
+            cls._lazy_ui_known_names = frozenset(known)
+        return name in cls._lazy_ui_known_names
+
     def __getattr__(self,name):
         # Only reached when normal lookup fails: a widget of a page that is not built yet.
         pending=self.__dict__.get("_pending_builders")
         # While a page is being built, a missing attribute means exactly what it meant before (not built yet).
         # 2.9.66: flags such as _update_checked are not page widgets: never build pages for them
         if pending and not name.startswith("_") and not self.__dict__.get("_building_depth",0):
+            # An unknown optional attribute lookup must not materialize all pages.
+            # Keep the old late-widget behavior for symbols referenced by Nanza.
+            if not self._is_known_lazy_ui_name(name):
+                return super().__getattr__(name)
             self.build_pending_pages()
             try: return object.__getattribute__(self,name)
             except AttributeError: pass

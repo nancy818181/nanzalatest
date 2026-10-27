@@ -2,6 +2,17 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.139 (speed and freeze safeguards; no new features)
+
+Technical validation and known limits: `docs/RELEASE_2.9.139.md`.
+
+- **Menu navigation:** Lazy first-load design formatting and hidden-tab checks are scoped to the newly opened page instead of traversing previously opened pages.
+- **Freeze prevention:** Unknown optional UI attribute probes no longer automatically build all remaining screens. Existing recognized lazy widgets continue loading.
+- **Invoice list:** When there are invoices, displayed equivalents use saved FX rates without triggering synchronous internet synchronization; an empty list avoids the rate query. This does not change posting or valuation rules. Missing stored rates must not be invented.
+- **Tables:** Treeview auto-width calculations reuse sampled row values and repeated text measurements rather than measuring the same contents repeatedly.
+- **Tests:** Includes menu/permissions, cached rates, window fit and lazy-page regressions. Complete Windows and Linux tests passed on the speed source revision `a74b3280`; release-build verification for 2.9.139 must still pass before release.
+- No accounting, VAT, posting, database-schema, licence or password rules changed.
+
 ## Version 2.9.138 (invoice and payment screens for 14-inch laptops, faster invoice opening)
 
 Details and validation: `docs/RELEASE_2.9.138.md`.
@@ -219,7 +230,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.138. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.139. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 
