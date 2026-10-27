@@ -835,12 +835,46 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def _finish_pages(self):
         self.setup_context_f2()
 
+    @classmethod
+    def _is_known_lazy_ui_name(cls, name):
+        """Conservatively recognize attributes referenced by class/mixin code.
+
+        A missing arbitrary public name should not eagerly construct every
+        pending page. Preserve legacy lazy loading for Nanza widget symbols,
+        including those referenced by nested callbacks and getattr strings.
+        """
+        known = cls.__dict__.get("_lazy_ui_known_names")
+        if known is None:
+            import types
+            known = set()
+            def collect(code):
+                known.update(code.co_names)
+                for value in code.co_consts:
+                    if isinstance(value, types.CodeType): collect(value)
+                    elif isinstance(value, str): known.add(value)
+            for base in cls.__mro__:
+                for candidate in vars(base).values():
+                    if isinstance(candidate, (staticmethod, classmethod)):
+                        candidate = candidate.__func__
+                    if isinstance(candidate, property):
+                        for method in (candidate.fget, candidate.fset, candidate.fdel):
+                            if method is not None and hasattr(method, "__code__"):
+                                collect(method.__code__)
+                    elif hasattr(candidate, "__code__"):
+                        collect(candidate.__code__)
+            cls._lazy_ui_known_names = frozenset(known)
+        return name in cls._lazy_ui_known_names
+
     def __getattr__(self,name):
         # Only reached when normal lookup fails: a widget of a page that is not built yet.
         pending=self.__dict__.get("_pending_builders")
         # While a page is being built, a missing attribute means exactly what it meant before (not built yet).
         # 2.9.66: flags such as _update_checked are not page widgets: never build pages for them
         if pending and not name.startswith("_") and not self.__dict__.get("_building_depth",0):
+            # An unknown optional attribute lookup must not materialize all pages.
+            # Keep the old late-widget behavior for symbols referenced by Nanza.
+            if not self._is_known_lazy_ui_name(name):
+                return super().__getattr__(name)
             self.build_pending_pages()
             try: return object.__getattribute__(self,name)
             except AttributeError: pass
