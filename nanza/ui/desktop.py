@@ -766,18 +766,33 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self.__dict__["_building_depth"]=self.__dict__.get("_building_depth",0)+1
         try:
             build()
-            try: polish(getattr(self,"main_notebook",self),fold=True)  # 2.9.95: same buttons, cards and inputs on every screen; 2.9.116: More menus
+            # Decorate only the newly built screen, not previously opened pages. Keep
+            # a full-notebook fallback for an unregistered builder.
+            builder_pages = {
+                "build_dashboard": "dashboard_tab", "build_invoices": "invoices_tab",
+                "build_sales_invoice": "sales_tab", "build_manual": "manual_tab",
+                "build_import": "import_tab", "build_parties": "parties_tab",
+                "build_transactions": "transactions_tab", "build_purchases_expenses": "purchases_tab",
+                "build_inventory": "inventory_tab", "build_payroll": "payroll_tab",
+                "build_vat_return": "vat_tab", "build_journal": "journal_tab",
+                "build_trial": "account_reports_tab", "build_statement": "account_reports_tab",
+                "build_accounts": "account_reports_tab", "build_profit_loss": "pnl_tab",
+                "build_financial_reports": "reports_tab", "build_settings": "settings_tab",
+            }
+            attr = builder_pages.get(build.__name__)
+            page = self.__dict__.get(attr) if attr else None
+            try: polish(page if page is not None else getattr(self,"main_notebook",self),fold=True)
             except Exception: log.debug("Design pass skipped", exc_info=True)
             # Bind newly created controls while missing widgets cannot trigger eager loading.
             self.setup_context_f2()
-            self.apply_hidden_tabs()  # 2.9.81
+            self.apply_hidden_tabs(page)  # 2.9.81; scope to this newly built page
         except Exception as exc:
             log.exception("Page %s could not be loaded", build.__name__); messagebox.showerror("Nanza Accounting",
                     f"A page could not be loaded ({build.__name__.replace('build_','').replace('_',' ')}): {exc}\n\nThe other pages are still available.")
         finally: self.__dict__["_building_depth"]-=1
 
-    def apply_hidden_tabs(self):
-        """2.9.81: hide the tabs (Fixed Assets, Production, Bank Reconciliation, the Financial Reports) chosen in Accounting Settings."""
+    def apply_hidden_tabs(self, page=None):
+        """Hide company/user-restricted tabs, scoping to one page during lazy build."""
         import accounting_setup as setup_rules
         from desktop_common import hidden_view
         try: hidden=hidden_view(self)
@@ -793,8 +808,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
                             if child.tab(tab,"text").strip() in names: child.hide(tab)
                         except tk.TclError: pass
                 walk(child)
-        for page in getattr(self,"main_tab_pages",[]):
-            try: walk(page)
+        for root in ([page] if page is not None else getattr(self,"main_tab_pages",[])):
+            try: walk(root)
             except tk.TclError: pass
 
     def _build_next_page(self,generation):
