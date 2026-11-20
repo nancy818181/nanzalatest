@@ -91,6 +91,9 @@ class SalesInvoiceMixin:
         if (self.current_user or {}).get("role") == "admin":
             self.action_button(nav,"Numbering",self.open_numbering_settings).pack(side="left",padx=3)
         self.action_button(nav,"New Invoice",self.new_sales_invoice).pack(side="left",padx=3)
+        self.action_button(nav, "Quotations", lambda: self.open_commercial_documents(quotations_only=True)).pack(
+            side="left", padx=3
+        )
         details=ttk.Notebook(tabs_row); details.pack(side="left",fill="x",expand=True)
         invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT)
         details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
@@ -480,18 +483,47 @@ class SalesInvoiceMixin:
         iid = iid or self.sales_sheet.focus()
         if not iid or not self.sales_sheet.exists(iid):
             return messagebox.showinfo("Sales Invoice", "Select or add an invoice line, then press F2 in Item Code.")
+        def selected(product):
+            item = self.sales_item_for(iid)
+            if item is None:
+                return
+            if editor is not None and editor.winfo_exists():
+                editor.destroy()
+            self.apply_sales_inventory_item(item, product)
+            self.recalculate_sales_item(item)
+            self.sales_sheet.item(iid, values=self.sales_row_values(item))
+            self.update_sales_totals()
+            self.sales_sheet.focus_set()
+
+        query = editor.get().strip() if editor is not None and editor.winfo_exists() else ""
+        return self.choose_sales_inventory_item(self, selected, query)
+
+    def choose_sales_inventory_item(self, parent, on_select, query=""):
+        """Open the sales item search for an invoice or a commercial-document line."""
         products = getattr(self, "inventory_rows", None)
         if not products:
             try: products = self.client.inventory_items()
             except RuntimeError as exc: return messagebox.showerror("Sales Invoice", f"Could not load inventory items: {exc}")
             self.inventory_rows = products
         products = [row for row in products if row.get("active", 1)]
-        window = tk.Toplevel(self); window.title("Choose an inventory item"); window.configure(bg=LIGHT); window.transient(self); window.grab_set()
+        previous_grab = parent.grab_current()
+        window = tk.Toplevel(parent)
+        window.title("Choose an inventory item")
+        window.configure(bg=LIGHT)
+        window.transient(parent)
+        window.grab_set()
+
+        def close():
+            window.destroy()
+            if previous_grab is not None and previous_grab.winfo_exists():
+                previous_grab.grab_set()
+
+        window.protocol("WM_DELETE_WINDOW", close)
         width = max(600, min(900, self.winfo_screenwidth() - 40)); height = max(380, min(560, self.winfo_screenheight() - 100))
         window.geometry(f"{width}x{height}")
         tk.Label(window, text="Search by item code, name or category. Double-click a row or press Enter to select.",
                  bg=LIGHT, fg=NAVY, anchor="w").pack(fill="x", padx=12, pady=(10, 4))
-        search_var = tk.StringVar(value=editor.get().strip() if editor is not None and editor.winfo_exists() else "")
+        search_var = tk.StringVar(value=query)
         search = tk.Entry(window, textvariable=search_var, width=54); search.pack(fill="x", padx=12, pady=(0, 8)); search.focus_set()
         frame = tk.Frame(window, bg=LIGHT); frame.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         columns = ("code", "name", "category", "unit", "price", "vat")
@@ -520,16 +552,12 @@ class SalesInvoiceMixin:
         def choose(_event=None):
             selected = tree.selection()
             if not selected: return
-            product = by_iid.get(selected[0]); item = self.sales_item_for(iid)
-            if item is None or product is None: return
-            if editor is not None and editor.winfo_exists(): editor.destroy()
-            self.apply_sales_inventory_item(item, product); self.recalculate_sales_item(item)
-            self.sales_sheet.item(iid, values=self.sales_row_values(item)); self.update_sales_totals()
-            window.destroy(); self.sales_sheet.focus_set()
+            product = by_iid[selected[0]]
+            close()
+            on_select(product)
         search_var.trace_add("write", fill); tree.bind("<Double-1>", choose); tree.bind("<Return>", choose)
         search.bind("<Return>", lambda _event: (choose(), "break")[1])
-        window.bind("<Escape>", lambda _event: window.destroy())
-        if editor is not None and editor.winfo_exists(): editor.bind("<F2>", lambda _event: (self.sales_item_lookup(iid, editor), "break")[1])
+        window.bind("<Escape>", lambda _event: close())
         fill(); search.focus_set()
         return window
 

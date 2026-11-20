@@ -13,9 +13,17 @@ KINDS = {
 }
 
 
-def open_commercial_documents(app):
+def open_commercial_documents(app, *, quotations_only=False):
+    kinds = {"Quotation": "quotation"} if quotations_only else KINDS
+    client = app.client
+    company_context = (client.company_id, client.fiscal_year)
+
+    def require_company_context():
+        if app.client is not client or (client.company_id, client.fiscal_year) != company_context:
+            raise ValueError("The company or fiscal year changed. Reopen Commercial Documents.")
+
     window = tk.Toplevel(app)
-    window.title("Quotations / Purchase Orders / Consignment")
+    window.title("Quotations" if quotations_only else "Quotations / Purchase Orders / Consignment")
     window.geometry(
         f"{min(1180,app.winfo_screenwidth()-50)}x{min(760,app.winfo_screenheight()-80)}"
     )
@@ -27,7 +35,11 @@ def open_commercial_documents(app):
     tk.Label(top, textvariable=number, font=("Segoe UI", 12, "bold")).pack(side="left")
     tk.Label(
         window,
-        text="Confirm a saved document before receiving or creating a draft invoice. Review and post invoices in Uploaded Data; record payments in Payments.",
+        text=(
+            "Save and confirm the quotation, then convert it to a sales invoice draft. Review it in Uploaded Data."
+            if quotations_only
+            else "Confirm a saved document before receiving or creating a draft invoice. Review and post invoices in Uploaded Data."
+        ),
         wraplength=1000,
         justify="left",
     ).pack(fill="x", padx=12)
@@ -38,13 +50,16 @@ def open_commercial_documents(app):
     fields = {}
     state["fields"] = fields
     parties = app.client.parties()
-    party_map = {f"{p['name']} [{p['id']}]": p["id"] for p in parties}
+    party_map = {
+        f"{p['name']} [{p['id']}]": p["id"]
+        for p in parties if not quotations_only or p.get("kind") in ("customer", "both")
+    }
     state["party_map"] = party_map
     currencies = [r["code"] for r in app.client.currencies()]
     for key, label, options, width in (
-        ("kind", "Document", list(KINDS), 20),
+        ("kind", "Document", list(kinds), 20),
         ("doc_date", "Date", None, 13),
-        ("party", "Customer / supplier", list(party_map), 30),
+        ("party", "Customer" if quotations_only else "Customer / supplier", list(party_map), 30),
         ("currency", "Currency", currencies, 8),
         ("valid_until", "Valid until (optional)", None, 13),
     ):
@@ -154,9 +169,28 @@ def open_commercial_documents(app):
                     ),
                 )
             )
-            tk.Entry(dialog, textvariable=values[key], width=45).grid(
-                row=n, column=1, padx=8, pady=5
-            )
+            entry = tk.Entry(dialog, textvariable=values[key], width=45)
+            entry.grid(row=n, column=1, padx=8, pady=5)
+            if key == "sku":
+                item_code = entry
+
+        def select_item(product):
+            values["sku"].set(product["sku"])
+            values["description"].set(product["name"])
+            if fields["kind"].get() == "Quotation":
+                if product.get("sales_price") is not None:
+                    values["unit_price"].set(str(product["sales_price"]))
+                if product.get("default_vat") not in (None, ""):
+                    default_vat = str(product["default_vat"]).replace("%", "").strip()
+                    values["vat_rate"].set("0" if default_vat in ("0", "0.0") else str(vat_rate(app)))
+
+        def search_items(_event=None):
+            perform(lambda: app.choose_sales_inventory_item(dialog, select_item, values["sku"].get().strip()))
+            return "break"
+
+        tk.Button(dialog, text="Search items (F2)", command=search_items).grid(row=0, column=2, padx=8)
+        dialog.bind("<F2>", search_items)
+        item_code.focus_set()
 
         def use():
             from commercial_documents import money
@@ -199,6 +233,11 @@ def open_commercial_documents(app):
     tree.bind("<Double-1>", lambda _e: edit_line())
     records = tk.LabelFrame(pane, text="Saved documents — double-click to open")
     pane.add(records, weight=2)
+    document_search = tk.StringVar()
+    search_bar = tk.Frame(records)
+    search_bar.pack(fill="x")
+    tk.Label(search_bar, text="Find document").pack(side="left", padx=4)
+    tk.Entry(search_bar, textvariable=document_search).pack(side="left", fill="x", expand=True, padx=4)
     saved_tree = ttk.Treeview(
         records,
         columns=("number", "kind", "date", "party", "currency", "status"),
@@ -209,40 +248,42 @@ def open_commercial_documents(app):
         ("number", "Number", 165),
         ("kind", "Type", 120),
         ("date", "Date", 100),
-        ("party", "Customer / supplier", 250),
+        ("party", "Customer" if quotations_only else "Customer / supplier", 250),
         ("currency", "Currency", 80),
         ("status", "Status", 100),
     ):
         saved_tree.heading(key, text=label)
         saved_tree.column(key, width=width)
+    scrollbar = ttk.Scrollbar(records, orient="vertical", command=saved_tree.yview)
+    saved_tree.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
     saved_tree.pack(fill="both", expand=True)
+    saved_documents = []
+
+    def filter_documents(*_args):
+        keys = ("number", "kind", "doc_date", "party_name", "currency", "status")
+        query = document_search.get().strip().casefold()
+        saved_tree.delete(*saved_tree.get_children())
+        for doc in saved_documents:
+            values = [doc[key] for key in keys]
+            if all(term in " ".join(str(value) for value in values).casefold() for term in query.split()):
+                saved_tree.insert("", "end", iid=str(doc["id"]), values=values)
+
+    document_search.trace_add("write", filter_documents)
 
     def load():
-        saved_tree.delete(*saved_tree.get_children())
-        for doc in app.client.request("GET", "/api/commercial")["items"]:
-            saved_tree.insert(
-                "",
-                "end",
-                iid=str(doc["id"]),
-                values=[
-                    doc[k]
-                    for k in (
-                        "number",
-                        "kind",
-                        "doc_date",
-                        "party_name",
-                        "currency",
-                        "status",
-                    )
-                ],
-            )
+        saved_documents[:] = [
+            doc for doc in app.client.request("GET", "/api/commercial")["items"]
+            if not quotations_only or doc["kind"] == "quotation"
+        ]
+        filter_documents()
 
     def display(doc):
         state["document"] = doc
         state["rows"] = [dict(row) for row in doc["lines"]]
         number.set(f"{doc['number']}  |  {doc['status']}  |  {doc['currency']}")
         fields["kind"].set(
-            next(label for label, kind in KINDS.items() if kind == doc["kind"])
+            next(label for label, kind in kinds.items() if kind == doc["kind"])
         )
         for key in ("doc_date", "currency", "valid_until"):
             fields[key].set(doc.get(key) or "")
@@ -283,6 +324,7 @@ def open_commercial_documents(app):
 
     def perform(operation):
         try:
+            require_company_context()
             return operation()
         except (RuntimeError, ValueError, KeyError, TypeError) as exc:
             messagebox.showerror("Commercial documents", str(exc), parent=window)
@@ -292,7 +334,7 @@ def open_commercial_documents(app):
             key: value.get().strip() for key, value in fields.items() if key != "party"
         }
         header["party_id"] = party_map.get(fields["party"].get())
-        header["kind"] = KINDS.get(header["kind"])
+        header["kind"] = kinds.get(header["kind"])
         header.update({key: value.get() for key, value in text_fields.items()})
         old = state["document"]
         header["revision"] = old["revision"] if old else None
@@ -365,12 +407,18 @@ def open_commercial_documents(app):
             raise ValueError(
                 "A consignment note is not a sale; review the actual transaction separately"
             )
+        sale = doc["kind"] == "quotation"
         dialog = tk.Toplevel(window)
-        dialog.title("Receive goods" if action == "receive" else "Create invoice draft")
+        dialog.title("Convert to Sales Invoice" if sale else
+                     "Receive goods" if action == "receive" else "Create invoice draft")
         dialog.transient(window)
         tk.Label(
             dialog,
-            text="Enter actual quantities. Blank / zero skips a line. Invoice creation always produces a draft for review.",
+            text=(
+                "Tick the lines to transfer and enter their quantities. The sales invoice is saved as a draft."
+                if sale
+                else "Enter actual quantities. Blank / zero skips a line. Invoice creation always produces a draft for review."
+            ),
             wraplength=650,
         ).grid(row=0, column=0, columnspan=4, padx=8, pady=8)
         day = tk.StringVar(value=app.fiscal_today())
@@ -378,21 +426,16 @@ def open_commercial_documents(app):
         warehouse = tk.StringVar()
         tk.Label(dialog, text="Date").grid(row=1, column=0)
         tk.Entry(dialog, textvariable=day).grid(row=1, column=1)
-        tk.Label(
-            dialog,
-            text=(
-                "Receipt reference"
-                if action == "receive"
-                else "Supplier invoice no. (purchases)"
-            ),
-        ).grid(row=2, column=0)
-        tk.Entry(dialog, textvariable=reference).grid(row=2, column=1)
-        warehouses = {
-            f"{w['code']} - {w['name']}": w["id"]
-            for w in app.client.warehouses()
-            if w["active"]
-        }
+        if not sale:
+            tk.Label(dialog, text="Receipt reference" if action == "receive" else "Supplier invoice no.").grid(
+                row=2, column=0
+            )
+            tk.Entry(dialog, textvariable=reference).grid(row=2, column=1)
         if action == "receive":
+            warehouses = {
+                f"{w['code']} - {w['name']}": w["id"]
+                for w in app.client.warehouses() if w["active"]
+            }
             tk.Label(dialog, text="Warehouse").grid(row=3, column=0)
             ttk.Combobox(
                 dialog,
@@ -414,6 +457,7 @@ def open_commercial_documents(app):
         quantities = []
         for index, line in enumerate(doc["lines"], 1):
             qty = tk.StringVar(value="0")
+            transfer = tk.BooleanVar(value=False)
             price = tk.StringVar(value=line["unit_price"])
             remaining = (
                 Decimal(line["quantity"]) - Decimal(line["received"])
@@ -425,30 +469,39 @@ def open_commercial_documents(app):
                 )
                 - Decimal(line["invoiced"])
             )
+            if sale:
+                qty.set(str(remaining))
+                transfer.set(remaining > 0)
+                tk.Checkbutton(
+                    line_body, text="Transfer", variable=transfer,
+                    state="normal" if remaining > 0 else "disabled",
+                ).grid(row=index, column=3, sticky="w", padx=6)
+            item = " · ".join(part for part in (line.get("sku"), line["description"]) if part)
             tk.Label(
-                line_body,
-                text=f"{index}. {line['description'][:42]} (remaining {remaining})",
+                line_body, text=f"{index}. {item} (remaining {remaining})",
+                wraplength=330, justify="left",
             ).grid(row=index, column=0, sticky="w", padx=8)
             tk.Entry(line_body, textvariable=qty, width=12).grid(row=index, column=1)
             if action == "invoice":
                 tk.Entry(line_body, textvariable=price, width=14).grid(
                     row=index, column=2
                 )
-            quantities.append((index, qty, price))
+            quantities.append((index, qty, price, transfer))
         request_key = str(uuid4())
 
         def apply():
             try:
+                require_company_context()
                 from commercial_documents import money
 
                 rows = [
                     {
                         "line": index,
-                        "quantity": str(money(qty.get() or "0", "quantity")),
+                        "quantity": str(money(qty.get() or "0", "quantity", sale)),
                         "unit_price": price.get(),
                     }
-                    for index, qty, price in quantities
-                    if money(qty.get() or "0", "quantity") > 0
+                    for index, qty, price, transfer in quantities
+                    if (transfer.get() if sale else money(qty.get() or "0", "quantity") > 0)
                 ]
                 body = {
                     "doc_date": day.get(),
@@ -471,9 +524,11 @@ def open_commercial_documents(app):
                         f"{invoice['invoice_number']} saved for review. Stock is recorded through receipts / Stock Documents.\nReview and approve in Uploaded Data, then use Payments.",
                         parent=dialog,
                     )
-                display(app.client.request("GET", f"/api/commercial/{doc['id']}"))
-                load()
                 dialog.destroy()
+                if sale and "sales_open_box" in app.__dict__:
+                    perform(app.load_sales_customer_list)
+                perform(lambda: display(app.client.request("GET", f"/api/commercial/{doc['id']}")))
+                perform(load)
             except (RuntimeError, ValueError, KeyError, ArithmeticError) as exc:
                 messagebox.showwarning("Not saved", str(exc), parent=dialog)
 
@@ -486,20 +541,22 @@ def open_commercial_documents(app):
         ).grid(row=5, column=0, columnspan=3, pady=10)
         dialog.grab_set()
 
-    for index, (label, action) in enumerate(
-        (
-            ("New", new),
-            ("Save draft", save),
-            ("Open selected", selected),
-            ("Confirm", lambda: status("confirmed")),
-            ("Cancel document", lambda: status("cancelled")),
-            ("Receive partial", lambda: operation("receive")),
-            ("Create invoice draft", lambda: operation("invoice")),
-            ("PDF", lambda: output("pdf")),
-            ("Excel", lambda: output("xlsx")),
-            ("Matching report", lambda: output("pdf", True)),
-        )
-    ):
+    actions = [
+        ("New", new),
+        ("Save draft", save),
+        ("Open selected", selected),
+        ("Confirm", lambda: status("confirmed")),
+        ("Cancel document", lambda: status("cancelled")),
+    ]
+    if not quotations_only:
+        actions.append(("Receive partial", lambda: operation("receive")))
+    actions.extend((
+        ("Convert to Sales Invoice" if quotations_only else "Create invoice draft", lambda: operation("invoice")),
+        ("PDF", lambda: output("pdf")),
+        ("Excel", lambda: output("xlsx")),
+        ("Matching report", lambda: output("pdf", True)),
+    ))
+    for index, (label, action) in enumerate(actions):
         tk.Button(bar, text=label, command=lambda action=action: perform(action)).grid(
             row=index // 5, column=index % 5, sticky="ew", padx=2, pady=2
         )

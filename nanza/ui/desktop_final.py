@@ -75,7 +75,7 @@ class FinalFeaturesMixin:
                 if days <= 30: tk.Label(bar, text=f"Account expires in {days} day(s) - ask the administrator to renew", bg=NAVY, fg=GOLD, font=("Segoe UI", 8, "bold")).pack(side="left", padx=8)
             except ValueError: pass
 
-    def scrollable_page(self, parent):
+    def scrollable_page(self, parent, *, fit_width=False):
         """A notebook page that exposes long and wide forms on small displays."""
         outer = tk.Frame(parent, bg=LIGHT)
         canvas = tk.Canvas(outer, bg=LIGHT, highlightthickness=0)
@@ -83,9 +83,11 @@ class FinalFeaturesMixin:
         horizontal = ttk.Scrollbar(outer, orient="horizontal", command=canvas.xview)
         inner = tk.Frame(canvas, bg=LIGHT); window = canvas.create_window((0, 0), window=inner, anchor="nw")
         def resize(_event=None):
-            width=max(canvas.winfo_width(),inner.winfo_reqwidth())
-            canvas.itemconfigure(window,width=width,height=inner.winfo_reqheight())
+            width = canvas.winfo_width() if fit_width else max(canvas.winfo_width(), inner.winfo_reqwidth())
+            canvas.itemconfigure(window, width=width, height=inner.winfo_reqheight())
             canvas.configure(scrollregion=canvas.bbox("all"))
+            if fit_width:
+                return
             if inner.winfo_reqheight()>canvas.winfo_height()+1:
                 if not scroll.winfo_manager(): scroll.grid()
             else: scroll.grid_remove()
@@ -99,7 +101,9 @@ class FinalFeaturesMixin:
         scroll.grid(row=0,column=1,sticky="ns")
         horizontal.grid(row=1,column=0,sticky="ew")
         canvas.configure(yscrollcommand=scroll.set,xscrollcommand=horizontal.set)
-        scroll.grid_remove(); horizontal.grid_remove()
+        if not fit_width:
+            scroll.grid_remove()
+        horizontal.grid_remove()
         # The program-wide wheel handler scrolls this page. (It used to bind and then UNBIND the wheel
         # for the whole program when the mouse left the page, which stopped scrolling everywhere.)
         canvas._saber_scroll_page = True

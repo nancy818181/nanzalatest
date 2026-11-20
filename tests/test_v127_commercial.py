@@ -64,7 +64,12 @@ class CommercialTest(unittest.TestCase):
         self,
     ):
         doc = self.confirm(self.order("quotation"))
-        result = self.invoice(doc)["invoice"]
+        before_stock = self.quantity()
+        draft = self.invoice(doc)
+        result = draft["invoice"]
+        self.assertEqual(result["status"], "review")
+        self.assertEqual(draft["items"][0]["item_code"], "PAPER")
+        self.assertEqual(self.quantity(), before_stock)
         with self.db.connect() as connection:
             saved_party = connection.execute(
                 "SELECT party_id FROM invoices WHERE id=?", (result["id"],)

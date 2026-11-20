@@ -404,11 +404,12 @@ def invoice(database, document_id, body, user):
                 money(raw.get("unit_price", line["unit_price"]), "invoice unit price")
             ),
             "vat_rate": line["vat_rate"],
+            "item_code": line["sku"] if not purchase else "",
         }
         for _index, line, qty, raw in selected
     ]
-    # Stock is handled by receipts / Stock Documents, separately from this accounting
-    # draft. Preserve source SKUs on the commercial lines, without a second movement.
+    # Keep quotation item identity on the sales draft. Physical dispatch and
+    # purchase receipts are recorded separately in Stock Documents.
     header = {
         "kind": "purchase" if purchase else "sale",
         "status": "review",
@@ -433,7 +434,7 @@ def invoice(database, document_id, body, user):
     ):
         if key in body:
             header[key] = body[key]
-    saved = database.create_manual_invoice(header, lines, user)
+    saved = database.create_manual_invoice(header, lines, user, move_stock=False)
     invoice_id = saved["id"] if isinstance(saved, dict) else int(saved)
     with database.connect() as connection:
         rows = [

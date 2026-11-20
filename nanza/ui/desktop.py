@@ -689,6 +689,14 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             frame=tk.Frame(canvas,bg=LIGHT)
             item=canvas.create_window((0,0),window=frame,anchor="nw")
             def resize_page(_event=None, *, page=frame, view=canvas, window=item, vbar=vertical, hbar=horizontal):
+                if getattr(page, "_fit_purchase_invoice", False):
+                    vbar.grid_remove()
+                    hbar.grid_remove()
+                    view.itemconfigure(window, width=view.winfo_width(), height=view.winfo_height())
+                    view.configure(scrollregion=view.bbox("all"))
+                    view.xview_moveto(0)
+                    view.yview_moveto(0)
+                    return
                 if page.winfo_reqheight()>view.winfo_height()+1: vbar.grid()
                 else: vbar.grid_remove()
                 if page.winfo_reqwidth()>view.winfo_width()+1: hbar.grid()
@@ -699,6 +707,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
                 if arabic_ui.active() and page.winfo_reqwidth()>view.winfo_width()+1: arabic_ui.show_right_end(view)  # 2.9.118
             frame.bind("<Configure>",resize_page)
             canvas.bind("<Configure>",resize_page)
+            if attribute == "purchases_tab":
+                frame._resize_purchase_view = resize_page
             setattr(self,attribute,frame); notebook.add(container,text=name); self.main_tab_pages.append(container)
         account_notebook=ttk.Notebook(self.account_reports_tab); account_notebook.pack(fill="both",expand=True,padx=8,pady=8)
         for attribute,name in (("trial_tab",tr(lang,"trial_balance")),("statement_tab",tr(lang,"statement_account")),("accounts_tab",tr(lang,"chart_accounts"))):

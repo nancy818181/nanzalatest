@@ -279,7 +279,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
         return {"created": created, "skipped": skipped}
 
     @atomic  # 2.9.121
-    def create_manual_invoice(self, item, line_items, user_id):
+    def create_manual_invoice(self, item, line_items, user_id, *, move_stock=True):
         exemption = item.get("income_exemption")
         if exemption is not None:
             from tax_adjustments import reason_text
@@ -390,7 +390,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
         with self.connect() as db: db.execute("UPDATE invoices SET is_return=? WHERE id=?",(1 if is_return else 0,invoice_id))
         # Stock moves for invoices and returns only. A credit note or a debit note is a discount / price
         # adjustment: it never moves goods, even when its lines name items.
-        if any(line.get("item_code") for line in line_items) and (subtype=="invoice" or is_return):
+        if move_stock and any(line.get("item_code") for line in line_items) and (subtype=="invoice" or is_return):
             import inventory
             inventory.issue_for_invoice(self, invoice_id, line_items, user_id)
         # Preserve the supplier's invoiced VAT for the quarterly declaration.

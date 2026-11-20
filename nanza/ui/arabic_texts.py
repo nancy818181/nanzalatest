@@ -2,6 +2,19 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'The company or fiscal year changed. Reopen Commercial Documents.':
+        'تغيّرت الشركة أو السنة المالية. أعد فتح المستندات التجارية.',
+    'Search items (F2)': 'البحث عن الأصناف (F2)',
+    'Find document': 'البحث عن مستند',
+    'Transfer': 'تحويل',
+    'Tick the lines to transfer and enter their quantities. The sales invoice is saved as a draft.':
+        'حدّد سطور الأصناف المراد تحويلها وأدخل كمياتها. تُحفظ فاتورة البيع كمسوّدة.',
+    'Quotations': 'عروض الأسعار',
+    'Quotation': 'عرض سعر',
+    'Convert to Sales Invoice': 'تحويل إلى فاتورة بيع',
+    'Save and confirm the quotation, then convert it to a sales invoice draft. Review it in Uploaded Data.':
+        'احفظ عرض السعر وأكّده، ثم حوّله إلى مسوّدة فاتورة بيع. راجعها في البيانات المرفوعة.',
+    'Review OCR values before saving.': 'راجع القيم المستخرجة قبل الحفظ.',
     'KEY FIGURES': 'الأرقام الرئيسية',
     'Saved report layouts': 'تخطيطات التقارير المحفوظة',
     'Save current': 'حفظ الحالي',

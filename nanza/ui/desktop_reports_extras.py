@@ -19,9 +19,9 @@ class ReportsExtrasMixin:
         try: return open_executive(self)
         except (RuntimeError, ValueError, KeyError, TypeError) as exc: messagebox.showerror("Executive dashboard",str(exc))
 
-    def open_commercial_documents(self):
+    def open_commercial_documents(self, *, quotations_only=False):
         from desktop_commercial import open_commercial_documents
-        try: return open_commercial_documents(self)
+        try: return open_commercial_documents(self, quotations_only=quotations_only)
         except (RuntimeError, ValueError, KeyError, TypeError) as exc: messagebox.showerror("Commercial documents",str(exc))
 
     def open_dashboard_brief(self):

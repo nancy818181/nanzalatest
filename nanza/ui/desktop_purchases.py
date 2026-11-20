@@ -25,10 +25,20 @@ class PurchasesMixin:
         self.purchase_notebook=nested
         purchases_outer=tk.Frame(nested,bg=LIGHT)
         purchase_totals=tk.Frame(purchases_outer,bg=LIGHT); purchase_totals.pack(side="bottom",fill="x")
-        purchase_costs=tk.Frame(nested,bg=LIGHT)
+        purchase_body_outer, purchase_body = self.scrollable_page(purchases_outer, fit_width=True)
+        purchase_body_outer.pack(fill="both", expand=True)
+        purchase_costs = tk.Frame(nested, bg=LIGHT)
         expenses_outer, expenses = self.scrollable_page(nested)
         nested.add(purchases_outer, text="Purchase Invoice")
         self.purchase_invoice_page=purchases_outer
+        purchase_tab = self.purchases_tab
+        resize_view = getattr(purchase_tab, "_resize_purchase_view", None)
+        if resize_view is not None:
+            def fit_invoice_view(_event=None):
+                purchase_tab._fit_purchase_invoice = nested.select() == str(purchases_outer)
+                resize_view()
+            nested.bind("<<NotebookTabChanged>>", fit_invoice_view, add="+")
+            fit_invoice_view()
         nested.add(purchase_costs,text="Cost on Purchase")
         assets_outer=tk.Frame(nested,bg=LIGHT); nested.add(assets_outer,text="Assets & Depreciation")
         assets_tabs=ttk.Notebook(assets_outer); assets_tabs.pack(fill="both",expand=True,padx=4,pady=4); self.assets_tabs=assets_tabs
@@ -37,7 +47,7 @@ class PurchasesMixin:
         depreciation_page=tk.Frame(assets_tabs,bg=LIGHT); assets_tabs.add(depreciation_page,text="3. Monthly Depreciation Table")
         self.build_asset_accounts_page(asset_accounts_page); self.build_depreciation_table_page(depreciation_page)
         nested.add(expenses_outer, text="Expenses")
-        self.build_purchases_page(purchases_outer,purchase_totals,purchase_costs); self.build_expenses_page(expenses)
+        self.build_purchases_page(purchase_body,purchase_totals,purchase_costs); self.build_expenses_page(expenses)
         self.build_assets_page(assets_page); self.add_asset_category_selector(assets_page)
         import desktop_design
         desktop_design.tab_bar(nested,min_tabs=4)
@@ -196,7 +206,8 @@ class PurchasesMixin:
         f["doc"] = tk.StringVar(value="Invoice")  # 2.9.54: Invoice / Return (goods back to the supplier) / Debit Note / Credit Note
         import desktop_design as design  # 2.9.134: a framed panel with a gold-marked title instead of the plain group box
         box_outer, box = design.panel(page, pady=5); box_outer.pack(fill="x", padx=8, pady=(2, 3))
-        PurchasesMixin._fit_panel_to_view(self, box_outer, 8)
+        if totals_parent is None:
+            PurchasesMixin._fit_panel_to_view(self, box_outer, 8)
         # Title, lookup and Excel actions in one row: the lookup (label + box) stays together and the two Excel
         # buttons move to a second line only when the row does not fit (flow_toolbars at the end of this method).
         heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 4))
@@ -231,22 +242,46 @@ class PurchasesMixin:
         f["supplier_box"].bind("<KeyRelease>", lambda _e: self.filter_suppliers()); f["supplier_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_supplier_chosen())
         doc_box = f["header_widgets"]["Document"]
         doc_box.bind("<<ComboboxSelected>>",lambda _e:self.purchase_doc_changed())
-        totals_box = tk.LabelFrame(totals_parent or page, text="Purchase totals", bg="#dfe6ee", padx=10, pady=4)
-        r2 = tk.Frame(totals_box, bg="#dfe6ee"); r2.pack(fill="x", pady=(2, 4))
-        for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11), ("VAT %", "rate", 5), ("VAT", "vat", 11)):
-            tk.Label(r2, text=label, bg="#dfe6ee").pack(side="left"); entry = tk.Entry(r2, textvariable=v[key], width=width); entry.pack(side="left", padx=(4, 8))
-            entry.bind("<KeyRelease>", lambda e, k=key: self.purchase_amounts_changed(k))
-        f["total"] = tk.Label(r2, text="Total: 0.00", bg="#dfe6ee", fg=NAVY, font=("Segoe UI", 10, "bold")); f["total"].pack(side="left", padx=6)
-        summary = tk.Frame(totals_box, bg="#dfe6ee"); summary.pack(fill="x", padx=8)
-        tk.Label(summary,text="Total before discount",bg="#dfe6ee").pack(side="left")
-        f["gross_summary"] = tk.Label(summary,text="0.00",bg="#dfe6ee",fg=NAVY,width=13,anchor="e"); f["gross_summary"].pack(side="left",padx=(2,16))
-        tk.Label(summary,text="Discount %",bg="#dfe6ee").pack(side="left")
-        percent_entry=tk.Entry(summary,textvariable=f["discount_percent"],width=6); percent_entry.pack(side="left",padx=4)
-        tk.Label(summary,text="or amount",bg="#dfe6ee").pack(side="left")
-        amount_entry=tk.Entry(summary,textvariable=f["discount_amount"],width=10); amount_entry.pack(side="left",padx=4)
-        percent_entry.bind("<KeyRelease>",lambda _e:self.purchase_discount_changed("percent"))
-        amount_entry.bind("<KeyRelease>",lambda _e:self.purchase_discount_changed("amount"))
-        f["discount_summary"] = tk.Label(summary,text="Total HT: 0.00",bg="#dfe6ee",fg=NAVY,font=("Segoe UI",9,"bold")); f["discount_summary"].pack(side="right",padx=8)
+        card_bg = "white"
+        totals_box = tk.Frame(totals_parent or page, bg=card_bg, padx=10, pady=4,
+                              highlightthickness=1, highlightbackground="#DDE4EC")
+        r2 = tk.Frame(totals_box, bg=card_bg)
+        r2.pack(side="top", fill="x")
+        for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11),
+                                  ("VAT %", "rate", 5), ("VAT", "vat", 11)):
+            field = tk.Frame(r2, bg=card_bg)
+            field.pack(side="left", padx=(0, 8))
+            tk.Label(field, text=label, bg=card_bg, fg=MUTED).pack(side="left")
+            entry = tk.Entry(field, textvariable=v[key], width=width, justify="right")
+            entry.pack(side="left", padx=(4, 0))
+            entry.bind("<KeyRelease>", lambda _event, k=key: self.purchase_amounts_changed(k))
+
+        summary = tk.Frame(totals_box, bg=card_bg)
+        summary.pack(side="right")
+        for row, column, key, label in (
+            (0, 0, "gross_summary", "Total"), (0, 2, "discount_value", "Discount"),
+            (1, 0, "ht_summary", "Total HT"), (1, 2, "vat_summary", "VAT"),
+            (2, 2, "total", "TOTAL TTC"),
+        ):
+            tk.Label(summary, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED).grid(
+                row=row, column=column, sticky="w", padx=(10, 5)
+            )
+            f[key] = tk.Label(summary, text="0.00", bg=card_bg, fg=NAVY,
+                              font=("Segoe UI", 14 if key == "total" else 10, "bold"))
+            f[key].grid(row=row, column=column + 1, sticky="e", padx=(0, 4))
+
+        discount_inputs = tk.Frame(totals_box, bg=card_bg)
+        discount_inputs.pack(side="left", anchor="s")
+        tk.Label(discount_inputs, text="Discount %", bg=card_bg, fg=MUTED).pack(side="left")
+        percent_entry = tk.Entry(discount_inputs, textvariable=f["discount_percent"], width=5)
+        percent_entry.pack(side="left", padx=3)
+        tk.Label(discount_inputs, text="or amount", bg=card_bg, fg=MUTED).pack(side="left")
+        amount_entry = tk.Entry(discount_inputs, textvariable=f["discount_amount"], width=9)
+        amount_entry.pack(side="left", padx=3)
+        percent_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("percent"))
+        amount_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("amount"))
+        f["discount_summary"] = tk.Label(totals_box, text="", bg=card_bg, fg=RED)
+        f["discount_summary"].pack(side="bottom", anchor="w")
         # Keep the invoice header focused on supplier, account and payment details.
         # The treatment/dimension controls are placed after the items table below,
         # where they remain part of this same invoice workflow and scroll together.
@@ -262,7 +297,7 @@ class PurchasesMixin:
         f["not_deductible"]=tk.BooleanVar(value=False); place_tick(tax_tick(treatment,f["not_deductible"],LIGHT),side="left",padx=(10,0))
         items = tk.LabelFrame(page, text="Purchase Invoice Items · F2 to find an item · double-click a cell to edit", bg=LIGHT, padx=6, pady=2)
         items.pack(fill="both",expand=True,padx=8,pady=2,after=box_outer)
-        if totals_parent is not None: totals_box.pack(fill="x", padx=8, pady=(2,4))
+        if totals_parent is not None: totals_box.pack(anchor="e", padx=8, pady=(2,4))
         else: totals_box.pack(fill="x", padx=8, pady=(2,4), after=items)
         wh = tk.Frame(items, bg=LIGHT); wh.pack(fill="x"); f["warehouse"] = tk.StringVar()
         tk.Label(wh, text="Warehouse", bg=LIGHT).pack(side="left"); f["warehouse_box"] = ttk.Combobox(wh, textvariable=f["warehouse"], state="readonly",
@@ -300,8 +335,7 @@ class PurchasesMixin:
         free_read = self.action_button(r5, "Free PDF Read", self.ai_read_purchase_pdf); free_read.pack(side="left", padx=3)
         self.action_button(r5, "Attachments", lambda: self.purchase_attachments()).pack(side="left", padx=3)
         self.azure_button(r5, self.azure_read_purchase, free_read)  # 2.9.120: only where Azure is set up
-        tk.Label(r5, text="Review OCR values, then press Save Purchase. OCR never posts automatically.",
-                 bg=LIGHT, fg=RED, wraplength=300, justify="left").pack(side="left", padx=6)
+        tk.Label(r5, text="Review OCR values before saving.", bg=LIGHT, fg=RED).pack(side="left", padx=6)
         f["pdf_label"].pack(side="left", padx=8)
         for row in (heading, r4, r5):  # light, gold and red buttons of these rows keep one height (design pass)
             for button in row.winfo_children():
@@ -359,10 +393,12 @@ class PurchasesMixin:
         self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
         f["pdf_label"].configure(wraplength=600,justify="left")
         # The heading wraps as units: title, lookup (label + box together), Import Excel, Excel Template.
-        flow_toolbars(heading,treatment,r4,r5,wh,r2,summary,
+        flow_toolbars(heading,treatment,r4,r5,wh,r2,
                       settings,c2,payment,actions,attachments,report_bar)
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
         f["tree"].bind("<<TreeviewSelect>>", lambda _e: self.purchase_selected())
+        v["currency"].trace_add("write", lambda *_args: self.purchase_amounts_changed("none"))
+        self.purchase_amounts_changed("none")
 
     def purchase_item_line(self, row=None):
         f = self.purchase_form; row = row or {"item_code": "", "name": "", "quantity": 1, "unit": "", "unit_cost": 0, "discount_percent": 0}
@@ -568,14 +604,20 @@ class PurchasesMixin:
         taxable = _num(v["taxable"].get()) or 0; exempt = _num(v["exempt"].get()) or 0; rate = _num(v["rate"].get()) or 0
         try: discount=self.purchase_discount(taxable)
         except ValueError as exc:
-            f["discount_summary"].config(text=str(exc),fg=RED); return
+            f["discount_summary"].config(text=str(exc))
+            for key in ("discount_value", "ht_summary", "vat_summary", "total"):
+                f[key].config(text="—")
+            return
         if not f["vat_typed"] and not f.get("pdf_vat_review"): v["vat"].set(f"{(taxable-discount) * rate / 100:.2f}" if taxable else "")
         vat = _num(v["vat"].get()) or 0
         rows=[r for r in f["items_sheet"].ordered() if (r.get("item_code") or r.get("name"))] if "items_sheet" in f else []
         line_discount=sum(round((_num(r.get("quantity")) or 0)*(_num(r.get("unit_cost")) or 0)*(_num(r.get("discount_percent")) or 0)/100,2) for r in rows)
         f["gross_summary"].config(text=f"{taxable+exempt+line_discount:,.2f}")
-        f["discount_summary"].config(text=f"−{discount+line_discount:,.2f}  |  Total HT: {taxable+exempt-discount:,.2f}",fg=NAVY)
-        f["total"].config(text=f"TOTAL TTC: {taxable+exempt-discount+vat:,.2f} {v['currency'].get()}")
+        f["discount_summary"].config(text="")
+        f["discount_value"].config(text=f"{discount+line_discount:,.2f}")
+        f["ht_summary"].config(text=f"{taxable+exempt-discount:,.2f}")
+        f["vat_summary"].config(text=f"{vat:,.2f}")
+        f["total"].config(text=f"{taxable+exempt-discount+vat:,.2f} {v['currency'].get()}")
 
     def new_purchase(self):
         f = self.purchase_form; v = f["vars"]; f["id"] = None; f["pdf"] = None; f["pdf_pending_invoice_id"] = None
@@ -587,8 +629,9 @@ class PurchasesMixin:
         f["discount_mode"]="percent"; f["discount_percent"].set("0"); f["discount_amount"].set("0")
         if "doc" in f: f["doc"].set("Invoice")
         if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set("")
-        f["pdf_label"].config(text="No PDF", fg=MUTED); f["total"].config(text="TOTAL TTC: 0.00"); f["tree"].selection_remove(*f["tree"].selection())
+        f["pdf_label"].config(text="No PDF", fg=MUTED); f["tree"].selection_remove(*f["tree"].selection())
         f["items_sheet"].clear(); f["find"].set("")
+        self.purchase_amounts_changed("none")
 
     def choose_purchase_pdf(self):
         path = filedialog.askopenfilename(filetypes=[("PDF invoice", "*.pdf"), ("Images", "*.png *.jpg *.jpeg")])

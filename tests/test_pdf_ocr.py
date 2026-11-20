@@ -570,7 +570,8 @@ class OcrPageTests(unittest.TestCase):
                            "vars": {key: Field(value) for key, value in
                                     (("vat", ""), ("taxable", "100"), ("exempt", "0"), ("rate", "11"), ("currency", "USD"))},
                            "items_sheet": types.SimpleNamespace(ordered=lambda: []),
-                           "discount_summary": Mock(), "gross_summary": Mock(), "total": Mock()},
+                           "discount_summary": Mock(), "gross_summary": Mock(), "discount_value": Mock(),
+                           "ht_summary": Mock(), "vat_summary": Mock(), "total": Mock()},
             expense_form={"pdf_vat_review": True, "vat_typed": True,
                           "vars": {key: Field(value) for key, value in
                                    (("vat", ""), ("with_vat", "100"), ("without_vat", "0"), ("currency", "USD"))},

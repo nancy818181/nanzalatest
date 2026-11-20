@@ -116,6 +116,16 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         widgets["Currency"].set("USD"); widgets["Type"].set("Purchases"); widgets["Document"].set("Invoice")
         widgets["Document"].event_generate("<<ComboboxSelected>>")
         v["taxable"].set("100"); app.purchase_amounts_changed("taxable"); app.update()
+        total = app.purchase_form["total"]
+        self.assertEqual(total.cget("text"), "111.00 USD")
+        bottom = total.winfo_rooty() + total.winfo_height()
+        self.assertLessEqual(bottom, app.winfo_rooty() + app.winfo_height())
+        canvas = app.purchase_form["items_sheet"].tree
+        while not getattr(canvas, "_saber_scroll_page", False):
+            canvas = canvas.master
+        canvas.yview_moveto(1)
+        app.update_idletasks()
+        self.assertEqual(total.winfo_rooty() + total.winfo_height(), bottom)
         app.save_purchase(); app.update()
         self.assertFalse([m for m in self.messages if m[0] in ("showerror", "showwarning")], self.messages)
         saved = [i for i in app.client.invoices() if i.get("invoice_number") == "GRID-1"]
