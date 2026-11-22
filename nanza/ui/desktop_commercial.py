@@ -4,6 +4,7 @@ from decimal import Decimal
 import tkinter as tk
 from tkinter import ttk, messagebox
 from uuid import uuid4
+from urllib.parse import urlencode
 from desktop_common import flow_toolbar, main_currency, vat_rate
 
 KINDS = {
@@ -36,7 +37,7 @@ def open_commercial_documents(app, *, quotations_only=False):
     tk.Label(
         window,
         text=(
-            "Save and confirm the quotation, then convert it to a sales invoice draft. Review it in Uploaded Data."
+            "Save the quotation, then convert it to a draft for review in Sales Invoice."
             if quotations_only
             else "Confirm a saved document before receiving or creating a draft invoice. Review and post invoices in Uploaded Data."
         ),
@@ -93,42 +94,59 @@ def open_commercial_documents(app, *, quotations_only=False):
     pane.add(line_frame, weight=3)
     controls = tk.Frame(line_frame)
     controls.pack(side="bottom",fill="x")
-    columns = (
-        "sku",
-        "description",
-        "quantity",
-        "unit_price",
-        "vat_rate",
-        "received",
-        "invoiced",
-    )
-    tree = ttk.Treeview(line_frame, columns=columns, show="headings", height=7)
-    for key, label, width in zip(
-        columns,
-        (
-            "Item code (optional)",
-            "Description",
-            "Qty",
-            "Unit price",
-            "VAT %",
-            "Received",
-            "Invoiced",
-        ),
-        (130, 290, 85, 100, 70, 85, 85),
-    ):
+    edit_fields = [("sku", "Item Code (F2)"), ("description", "Description"),
+                   ("quantity", "Quantity"), ("unit_price", "Unit Price"), ("vat_rate", "VAT %")]
+    if quotations_only:
+        edit_fields.extend((("unit", "Unit"), ("discount_percent", "Discount %")))
+        columns = (
+            ("sku", "Item Code (F2)", 126), ("description", "Item Description", 260),
+            ("quantity", "Qty", 60), ("unit", "Unit", 62), ("unit_price", "Unit Price", 100),
+            ("gross_amount", "Total Amount", 108), ("discount_percent", "Discount %", 88),
+            ("vat_rate", "VAT %", 70), ("total", "Net", 100),
+        )
+    else:
+        columns = (
+            ("sku", "Item code (optional)", 130), ("description", "Description", 290),
+            ("quantity", "Qty", 85), ("unit_price", "Unit price", 100), ("vat_rate", "VAT %", 70),
+            ("received", "Received", 85), ("invoiced", "Invoiced", 85),
+        )
+    tree = ttk.Treeview(line_frame, columns=[key for key, _, _ in columns], show="headings",
+                        height=7, style="Sales.Treeview" if quotations_only else "Treeview")
+    for key, label, width in columns:
         tree.heading(key, text=label)
         tree.column(key, width=width, stretch=key == "description")
+    if quotations_only:
+        totals = tk.Frame(line_frame)
+        totals.pack(side="bottom", fill="x")
+        total_labels = {}
+        for label, key in (("Total HT", "total_ht"), ("Discount", "discount"), ("VAT", "vat"),
+                           ("TOTAL TTC", "grand_total")):
+            tk.Label(totals, text=label).pack(side="left", padx=(12, 4))
+            total_labels[key] = tk.Label(totals, font=("Segoe UI", 9, "bold"))
+            total_labels[key].pack(side="left", padx=(0, 8))
     scroll = ttk.Scrollbar(line_frame, orient="horizontal", command=tree.xview)
     tree.configure(xscrollcommand=scroll.set)
     scroll.pack(side="bottom",fill="x")
+    line_scroll = ttk.Scrollbar(line_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=line_scroll.set)
+    line_scroll.pack(side="right", fill="y")
     tree.pack(fill="both", expand=True)
 
     def refresh_lines():
+        lines = state["rows"]
+        if quotations_only:
+            from invoice_calc import calculate
+
+            result = calculate(lines, exact=True)
+            lines = result["lines"]
+            discount = sum(row["discount_amount"] for row in lines)
+            for key, label in total_labels.items():
+                suffix = f" {fields['currency'].get()}" if key == "grand_total" else ""
+                value = discount if key == "discount" else result[key]
+                label.configure(text=f"{value:,.2f}{suffix}")
         tree.delete(*tree.get_children())
-        for index, line in enumerate(state["rows"]):
-            tree.insert(
-                "", "end", iid=str(index), values=[line.get(k, "") for k in columns]
-            )
+        for index, line in enumerate(lines):
+            tree.insert("", "end", iid=str(index), values=[line.get(key, "") for key, _, _ in columns])
 
     def edit_line(new=False):
         if state["document"] and state["document"]["status"] != "draft":
@@ -144,18 +162,7 @@ def open_commercial_documents(app, *, quotations_only=False):
         dialog.title("Document line")
         dialog.transient(window)
         values = {}
-        for n, (key, label) in enumerate(
-            zip(
-                columns[:5],
-                (
-                    "Item code (optional)",
-                    "Description",
-                    "Quantity",
-                    "Unit price",
-                    "VAT %",
-                ),
-            )
-        ):
+        for n, (key, label) in enumerate(edit_fields):
             tk.Label(dialog, text=label).grid(
                 row=n, column=0, sticky="w", padx=8, pady=5
             )
@@ -178,6 +185,8 @@ def open_commercial_documents(app, *, quotations_only=False):
             values["sku"].set(product["sku"])
             values["description"].set(product["name"])
             if fields["kind"].get() == "Quotation":
+                if "unit" in values:
+                    values["unit"].set(product.get("unit") or "")
                 if product.get("sales_price") is not None:
                     values["unit_price"].set(str(product["sales_price"]))
                 if product.get("default_vat") not in (None, ""):
@@ -201,6 +210,8 @@ def open_commercial_documents(app, *, quotations_only=False):
                     raise ValueError("Enter a description")
                 for key in ("quantity", "unit_price", "vat_rate"):
                     money(result[key], key, key == "quantity")
+                if quotations_only and money(result["discount_percent"] or 0, "discount") > 100:
+                    raise ValueError("The line discount cannot exceed 100%")
                 if new:
                     state["rows"].append(result)
                 else:
@@ -211,7 +222,7 @@ def open_commercial_documents(app, *, quotations_only=False):
                 messagebox.showwarning("Line", str(exc), parent=dialog)
 
         tk.Button(dialog, text="Use line", command=use).grid(
-            row=5, column=0, columnspan=2, pady=8
+            row=len(values), column=0, columnspan=2, pady=8
         )
         dialog.grab_set()
 
@@ -240,7 +251,7 @@ def open_commercial_documents(app, *, quotations_only=False):
     tk.Entry(search_bar, textvariable=document_search).pack(side="left", fill="x", expand=True, padx=4)
     saved_tree = ttk.Treeview(
         records,
-        columns=("number", "kind", "date", "party", "currency", "status"),
+        columns=("number", "kind", "date", "party", "currency", "status", *(("item",) if quotations_only else ())),
         show="headings",
         height=5,
     )
@@ -251,14 +262,19 @@ def open_commercial_documents(app, *, quotations_only=False):
         ("party", "Customer" if quotations_only else "Customer / supplier", 250),
         ("currency", "Currency", 80),
         ("status", "Status", 100),
+        *((("item", "Matched item line", 250),) if quotations_only else ()),
     ):
         saved_tree.heading(key, text=label)
         saved_tree.column(key, width=width)
     scrollbar = ttk.Scrollbar(records, orient="vertical", command=saved_tree.yview)
     saved_tree.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
+    horizontal = ttk.Scrollbar(records, orient="horizontal", command=saved_tree.xview)
+    saved_tree.configure(xscrollcommand=horizontal.set)
+    horizontal.pack(side="bottom", fill="x")
     saved_tree.pack(fill="both", expand=True)
     saved_documents = []
+    search_timer = None
 
     def filter_documents(*_args):
         keys = ("number", "kind", "doc_date", "party_name", "currency", "status")
@@ -266,22 +282,46 @@ def open_commercial_documents(app, *, quotations_only=False):
         saved_tree.delete(*saved_tree.get_children())
         for doc in saved_documents:
             values = [doc[key] for key in keys]
-            if all(term in " ".join(str(value) for value in values).casefold() for term in query.split()):
-                saved_tree.insert("", "end", iid=str(doc["id"]), values=values)
-
-    document_search.trace_add("write", filter_documents)
+            line = doc.get("line_number")
+            iid = f"{doc['id']}:{line}" if line else str(doc["id"])
+            if quotations_only:
+                values.append(f"{line}. {doc['matched_item']}" if line else "")
+            if quotations_only or all(term in " ".join(str(value) for value in values).casefold() for term in query.split()):
+                saved_tree.insert("", "end", iid=iid, values=values)
 
     def load():
-        saved_documents[:] = [
-            doc for doc in app.client.request("GET", "/api/commercial")["items"]
-            if not quotations_only or doc["kind"] == "quotation"
-        ]
+        query = urlencode({"quotations": 1, "q": document_search.get()})
+        path = f"/api/commercial?{query}" if quotations_only else "/api/commercial"
+        saved_documents[:] = app.client.request("GET", path)["items"]
         filter_documents()
+
+    def schedule_search(*_args):
+        nonlocal search_timer
+        if not quotations_only:
+            filter_documents()
+            return
+        if search_timer is not None:
+            window.after_cancel(search_timer)
+
+        def search():
+            nonlocal search_timer
+            search_timer = None
+            perform(load)
+
+        search_timer = window.after(220, search)
+
+    document_search.trace_add("write", schedule_search)
+    window.bind("<Destroy>", lambda event: window.after_cancel(search_timer)
+                if event.widget is window and search_timer is not None else None)
 
     def display(doc):
         state["document"] = doc
         state["rows"] = [dict(row) for row in doc["lines"]]
-        number.set(f"{doc['number']}  |  {doc['status']}  |  {doc['currency']}")
+        linked = " | ".join(
+            f"{event['invoice_number']} ({event['invoice_status']})"
+            for event in doc["events"] if event["invoice_id"]
+        )
+        number.set("  |  ".join(part for part in (doc["number"], doc["status"], doc["currency"], linked) if part))
         fields["kind"].set(
             next(label for label, kind in kinds.items() if kind == doc["kind"])
         )
@@ -302,7 +342,7 @@ def open_commercial_documents(app, *, quotations_only=False):
             perform(
                 lambda: display(
                     app.client.request(
-                        "GET", "/api/commercial/" + saved_tree.selection()[0]
+                        "GET", "/api/commercial/" + saved_tree.selection()[0].split(":", 1)[0]
                     )
                 )
             )
@@ -396,6 +436,32 @@ def open_commercial_documents(app, *, quotations_only=False):
             doc["number"],
             format_name,
         )
+
+    def convert():
+        doc = state["document"]
+        if not doc:
+            raise ValueError("Save or open a quotation first")
+        if state["rows"] != doc["lines"] or any(
+            fields[key].get() != (doc.get(key) or "") for key in ("doc_date", "currency", "valid_until")
+        ) or party_map.get(fields["party"].get()) != doc["party_id"]:
+            raise ValueError("Save your quotation changes before converting")
+        result = app.client.request(
+            "POST", f"/api/commercial/{doc['id']}/convert",
+            {"doc_date": app.fiscal_today(), "revision": doc["revision"]},
+        )
+        invoice = result["invoice"]
+        display(app.client.request("GET", f"/api/commercial/{doc['id']}"))
+        app.select_main_tab(app.sales_tab)
+        if app.open_sales_invoice(invoice_id=invoice["id"]):
+            window.destroy()
+            rates = ", ".join(dict.fromkeys(str(line["vat_rate"]) for line in result["items"]))
+            messagebox.showinfo(
+                "Linked Sales Invoice",
+                f"{invoice['invoice_number']} ({invoice['status']})\n"
+                f"Invoice date: {invoice['invoice_date']}\n"
+                f"USD per {invoice['currency']}: {result.get('usd_per_currency') or '—'}\nVAT rates: {rates}%",
+                parent=app,
+            )
 
     def operation(action):
         doc = state["document"]
@@ -551,7 +617,7 @@ def open_commercial_documents(app, *, quotations_only=False):
     if not quotations_only:
         actions.append(("Receive partial", lambda: operation("receive")))
     actions.extend((
-        ("Convert to Sales Invoice" if quotations_only else "Create invoice draft", lambda: operation("invoice")),
+        ("Convert to Sales Invoice" if quotations_only else "Create invoice draft", convert if quotations_only else lambda: operation("invoice")),
         ("PDF", lambda: output("pdf")),
         ("Excel", lambda: output("xlsx")),
         ("Matching report", lambda: output("pdf", True)),
@@ -562,6 +628,8 @@ def open_commercial_documents(app, *, quotations_only=False):
         )
     for column in range(5):
         bar.columnconfigure(column, weight=1)
+    if quotations_only:
+        fields["currency"].trace_add("write", lambda *_args: refresh_lines())
     new()
     perform(load)
     return window

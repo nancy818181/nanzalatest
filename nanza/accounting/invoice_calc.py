@@ -16,7 +16,8 @@ def _d(value):
     except (ArithmeticError, ValueError, TypeError, KeyError): raise ValueError(f"'{value}' is not a number")
 
 
-def calculate(lines, invoice_discount_percent=0, invoice_discount_amount=0, zero_vat=False):
+def calculate(lines, invoice_discount_percent=0, invoice_discount_amount=0, zero_vat=False, *, exact=False):
+    number = (lambda value: value) if exact else float
     rows = []; total_net = Decimal("0")
     for line in lines:
         qty = _d(line.get("quantity") if line.get("quantity") not in (None, "") else 1); price = _d(line.get("unit_price")); percent = _d(line.get("discount_percent"))
@@ -27,8 +28,9 @@ def calculate(lines, invoice_discount_percent=0, invoice_discount_amount=0, zero
         discount = gross - net; total_net += net
         rate = _d(line.get("vat_rate") if line.get("vat_rate") not in (None, "") else 11)
         if rate < 0: raise ValueError("VAT cannot be negative")
-        rows.append({**line, "quantity": float(qty), "unit_price": float(price), "gross_amount": float(gross), "discount_percent": float(percent),
-                     "discount_amount": float(discount), "net": net, "vat_rate": 0.0 if zero_vat else float(rate)})
+        rate = Decimal(0) if zero_vat else rate if exact else Decimal(str(float(rate)))
+        rows.append({**line, "quantity": number(qty), "unit_price": number(price), "gross_amount": number(gross), "discount_percent": number(percent),
+                     "discount_amount": number(discount), "net": net, "vat_rate": rate})
     percent = _d(invoice_discount_percent); amount = _d(invoice_discount_amount)
     if percent < 0 or percent > 100 or amount < 0: raise ValueError("The invoice discount must be between 0% and 100%, or a positive amount")
     discount = (amount if amount else total_net * percent / 100).quantize(CENT, rounding=ROUND_HALF_UP)
@@ -41,10 +43,10 @@ def calculate(lines, invoice_discount_percent=0, invoice_discount_amount=0, zero
     vat_total = Decimal("0"); taxable = Decimal("0"); exempt = Decimal("0")
     for index, row in enumerate(rows):
         share = shares[index]; after = row["net"] - share
-        rate = Decimal(str(row["vat_rate"])); vat = (after * rate / 100).quantize(CENT, rounding=ROUND_HALF_UP)
-        row.update(deductible_subtotal=float(after) if rate > 0 else 0.0, non_deductible_subtotal=0.0 if rate > 0 else float(after), vat=float(vat),
-                   subtotal=float(after), total=float(after + vat), net=float(row["net"]))
+        rate = row["vat_rate"]; vat = (after * rate / 100).quantize(CENT, rounding=ROUND_HALF_UP)
+        row.update(vat_rate=number(rate), deductible_subtotal=number(after) if rate > 0 else number(Decimal(0)), non_deductible_subtotal=number(Decimal(0)) if rate > 0 else number(after), vat=number(vat),
+                   subtotal=number(after), total=number(after + vat), net=number(row["net"]))
         vat_total += vat; taxable += after if rate > 0 else 0; exempt += after if rate <= 0 else 0
     total_ht = total_net - discount
-    return {"lines": rows, "total": float(total_net), "discount": float(discount), "discount_percent": float(percent), "discount_amount": float(amount),
-            "total_ht": float(total_ht), "vat": float(vat_total), "grand_total": float(total_ht + vat_total), "taxable": float(taxable), "exempt": float(exempt)}
+    return {"lines": rows, "total": number(total_net), "discount": number(discount), "discount_percent": number(percent), "discount_amount": number(amount),
+            "total_ht": number(total_ht), "vat": number(vat_total), "grand_total": number(total_ht + vat_total), "taxable": number(taxable), "exempt": number(exempt)}

@@ -79,6 +79,76 @@ class CommercialTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.invoice(wrong)
 
+    def test_one_click_conversion_retries_and_posts_stock_and_reports(self):
+        from concurrent.futures import ThreadPoolExecutor
+
+        purchase = self.receipt(self.confirm(self.order()), quantity="10")
+        self.assertEqual(purchase["lines"][0]["received"], "10")
+        self.db.save_exchange_rate({"rate_date": "2026-01-15", "from_currency": "EUR", "to_currency": "USD", "rate": "1.20"}, 1)
+        self.db.save_exchange_rate({"rate_date": "2026-01-17", "from_currency": "EUR", "to_currency": "USD", "rate": "1.25"}, 1)
+        quote = self.order("quotation")
+        lines = [{**quote["lines"][0], "quantity": "2", "discount_percent": "10", "unit": "ream"},
+                 {"description": "Delivery", "quantity": "1", "unit_price": "5.25", "vat_rate": "0"}]
+        before = (self.quantity(), self.db.trial_balance(), self.db.vat_report(),
+                  self.db.aging_report("2026-12-31", "sale"))
+        quote = c.save(self.db, {**quote, "currency": "EUR"}, lines, 1, quote["id"])
+        match, = c.listing(self.db, quotation_search="paper papier")
+        self.assertEqual((match["id"], match["line_number"]), (quote["id"], 1))
+        self.assertIn("Papier", match["matched_item"])
+
+        def convert():
+            return c.convert_quotation(self.db, quote["id"], "2026-01-17", quote["revision"], 1)
+
+        with patch.object(c, "_event", side_effect=ValueError("Link failed")):
+            with self.assertRaisesRegex(ValueError, "Link failed"):
+                convert()
+        self.assertEqual(c.get(self.db, quote["id"])["events"], [])
+        self.assertEqual(c.get(self.db, quote["id"])["status"], "draft")
+        self.assertFalse(self.db.list_invoices())
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first, second = [job.result() for job in (pool.submit(convert), pool.submit(convert))]
+        invoice = first["invoice"]
+        self.assertEqual(second["invoice"]["id"], invoice["id"])
+        self.assertEqual(invoice["currency"], "EUR")
+        self.assertEqual(Decimal(first["usd_per_currency"]), Decimal("1.25"))
+        self.assertEqual(invoice["status"], "review")
+        self.assertEqual(first["quotation_number"], quote["number"])
+        self.assertEqual(Decimal(invoice["subtotal"]), Decimal("23.25"))
+        self.assertEqual(Decimal(invoice["vat"]), Decimal("1.98"))
+        self.assertEqual(Decimal(invoice["total"]), Decimal("25.23"))
+        self.assertEqual(first["items"][0]["unit"], "ream")
+        self.assertEqual(Decimal(first["items"][0]["discount_percent"]), Decimal("10"))
+        self.assertEqual(Decimal(first["items"][1]["vat_rate"]), 0)
+        self.assertEqual((self.quantity(), self.db.trial_balance(), self.db.vat_report(),
+                          self.db.aging_report("2026-12-31", "sale")), before)
+
+        invoice_id = invoice["id"]
+        with self.assertRaisesRegex(ValueError, "approval"):
+            self.db.update_invoice(invoice_id, invoice, 1)
+        with self.assertRaises(ValueError):
+            self.db.delete_invoice(invoice_id, 1)
+        self.assertEqual(self.db.approve_invoices([invoice_id], {"id": 1}, True)["approved"], [])
+        self.assertEqual(self.db.approve_invoices([invoice_id], {"id": 1}, False)["approved"],
+                         [invoice["invoice_number"]])
+        self.assertEqual(convert()["invoice"]["status"], "posted")
+        self.assertEqual(self.quantity(), 8)
+        self.assertNotEqual(self.db.trial_balance(), before[1])
+        self.assertNotEqual(self.db.vat_report(), before[2])
+        receivable, = self.db.aging_report("2026-12-31", "sale")
+        self.assertEqual(receivable["id"], invoice_id)
+        self.db.cancel_invoice(invoice_id, "Customer cancelled", 1)
+        self.assertEqual(convert()["invoice"]["status"], "cancelled")
+        self.assertEqual(self.quantity(), 10)
+        self.assertEqual(len(c.get(self.db, quote["id"])["events"]), 1)
+
+    def test_convert_rejects_invoice_date_outside_selected_fiscal_year(self):
+        quote = self.order("quotation")
+        self.db.fiscal_year = 2026
+        with self.assertRaisesRegex(ValueError, "selected fiscal year"):
+            c.convert_quotation(self.db, quote["id"], "2027-01-17", quote["revision"], 1)
+        self.assertEqual(c.get(self.db, quote["id"])["events"], [])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

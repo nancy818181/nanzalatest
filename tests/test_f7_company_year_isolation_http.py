@@ -60,6 +60,8 @@ class CompanyYearHttpIsolationTest(unittest.TestCase):
     def test_mismatched_company_is_denied_on_current_and_multi_year_routes(self):
         routes = (
             ("GET", "/api/parties"),
+            ("GET", "/api/commercial?quotations=1&q=paper"),
+            ("POST", "/api/commercial/1/convert"),
             ("GET", "/api/dashboard/brief?date_from=2026-01-01&date_to=2026-12-31"),
             ("GET", "/api/dashboard/executive?date_from=2026-01-01&date_to=2026-12-31"),
             ("GET", "/api/management-pack?month_end=2026-12-31"),

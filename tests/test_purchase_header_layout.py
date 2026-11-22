@@ -22,7 +22,7 @@ except Exception:
 from client import ApiClient
 from server import run_server
 
-HEADER = ("Supplier", "Supplier Invoice No.", "Date", "Due", "Currency", "Type", "Document",
+HEADER = ("Supplier", "Supplier Invoice No.", "Date", "Due Date", "Currency", "Type", "Document",
           "Cost / Asset A/C", "VAT A/C", "Paid", "Paid from A/C")
 
 
@@ -136,6 +136,161 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         rows = trial.get("items", trial) if isinstance(trial, dict) else trial
         debit = sum(float(r.get("debit") or 0) for r in rows); credit = sum(float(r.get("credit") or 0) for r in rows)
         self.assertAlmostEqual(debit, credit, places=2)
+
+    def test_purchase_item_edit_and_reopen(self):
+        from tkinter import ttk
+        app = self.open()
+        app.client.save_inventory_item({"sku": "GRID-PAPER", "name": "Layout paper", "unit": "pack"})
+        form = app.purchase_form
+        sheet = form["items_sheet"]
+        form["vars"]["supplier"].set("Layout Line Supplier")
+        form["vars"]["number"].set("GRID-LINES-1")
+        form["vars"]["currency"].set("USD")
+        items = sheet.tree.master.master
+        next(b for b in self.buttons(items) if self.english(b) == "Add Item Line").invoke()
+        app.update()
+        row = sheet.tree.focus()
+        app.purchase_item_lookup()
+        app.update()
+        dialog = next(w for w in app.winfo_children() if isinstance(w, tk.Toplevel) and w.title() == "Items - F2")
+        lookup_tree = next(w for frame in dialog.winfo_children() for w in frame.winfo_children() if isinstance(w, ttk.Treeview))
+        match = next(item for item in lookup_tree.get_children() if lookup_tree.item(item, "values")[0] == "GRID-PAPER")
+        lookup_tree.selection_set(match)
+        lookup_tree.focus_force()
+        lookup_tree.event_generate("<Return>")
+        app.update()
+        self.assertEqual(sheet.rows[row]["item_code"], "GRID-PAPER")
+        self.assertIsNot(app.purchase_item_changed(row, "unit_cost", "15.25"), False)
+        self.assertEqual(sheet.rows[row]["unit_cost"], 15.25)
+        next(b for b in self.buttons(items) if self.english(b) == "Add Item Line").invoke()
+        app.update()
+        next(b for b in self.buttons(items) if self.english(b) == "Delete Line").invoke()
+        app.update()
+        self.assertEqual(len(sheet.rows), 1)
+        next(b for b in self.buttons(app.purchase_invoice_page) if self.english(b) == "Save Purchase").invoke()
+        app.update()
+        choice = next(label for label in form["find_map"] if label.startswith("GRID-LINES-1 |"))
+        form["find"].set(choice)
+        form["find_box"].event_generate("<<ComboboxSelected>>")
+        app.update()
+        saved, = sheet.rows.values()
+        self.assertEqual(saved["item_code"], "GRID-PAPER")
+        self.assertEqual(saved["unit_cost"], 15.25)
+        self.assertFalse([m for m in self.messages if m[0] in ("showerror", "showwarning")], self.messages)
+
+    def test_sales_menu_quotation_search_conversion_and_post(self):
+        from decimal import Decimal
+        from tkinter import ttk
+        app = self.open()
+        app.client.save_inventory_item({"sku": "QUOTE-UI-PAPER", "name": "Quotation UI paper", "unit": "ream"})
+        customer = app.client.save_party({"name": "Quotation UI customer", "kind": "customer", "currency": "USD"})
+        app.client.save_stock_document(
+            {"doc_type": "receipt", "doc_date": app.fiscal_today(), "warehouse_id": "MAIN"},
+            [{"sku": "QUOTE-UI-PAPER", "quantity": "5", "unit_cost": "3"}],
+        )
+        sales_menu, _ = app.side_menu_groups["Sales"]
+        next(b for b in self.buttons(sales_menu) if self.english(b) == "Quotations").invoke()
+        app.update()
+        window = next(w for w in app.winfo_children() if isinstance(w, tk.Toplevel) and hasattr(w, "_commercial"))
+        state = window._commercial
+        state["fields"]["party"].set(next(label for label, pid in state["party_map"].items() if pid == customer["id"]))
+        state["fields"]["currency"].set("USD")
+        next(b for b in self.buttons(window) if self.english(b) == "Add line").invoke()
+        app.update()
+        line = next(w for w in window.winfo_children() if isinstance(w, tk.Toplevel))
+        entries = [w for w in line.winfo_children() if isinstance(w, tk.Entry)]
+        for entry, value in zip(entries, ("QUOTE-UI-PAPER", "Quotation UI paper", "2", "10", "11", "ream", "10")):
+            entry.delete(0, "end")
+            entry.insert(0, value)
+        next(b for b in self.buttons(line) if self.english(b) == "Use line").invoke()
+        next(b for b in self.buttons(window) if self.english(b) == "Save draft").invoke()
+        quotation = state["document"]["number"]
+
+        def widgets(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from widgets(child)
+
+        search = next(w for w in widgets(window) if isinstance(w, tk.Entry) and
+                      any(isinstance(other, tk.Label) and other.cget("text") == "Find document"
+                          for other in w.master.winfo_children()))
+        search.insert(0, "QUOTE-UI-PAPER")
+        app.after(300, app.quit)
+        app.mainloop()
+        results = next(w for w in widgets(window) if isinstance(w, ttk.Treeview) and "number" in w["columns"])
+        match = next(item for item in results.get_children() if quotation in results.item(item, "values"))
+        self.assertIn("QUOTE-UI-PAPER", results.item(match, "values")[-1])
+        results.selection_set(match)
+        next(b for b in self.buttons(window) if self.english(b) == "Open selected").invoke()
+        next(b for b in self.buttons(window) if self.english(b) == "Convert to Sales Invoice").invoke()
+        app.update()
+        invoice = app.client.invoice_detail(app.sales_edit_id)
+        self.assertEqual(invoice["quotation_number"], quotation)
+        self.assertEqual(invoice["invoice"]["status"], "review")
+        self.assertEqual(Decimal(invoice["invoice"]["total"]), Decimal("19.98"))
+        app.client.save_user({"username": "quote-ui-viewer", "password": "Quote-UI-Viewer-2026!", "role": "viewer"})
+        viewer = ApiClient(self.url)
+        self.addCleanup(viewer.close)
+        viewer.login("quote-ui-viewer", "Quote-UI-Viewer-2026!")
+        viewer.select_company_year(app.client.company_id, app.client.fiscal_year)
+        with self.assertRaisesRegex(RuntimeError, "read-only"):
+            viewer.request("POST", f"/api/commercial/{state['document']['id']}/convert",
+                           {"doc_date": app.fiscal_today(), "revision": state["document"]["revision"]})
+        invoice_id = app.sales_edit_id
+        self.assertEqual(self.english(app.sales_save_button), "Post")
+        app.sales_save_button.invoke()
+        app.update()
+        self.assertEqual(app.client.invoice_detail(invoice_id)["invoice"]["status"], "posted")
+        self.assertFalse([m for m in self.messages if m[0] in ("showerror", "showwarning")], self.messages)
+
+    def test_rapid_switching_keeps_input_and_refreshes_company_year(self):
+        from tkinter import ttk
+        app = self.open()
+        source_company = app.current_company
+        source_year = app.current_fiscal_year
+        other = app.client.create_company({"name": "Navigation Isolation Demo", "year": source_year})
+        app.client.request("POST", "/api/companies/year",
+                           {"company_id": other["id"], "year": source_year + 1})
+
+        def select(attribute):
+            index = app._page_attributes.index(attribute)
+            app.select_main_tab(app.main_tab_pages[index])
+
+        def switch(company, year):
+            button = next(b for b in self.buttons(app) if self.english(b) == "Switch Company / Year")
+            button.invoke()
+            opener = next(b for b in self.buttons(app) if self.english(b) == "Open Company")
+            company_box, year_box = [w for w in opener.master.winfo_children() if isinstance(w, ttk.Combobox)]
+            company_box.set(next(value for value in company_box["values"] if value.startswith(f"{company['name']} (")))
+            company_box.event_generate("<<ComboboxSelected>>")
+            year_box.set(str(year))
+            opener.invoke()
+            app.update()
+            self.assertEqual((app.client.company_id, app.client.fiscal_year), (company["id"], year))
+
+        form = app.purchase_form
+        form["vars"]["supplier"].set("Navigation Demo Supplier")
+        form["vars"]["number"].set("NAVIGATION-PURCHASE")
+        form["vars"]["currency"].set("USD")
+        form["vars"]["taxable"].set("100")
+        app.purchase_amounts_changed("taxable")
+        for _ in range(38):
+            for route in ("dashboard_tab", "reports_tab", "sales_tab", "purchases_tab"):
+                select(route)
+                app.update()
+            self.assertEqual(form["vars"]["number"].get(), "NAVIGATION-PURCHASE")
+            self.assertEqual(form["total"].cget("text"), "111.00 USD")
+        app.save_purchase()
+        self.assertTrue(any(key.startswith("NAVIGATION-PURCHASE |") for key in form["find_map"]))
+        for year in (source_year, source_year + 1):
+            switch(other, year)
+            select("purchases_tab")
+            self.assertFalse(any("NAVIGATION-PURCHASE" in key for key in app.purchase_form["find_map"]))
+        switch(source_company, source_year)
+        select("purchases_tab")
+        app.update()
+        self.assertTrue(any(key.startswith("NAVIGATION-PURCHASE |") for key in app.purchase_form["find_map"]))
+        self.assertFalse([m for m in self.messages if m[0] in ("showerror", "showwarning")], self.messages)
 
     def test_arabic_header_puts_each_label_right_of_its_field(self):
         app = self.open("ar")

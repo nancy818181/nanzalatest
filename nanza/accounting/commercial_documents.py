@@ -12,6 +12,7 @@ from database_common import atomic, iso_date, utcnow
 
 KINDS = {"quotation": "QUO", "consignment": "CON", "purchase_order": "PO"}
 CENT = Decimal("0.01")
+QUOTE_CONVERSION = "sales-invoice"
 
 
 def migrate(connection):
@@ -94,15 +95,43 @@ def get(database, document_id):
     return result
 
 
-def listing(database):
+def listing(database, *, quotation_search=None):
     with database.connect() as connection:
-        return [
+        documents = [
             dict(row)
             for row in connection.execute(
                 """SELECT d.id,d.number,d.kind,d.doc_date,d.status,
             d.currency,d.revision,p.name party_name FROM commercial_documents d JOIN parties p ON p.id=d.party_id ORDER BY d.id DESC"""
             )
         ]
+
+    if quotation_search is None:
+        return documents
+    terms = quotation_search.casefold().split()
+    return quotation_matches(database, documents, terms)
+
+
+def quotation_matches(database, documents, terms):
+    quotations = {doc["id"]: doc for doc in documents if doc["kind"] == "quotation"}
+    if not terms:
+        return list(quotations.values())
+    matches = []
+    with database.connect() as connection:
+        for record in connection.execute(
+            "SELECT id, lines FROM commercial_documents WHERE kind='quotation' ORDER BY id DESC"
+        ):
+            doc = quotations.get(record["id"])
+            if doc is None:
+                continue
+            caption = f"{doc['number']} {doc['party_name']}".casefold()
+            if all(term in caption for term in terms):
+                matches.append(doc)
+                continue
+            for index, line in enumerate(json.loads(record["lines"]), 1):
+                item = f"{line['sku']} {line['description']}"
+                if all(term in f"{caption} {item.casefold()}" for term in terms):
+                    matches.append({**doc, "line_number": index, "matched_item": item.strip()})
+    return matches
 
 
 @atomic
@@ -111,6 +140,8 @@ def save(database, header, rows, user, document_id=None):
     if kind not in KINDS:
         raise ValueError("Choose quotation, consignment or purchase order")
     day = iso_date(header.get("doc_date"))
+    if kind == "quotation":
+        assert_quotation_year(database, day)
     database._assert_period_open(day)
     currency = str(header.get("currency") or "").upper()
     if currency not in database.currency_codes():
@@ -124,8 +155,14 @@ def save(database, header, rows, user, document_id=None):
         ).fetchone()
         if not party:
             raise ValueError("Choose a customer or supplier")
+        if kind == "quotation" and party["kind"] not in ("customer", "both"):
+            raise ValueError("Choose a customer for a quotation")
         if kind == "purchase_order" and party["kind"] not in ("supplier", "both"):
             raise ValueError("Choose a supplier for a purchase order")
+        if kind == "quotation":
+            from invoice_calc import calculate
+
+            priced = calculate(rows, exact=True)["lines"]
         for index, row in enumerate(rows, 1):
             description = str(row.get("description") or "").strip()
             if not description:
@@ -145,6 +182,8 @@ def save(database, header, rows, user, document_id=None):
                 raise ValueError(f"Unknown or inactive item {sku}")
             base = (qty * price).quantize(CENT)
             tax = (base * rate / 100).quantize(CENT)
+            if kind == "quotation":
+                base, tax = priced[index - 1]["subtotal"], priced[index - 1]["vat"]
             lines.append(
                 {
                     "description": description,
@@ -152,6 +191,9 @@ def save(database, header, rows, user, document_id=None):
                     "quantity": str(qty),
                     "unit_price": str(price),
                     "vat_rate": str(rate),
+                    **({"unit": str(row.get("unit") or ""),
+                        "discount_percent": str(priced[index - 1]["discount_percent"])}
+                       if kind == "quotation" else {}),
                     "subtotal": str(base),
                     "vat": str(tax),
                     "total": str(base + tax),
@@ -376,6 +418,8 @@ def receive(database, document_id, body, user):
 
 @atomic
 def invoice(database, document_id, body, user):
+    if body.get("reference") == QUOTE_CONVERSION or quote_invoice_id(database, document_id):
+        raise ValueError("Open the linked Sales Invoice from Quotations")
     reference, fingerprint, old = _request(database, document_id, "invoice", body)
     if old:
         return database.invoice_detail(old["invoice_id"])
@@ -455,12 +499,90 @@ def invoice(database, document_id, body, user):
     return database.invoice_detail(invoice_id)
 
 
+def quote_invoice_id(database, document_id):
+    with database.connect() as connection:
+        row = connection.execute(
+            "SELECT invoice_id FROM commercial_events WHERE document_id=? AND kind='invoice' AND reference=?",
+            (document_id, QUOTE_CONVERSION),
+        ).fetchone()
+    return row["invoice_id"] if row else None
+
+
+def assert_quotation_year(database, day):
+    fiscal_year = getattr(database, "fiscal_year", None)
+    if fiscal_year and int(day[:4]) != int(fiscal_year):
+        raise ValueError("The document date must be in the selected fiscal year")
+
+
+@atomic
+def convert_quotation(database, document_id, day, revision, user):
+    from invoice_calc import calculate
+
+    quote = get(database, document_id)
+    if quote["kind"] != "quotation":
+        raise ValueError("Choose a sales quotation")
+    linked = [event for event in quote["events"] if event["kind"] == "invoice"]
+    if linked:
+        event = next((event for event in linked if event["reference"] == QUOTE_CONVERSION), linked[0])
+        result = database.invoice_detail(event["invoice_id"])
+        return _conversion_result(database, quote, result)
+    if quote["status"] == "cancelled" or quote["revision"] != int(revision):
+        raise ValueError("Reload the quotation before converting")
+    day = iso_date(day)
+    assert_quotation_year(database, day)
+    database._assert_period_open(day)
+    if day < quote["doc_date"] or (quote["valid_until"] and day > quote["valid_until"]):
+        raise ValueError("The invoice date must fall within the quotation validity period")
+    vat_rate = database.vat_rate_percent()
+    lines = [{**line, "item_code": line["sku"],
+              "vat_rate": str(vat_rate) if Decimal(line["vat_rate"]) else "0"}
+             for line in quote["lines"]]
+    priced = calculate(lines, exact=True)
+    saved_id = database.create_manual_invoice({
+        "kind": "sale", "status": "review", "invoice_date": day,
+        "party_name": quote["party_name"], "commercial_party_id": quote["party_id"],
+        "currency": quote["currency"], "source_file": quote["number"],
+        "description": f"From {quote['number']}",
+    }, priced["lines"], user, move_stock=False)
+    with database.connect() as connection:
+        if quote["status"] == "draft":
+            connection.execute(
+                "UPDATE commercial_documents SET status='confirmed',revision=revision+1,updated_at=? WHERE id=?",
+                (utcnow(), document_id),
+            )
+        _event(connection, document_id, "invoice", QUOTE_CONVERSION, "", day,
+               [{"line": index, "quantity": line["quantity"]}
+                for index, line in enumerate(lines, 1)], user, invoice_id=saved_id)
+    return _conversion_result(database, quote, database.invoice_detail(saved_id))
+
+
+def _conversion_result(database, quote, result):
+    invoice = result["invoice"]
+    try:
+        rate = database._converted_amount(1, invoice["currency"], "USD", invoice["invoice_date"])
+    except ValueError:
+        rate = None
+    return {**result, "quotation_number": quote["number"],
+            "usd_per_currency": str(rate) if rate is not None else None}
+
+
+def quotation_for_invoice(connection, invoice_id):
+    row = connection.execute(
+        """SELECT d.number FROM commercial_events e JOIN commercial_documents d ON d.id=e.document_id
+           WHERE e.invoice_id=? AND e.kind='invoice' AND e.reference=? AND d.kind='quotation'""",
+        (invoice_id, QUOTE_CONVERSION),
+    ).fetchone()
+    return row["number"] if row else None
+
+
 def guard_invoice_edit(database, invoice_id, item=None):
     with database.connect() as connection:
         if not connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='commercial_events'"
         ).fetchone():
             return
+        if item is not None and quotation_for_invoice(connection, invoice_id):
+            raise ValueError("Use Sales Invoice approval to post this linked draft")
         linked = connection.execute(
             "SELECT 1 FROM commercial_events WHERE invoice_id=?", (int(invoice_id),)
         ).fetchone()

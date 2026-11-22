@@ -3785,6 +3785,8 @@ AR.update({
     "Receipt reference": "مرجع الاستلام", "Create draft — do not post": "إنشاء مسودة دون ترحيل",
     "Supplier invoice no. (purchases)": "رقم فاتورة المورد (المشتريات)", "Supplier tax ID": "رقم المورد الضريبي",
     "Invoice draft": "مسودة فاتورة", "Not saved": "لم يتم الحفظ",
+    "Matched item line": "سطر الصنف المطابق", "Linked Sales Invoice": "فاتورة المبيعات المرتبطة",
+    "Save the quotation, then convert it to a draft for review in Sales Invoice.": "احفظ عرض السعر ثم حوّله إلى مسودة لمراجعتها في فاتورة المبيعات.",
 })
 
 

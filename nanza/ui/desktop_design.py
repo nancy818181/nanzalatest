@@ -146,8 +146,17 @@ class _TabBar:
         notebook.bind("<<NotebookTabChanged>>", lambda _e: self.rebuild(), add="+")
         self.bar.bind("<Map>", lambda _e: self.rebuild(), add="+")
         self.signature = None
+        self.current = None
+        self.underline = None
         self.rebuild()
+        self._watch_id = None
+        self.bar.bind("<Destroy>", self._cancel_watch, add="+")
         self._watch()
+
+    def _cancel_watch(self, event):
+        if event.widget is self.bar and self._watch_id is not None:
+            self.bar.after_cancel(self._watch_id)
+            self._watch_id = None
 
     def _watch(self):
         """Tabs added, renamed (language), hidden or shown after the bar was built are picked up within a second."""
@@ -155,7 +164,7 @@ class _TabBar:
             if not self.bar.winfo_exists(): return
             signature = tuple((t, self.nb.tab(t, "text"), self.nb.tab(t, "state")) for t in self.nb.tabs())
             if signature != self.signature: self.rebuild()
-            self.bar.after(1000, self._watch)
+            self._watch_id = self.bar.after(1000, self._watch)
         except tk.TclError:
             pass
 
@@ -183,35 +192,50 @@ class _TabBar:
             pass
 
     def rebuild(self):
-        """Re-read the tabs (a tab may have been added, renamed - e.g. translated - hidden or shown)."""
+        """Refresh labels only when tabs change, and update selection in place."""
         try:
-            self.signature = tuple((t, self.nb.tab(t, "text"), self.nb.tab(t, "state")) for t in self.nb.tabs())
-            tabs = [t for t in self.nb.tabs() if self.nb.tab(t, "state") != "hidden"]
+            signature = tuple((t, self.nb.tab(t, "text"), self.nb.tab(t, "state")) for t in self.nb.tabs())
             current = self.nb.select()
-            for widget in self.inner.winfo_children(): widget.destroy()
-            self.buttons = {}
-            for tab in tabs:
-                active = tab == current; disabled = self.nb.tab(tab, "state") == "disabled"
-                text = self.nb.tab(tab, "text")
-                button = tk.Label(self.inner, text=text, padx=self.PAD[0], pady=self.PAD[1], cursor="arrow" if disabled else "hand2",
-                                  bg="white" if active else "#EAF0F6", fg="#9AA8B6" if disabled else NAVY, font=(FONT, 9, "bold"))
-                if not disabled:
-                    button.bind("<Button-1>", lambda _e, t=tab: self.nb.select(t))
-                    if not active:
-                        button.bind("<Enter>", lambda _e, b=button: b.configure(bg="#F5EBD4")); button.bind("<Leave>", lambda _e, b=button: b.configure(bg="#EAF0F6"))
-                self.buttons[tab] = button
-            self.inner.update_idletasks(); self._resize()
-            if current in self.buttons: self.reveal(self.buttons[current])
-            self._underline(current)
+            if signature != self.signature:
+                for widget in self.inner.winfo_children():
+                    widget.destroy()
+                self.buttons.clear()
+                self.underline = None
+                self.current = None
+                for tab, text, state in signature:
+                    if state == "hidden":
+                        continue
+                    disabled = state == "disabled"
+                    button = tk.Label(self.inner, text=text, padx=self.PAD[0], pady=self.PAD[1],
+                                      cursor="arrow" if disabled else "hand2", bg="#EAF0F6",
+                                      fg="#9AA8B6" if disabled else NAVY, font=(FONT, 9, "bold"))
+                    if not disabled:
+                        def paint(color, tab=tab, button=button):
+                            if self.current != tab:
+                                button.configure(bg=color)
+
+                        button.bind("<Button-1>", lambda _e, tab=tab: self.nb.select(tab))
+                        button.bind("<Enter>", lambda _e, paint=paint: paint("#F5EBD4"))
+                        button.bind("<Leave>", lambda _e, paint=paint: paint("#EAF0F6"))
+                    self.buttons[tab] = button
+                self.signature = signature
+                self._resize()
+            if current != self.current:
+                previous = self.buttons.get(self.current)
+                if previous is not None:
+                    previous.configure(bg="#EAF0F6")
+                if self.underline is not None:
+                    self.underline.destroy()
+                    self.underline = None
+                self.current = current
+                button = self.buttons.get(current)
+                if button is not None:
+                    button.configure(bg="white")
+                    self.underline = tk.Frame(button, bg=GOLD, height=2)
+                    self.underline.place(relx=0, rely=1.0, relwidth=1.0, height=2, anchor="sw")
+                    self.reveal(button)
         except tk.TclError:
             pass
-
-    def _underline(self, current):
-        button = self.buttons.get(current)
-        if button is None: return
-        try:
-            line = tk.Frame(button, bg=GOLD, height=2); line.place(relx=0, rely=1.0, relwidth=1.0, height=2, anchor="sw")
-        except tk.TclError: pass
 
     def reveal(self, button):
         """All tabs are laid out in visible rows; keep the active row in the viewport."""

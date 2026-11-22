@@ -146,6 +146,16 @@ def build_side_menu(app, holder, attributes, pages, names):
             button.pack(fill="x")
             button.bind("<Enter>", lambda _e, b=button: b.config(bg=MENU_HOVER) if b.cget("bg") == MENU_BG else None)
             button.bind("<Leave>", lambda _e, b=button: b.config(bg=MENU_BG) if b.cget("bg") == MENU_HOVER else None)
+            if attribute == "sales_tab":
+                def open_quotations(page=page):
+                    app.select_main_tab(page)
+                    app.open_commercial_documents(quotations_only=True)
+
+                quotation = tk.Button(body, text="Quotations", command=open_quotations,
+                                      bg=MENU_BG, fg=MENU_TEXT, anchor="w", activebackground=GOLD,
+                                      activeforeground=NAVY, border=0, relief="flat",
+                                      font=("Segoe UI", 10), padx=26, pady=4, cursor="hand2")
+                quotation.pack(fill="x")
             buttons[str(page)] = button
     return [buttons[str(page)] for page in pages]
 

@@ -1018,11 +1018,19 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             self.page_title._title.configure(text=self.tab_names[index])
         except (AttributeError,ValueError,IndexError,tk.TclError): pass
         side=getattr(self,"side_menu_mode",False)
+        selection = (self.main_notebook, selected)
+        previous = self.__dict__.get("_painted_page")
+        if previous == selection:
+            return
         for page,button in zip(getattr(self,"main_tab_pages",[]),getattr(self,"tab_buttons",[])):
+            if previous and previous[0] is self.main_notebook and str(page) not in (previous[1], selected):
+                continue
             if side:
                 import desktop_layout
                 if desktop_layout.colour_menu_button(button,str(page)==selected): continue
             button.config(bg=GOLD if str(page)==selected else NAVY,fg=NAVY if str(page)==selected else "white")
+        if self.tab_buttons:
+            self._painted_page = selection
 
     def show_tab_window(self,start,selected_index=None):
         maximum=max(0,len(self.main_tab_pages)-6); self.visible_tab_start=max(0,min(start,maximum))

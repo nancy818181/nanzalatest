@@ -75,7 +75,7 @@ class FinalFeaturesMixin:
                 if days <= 30: tk.Label(bar, text=f"Account expires in {days} day(s) - ask the administrator to renew", bg=NAVY, fg=GOLD, font=("Segoe UI", 8, "bold")).pack(side="left", padx=8)
             except ValueError: pass
 
-    def scrollable_page(self, parent, *, fit_width=False):
+    def scrollable_page(self, parent, *, fit_width=False, fill_height=False):
         """A notebook page that exposes long and wide forms on small displays."""
         outer = tk.Frame(parent, bg=LIGHT)
         canvas = tk.Canvas(outer, bg=LIGHT, highlightthickness=0)
@@ -84,7 +84,8 @@ class FinalFeaturesMixin:
         inner = tk.Frame(canvas, bg=LIGHT); window = canvas.create_window((0, 0), window=inner, anchor="nw")
         def resize(_event=None):
             width = canvas.winfo_width() if fit_width else max(canvas.winfo_width(), inner.winfo_reqwidth())
-            canvas.itemconfigure(window, width=width, height=inner.winfo_reqheight())
+            height = max(inner.winfo_reqheight(), canvas.winfo_height()) if fill_height else inner.winfo_reqheight()
+            canvas.itemconfigure(window, width=width, height=height)
             canvas.configure(scrollregion=canvas.bbox("all"))
             if fit_width:
                 return

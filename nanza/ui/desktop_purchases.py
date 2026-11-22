@@ -25,7 +25,7 @@ class PurchasesMixin:
         self.purchase_notebook=nested
         purchases_outer=tk.Frame(nested,bg=LIGHT)
         purchase_totals=tk.Frame(purchases_outer,bg=LIGHT); purchase_totals.pack(side="bottom",fill="x")
-        purchase_body_outer, purchase_body = self.scrollable_page(purchases_outer, fit_width=True)
+        purchase_body_outer, purchase_body = self.scrollable_page(purchases_outer, fit_width=True, fill_height=True)
         purchase_body_outer.pack(fill="both", expand=True)
         purchase_costs = tk.Frame(nested, bg=LIGHT)
         expenses_outer, expenses = self.scrollable_page(nested)
@@ -175,11 +175,11 @@ class PurchasesMixin:
                                           minsize=field_width if used and column % 2 else 0)
             short = [c for c in cells if c[0] == "short"]; wide = [c for c in cells if c[0] == "wide"]
             def place(label, widget, row, pair, span=1):
-                label.grid(row=row, column=2 * pair, sticky="e", padx=(pair_gap if pair else 0, label_gap), pady=3)
+                label.grid(row=row, column=2 * pair, sticky="e", padx=(pair_gap if pair else 0, label_gap), pady=1)
                 extra = {}
                 if isinstance(widget, tk.Entry) and target:  # tk.Entry is shorter than a ttk.Combobox: same height in the row
                     extra["ipady"] = max(0, (target - widget.winfo_reqheight()) // 2)
-                widget.grid(row=row, column=2 * pair + 1, columnspan=span, sticky="ew", pady=3, **extra)
+                widget.grid(row=row, column=2 * pair + 1, columnspan=span, sticky="ew", pady=1, **extra)
             for index, (_k, label, widget) in enumerate(short):
                 place(label, widget, index // pairs, index % pairs)
             first = (len(short) + pairs - 1) // pairs
@@ -205,12 +205,12 @@ class PurchasesMixin:
         f["discount_percent"] = tk.StringVar(value="0"); f["discount_amount"] = tk.StringVar(value="0"); f["discount_mode"] = "percent"
         f["doc"] = tk.StringVar(value="Invoice")  # 2.9.54: Invoice / Return (goods back to the supplier) / Debit Note / Credit Note
         import desktop_design as design  # 2.9.134: a framed panel with a gold-marked title instead of the plain group box
-        box_outer, box = design.panel(page, pady=5); box_outer.pack(fill="x", padx=8, pady=(2, 3))
+        box_outer, box = design.panel(page, pady=2); box_outer.pack(fill="x", padx=8, pady=(1, 1))
         if totals_parent is None:
             PurchasesMixin._fit_panel_to_view(self, box_outer, 8)
         # Title, lookup and Excel actions in one row: the lookup (label + box) stays together and the two Excel
         # buttons move to a second line only when the row does not fit (flow_toolbars at the end of this method).
-        heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 4))
+        heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 1))
         tk.Label(heading, text="Purchase Invoice", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 12))
         find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", padx=(0, 6))
         f["find"] = tk.StringVar()
@@ -221,14 +221,14 @@ class PurchasesMixin:
         self.action_button(heading, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(6, 3))
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
         # The existing controls and callbacks stay in the same order below.
-        actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x", pady=(6, 2))
+        actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x", pady=(1, 0))
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
         f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
         PurchasesMixin._purchase_header_grid(self, fields, [
             ("Supplier", lambda parent: ttk.Combobox(parent, textvariable=v["supplier"], width=12)),
             ("Supplier Invoice No.", lambda parent: tk.Entry(parent, textvariable=v["number"], width=10)),
             ("Date", lambda parent: self.date_entry(parent, v["date"], 10)),
-            ("Due", lambda parent: self.date_entry(parent, v["due"], 10)),
+            ("Due Date", lambda parent: self.date_entry(parent, v["due"], 10)),
             ("Currency", lambda parent: ttk.Combobox(parent, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=6)),
             ("Type", lambda parent: ttk.Combobox(parent, textvariable=v["type"], values=["Purchases", "Assets"], state="readonly", width=9)),
             ("Document", lambda parent: ttk.Combobox(parent, textvariable=f["doc"], values=list(PURCHASE_DOCUMENTS), state="readonly", width=10)),
@@ -243,7 +243,7 @@ class PurchasesMixin:
         doc_box = f["header_widgets"]["Document"]
         doc_box.bind("<<ComboboxSelected>>",lambda _e:self.purchase_doc_changed())
         card_bg = "white"
-        totals_box = tk.Frame(totals_parent or page, bg=card_bg, padx=10, pady=4,
+        totals_box = tk.Frame(totals_parent or page, bg=card_bg, padx=6, pady=2,
                               highlightthickness=1, highlightbackground="#DDE4EC")
         r2 = tk.Frame(totals_box, bg=card_bg)
         r2.pack(side="top", fill="x")
@@ -257,11 +257,11 @@ class PurchasesMixin:
             entry.bind("<KeyRelease>", lambda _event, k=key: self.purchase_amounts_changed(k))
 
         summary = tk.Frame(totals_box, bg=card_bg)
-        summary.pack(side="right")
+        summary.pack(side="right", padx=(4, 0))
         for row, column, key, label in (
             (0, 0, "gross_summary", "Total"), (0, 2, "discount_value", "Discount"),
             (1, 0, "ht_summary", "Total HT"), (1, 2, "vat_summary", "VAT"),
-            (2, 2, "total", "TOTAL TTC"),
+            (1, 4, "total", "TOTAL TTC"),
         ):
             tk.Label(summary, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED).grid(
                 row=row, column=column, sticky="w", padx=(10, 5)
@@ -282,6 +282,7 @@ class PurchasesMixin:
         amount_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("amount"))
         f["discount_summary"] = tk.Label(totals_box, text="", bg=card_bg, fg=RED)
         f["discount_summary"].pack(side="bottom", anchor="w")
+        f["discount_summary"].pack_forget()
         # Keep the invoice header focused on supplier, account and payment details.
         # The treatment/dimension controls are placed after the items table below,
         # where they remain part of this same invoice workflow and scroll together.
@@ -309,9 +310,9 @@ class PurchasesMixin:
         f["items_sheet"] = EditableSheet(self, items, [("line", "#", 35, "center"), ("item_code", "Item", 125, "w"), ("name", "Description", 410, "w"), ("quantity", "Qty", 70, "e"),
             ("unit", "Unit", 60, "center"), ("unit_cost", "Unit Price", 95, "e"), ("discount_percent", "Discount %", 85, "e"), ("vat_flag", "VAT", 50, "center"), ("total", "Net", 105, "e")],
             ["item_code", "name", "quantity", "unit", "unit_cost", "discount_percent", "vat_flag"], self.purchase_item_changed,
-                    height=8)  # 2.9.87: VAT Yes / No per line; 2.9.94: 8 rows so the totals show on a laptop screen
+                    height=5)
         f["items_sheet"].tree.bind("<F2>", lambda _e: self.purchase_item_lookup())
-        f["items_sheet"].tree.master.pack_configure(expand=True,fill="both")
+        f["items_sheet"].tree.master.pack_configure(expand=True, fill="both", pady=(1, 0))
         tax_options.pack_forget()
         more_state={"shown":False}
         def toggle_purchase_more():
@@ -322,7 +323,7 @@ class PurchasesMixin:
             else:
                 tax_options.pack_forget(); more_button.config(text="More ▾")
         r4 = tk.Frame(actions, bg=LIGHT); r4.pack(side="top", anchor="w", pady=(2, 0))
-        r5 = tk.Frame(actions, bg=LIGHT); r5.pack(side="top", anchor="w", pady=(6, 0))  # 2.9.95: row 1 the invoice, row 2 the PDF
+        r5 = tk.Frame(actions, bg=LIGHT); r5.pack(side="top", anchor="w", pady=(1, 0))
         more_button=self.action_button(r4,"More ▾",toggle_purchase_more); more_button.pack(side="left",padx=(0,4))
         f["pdf_label"] = tk.Label(r5, text="No PDF", bg=LIGHT, fg=MUTED)
         self.action_button(r4, "New", self.new_purchase).pack(side="left", padx=(0, 3))
@@ -605,6 +606,7 @@ class PurchasesMixin:
         try: discount=self.purchase_discount(taxable)
         except ValueError as exc:
             f["discount_summary"].config(text=str(exc))
+            f["discount_summary"].pack(side="bottom", anchor="w")
             for key in ("discount_value", "ht_summary", "vat_summary", "total"):
                 f[key].config(text="—")
             return
@@ -613,7 +615,7 @@ class PurchasesMixin:
         rows=[r for r in f["items_sheet"].ordered() if (r.get("item_code") or r.get("name"))] if "items_sheet" in f else []
         line_discount=sum(round((_num(r.get("quantity")) or 0)*(_num(r.get("unit_cost")) or 0)*(_num(r.get("discount_percent")) or 0)/100,2) for r in rows)
         f["gross_summary"].config(text=f"{taxable+exempt+line_discount:,.2f}")
-        f["discount_summary"].config(text="")
+        f["discount_summary"].pack_forget()
         f["discount_value"].config(text=f"{discount+line_discount:,.2f}")
         f["ht_summary"].config(text=f"{taxable+exempt-discount:,.2f}")
         f["vat_summary"].config(text=f"{vat:,.2f}")

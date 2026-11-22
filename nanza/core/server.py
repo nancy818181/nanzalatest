@@ -313,7 +313,9 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/commercial"):
             import commercial_documents as commercial
             try:
-                if path == "/api/commercial": return self._json(200,{"items":commercial.listing(self.db)})
+                if path == "/api/commercial":
+                    query = self._query(parsed, "q", "") if self._query(parsed, "quotations") == "1" else None
+                    return self._json(200, {"items": commercial.listing(self.db, quotation_search=query)})
                 document_id=int(path.split("/")[3]); document=commercial.get(self.db,document_id)
                 if path.endswith("/matching"): return self._json(200,commercial.matching(self.db,document_id,self._query(parsed,"language","en")))
                 if path.endswith("/print"): return self._json(200,commercial.sections(document,self._query(parsed,"language","en")))
@@ -1112,13 +1114,27 @@ class ApiHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/commercial"):
             import commercial_documents as commercial
             try:
-                if path == "/api/commercial": result=commercial.save(self.db,body.get("header",{}),body.get("rows"),user["id"],body.get("id"))
+                year = self.headers.get("X-Fiscal-Year")
+                if path == "/api/commercial":
+                    header = body.get("header", {})
+                    if year and header.get("kind") == "quotation" and self.db._date_year(header.get("doc_date")) != int(year):
+                        raise ValueError("The quotation date must be in the selected fiscal year")
+                    result = commercial.save(self.db, header, body.get("rows"), user["id"], body.get("id"))
                 else:
-                    document_id=int(path.split("/")[3]); action=path.rsplit("/",1)[-1]
-                    if action == "status": result=commercial.set_status(self.db,document_id,body.get("status"),body.get("revision"),user["id"])
-                    elif action == "receive": result=commercial.receive(self.db,document_id,body,user["id"])
-                    elif action == "invoice": result=commercial.invoice(self.db,document_id,body,user["id"])
-                    else: raise ValueError("Unknown commercial document action")
+                    document_id = int(path.split("/")[3])
+                    action = path.rsplit("/", 1)[-1]
+                    if action == "status":
+                        result = commercial.set_status(self.db, document_id, body.get("status"), body.get("revision"), user["id"])
+                    elif action == "receive":
+                        result = commercial.receive(self.db, document_id, body, user["id"])
+                    elif action == "invoice":
+                        result = commercial.invoice(self.db, document_id, body, user["id"])
+                    elif action == "convert":
+                        if year and self.db._date_year(body.get("doc_date")) != int(year):
+                            raise ValueError("The invoice date must be in the selected fiscal year")
+                        result = commercial.convert_quotation(self.db, document_id, body.get("doc_date"), body.get("revision"), user["id"])
+                    else:
+                        raise ValueError("Unknown commercial document action")
                 return self._json(201,result)
             except (ValueError,KeyError,TypeError,IndexError,sqlite3.Error,ArithmeticError) as exc: return self._json(400,{"error":str(exc)})
         if self._module_denied(user, path): return

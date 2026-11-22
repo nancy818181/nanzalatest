@@ -175,7 +175,8 @@ class SalesInvoiceMixin:
         toolbar=tk.Frame(self.sales_tab,bg=LIGHT); toolbar.pack(fill="x",padx=10,pady=(2,0))
         self.action_button(toolbar,"Add Line",self.add_sales_item).pack(side="left",padx=2)
         tk.Button(toolbar,text="Delete Line",command=self.remove_sales_item,bg="#8B1E1E",fg="white",border=0,padx=10,pady=4).pack(side="left",padx=2)
-        tk.Button(toolbar,text="Save",command=lambda:self.save_sales_invoice(True),bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=14,pady=4).pack(side="left",padx=(8,2))
+        self.sales_save_button = tk.Button(toolbar,text="Save",command=lambda:self.save_sales_invoice(True),bg=GOLD,fg=NAVY,font=("Segoe UI",10,"bold"),border=0,padx=14,pady=4)
+        self.sales_save_button.pack(side="left",padx=(8,2))
         tk.Button(toolbar,text="Delete",command=self.delete_sales_invoice,bg="#8B1E1E",fg="white",border=0,padx=12,pady=4).pack(side="left",padx=2)
         tk.Button(toolbar,text="Return (goods back)",command=self.return_open_sales_invoice,bg=NAVY,fg="white",font=("Segoe UI",9,"bold"),border=0,padx=10,pady=4).pack(side="left",padx=2)
         self.action_button(toolbar,"Duplicate",self.duplicate_sales_invoice).pack(side="left",padx=(8,2))
@@ -416,6 +417,9 @@ class SalesInvoiceMixin:
 
     def new_sales_invoice(self,confirm=True):
         if confirm and self.sales_items and not messagebox.askyesno("Sales Invoice","Start a new invoice? Lines that are not saved will be cleared."): return
+        import arabic_ui
+        self.sales_save_button.config(text=arabic_ui.translate("Save"), state="normal")
+        self._sales_quotation = None
         self.sales_edit_id=None; self.sales_items=[]; self.sales_pdf_path=None; self.sales_sheet.delete(*self.sales_sheet.get_children())
         if hasattr(self,"sales_exempt_reason"):
             self.sales_exempt_reason.set(""); self.sales_exempt_article.set("")
@@ -449,11 +453,12 @@ class SalesInvoiceMixin:
         item.setdefault("unit",""); item.setdefault("subtotal",item["net"]); item.setdefault("vat",0.0); item.setdefault("total",item["net"])
         return item
 
-    def add_sales_item(self,item=None):
+    def add_sales_item(self,item=None, *, update_totals=True):
         item=self.recalculate_sales_item(dict(item or {"description":"","quantity":1,"unit":"","unit_price":0,"discount_percent":0,"vat_rate":0 if getattr(self,
                 "sales_treatment",None) is not None and self.sales_treatment.get()!=TAXABLE_LABEL else vat_rate(self)}))
         self.sales_items.append(item); iid=self.sales_sheet.insert("","end",values=self.sales_row_values(item))
-        item["_iid"]=iid; self.update_sales_totals()
+        item["_iid"]=iid
+        if update_totals: self.update_sales_totals()
         if not item["description"]:
             self.sales_sheet.selection_set(iid); self.sales_sheet.focus(iid)
             sheet = self.sales_sheet
@@ -741,8 +746,8 @@ class SalesInvoiceMixin:
         except Exception as exc:
             messagebox.showerror("Manual Entry",str(exc))
 
-    def open_sales_invoice(self):
-        row=getattr(self,"sales_open_map",{}).get(self.sales_open_choice.get())
+    def open_sales_invoice(self, *, invoice_id=None):
+        row = {"id": invoice_id} if invoice_id is not None else self.sales_open_map.get(self.sales_open_choice.get())
         if not row: return False
         if self.sales_edit_id and getattr(self,"_sales_loaded_state",None)!=self.sales_form_state():
             prompt="Reload this invoice?" if self.sales_edit_id==row["id"] else "Open another invoice?"
@@ -753,8 +758,24 @@ class SalesInvoiceMixin:
             if not messagebox.askyesno("Sales Invoice","Open this invoice? The lines you are typing now will be cleared."):
                 self.sales_open_choice.set("")
                 return False
-        try: items=self.client.invoice_items(row["id"]); detail=next(r for r in self.client.invoices() if r["id"]==row["id"])
-        except Exception as exc: messagebox.showerror("Sales Invoice",str(exc)); return False
+        try:
+            record = self.client.invoice_detail(row["id"])
+            detail, items = record["invoice"], record["items"]
+            if detail["kind"] != "sale":
+                raise ValueError("Choose a sales invoice")
+        except Exception as exc:
+            messagebox.showerror("Sales Invoice", str(exc))
+            return False
+        self._sales_quotation = record.get("quotation_number")
+        self._sales_linked_status = detail["status"]
+        import arabic_ui
+        self.sales_save_button.config(text=arabic_ui.translate("Post") if self._sales_quotation else arabic_ui.translate("Save"),
+                                      state="disabled" if self._sales_quotation and detail["status"] != "review" else "normal")
+        if invoice_id is not None:
+            self.sales_open_choice.set(next(
+                (key for key, item in self.sales_open_map.items() if item["id"] == invoice_id), ""
+            ))
+
         self.sales_edit_id=row["id"]; self.sales_items=[]; self.sales_sheet.delete(*self.sales_sheet.get_children())
         if hasattr(self,"sales_exempt_reason"):  # 2.9.113
             from tax_adjustments import NEEDS_ARTICLE
@@ -796,9 +817,11 @@ class SalesInvoiceMixin:
         for line in items or [{"description":"Invoice total","quantity":1,"unit_price":float(detail["subtotal"] or 0),"vat_rate":11}]:
             item={"item_code":line.get("item_code") or "","description":line["description"],"quantity":float(line["quantity"]),"unit":line.get("unit") or "",
                   "unit_price":float(line["unit_price"]),"discount_percent":float(line.get("discount_percent") or 0),"vat_rate":float(line["vat_rate"])}
-            self.add_sales_item(item)
+            self.add_sales_item(item, update_totals=False)
+        self.update_sales_totals()
         status={"posted":"POSTED","review":"DRAFT"}.get(detail.get("status"),str(detail.get("status")).upper())
-        self.sales_mode_label.config(text=f"EDITING {detail['invoice_number']} ({status})",bg="#dfe6ee")
+        source = f"  |  {self._sales_quotation}" if self._sales_quotation else ""
+        self.sales_mode_label.config(text=f"EDITING {detail['invoice_number']} ({status}){source}",bg="#dfe6ee")
         self._sales_loaded_state=self.sales_form_state()
         self.update_sales_navigation()
         return True
@@ -814,6 +837,22 @@ class SalesInvoiceMixin:
         return tuple(field.get() for field in fields) + exempt,lines
 
     def save_sales_invoice(self,post=False):
+        if self.sales_edit_id and self.__dict__.get("_sales_quotation"):
+            if not post or self._sales_linked_status != "review":
+                return messagebox.showinfo("Sales Invoice", "Linked quotation invoice. Use Post to approve the draft.")
+            if self._sales_loaded_state != self.sales_form_state():
+                return messagebox.showwarning("Sales Invoice", "Reload the linked draft before posting. Posting uses the saved quotation values.")
+            if not messagebox.askyesno("Sales Invoice", f"Post {self.sales_no.get()}?"):
+                return
+            try:
+                result = self.client.approve_invoices([self.sales_edit_id])
+                if not result["approved"]:
+                    return messagebox.showwarning("Sales Invoice", "\n".join(result["skipped"]))
+            except (RuntimeError, OSError, ValueError) as exc:
+                return messagebox.showerror("Sales Invoice", str(exc))
+            self.open_sales_invoice(invoice_id=self.sales_edit_id)
+            self.load_dashboard(); self.load_invoices(); self.load_journal(); self.load_trial()
+            return
         self.update_sales_totals()
         lines=[{k:v for k,v in item.items() if not k.startswith("_") and k!="net"} for item in self.sales_items if str(item.get("description") or "").strip()]
         if not self.sales_party.get().strip(): return messagebox.showwarning("Sales Invoice","Choose or type the customer")

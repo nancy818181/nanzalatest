@@ -583,6 +583,15 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             if require_other and row["created_by"] == user["id"]: skipped.append(f"{row['invoice_number']}: prepared by you - another user must approve it"); continue
             try: self._assert_period_open(row["invoice_date"]); self._assert_vat_open(row["invoice_date"])
             except ValueError as exc: skipped.append(f"{row['invoice_number']}: {exc}"); continue
+            import commercial_documents
+            import inventory
+
+            with self.connect() as db:
+                source = commercial_documents.quotation_for_invoice(db, invoice_id)
+            if source:
+                # Conversion records the invoice and its lines without stock.
+                # Dispatch joins this approval transaction and rolls back with it.
+                inventory.issue_for_invoice(self, invoice_id, self.invoice_detail(invoice_id)["items"], user["id"])
             with self.connect() as db:
                 db.execute("""UPDATE invoices SET status='posted',posted_at=?,posted_by=?,rejection_reason=NULL
                     WHERE id=? AND status='review'""", (utcnow(),user["id"],invoice_id))
@@ -882,7 +891,12 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
                 COALESCE((SELECT DSUM(CAST(ret.vat AS REAL)) FROM invoice_items ret JOIN invoices ri ON ri.id=ret.invoice_id
                     WHERE ri.linked_invoice_id=? AND ri.status NOT IN ('cancelled','deleted','void') AND ret.origin_item_id=ii.id),0) returned_vat
                 FROM invoice_items ii WHERE ii.invoice_id=? ORDER BY ii.id""",(invoice_id,invoice_id,invoice_id,invoice_id,invoice_id))]
-        return {"invoice":invoice,"items":items}
+            import commercial_documents
+            source = commercial_documents.quotation_for_invoice(db, invoice_id)
+        result = {"invoice": invoice, "items": items}
+        if source:
+            result["quotation_number"] = source
+        return result
 
     def list_invoices(self, limit=None, _invoice_id=None):
         """Every invoice (2.9.58: the list stopped at the newest 500, so with a big file imported invoices, the
