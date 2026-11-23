@@ -462,10 +462,28 @@ class V22Mixin:
         box_basis.bind("<<ComboboxSelected>>", lambda _e: self.load_dashboard_charts())
         grid = tk.Frame(box, bg=LIGHT); grid.pack(fill="both", expand=True, pady=(4, 0))
         self.dash_canvases = {}
+        pending_draw = None
+
+        def redraw():
+            nonlocal pending_draw
+            pending_draw = None
+            if grid.winfo_exists():
+                self.draw_dashboard_charts()
+
+        def schedule_redraw(_event=None):
+            nonlocal pending_draw
+            if pending_draw is None:
+                pending_draw = grid.after_idle(redraw)
+
+        def cancel_redraw(event):
+            if event.widget is grid and pending_draw is not None:
+                grid.after_cancel(pending_draw)
+
+        grid.bind("<Destroy>", cancel_redraw)
         for index, key in enumerate(("months", "receivables", "top_clients", "cash")):
             canvas = tk.Canvas(grid, bg="white", highlightthickness=1, highlightbackground="#dfe6ee", height=190)
             canvas.grid(row=index // 2, column=index % 2, sticky="nsew", padx=4, pady=4); self.dash_canvases[key] = canvas
-            canvas.bind("<Configure>", lambda _e: self.draw_dashboard_charts())
+            canvas.bind("<Configure>", schedule_redraw)
         for col in range(2): grid.grid_columnconfigure(col, weight=1)
         for row in range(2): grid.grid_rowconfigure(row, weight=1)
 

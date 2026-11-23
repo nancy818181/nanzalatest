@@ -569,7 +569,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self._dimension_groups=[]; self._dimension_sheets=[]
         # Forget the widgets of the previous screen (switching company / year rebuilds every page).
         for name in ("purchase_form","expense_form","payment_forms","trial_state","statement_state","voucher_sheet","budget_sheet","departments_tree","pr_tree",
-                "vat_summary_tree","_dimensions","_account_cache","items_tree","sd_find_box","warehouses_tree","ir_warehouse_box","ir_item_box",
+                "vat_summary_tree","_dimensions","_account_cache","items_tree","inventory_rows","warehouse_rows","sd_find_box","warehouses_tree","ir_warehouse_box","ir_item_box",
                 "ir_category_box","stock_sheet","_cash_accounts","_expense_accounts",
                      "sio_sheet","pc_sheet","pc_find_box","sio_wh_box","pc_wh_box","cat_tree","item_boxes","ir_subcategory_box","ir_unit_box","ir_supplier_box","_all_accounts"):
             self.__dict__.pop(name,None)
@@ -1049,7 +1049,9 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         except ValueError: pass
 
     def currency_changed(self):
-        self.load_dashboard(); self.load_invoices(); self.load_journal(); self.load_trial(); self.load_profit_loss(); self.load_financial_reports(); self.load_ageing_report()
+        self.load_dashboard(); self.load_invoices(); self.load_journal(); self.load_trial(); self.load_profit_loss(); self.load_financial_reports()
+        if self.__dict__.get("_ageing_loaded") and self.__dict__.get("aging_tree") is not None:
+            self.load_ageing_report()
 
     def table(self,parent,columns):
         search_bar=tk.Frame(parent,bg=LIGHT); search_bar.pack(fill="x",padx=10,pady=(10,0))
@@ -1361,13 +1363,14 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         if hasattr(self,"accounts_tree"): self.load_accounts()
         return account
 
-    def open_account_lookup(self,variable,include_groups=False):
-        try: all_accounts=self.client.accounts()
+    def open_account_lookup(self,variable,include_groups=False,*,account_rows=None):
+        read_only = account_rows is not None
+        try: all_accounts=account_rows if read_only else self.client.accounts()
         except Exception as exc: return messagebox.showerror("Account Search",str(exc))
         accounts=[row for row in all_accounts if str(row.get("code") or "").isdigit() and len(str(row["code"])) >= (3 if include_groups else 9)]
         parents={str(row["code"]):row for row in all_accounts if len(str(row.get("code") or ""))==4 and str(row["code"]).isdigit()}
         previous_grab=self.grab_current()
-        window=tk.Toplevel(self); window.title("Find or Create Account - F2")
+        window=tk.Toplevel(self); window.title("Account Search" if read_only else "Find or Create Account - F2")
         fit_dialog=getattr(self,"fit_dialog",None)
         if fit_dialog: fit_dialog(window,820,590,320,320)
         else: SaberApp.fit_dialog(self,window,820,590,320,320)
@@ -1409,6 +1412,9 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
                 lambda _event:(None if tree.selection() else tree.selection_set(tree.get_children()[0]),select()) if tree.get_children() else None)
         entry.bind("<Down>",lambda _event:move(1)); entry.bind("<Up>",lambda _event:move(-1))
         entry.bind("<Next>",lambda _event:move(10)); entry.bind("<Prior>",lambda _event:move(-10))
+        if read_only:
+            populate()
+            return window
         tk.Label(window,text="Arrows \u2191 \u2193 choose, Enter selects (or double-click). If it does not exist, create it below.",bg=LIGHT,fg="#5f6b76").pack(pady=(0,5))
         create=tk.LabelFrame(window,text="Create account here (number assigned automatically)",bg=LIGHT,padx=10,pady=8)
         create.pack(fill="x",padx=10,pady=(0,10))

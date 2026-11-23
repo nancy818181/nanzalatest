@@ -170,7 +170,14 @@ class ApiClient:
     def professional_dashboard(self): return self.request("GET","/api/dashboard/professional")
     def dashboard_conversion(self,source,target,date):
         return self.request("GET","/api/dashboard/conversion?"+urlencode({"source":source,"target":target,"date":date}))
-    def invoices(self): return self.request("GET", "/api/invoices")["items"]
+    def invoices(self, *, kind=None):
+        path = f"/api/invoices?{urlencode({'kind': kind})}" if kind else "/api/invoices"
+        rows = self.request("GET", path)["items"]
+        return [row for row in rows if row["kind"] == kind] if kind else rows
+
+    def sales_invoice_choices(self):
+        rows = self.request("GET", "/api/invoices?view=sales-lookup")["items"]
+        return [row for row in rows if row.get("kind", "sale") == "sale" and row.get("status") != "cancelled"]
     def accounts(self): return self.request("GET", "/api/accounts")["items"]
     def next_account_number(self,prefix): return self.request("GET",f"/api/accounts/next-number?{urlencode({'prefix':prefix})}")["account_number"]
     def save_account(self,item): return self.request("POST","/api/accounts",item)["account"]
@@ -314,9 +321,13 @@ class ApiClient:
     def fiscal_year_balance_sheet(self,year,to_date=None,currency=None,convert=False):
         query=urlencode({k:v for k,v in {"year":year,"to_date":to_date,"currency":currency,"convert":"1" if convert else None}.items() if v})
         return self.request("GET",f"/api/fiscal-year/balance-sheet?{query}")["items"]
-    def fiscal_year_journal(self,year,from_date=None,to_date=None,currency=None):
-        query=urlencode({k:v for k,v in {"year":year,"from_date":from_date,"to_date":to_date,"currency":currency}.items() if v})
-        return self.request("GET",f"/api/fiscal-year/journal?{query}")["items"]
+    def fiscal_year_journal(self, year, from_date=None, to_date=None, currency=None, *, entry_number=None):
+        query = urlencode({k: v for k, v in {"year": year, "from_date": from_date, "to_date": to_date,
+                                            "currency": currency, "entry_number": entry_number}.items() if v})
+        return self.request("GET", f"/api/fiscal-year/journal?{query}")["items"]
+
+    def fiscal_year_report_choices(self, year):
+        return self.request("GET", f"/api/fiscal-year/report-choices?{urlencode({'year': year})}")
     def save_party(self, item): return self.request("POST","/api/parties",item)["party"]
     def payments(self): return self.request("GET","/api/payments")["items"]
     def add_payment(self, item): return self.request("POST","/api/payments",item)

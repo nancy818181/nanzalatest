@@ -5,7 +5,7 @@ from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as pl
 import logging
 
 from desktop_stage3_common import (  # 2.9.102: the names this module uses (no more 'import *')
-    ask_new_item_details, asked_item_details, bulk_action, filedialog, GOLD, LIGHT, messagebox,
+    ask_new_item_details, asked_item_details, filedialog, GOLD, LIGHT, messagebox,
     mimetypes, MUTED, NAVY, notify_new_items, Path, prepare_pdf_reading, PURCHASE_USES, read_customs_costs,
     read_invoice_pdf, RED, resolve_item, run_with_progress, simpledialog, tk, ttk
 )
@@ -208,10 +208,7 @@ class PurchasesMixin:
         box_outer, box = design.panel(page, pady=2); box_outer.pack(fill="x", padx=8, pady=(1, 1))
         if totals_parent is None:
             PurchasesMixin._fit_panel_to_view(self, box_outer, 8)
-        # Title, lookup and Excel actions in one row: the lookup (label + box) stays together and the two Excel
-        # buttons move to a second line only when the row does not fit (flow_toolbars at the end of this method).
         heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 1))
-        tk.Label(heading, text="Purchase Invoice", bg=LIGHT, fg=NAVY, font=("Segoe UI", 11, "bold")).pack(side="left", padx=(0, 12))
         find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", padx=(0, 6))
         f["find"] = tk.StringVar()
         tk.Label(find, text="Find purchase", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
@@ -221,7 +218,7 @@ class PurchasesMixin:
         self.action_button(heading, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(6, 3))
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
         # The existing controls and callbacks stay in the same order below.
-        actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x", pady=(1, 0))
+        actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x")
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
         f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
         PurchasesMixin._purchase_header_grid(self, fields, [
@@ -256,22 +253,8 @@ class PurchasesMixin:
             entry.pack(side="left", padx=(4, 0))
             entry.bind("<KeyRelease>", lambda _event, k=key: self.purchase_amounts_changed(k))
 
-        summary = tk.Frame(totals_box, bg=card_bg)
-        summary.pack(side="right", padx=(4, 0))
-        for row, column, key, label in (
-            (0, 0, "gross_summary", "Total"), (0, 2, "discount_value", "Discount"),
-            (1, 0, "ht_summary", "Total HT"), (1, 2, "vat_summary", "VAT"),
-            (1, 4, "total", "TOTAL TTC"),
-        ):
-            tk.Label(summary, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED).grid(
-                row=row, column=column, sticky="w", padx=(10, 5)
-            )
-            f[key] = tk.Label(summary, text="0.00", bg=card_bg, fg=NAVY,
-                              font=("Segoe UI", 14 if key == "total" else 10, "bold"))
-            f[key].grid(row=row, column=column + 1, sticky="e", padx=(0, 4))
-
-        discount_inputs = tk.Frame(totals_box, bg=card_bg)
-        discount_inputs.pack(side="left", anchor="s")
+        discount_inputs = tk.Frame(r2, bg=card_bg)
+        discount_inputs.pack(side="left")
         tk.Label(discount_inputs, text="Discount %", bg=card_bg, fg=MUTED).pack(side="left")
         percent_entry = tk.Entry(discount_inputs, textvariable=f["discount_percent"], width=5)
         percent_entry.pack(side="left", padx=3)
@@ -280,6 +263,18 @@ class PurchasesMixin:
         amount_entry.pack(side="left", padx=3)
         percent_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("percent"))
         amount_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("amount"))
+        summary = tk.Frame(totals_box, bg=card_bg)
+        summary.pack(fill="x", pady=(2, 0))
+        for key, label in (
+            ("gross_summary", "Total"), ("discount_value", "Discount"),
+            ("ht_summary", "Total HT"), ("vat_summary", "VAT"), ("total", "TOTAL TTC"),
+        ):
+            pair = tk.Frame(summary, bg=card_bg)
+            pair.pack(side="left", padx=(0, 12))
+            tk.Label(pair, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED).pack(side="left", padx=(0, 5))
+            f[key] = tk.Label(pair, text="0.00", bg=card_bg, fg=NAVY,
+                              font=("Segoe UI", 13 if key == "total" else 10, "bold"))
+            f[key].pack(side="left")
         f["discount_summary"] = tk.Label(totals_box, text="", bg=card_bg, fg=RED)
         f["discount_summary"].pack(side="bottom", anchor="w")
         f["discount_summary"].pack_forget()
@@ -296,23 +291,37 @@ class PurchasesMixin:
         tk.Label(treatment,text="Mixed prorates input VAT by taxable / total use.",bg=LIGHT,fg=MUTED).pack(side="left",padx=4)
         tk.Checkbutton(treatment,text="Reverse charge",variable=f["reverse"],bg=LIGHT).pack(side="left")
         f["not_deductible"]=tk.BooleanVar(value=False); place_tick(tax_tick(treatment,f["not_deductible"],LIGHT),side="left",padx=(10,0))
-        items = tk.LabelFrame(page, text="Purchase Invoice Items · F2 to find an item · double-click a cell to edit", bg=LIGHT, padx=6, pady=2)
+        items = tk.Frame(page, bg=card_bg, padx=6, pady=2,
+                         highlightthickness=1, highlightbackground="#DDE4EC")
         items.pack(fill="both",expand=True,padx=8,pady=2,after=box_outer)
-        if totals_parent is not None: totals_box.pack(anchor="e", padx=8, pady=(2,4))
+        if totals_parent is not None: totals_box.pack(fill="x", padx=8, pady=(1, 3))
         else: totals_box.pack(fill="x", padx=8, pady=(2,4), after=items)
-        wh = tk.Frame(items, bg=LIGHT); wh.pack(fill="x"); f["warehouse"] = tk.StringVar()
-        tk.Label(wh, text="Warehouse", bg=LIGHT).pack(side="left"); f["warehouse_box"] = ttk.Combobox(wh, textvariable=f["warehouse"], state="readonly",
-                width=20); f["warehouse_box"].pack(side="left", padx=4)
+        wh = tk.Frame(items, bg=card_bg)
+        wh.pack(fill="x", pady=(0, 2))
+        tk.Label(wh, text="Items", bg=card_bg, fg=NAVY, font=("Segoe UI", 10, "bold")).pack(
+            side="left", padx=(0, 10)
+        )
+        warehouse = tk.Frame(wh, bg=card_bg)
+        warehouse.pack(side="left", padx=(0, 4))
+        f["warehouse"] = tk.StringVar()
+        tk.Label(warehouse, text="Warehouse", bg=card_bg).pack(side="left")
+        f["warehouse_box"] = ttk.Combobox(
+            warehouse, textvariable=f["warehouse"], state="readonly", width=20
+        )
+        f["warehouse_box"].pack(side="left", padx=4)
         self.action_button(wh, "Add Item Line", lambda: self.purchase_item_line()).pack(side="left", padx=6)
         tk.Button(wh, text="Delete Line", command=lambda: (f["items_sheet"].delete_selected(), self.purchase_items_changed()), bg="#8B1E1E", fg="white",
                 border=0, padx=10, pady=5).pack(side="left", padx=2)
+        tk.Label(wh, text="F2 to find an item · double-click to edit", bg=card_bg, fg=MUTED).pack(
+            side="left", padx=(6, 0)
+        )
         from desktop_brains import EditableSheet
         f["items_sheet"] = EditableSheet(self, items, [("line", "#", 35, "center"), ("item_code", "Item", 125, "w"), ("name", "Description", 410, "w"), ("quantity", "Qty", 70, "e"),
             ("unit", "Unit", 60, "center"), ("unit_cost", "Unit Price", 95, "e"), ("discount_percent", "Discount %", 85, "e"), ("vat_flag", "VAT", 50, "center"), ("total", "Net", 105, "e")],
             ["item_code", "name", "quantity", "unit", "unit_cost", "discount_percent", "vat_flag"], self.purchase_item_changed,
                     height=5)
         f["items_sheet"].tree.bind("<F2>", lambda _e: self.purchase_item_lookup())
-        f["items_sheet"].tree.master.pack_configure(expand=True, fill="both", pady=(1, 0))
+        f["items_sheet"].tree.master.pack_configure(expand=True, fill="both", padx=0, pady=(1, 0))
         tax_options.pack_forget()
         more_state={"shown":False}
         def toggle_purchase_more():
@@ -338,9 +347,11 @@ class PurchasesMixin:
         self.azure_button(r5, self.azure_read_purchase, free_read)  # 2.9.120: only where Azure is set up
         tk.Label(r5, text="Review OCR values before saving.", bg=LIGHT, fg=RED).pack(side="left", padx=6)
         f["pdf_label"].pack(side="left", padx=8)
-        for row in (heading, r4, r5):  # light, gold and red buttons of these rows keep one height (design pass)
+        for row in (heading, r4, r5, wh):
             for button in row.winfo_children():
-                if isinstance(button, tk.Button): button._saber_even = True
+                if isinstance(button, tk.Button):
+                    button._saber_even = True
+                    button._saber_compact = True
             PurchasesMixin._keep_button_heights_even(row)
         cost = tk.LabelFrame(cost_parent or page, text="Cost on Purchase (customs / freight / insurance) for the selected purchase", bg=LIGHT, padx=8, pady=4); cost.pack(fill="x", padx=8, pady=3)
         f["lc"] = {k: tk.StringVar() for k in ("freight", "insurance", "customs_duties", "customs_group_1", "customs_group_2", "broker_fees", "other_costs",
@@ -393,11 +404,8 @@ class PurchasesMixin:
         self.action_button(report_bar, "Cost breakdown PDF", lambda: self.landed_cost_report("pdf")).pack(side="left", padx=3)
         self.action_button(report_bar, "Cost breakdown Excel", lambda: self.landed_cost_report("xlsx")).pack(side="left", padx=3)
         f["pdf_label"].configure(wraplength=600,justify="left")
-        # The heading wraps as units: title, lookup (label + box together), Import Excel, Excel Template.
-        flow_toolbars(heading,treatment,r4,r5,wh,r2,
+        flow_toolbars(heading,treatment,r4,r5,wh,r2,summary,
                       settings,c2,payment,actions,attachments,report_bar)
-        f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
-        f["tree"].bind("<<TreeviewSelect>>", lambda _e: self.purchase_selected())
         v["currency"].trace_add("write", lambda *_args: self.purchase_amounts_changed("none"))
         self.purchase_amounts_changed("none")
 
@@ -415,7 +423,13 @@ class PurchasesMixin:
     def purchase_item_changed(self, iid, key, text):
         row = self.purchase_form["items_sheet"].rows[iid]
         if key in ("item_code", "name"):
-            item = self.item_by_code(text) if key == "item_code" else next((i for i in getattr(self, "inventory_rows", []) if i["name"].casefold() == text.strip().casefold()), None)
+            if key == "item_code":
+                item = self.item_by_code(text)
+            else:
+                try:
+                    item = next((i for i in self.inventory_lookup_rows() if i["name"].casefold() == text.strip().casefold()), None)
+                except RuntimeError:
+                    item = None
             if item: row.update(item_code=item["sku"], name=item["name"], unit=item["unit"], unit_cost=row.get("unit_cost") or item["average_cost"])
             elif key == "item_code" and text: messagebox.showwarning("Purchases", f"Item {text} was not found. Type the item name instead: a new item is created on saving."); return False
             else: row[key] = text.strip()
@@ -468,6 +482,10 @@ class PurchasesMixin:
     def purchase_item_lookup(self):
         iid, row = self.purchase_form["items_sheet"].selected()
         if not row: return
+        try:
+            products = self.inventory_lookup_rows()
+        except RuntimeError as exc:
+            return messagebox.showerror("Purchases", str(exc))
         window = tk.Toplevel(self); window.title("Items - F2"); window.geometry("640x420"); window.configure(bg=LIGHT); window.transient(self); window.grab_set()
         search = tk.StringVar(); entry = tk.Entry(window, textvariable=search, width=40); entry.pack(padx=10, pady=8); entry.focus_set()
         list_frame = tk.Frame(window, bg=LIGHT); list_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
@@ -481,7 +499,7 @@ class PurchasesMixin:
             tree.heading(key, text=label); tree.column(key, width=width, minwidth=65, stretch=key == "name", anchor="e" if key == "cost" else "w")
         def fill(*_a):
             tree.delete(*tree.get_children()); text = search.get().casefold()
-            for i in getattr(self, "inventory_rows", []):
+            for i in products:
                 if i["active"] and (not text or text in f'{i["sku"]} {i["name"]} {i.get("category") or ""}'.casefold()): tree.insert("", "end",
                         values=(i["sku"], i["name"], i["unit"], f'{i["average_cost"]:,.4f}'))
         def choose(_e=None):
@@ -512,7 +530,8 @@ class PurchasesMixin:
             matches=list(f["find_box"]["values"])
             if len(matches)==1: f["find"].set(matches[0]); invoice_id=f.get("find_map",{}).get(matches[0])
         if not invoice_id: return
-        f["tree"].selection_set(str(invoice_id)); self.edit_purchase(); self.purchase_selected()
+        f["selected_id"] = str(invoice_id)
+        self.edit_purchase(); self.purchase_selected()
         f["items_sheet"].clear()
         try: lines = self.client.invoice_items(invoice_id)
         except Exception: lines = []
@@ -534,7 +553,7 @@ class PurchasesMixin:
             try:
                 lines = []
                 for line in invoice["lines"]:
-                    before = len(getattr(self, "inventory_rows", []))
+                    before = len(self.__dict__.get("inventory_rows", []))
                     item = resolve_item(self, line["description"], line.get("unit") or "unit", line.get("item_code") or None)
                     if not self.item_by_code(item["sku"]): created += 1
                     cost = line["unit_price"] * (1 - (line.get("discount_percent") or 0) / 100)
@@ -631,7 +650,7 @@ class PurchasesMixin:
         f["discount_mode"]="percent"; f["discount_percent"].set("0"); f["discount_amount"].set("0")
         if "doc" in f: f["doc"].set("Invoice")
         if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set("")
-        f["pdf_label"].config(text="No PDF", fg=MUTED); f["tree"].selection_remove(*f["tree"].selection())
+        f["pdf_label"].config(text="No PDF", fg=MUTED); f["selected_id"] = None
         f["items_sheet"].clear(); f["find"].set("")
         self.purchase_amounts_changed("none")
 
@@ -875,16 +894,18 @@ class PurchasesMixin:
         taxable_rows = [r for r in stock if r.get("vat_flag") != "No"]
         if stock:
             lines = []; warehouse = (f["warehouse"].get() or "MAIN").split(" - ", 1)[0]
+            items_by_code = ({item["sku"]: item for item in self.inventory_lookup_rows()}
+                             if v["type"].get() != "Assets" else {})
             for r in stock:
                 code = r.get("item_code")
                 if not code:
                     item = resolve_item(self, r["name"], r.get("unit") or "unit", None, party["id"] if party else None); code = item["sku"]
                 cost = (_num(r["unit_cost"]) or 0) * (1 - (_num(r.get("discount_percent")) or 0) / 100)
                 if r.get("vat_flag") != "No": cost *= net_taxable/taxable if taxable else 1
-                item_row = next((i for i in getattr(self, "inventory_rows", []) if i.get("sku") == code), None)
+                item_row = items_by_code.get(code)
                 line = {"item_code": code, "description": r.get("name") or code, "quantity": _num(r["quantity"]), "unit": r.get("unit") or "", "unit_price": round(cost, 6),
                               "discount_percent": _num(r.get("discount_percent")) or 0, "vat_rate": rate, "warehouse": warehouse}
-                if item_row and item_row.get("cost_account") and v["type"].get() != "Assets": line["expense_account"] = item_row["cost_account"]
+                if item_row and item_row.get("cost_account"): line["expense_account"] = item_row["cost_account"]
                 if r.get("vat_flag") == "No":  # 2.9.87: a line without VAT
                     line.update(vat_rate=0, vat=0, deductible_subtotal=0, non_deductible_subtotal=round(line["quantity"] * line["unit_price"], 2))
                 lines.append(line)
@@ -1011,13 +1032,13 @@ class PurchasesMixin:
         self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
 
     def purchase_rows_list(self):
-        try: rows = self.client.invoices()
+        try: rows = self.client.invoices(kind="purchase")
         except Exception: return []
-        return [r for r in rows if r["kind"] == "purchase" and r.get("entry_type") in ("purchases", "assets") and r.get("status") != "cancelled"]
+        return [r for r in rows if r.get("entry_type") in ("purchases", "assets") and r.get("status") != "cancelled"]
 
     def load_purchases(self):
         f = getattr(self, "purchase_form", None)
-        if not f or not f["tree"].winfo_exists(): return
+        if not f or not f["find_box"].winfo_exists(): return
         try: parties = self.client.parties()
         except Exception: parties = []
         f["supplier_map"] = {f'{p["name"]} | {p.get("account_number") or ""}': p for p in parties if p["kind"] in ("supplier", "both")}
@@ -1025,31 +1046,19 @@ class PurchasesMixin:
         f["lc_party_map"] = {f'{p["name"]} | {p.get("account_number") or ""}': p for p in parties
                              if (p.get("account_category") in ("supplier", "asset_supplier", "other_payable")) or p["kind"] in ("supplier", "both")}
         if f.get("lc_party_box"): f["lc_party_box"]["values"] = list(f["lc_party_map"])
-        rows = self.purchase_rows_list(); lists = self.dimension_lists()
-        departments = {d["id"]: d["code"] for d in lists["departments"]}; projects = {p["id"]: p["code"] for p in lists["projects"]}
-        landed = {}
-        for r in rows:
-            if r.get("description") and str(r.get("description")).startswith("Landed cost of"): continue
-        customs = [r for r in rows if (r.get("description") or "").startswith("Landed cost of")]
-        f["rows"] = {str(r["id"]): r for r in rows if not (r.get("description") or "").startswith("Landed cost of")}
-        for r in customs:
-            key = (r.get("description") or "").split("Landed cost of ", 1)[-1].split(" (", 1)[0]
-            totals = landed.setdefault(key, {}); totals[r["currency"]] = totals.get(r["currency"], 0) + float(r.get("total") or 0)
+        f["rows"] = {str(r["id"]): r for r in self.purchase_rows_list()
+                     if not (r.get("description") or "").startswith("Landed cost of")}
+        if f.get("selected_id") not in f["rows"]:
+            f["selected_id"] = None
         f["find_map"] = {f'{r["invoice_number"]} | {_dd(r["invoice_date"])} | {r.get("party_name") or ""} | {float(r.get("total") or 0):,.2f} {r["currency"]}': r["id"] for r in f["rows"].values()}
         f["find_box"]["values"] = list(f["find_map"])
         try: f["warehouse_box"]["values"] = [f'{w["code"]} - {w["name"]}' for w in self.client.warehouses() if w["active"]]
         except Exception: logging.getLogger("saber.ignored").debug("Ignored error", exc_info=True)
         if not f["warehouse"].get() and f["warehouse_box"]["values"]: f["warehouse"].set(f["warehouse_box"]["values"][0])
-        f["tree"].delete(*f["tree"].get_children())
-        for r in f["rows"].values():
-            f["tree"].insert("", "end", iid=str(r["id"]), values=(r["invoice_number"], _dd(r["invoice_date"]), r.get("party_name") or "", (r.get("entry_type") or "").title(), r["currency"],
-                f'{float(r.get("deductible_subtotal") or 0):,.2f}', f'{float(r.get("non_deductible_subtotal") or 0):,.2f}', f'{float(r.get("vat") or 0):,.2f}', f'{float(r.get("total") or 0):,.2f}',
-                " / ".join(f"{value:,.2f} {code}" for code, value in sorted(landed.get(r["invoice_number"], {}).items())), r.get("attachment_count") or "",
-                " / ".join(x for x in (departments.get(r.get("department_id")), projects.get(r.get("project_id"))) if x)))
 
     def selected_purchase(self):
-        selected = self.purchase_form["tree"].selection()
-        return self.purchase_form.get("rows", {}).get(selected[0]) if selected else None
+        form = self.purchase_form
+        return form.get("rows", {}).get(form.get("selected_id"))
 
     def purchase_selected(self):
         row = self.selected_purchase(); f = self.purchase_form
@@ -1103,16 +1112,6 @@ class PurchasesMixin:
         f["pdf_label"].config(text=f"Editing {row['invoice_number']} ({row.get('attachment_count') or 0} document(s) attached)", fg=NAVY); self.purchase_amounts_changed("none")
 
     def delete_purchase(self):
-        f = self.purchase_form; selected = f["tree"].selection()
-        if len(selected) > 1:  # 2.9.69: several selected
-            items = [(f["rows"][iid]["id"], f["rows"][iid]["invoice_number"]) for iid in selected if iid in f["rows"]]
-            posted = any(f["rows"][iid].get("status")=="posted" for iid in selected if iid in f["rows"])
-            reason = simpledialog.askstring("Void Purchases", "Reason for voiding selected posted purchases (required):", parent=self) if posted else None
-            if posted and reason is None: return
-            action="Void" if posted else "Delete"
-            if not messagebox.askyesno("Purchases", f"{action} {len(items)} selected purchases? Original entries and numbers will remain when posted."): return
-            bulk_action("Purchases", items, lambda invoice_id: self.client.delete_invoice(invoice_id, reason=reason))
-            self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial(); return
         row = self.selected_purchase() if not self.purchase_form["id"] else self.purchase_form["rows"].get(str(self.purchase_form["id"]))
         if not row: return messagebox.showwarning("Purchases", "Select a purchase first")
         posted = row.get("status")=="posted"
@@ -1236,7 +1235,8 @@ class PurchasesMixin:
         self.purchase_form["lc"]["party_name"].set("")
         self.purchase_form["lc_payment_method"].set("On Account (Not Cash)"); self.purchase_form["lc_cash_account"].set("")
         messagebox.showinfo("Cost on Purchase", f"Cost on purchase added to {row['invoice_number']}. Import VAT goes to the VAT return as customs VAT.")
-        self.load_purchases(); self.purchase_form["tree"].selection_set(str(row["id"])); self.load_invoices(); self.load_journal(); self.load_trial()
+        self.load_purchases(); self.purchase_form["selected_id"] = str(row["id"]); self.purchase_selected()
+        self.load_invoices(); self.load_journal(); self.load_trial()
 
     def import_customs_excel(self):
         path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xlsm")])

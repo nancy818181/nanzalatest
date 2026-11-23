@@ -898,13 +898,21 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             result["quotation_number"] = source
         return result
 
-    def list_invoices(self, limit=None, _invoice_id=None):
+    def list_invoices(self, limit=None, _invoice_id=None, *, kind=None):
         """Every invoice (2.9.58: the list stopped at the newest 500, so with a big file imported invoices, the
         purchases list, opening an entry and other screens could not find older ones)."""
         limit = int(limit) if limit else -1  # SQLite: LIMIT -1 = no limit
         allocation_invoice_filter = " AND a.invoice_id=?" if _invoice_id is not None else ""
-        invoice_filter = "WHERE i.id=?" if _invoice_id is not None else ""
-        parameters = (int(_invoice_id), int(_invoice_id), limit) if _invoice_id is not None else (limit,)
+        conditions = []
+        parameters = []
+        if _invoice_id is not None:
+            conditions.append("i.id=?")
+            parameters.extend((int(_invoice_id), int(_invoice_id)))
+        if kind is not None:
+            conditions.append("i.kind=?")
+            parameters.append(kind)
+        invoice_filter = "WHERE " + " AND ".join(conditions) if conditions else ""
+        parameters.append(limit)
         with self.connect() as db:
             return [dict(r) for r in db.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,
                 i.kind,i.entry_type,i.currency,i.exchange_rate,
@@ -931,6 +939,14 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
                 LEFT JOIN (SELECT a.invoice_id,DSUM(a.amount) allocated FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
                            WHERE {posted_payment_sql()}{allocation_invoice_filter} GROUP BY a.invoice_id) s ON s.invoice_id=i.id
                 {invoice_filter} ORDER BY i.id DESC LIMIT ?""", parameters)]
+
+    def sales_invoice_choices(self):
+        with self.connect() as db:
+            return [dict(row) for row in db.execute("""
+                SELECT id, invoice_number, invoice_date, status
+                FROM invoices WHERE kind='sale' AND status IS NOT 'cancelled'
+                ORDER BY id DESC
+            """)]
 
     # ---------------------------------------------------------------- invoices: edit keeping attachments, landed cost
     @atomic  # 2.9.121

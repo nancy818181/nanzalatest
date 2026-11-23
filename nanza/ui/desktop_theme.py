@@ -137,9 +137,12 @@ def _polish_button(button):
         elif bg in _OUTLINE_SOURCES: kind = "outline"
         else: return  # a colour chosen on purpose (status chips, colour pickers)
         padx = max(12, _pixels(button, "padx")); pady = 5 if _pixels(button, "pady") >= 4 else _pixels(button, "pady")
+        compact = getattr(button, "_saber_compact", False)
+        if compact:
+            padx, pady = 9, 2
         if kind in ("secondary", "outline"):
             button.configure(font=_BUTTON_FONT, bg=OUTLINE_BG, fg=NAVY, relief="flat", bd=0, highlightthickness=1,
-                             highlightbackground=OUTLINE_BORDER, highlightcolor=GOLD, padx=padx, pady=max(pady, 4),
+                             highlightbackground=OUTLINE_BORDER, highlightcolor=GOLD, padx=padx, pady=pady if compact else max(pady, 4),
                              activebackground=OUTLINE_HOVER, activeforeground=NAVY, cursor="hand2")
         else:
             hover, fg = (GOLD_HOVER, NAVY) if kind == "primary" else (DANGER_HOVER, "white")
@@ -147,7 +150,7 @@ def _polish_button(button):
             # ones, in their own colour, so every button of the row has the same height and padding.
             even = getattr(button, "_saber_even", False)
             button.configure(font=_BUTTON_FONT, fg=fg, relief="flat", bd=0, highlightthickness=1 if even else 0, padx=padx,
-                             pady=max(pady, 4) if even else pady, activebackground=hover, activeforeground=fg, cursor="hand2")
+                             pady=max(pady, 4) if even and not compact else pady, activebackground=hover, activeforeground=fg, cursor="hand2")
             if even: button.configure(highlightbackground=button.cget("background"), highlightcolor=button.cget("background"))
         button._saber_kind = kind
         _button_icon(button, kind)

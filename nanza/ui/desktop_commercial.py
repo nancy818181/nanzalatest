@@ -30,12 +30,28 @@ def open_commercial_documents(app, *, quotations_only=False):
     )
     window.transient(app)
     window._commercial = state = {"document": None, "rows": [], "lookup": {}}
-    top = tk.Frame(window)
+    form = window
+    if quotations_only:
+        tabs = ttk.Notebook(window)
+        tabs.pack(fill="both", expand=True)
+        form = ttk.Frame(tabs)
+        records = ttk.Frame(tabs, padding=8)
+        tabs.add(form, text="Quotation")
+        tabs.add(records, text="Search")
+        tabs.enable_traversal()
+        state["tabs"] = tabs
+    top = tk.Frame(form)
     top.pack(fill="x", padx=12, pady=8)
-    number = tk.StringVar(value="New document — number assigned on Save")
+    number = state["number"] = tk.StringVar()
+    if quotations_only:
+        tk.Label(top, text="Quotation No.", font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 8))
     tk.Label(top, textvariable=number, font=("Segoe UI", 12, "bold")).pack(side="left")
+    if quotations_only:
+        document_status = tk.StringVar()
+        tk.Label(top, textvariable=document_status).pack(side="left", padx=12)
+        flow_toolbar(top)
     tk.Label(
-        window,
+        form,
         text=(
             "Save the quotation, then convert it to a draft for review in Sales Invoice."
             if quotations_only
@@ -44,9 +60,9 @@ def open_commercial_documents(app, *, quotations_only=False):
         wraplength=1000,
         justify="left",
     ).pack(fill="x", padx=12)
-    bar = tk.Frame(window)
+    bar = tk.Frame(form)
     bar.pack(side="bottom", fill="x", padx=12, pady=8)
-    header = tk.Frame(window)
+    header = tk.Frame(form)
     header.pack(fill="x", padx=12, pady=8)
     fields = {}
     state["fields"] = fields
@@ -64,6 +80,9 @@ def open_commercial_documents(app, *, quotations_only=False):
         ("currency", "Currency", currencies, 8),
         ("valid_until", "Valid until (optional)", None, 13),
     ):
+        if quotations_only and key == "kind":
+            fields[key] = tk.StringVar()
+            continue
         box = tk.Frame(header)
         box.pack(side="left", padx=(0, 8))
         tk.Label(box, text=label).pack(anchor="w")
@@ -81,14 +100,14 @@ def open_commercial_documents(app, *, quotations_only=False):
     flow_toolbar(header)
     text_fields = {}
     for key, label in (("terms", "Payment / delivery terms"), ("notes", "Notes")):
-        row = tk.Frame(window)
+        row = tk.Frame(form)
         row.pack(fill="x", padx=12, pady=2)
         tk.Label(row, text=label, width=23, anchor="w").pack(side="left")
         text_fields[key] = tk.StringVar()
         tk.Entry(row, textvariable=text_fields[key]).pack(
             side="left", fill="x", expand=True
         )
-    pane = ttk.Panedwindow(window, orient="vertical")
+    pane = ttk.Panedwindow(form, orient="vertical")
     pane.pack(fill="both", expand=True, padx=12, pady=8)
     line_frame = tk.LabelFrame(pane, text="Document lines")
     pane.add(line_frame, weight=3)
@@ -242,30 +261,38 @@ def open_commercial_documents(app, *, quotations_only=False):
 
     tk.Button(controls, text="Remove selected", command=remove).pack(side="left")
     tree.bind("<Double-1>", lambda _e: edit_line())
-    records = tk.LabelFrame(pane, text="Saved documents — double-click to open")
-    pane.add(records, weight=2)
+    if not quotations_only:
+        records = tk.LabelFrame(pane, text="Saved documents — double-click to open")
+        pane.add(records, weight=2)
     document_search = tk.StringVar()
     search_bar = tk.Frame(records)
     search_bar.pack(fill="x")
-    tk.Label(search_bar, text="Find document").pack(side="left", padx=4)
-    tk.Entry(search_bar, textvariable=document_search).pack(side="left", fill="x", expand=True, padx=4)
+    tk.Label(search_bar, text="Find quotation" if quotations_only else "Find document").pack(side="left", padx=4)
+    search_entry = tk.Entry(search_bar, textvariable=document_search)
+    search_entry.pack(side="left", fill="x", expand=True, padx=4)
+    document_keys = ("number", "doc_date", "party_name", "currency", "status", "item") if quotations_only else (
+        "number", "kind", "doc_date", "party_name", "currency", "status"
+    )
+    if quotations_only:
+        tk.Label(records, text="Number, customer, item code or description", anchor="w").pack(fill="x", padx=4, pady=(2, 6))
     saved_tree = ttk.Treeview(
         records,
-        columns=("number", "kind", "date", "party", "currency", "status", *(("item",) if quotations_only else ())),
+        columns=document_keys,
         show="headings",
         height=5,
     )
     for key, label, width in (
-        ("number", "Number", 165),
+        ("number", "Quotation No." if quotations_only else "Number", 165),
         ("kind", "Type", 120),
-        ("date", "Date", 100),
-        ("party", "Customer" if quotations_only else "Customer / supplier", 250),
+        ("doc_date", "Date", 105),
+        ("party_name", "Customer" if quotations_only else "Customer / supplier", 200),
         ("currency", "Currency", 80),
         ("status", "Status", 100),
         *((("item", "Matched item line", 250),) if quotations_only else ()),
     ):
-        saved_tree.heading(key, text=label)
-        saved_tree.column(key, width=width)
+        if key in document_keys:
+            saved_tree.heading(key, text=label)
+            saved_tree.column(key, width=width, stretch=key in ("party_name", "item"))
     scrollbar = ttk.Scrollbar(records, orient="vertical", command=saved_tree.yview)
     saved_tree.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
@@ -275,13 +302,13 @@ def open_commercial_documents(app, *, quotations_only=False):
     saved_tree.pack(fill="both", expand=True)
     saved_documents = []
     search_timer = None
+    search_dirty = True
 
     def filter_documents(*_args):
-        keys = ("number", "kind", "doc_date", "party_name", "currency", "status")
         query = document_search.get().strip().casefold()
         saved_tree.delete(*saved_tree.get_children())
         for doc in saved_documents:
-            values = [doc[key] for key in keys]
+            values = [doc[key] for key in document_keys if key != "item"]
             line = doc.get("line_number")
             iid = f"{doc['id']}:{line}" if line else str(doc["id"])
             if quotations_only:
@@ -290,10 +317,15 @@ def open_commercial_documents(app, *, quotations_only=False):
                 saved_tree.insert("", "end", iid=iid, values=values)
 
     def load():
+        nonlocal search_dirty
+        if quotations_only and tabs.select() != str(records):
+            search_dirty = True
+            return
         query = urlencode({"quotations": 1, "q": document_search.get()})
         path = f"/api/commercial?{query}" if quotations_only else "/api/commercial"
         saved_documents[:] = app.client.request("GET", path)["items"]
         filter_documents()
+        search_dirty = False
 
     def schedule_search(*_args):
         nonlocal search_timer
@@ -310,6 +342,24 @@ def open_commercial_documents(app, *, quotations_only=False):
 
         search_timer = window.after(220, search)
 
+    def search_now(_event=None):
+        nonlocal search_timer
+        if search_timer is not None:
+            window.after_cancel(search_timer)
+            search_timer = None
+        perform(load)
+
+    if quotations_only:
+        def show_search(_event):
+            if tabs.select() == str(records):
+                if search_dirty:
+                    search_now()
+                search_entry.focus_set()
+
+        tabs.bind("<<NotebookTabChanged>>", show_search)
+        search_entry.bind("<Return>", search_now)
+        tk.Button(search_bar, text="Search", command=search_now).pack(side="left", padx=4)
+
     document_search.trace_add("write", schedule_search)
     window.bind("<Destroy>", lambda event: window.after_cancel(search_timer)
                 if event.widget is window and search_timer is not None else None)
@@ -321,7 +371,12 @@ def open_commercial_documents(app, *, quotations_only=False):
             f"{event['invoice_number']} ({event['invoice_status']})"
             for event in doc["events"] if event["invoice_id"]
         )
-        number.set("  |  ".join(part for part in (doc["number"], doc["status"], doc["currency"], linked) if part))
+        caption = (doc["status"], doc["currency"], linked)
+        if quotations_only:
+            number.set(doc["number"])
+            document_status.set("  |  ".join(filter(None, caption)))
+        else:
+            number.set("  |  ".join(filter(None, (doc["number"], *caption))))
         fields["kind"].set(
             next(label for label, kind in kinds.items() if kind == doc["kind"])
         )
@@ -338,21 +393,30 @@ def open_commercial_documents(app, *, quotations_only=False):
         refresh_lines()
 
     def selected(_event=None):
-        if saved_tree.selection():
-            perform(
-                lambda: display(
-                    app.client.request(
-                        "GET", "/api/commercial/" + saved_tree.selection()[0].split(":", 1)[0]
-                    )
-                )
-            )
+        if not saved_tree.selection():
+            return
+
+        def open_document():
+            document_id = saved_tree.selection()[0].split(":", 1)[0]
+            display(app.client.request("GET", f"/api/commercial/{document_id}"))
+            if quotations_only:
+                tabs.select(form)
+
+        perform(open_document)
 
     saved_tree.bind("<Double-1>", selected)
+    saved_tree.bind("<Return>", selected)
+    if quotations_only:
+        tk.Button(search_bar, text="Open selected", command=selected).pack(side="left", padx=4)
 
     def new():
         state["document"] = None
         state["rows"] = []
-        number.set("New document — number assigned on Save")
+        from arabic_ui import active, translate
+        message = "Assigned on Save" if quotations_only else "New document — number assigned on Save"
+        number.set(translate(message) if active() else message)
+        if quotations_only:
+            document_status.set("")
         fields["kind"].set("Quotation")
         fields["doc_date"].set(app.fiscal_today())
         fields["currency"].set(main_currency(app))
@@ -610,11 +674,11 @@ def open_commercial_documents(app, *, quotations_only=False):
     actions = [
         ("New", new),
         ("Save draft", save),
-        ("Open selected", selected),
         ("Confirm", lambda: status("confirmed")),
         ("Cancel document", lambda: status("cancelled")),
     ]
     if not quotations_only:
+        actions.insert(2, ("Open selected", selected))
         actions.append(("Receive partial", lambda: operation("receive")))
     actions.extend((
         ("Convert to Sales Invoice" if quotations_only else "Create invoice draft", convert if quotations_only else lambda: operation("invoice")),

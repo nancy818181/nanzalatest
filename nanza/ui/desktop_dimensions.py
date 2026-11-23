@@ -43,7 +43,7 @@ class DimensionsMixin:
         text = str(value or "").strip()
         return "" if text in ("", NONE, "All") else text.split(" - ", 1)[0].strip()
 
-    def dimension_selectors(self, parent, department_var, project_var, include_all=False, multi=False):
+    def dimension_selectors(self, parent, department_var, project_var, include_all=False, multi=False, *, report_filters=None):
         dep_group = tk.Frame(parent, bg=LIGHT); dep_group.pack(side="left")
         project_group = tk.Frame(parent, bg=LIGHT); project_group.pack(side="left")
         self._dimension_groups.append((dep_group, project_group, department_var, project_var, include_all))
@@ -52,7 +52,14 @@ class DimensionsMixin:
             from multi_select import MultiSelect
             department_var.set(department_var.get() or "All"); project_var.set(project_var.get() or "All")
             def reload(_box=None):
-                self.dimension_lists(refresh=True); department["values"] = self.department_choices(True)[1:]; project["values"] = self.project_choices(True)[1:]
+                historical = (report_filters or {}).get("_historical_choices")
+                if historical:
+                    department["values"] = [f'{r["code"]} - {r["name"]}' for r in historical["departments"]]
+                    project["values"] = [f'{r["code"]} - {r["name"]}' for r in historical["projects"]]
+                else:
+                    self.dimension_lists(refresh=True)
+                    department["values"] = self.department_choices(True)[1:]
+                    project["values"] = self.project_choices(True)[1:]
             department = MultiSelect(dep_group, department_var, self.department_choices(True)[1:], width=20, title="Department", before_open=reload, bg=LIGHT)
             department.pack(side="left", padx=(4, 10))
             tk.Label(project_group, text="Project", bg=LIGHT).pack(side="left")
@@ -461,7 +468,9 @@ class DimensionsMixin:
     def add_dimension_options(self, state, parent):
         box = tk.Frame(parent, bg=LIGHT); box.pack(fill="x", pady=(4, 0)); flags_row = tk.Frame(parent, bg=LIGHT); flags_row.pack(fill="x")
         state["vars"]["department"] = tk.StringVar(value="All"); state["vars"]["project"] = tk.StringVar(value="All")
-        self.dimension_selectors(box, state["vars"]["department"], state["vars"]["project"], include_all=True, multi=True); state["dimension_row"] = box
+        self.dimension_selectors(box, state["vars"]["department"], state["vars"]["project"], include_all=True,
+                                 multi=True, report_filters=state["vars"])
+        state["dimension_row"] = box
         for name, label in (("with_department", "Show Department / Project"), ("split_by_department", "Split by Department"),
                             ("split_by_project", "Split by Project"), ("budget", "Compare with Budget")):
             state["flags"][name] = tk.BooleanVar(value=False); tk.Checkbutton(flags_row, text=label, variable=state["flags"][name], bg=LIGHT).pack(side="left", padx=4)

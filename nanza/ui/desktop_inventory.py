@@ -41,6 +41,7 @@ class InventoryMixin:
                 "Physical Inventory", "Inventory Reports", "Ageing Report", "Warehouses & Settings")}
         for name, page in pages.items(): nested.add(page, text=name)
         self.ageing_tab=pages["Ageing Report"]
+        self.build_ageing_report(self.ageing_tab)
         self.build_items_page(pages["Items"]); self.build_categories_page(pages["Categories & Units"]); self.build_stock_in_out_page(pages["Stock In / Stock Out"])
         self.build_physical_page(pages["Physical Inventory"]); self.build_stock_documents_page(pages["Stock Documents"])
         self.build_inventory_reports_page(pages["Inventory Reports"]); self.build_inventory_settings_page(pages["Warehouses & Settings"])
@@ -48,7 +49,10 @@ class InventoryMixin:
         self.build_production_page(pages["Production"])  # 2.9.65: recipes, production orders, production report
 
     def load_inventory(self):
-        if not hasattr(self, "items_tree") or not self.items_tree.winfo_exists(): return
+        tree = self.__dict__.get("items_tree")
+        if tree is None or not tree.winfo_exists():
+            self.__dict__.pop("inventory_rows", None)
+            return
         try: self.inventory_rows = self.client.inventory_items(); self.warehouse_rows = self.client.warehouses(); inv = self.client.inventory_settings()
         except Exception as exc: return messagebox.showerror("Inventory", str(exc))
         self.inventory_currency = inv["currency"]
@@ -82,10 +86,23 @@ class InventoryMixin:
             self.inv_currency.set(inv["currency"]); self.inv_method.set("FIFO" if inv["method"] == "fifo" else "Weighted average")
         self.load_stock_documents()
 
+    def inventory_lookup_rows(self):
+        rows = self.__dict__.get("inventory_rows")
+        if rows is None:
+            rows = self.client.inventory_items()
+            self.inventory_rows = rows
+        return rows
+
     def item_by_code(self, code):
         code = str(code or "").split(" - ", 1)[0].strip().upper()
-        if not code: return None
-        return next((i for i in getattr(self, "inventory_rows", []) if i["sku"].upper() == code or (i.get("barcode") or "").upper() == code), None)
+        if not code:
+            return None
+        try:
+            items = self.inventory_lookup_rows()
+        except RuntimeError:
+            return None
+        return next((row for row in items if row["sku"].upper() == code or
+                     (row.get("barcode") or "").upper() == code), None)
 
     def filter_inventory_find(self, box, variable, map_name):
         from desktop import row_matches_search

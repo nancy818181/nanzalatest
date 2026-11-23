@@ -273,7 +273,7 @@ class SalesInvoiceMixin:
         except Exception: parties=[]
         self.sales_customers={f'{p["name"]}':p for p in parties if p["kind"] in ("customer","both")}
         self.sales_party_box["values"]=list(self.sales_customers)
-        try: invoices=[r for r in self.client.invoices() if r["kind"]=="sale" and r.get("status")!="cancelled"]
+        try: invoices=self.client.sales_invoice_choices()
         except Exception: invoices=[]
         invoices.sort(key=lambda r:(sortable_date(r["invoice_date"]),str(r["invoice_number"]),r["id"]))
         self.sales_open_map={}
@@ -505,11 +505,10 @@ class SalesInvoiceMixin:
 
     def choose_sales_inventory_item(self, parent, on_select, query=""):
         """Open the sales item search for an invoice or a commercial-document line."""
-        products = getattr(self, "inventory_rows", None)
-        if not products:
-            try: products = self.client.inventory_items()
-            except RuntimeError as exc: return messagebox.showerror("Sales Invoice", f"Could not load inventory items: {exc}")
-            self.inventory_rows = products
+        try:
+            products = self.inventory_lookup_rows()
+        except RuntimeError as exc:
+            return messagebox.showerror("Sales Invoice", f"Could not load inventory items: {exc}")
         products = [row for row in products if row.get("active", 1)]
         previous_grab = parent.grab_current()
         window = tk.Toplevel(parent)

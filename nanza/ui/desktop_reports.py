@@ -25,11 +25,15 @@ def _financial_filter_sets(app):
 
 class ReportsMixin:
     def build_journal(self):
+        self._journal_loaded_year = None
+        self.journal_rows = []
         filters=tk.Frame(self.journal_tab,bg=LIGHT); filters.pack(fill="x",padx=10,pady=(10,0))
         tk.Label(filters,text="View Year:",bg=LIGHT,font=("Segoe UI",9,"bold")).pack(side="left")
         years=[str(item["year"]) for item in getattr(self,"current_company",{}).get("years",[])]
         if not self.journal_view_year.get(): self.journal_view_year.set(str(getattr(self,"current_fiscal_year",datetime.now().year)))
-        ttk.Combobox(filters,textvariable=self.journal_view_year,values=years,state="readonly",width=7).pack(side="left",padx=(4,10))
+        year_box = ttk.Combobox(filters, textvariable=self.journal_view_year, values=years, state="readonly", width=7)
+        year_box.pack(side="left", padx=(4, 10))
+        year_box.bind("<<ComboboxSelected>>", self.switch_journal_view_year)
         tk.Label(filters,text="From Date:",bg=LIGHT,font=("Segoe UI",9,"bold")).pack(side="left")
         self.date_entry(filters,self.journal_from_date,13).pack(side="left",padx=(5,14))
         tk.Label(filters,text="To Date:",bg=LIGHT,font=("Segoe UI",9,"bold")).pack(side="left")
@@ -59,9 +63,14 @@ class ReportsMixin:
         self.action_button(actions,"Export Excel",lambda:self.journal_report("xlsx")).pack(side="left",padx=4)
         self.action_button(actions,"Export PDF",lambda:self.journal_report("pdf")).pack(side="left",padx=4)
         self.action_button(actions,"Print",lambda:self.journal_report("print")).pack(side="left",padx=4)
-        self.action_button(actions,"Check Balance",self.check_unbalanced_entries).pack(side="left",padx=4)
-        tk.Button(actions,text="Edit Selected Entry",command=self.edit_journal_selection,bg=GOLD,fg=NAVY,border=0,padx=14,pady=7,font=("Segoe UI",9,"bold")).pack(side="left",padx=4)
-        tk.Button(actions,text="Delete Selected Voucher",command=self.delete_selected_journal_voucher,bg="#6B1010",fg="white",border=0,padx=14,pady=7).pack(side="left",padx=4)
+        self.journal_check_button = self.action_button(actions, "Check Balance", self.check_unbalanced_entries)
+        self.journal_check_button.pack(side="left", padx=4)
+        self.journal_open_button = tk.Button(actions, text="Edit Selected Entry", command=self.edit_journal_selection,
+                                             bg=GOLD, fg=NAVY, border=0, padx=14, pady=7, font=("Segoe UI", 9, "bold"))
+        self.journal_open_button.pack(side="left", padx=4)
+        self.journal_delete_button = tk.Button(actions, text="Delete Selected Voucher", command=self.delete_selected_journal_voucher,
+                                               bg="#6B1010", fg="white", border=0, padx=14, pady=7)
+        self.journal_delete_button.pack(side="left", padx=4)
         self.journal_totals=tk.Label(actions,text="Debit: 0.00   Credit: 0.00",bg=LIGHT,font=("Segoe UI",10,"bold"))
         self.journal_totals.pack(side="left",padx=15)
         self.journal_tree=self.table(self.journal_tab,[
@@ -98,14 +107,32 @@ class ReportsMixin:
             messagebox.showwarning("General Journal","From Date cannot be after To Date"); return None
         return values
 
+    def switch_journal_view_year(self, _event=None):
+        year = self.journal_view_year.get()
+        previous_dates = self.journal_from_date.get(), self.journal_to_date.get()
+        self.journal_from_date.set(f"01-01-{year}")
+        self.journal_to_date.set(f"31-12-{year}")
+        if not self.load_journal():
+            self.journal_from_date.set(previous_dates[0])
+            self.journal_to_date.set(previous_dates[1])
+
     def load_journal(self):
         if not hasattr(self,"journal_tree"): return
         dates=self.journal_date_range()
         if dates is None: return
         currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
         view_year=int(self.journal_view_year.get() or self.current_fiscal_year)
-        try: rows=self.client.journal(dates[0],dates[1],currency) if view_year==int(self.current_fiscal_year) else self.client.fiscal_year_journal(view_year,dates[0],dates[1],currency)
-        except (RuntimeError,OSError,ValueError,KeyError,TypeError) as exc: return messagebox.showerror("General Journal",str(exc))
+        historical = view_year != int(self.current_fiscal_year)
+        try:
+            rows = self.client.fiscal_year_journal(view_year, *dates, currency) if historical else self.client.journal(*dates, currency)
+        except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+            self.journal_view_year.set(str(self._journal_loaded_year or self.current_fiscal_year))
+            messagebox.showerror("General Journal", str(exc))
+            return False
+        self._journal_loaded_year = view_year
+        self.journal_open_button.configure(text="View Selected Entry" if historical else "Edit Selected Entry")
+        self.journal_delete_button.configure(state="disabled" if historical else "normal")
+        self.journal_check_button.configure(state="disabled" if historical else "normal")
         if self.journal_section.get()!="All Sections": rows=[row for row in rows if row.get("journal_category")==self.journal_section.get()]
         number=self.journal_find.get().strip() if hasattr(self,"journal_find") else ""
         if number:
@@ -135,9 +162,11 @@ class ReportsMixin:
         mode="Current Year" if view_year==int(self.current_fiscal_year) else f"{view_year} Read-Only"
         more=f"   (showing the first {JOURNAL_SHOWN:,} of {len(rows):,} lines - narrow the dates or search; totals are for all lines)" if len(rows)>JOURNAL_SHOWN else ""
         self.journal_totals.config(text=f"{mode}   Debit: {debit:,.2f}   Credit: {credit:,.2f}   {state}{more}")
+        return True
 
     def delete_selected_journal_voucher(self):
-        if int(self.journal_view_year.get() or self.current_fiscal_year)!=int(self.current_fiscal_year): return messagebox.showwarning("General Journal","Previous-year transactions are read-only")
+        if getattr(self, "_journal_loaded_year", None) != int(self.current_fiscal_year):
+            return messagebox.showwarning("General Journal", "Previous-year transactions are read-only")
         selected=self.journal_tree.selection()
         if not selected: return messagebox.showwarning("General Journal","Select a Journal Voucher line first")
         numbers=list(dict.fromkeys(str(self.journal_tree.item(iid,"values")[0]) for iid in selected))
@@ -339,13 +368,6 @@ class ReportsMixin:
         messagebox.showinfo("Refresh Opening",f'Opening {year+1} refreshed successfully.\nVouchers: {", ".join(result.get("opening_vouchers",[])) or "No balances"}\n{status}')
 
     def build_financial_reports(self):
-        # 2.9.66: the Ageing Report page lives in Inventory; opening Financial Reports first (before the pages built in the
-        # background reached Inventory) failed with "no attribute 'ageing_tab'". Build Inventory first in that case.
-        if "ageing_tab" not in self.__dict__:
-            pending=self.__dict__.get("_pending_builders") or []
-            builder=next((b for b in pending if getattr(b,"__name__","")=="build_inventory"),None)
-            if builder is not None: pending.remove(builder); self._run_page_builder(builder)
-            if "ageing_tab" not in self.__dict__: self.ageing_tab=tk.Frame(self.reports_tab,bg=LIGHT)
         # Keep the report controls visually separate from the dense report tabs. The two
         # filter groups wrap independently on narrow windows; all existing variables and
         # callbacks remain unchanged.
@@ -395,11 +417,11 @@ class ReportsMixin:
         nested=ttk.Notebook(self.reports_tab); nested.pack(fill="both",expand=True,padx=10,pady=(0,10)); self.financial_notebook=nested
         gl=tk.Frame(nested,bg=LIGHT); bs=tk.Frame(nested,bg=LIGHT); vat=tk.Frame(nested,bg=LIGHT); cash=tk.Frame(nested,bg=LIGHT); cash_outlook=tk.Frame(nested,
             bg=LIGHT); cash_quarterly=tk.Frame(nested,bg=LIGHT); cash_13_week=tk.Frame(nested,bg=LIGHT)
-        cash_forecast=tk.Frame(nested,bg=LIGHT); aging=self.ageing_tab; comparative=tk.Frame(nested,bg=LIGHT)
+        cash_forecast=tk.Frame(nested,bg=LIGHT); comparative=tk.Frame(nested,bg=LIGHT)
         nested.add(gl,text="General Ledger"); nested.add(bs,text="Balance Sheet"); nested.add(vat,text="Lebanese VAT Report"); nested.add(cash,
             text="Cash Flow"); nested.add(cash_outlook,text="Cash Flow Outlook"); nested.add(cash_quarterly,text="Quarterly Cash Flow"); \
                 nested.add(cash_13_week,text="13-Week Cash Forecast"); nested.add(cash_forecast,text="5-Year Cash Forecast"); nested.add(comparative,
-                text="Comparative P&L"); ctb_page=tk.Frame(nested,bg=LIGHT); nested.add(ctb_page,text="Comparative Trial Balance"); self.ageing_page=aging; \
+                text="Comparative P&L"); ctb_page=tk.Frame(nested,bg=LIGHT); nested.add(ctb_page,text="Comparative Trial Balance"); \
                     self.build_budget_page(nested); self.build_projection_page(nested); self.build_business_reports_page(nested)
         self.build_management_pack_page(nested)  # 2.9.82
         self.build_quarterly_budget_page(nested)
@@ -500,23 +522,6 @@ class ReportsMixin:
                                        bg=LIGHT,fg=NAVY,anchor="w"); self.cash_budget_info.pack(fill="x",padx=12)
         self.cash_budget_tree=self.table(cash_budget_page,[("month","Month",110),("currency","Currency",80),("opening","Opening cash",140),("inflow","Cash in",130),
             ("outflow","Cash out",130),("net","Net",130),("closing","Closing cash",140)])
-        ageing_controls=tk.Frame(aging,bg=LIGHT); ageing_controls.pack(fill="x",padx=8,pady=4)
-        self.ageing_kind=tk.StringVar(value="Customers & Suppliers")
-        tk.Label(ageing_controls,text="Show",bg=LIGHT).pack(side="left")
-        kind_box=ttk.Combobox(ageing_controls,textvariable=self.ageing_kind,values=["Customers & Suppliers","Customers","Suppliers"],state="readonly",width=24)
-        kind_box.pack(side="left",padx=6); kind_box.bind("<<ComboboxSelected>>",lambda _e:self.refresh_ageing_tree())
-        tk.Label(ageing_controls,text="As of",bg=LIGHT).pack(side="left",padx=(8,2)); self.date_entry(ageing_controls,self.ageing_as_of,12).pack(side="left",padx=3)
-        range_row=tk.Frame(aging,bg=LIGHT); range_row.pack(fill="x",padx=8,pady=(0,4))
-        choices=[f'{p.get("account_number") or ""} - {p["name"]}' for p in self.client.parties()]
-        for label,var in (("Account / Name From",self.ageing_from),("To",self.ageing_to)):
-            tk.Label(range_row,text=label,bg=LIGHT).pack(side="left",padx=(6,2))
-            ttk.Combobox(range_row,textvariable=var,values=choices,width=27).pack(side="left",padx=(2,8))
-        self.action_button(range_row,"Apply",self.load_ageing_report).pack(side="left",padx=4)
-        tk.Label(range_row,text="Type a number or name, or choose from the list.",bg=LIGHT,fg="#5f6b76").pack(side="left",padx=8)
-        tk.Label(aging,text="A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made.",
-            bg=LIGHT,fg="#5f6b76",anchor="w").pack(fill="x",padx=12)
-        self.aging_tree=self.table(aging,[("kind","Type",85),("party","Customer / Supplier",220),("invoice","Invoice",110),("due","Due Date",100),("currency",
-                "Currency",75),("outstanding","Outstanding",120),("days","Days Overdue",110),("bucket","Aging Bucket",100)]); self.report_buttons(aging,"aging")
         self.comparative_tree=self.table(comparative,[("currency","Currency",75),("type","Type",85),("account","Account",95),("name","Account Name",260),
                 ("current","Current Period",130),("prior","Prior Year",130),("variance","Variance",130)]); self.report_buttons(comparative,"comparative")
         self.comparative_note=tk.Label(comparative,text="",bg=LIGHT,fg="#8a2c2c",anchor="w",justify="left")
@@ -534,9 +539,44 @@ class ReportsMixin:
         report_tab_bar=desktop_design.tab_bar(nested)
         if report_tab_bar is not None:
             report_tab_bar.bar.pack(before=controls,fill="x",padx=10,pady=(2,0))
+        outlook_opened = False
+        self.cash_projection_rows = []
+
+        def load_outlook_on_show(_event):
+            nonlocal outlook_opened
+            if not outlook_opened and nested.select() == str(cash_outlook):
+                outlook_opened = True
+                self.load_cashflow_outlook()
+
+        nested.bind("<<NotebookTabChanged>>", load_outlook_on_show, add="+")
         self.load_financial_reports()
-        self.load_ageing_report()
-        self.load_cashflow_outlook()
+
+    def build_ageing_report(self, aging):
+        self._ageing_loaded = False
+        self.aging_rows = []
+        ageing_controls=tk.Frame(aging,bg=LIGHT); ageing_controls.pack(fill="x",padx=8,pady=4)
+        self.ageing_kind=tk.StringVar(value="Customers & Suppliers")
+        tk.Label(ageing_controls,text="Show",bg=LIGHT).pack(side="left")
+        kind_box=ttk.Combobox(ageing_controls,textvariable=self.ageing_kind,values=["Customers & Suppliers","Customers","Suppliers"],state="readonly",width=24)
+        kind_box.pack(side="left",padx=6); kind_box.bind("<<ComboboxSelected>>",lambda _e:self.refresh_ageing_tree())
+        tk.Label(ageing_controls,text="As of",bg=LIGHT).pack(side="left",padx=(8,2)); self.date_entry(ageing_controls,self.ageing_as_of,12).pack(side="left",padx=3)
+        range_row=tk.Frame(aging,bg=LIGHT); range_row.pack(fill="x",padx=8,pady=(0,4))
+        choices=[f'{p.get("account_number") or ""} - {p["name"]}' for p in self.client.parties()]
+        for label,var in (("Account / Name From",self.ageing_from),("To",self.ageing_to)):
+            tk.Label(range_row,text=label,bg=LIGHT).pack(side="left",padx=(6,2))
+            ttk.Combobox(range_row,textvariable=var,values=choices,width=27).pack(side="left",padx=(2,8))
+        self.action_button(range_row,"Apply",self.load_ageing_report).pack(side="left",padx=4)
+        tk.Label(range_row,text="Type a number or name, or choose from the list.",bg=LIGHT,fg="#5f6b76").pack(side="left",padx=8)
+        tk.Label(aging,text="A past date shows what was open on that date (receipts / payments after it are not counted); a future date shows the expected lateness if no further payment is made.",
+            bg=LIGHT,fg="#5f6b76",anchor="w").pack(fill="x",padx=12)
+        self.aging_tree=self.table(aging,[("kind","Type",85),("party","Customer / Supplier",220),("invoice","Invoice",110),("due","Due Date",100),("currency",
+                "Currency",75),("outstanding","Outstanding",120),("days","Days Overdue",110),("bucket","Aging Bucket",100)]); self.report_buttons(aging,"aging")
+
+        def load_on_show(event):
+            if event.widget is aging and not self._ageing_loaded:
+                self.load_ageing_report()
+
+        aging.bind("<Map>", load_on_show, add="+")
 
     # ------------------------------------------------------------ optional filters (2.9.49)
     def _financial_filter_file(self):
@@ -819,6 +859,7 @@ class ReportsMixin:
         currency=None if self.view_currency.get()=="All Currencies" else self.view_currency.get()
         try: self.aging_rows=self.client.aging(as_of,None,currency)
         except (RuntimeError,OSError,ValueError,KeyError,TypeError) as exc: return messagebox.showerror("Ageing Report",str(exc))
+        self._ageing_loaded = True
         self.refresh_ageing_tree()
 
     def visible_ageing_rows(self):

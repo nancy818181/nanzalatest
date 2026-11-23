@@ -6,6 +6,7 @@ from desktop_brains_common import (  # 2.9.102: the names this module uses (no m
 )
 from desktop_common import flow_toolbars, main_currency  # responsive controls / 2.9.134
 from desktop_brains_common import _date_text, _fmt, _num
+from decimal import Decimal
 import logging
 from multi_select import MultiSelect, chosen_values
 
@@ -35,7 +36,7 @@ class BalanceReportsMixin:
         for label, key in (("Account From", "account_from"), ("Account To", "account_to")):
             line = tk.Frame(rows_box, bg=LIGHT); line.pack(fill="x", pady=1)
             tk.Label(line, text=label, bg=LIGHT, width=12, anchor="w", font=("Segoe UI", 9, "bold")).pack(side="left")
-            account_box=self.account_range_box(line, v[key], v.setdefault(f"{key}_name", tk.StringVar()))
+            account_box=self.account_range_box(line, v[key], v.setdefault(f"{key}_name", tk.StringVar()), v)
             account_box.pack(side="left", padx=(4, 6)); v[f"{key}_box"]=account_box
             tk.Label(line, textvariable=v[f"{key}_name"], bg="#dfe6ee", fg=NAVY, width=46, anchor="w", padx=6).pack(side="left")
             if key == "account_from":
@@ -51,13 +52,35 @@ class BalanceReportsMixin:
         tk.Label(row1, text="View Year", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
         year_box = ttk.Combobox(row1, textvariable=v["view_year"], values=years, state="readonly", width=6); year_box.pack(side="left", padx=(4, 10))
         def year_chosen(_event=None):
-            chosen = v["view_year"].get(); v["date_from"].set(f"01-01-{chosen}"); v["date_to"].set(f"31-12-{chosen}")
+            chosen = v["view_year"].get()
+            try:
+                choices = self.client.fiscal_year_report_choices(chosen) if chosen != str(year) else None
+                parties = choices["parties"] if choices else (self.client.parties() if statement else [])
+            except (RuntimeError, ValueError, KeyError) as exc:
+                v["view_year"].set(v.get("_choices_year", str(year)))
+                return messagebox.showerror("View Year", str(exc))
+            v["_choices_year"] = chosen
+            v["_historical_choices"] = choices
+            v["_historical_accounts"] = {str(a["code"]): a["name_en"] for a in choices["accounts"]} if choices else None
+            v["date_from"].set(f"01-01-{chosen}"); v["date_to"].set(f"31-12-{chosen}")
+            v["party"].set("")
+            for key in ("branch", "department", "project"):
+                v[key].set("All")
+            for key in ("account_from", "account_to"):
+                v[key + "_box"].refresh_report_accounts()
+                v[key + "_name"].set(self.balance_account_names(v).get(v[key].get().split(" - ", 1)[0].strip(), ""))
+            if statement:
+                self.set_statement_parties(v, parties)
+            year_mode.configure(text="Read-only" if choices else "")
         year_box.bind("<<ComboboxSelected>>", year_chosen)
         tk.Label(row1, text="Date From", bg=LIGHT).pack(side="left"); self.date_entry(row1, v["date_from"], 11).pack(side="left", padx=(4, 8))
         tk.Label(row1, text="To", bg=LIGHT).pack(side="left"); self.date_entry(row1, v["date_to"], 11).pack(side="left", padx=(4, 8))
         tk.Label(row1, text="Print Date", bg=LIGHT).pack(side="left"); self.date_entry(row1, v["print_date"], 11).pack(side="left", padx=(4, 8))
-        tk.Label(row1, text="Branch", bg=LIGHT).pack(side="left"); self.branch_multi_selector(row1, v["branch"]).pack(side="left", padx=(4, 8))
+        tk.Label(row1, text="Branch", bg=LIGHT).pack(side="left"); self.branch_multi_selector(row1, v["branch"], v).pack(side="left", padx=(4, 8))
         ttk.Combobox(row1, textvariable=v["posting"], values=["Posted only", "Posted + Review", "Review only"], state="readonly", width=15).pack(side="left", padx=4)
+
+        year_mode = tk.Label(row1, text="", bg=LIGHT, fg=MUTED)
+        year_mode.pack(side="left", padx=4)
 
         options = tk.Frame(box, bg=LIGHT); options.pack(fill="x", pady=(4, 0))
         groups = [("Lines", [("summary", "Summary (Resume)"), ("by_due_date", "By Due Date"), ("reference", "Reference"), ("with_branch", "With Branch")]),
@@ -118,16 +141,20 @@ class BalanceReportsMixin:
         state["viewer"] = None
         return state
 
-    def account_range_box(self, parent, variable, name_variable):
+    def balance_account_names(self, filters):
+        historical = filters.get("_historical_accounts")
+        return self._all_accounts if historical is None else historical
+
+    def account_range_box(self, parent, variable, name_variable, filters):
         """All accounts (parents too), searched by number or name; the account name shows beside the box."""
         if not getattr(self, "_all_accounts", None):
             try: self._all_accounts = {str(a["code"]): a["name_en"] for a in self.client.accounts()}
             except Exception: self._all_accounts = {}
-        def choices(): return [f"{code} - {name}" for code, name in sorted(self._all_accounts.items())]
+        def choices(): return [f"{code} - {name}" for code, name in sorted(self.balance_account_names(filters).items())]
         box = ttk.Combobox(parent, textvariable=variable, values=choices(), width=16)
         def show_name(*_args):
             code = variable.get().split(" - ", 1)[0].strip()
-            name_variable.set(self._all_accounts.get(code, "" if not code else "(account not found)"))
+            name_variable.set(self.balance_account_names(filters).get(code, "" if not code else "(account not found)"))
         def search(event=None):
             if event is not None and event.keysym in ("Up", "Down", "Return", "Escape", "Tab"): return
             typed = variable.get().strip().casefold()
@@ -140,14 +167,18 @@ class BalanceReportsMixin:
             show_name()
         box.bind("<KeyRelease>", search); box.bind("<FocusIn>", search)
         box.bind("<<ComboboxSelected>>", choose); box.bind("<FocusOut>", choose); box.bind("<Return>", choose)
-        box._f2 = lambda: (self.open_account_lookup(variable), None)[1]
+        def lookup():
+            historical = filters.get("_historical_choices")
+            self.open_account_lookup(variable, account_rows=historical["accounts"] if historical else None)
+        box._f2 = lookup
+        box.refresh_report_accounts = lambda: box.configure(values=choices())
         variable.trace_add("write", show_name); show_name()
         return box
 
     def statement_account_from_changed(self, v):
         """Mirror a known account to the second row unless the user chose a different end account."""
         code=v["account_from"].get().split(" - ",1)[0].strip()
-        if code not in getattr(self,"_all_accounts",{}): return
+        if code not in self.balance_account_names(v): return
         current=v["account_to"].get().split(" - ",1)[0].strip()
         if not current or current==v.get("_auto_account_to"):
             v["_auto_account_to"]=code
@@ -173,49 +204,83 @@ class BalanceReportsMixin:
     def close_result_tab(self, state):
         current = state["notebook"].select()
         if not current or current == str(state["options_page"]): return
-        state["tabs"].pop(current, None); state["notebook"].forget(current)
-        if not state["notebook"].tabs(): state["result"] = None; state["viewer"] = None
+        state["tabs"].pop(current, None)
+        state["notebook"].nametowidget(current).destroy()
+        state["result"], state["viewer"] = state["tabs"].get(state["notebook"].select(), (None, None))
 
     def open_report_line(self, state, viewer, event):
-        values = viewer.item(viewer.identify_row(event.y), "values")
+        iid = viewer.identify_row(event.y)
+        if not iid or set(viewer.item(iid, "tags")) & {"section", "header", "total"}:
+            return
+        values = viewer.item(iid, "values")
         if not values: return
-        result = state.get("result") or {}
+        tab_data = next((data for data in state["tabs"].values() if data[1] is viewer), None)
+        result = tab_data[0] if tab_data else {}
+        options = result.get("_options")
+        if not options:
+            return
         detailed = result.get("title", "").startswith(("Statement", "Detailed"))
-        if detailed and len(values) > 1 and values[1] and values[1] not in ("Voucher",):
-            self._opening_from_state = state
-            return self.open_transaction(str(values[1]))
+        if detailed and len(values) > 1 and values[1] and values[1] != "Voucher":
+            return self.open_transaction(str(values[1]), view_year=result["_year"], return_state=state)
         code = str(values[0]).strip()
-        if code and code.replace(".", "").isdigit():  # trial balance line: open the statement of that account in a new tab
-            v = state["vars"]; v["account_from"].set(code); v["account_to"].set(code); state["flags"]["detailed"].set(True)
+        if code and code.replace(".", "").isdigit():
             parent = state["notebook"].select()
-            self.run_balance_report(state); state["flags"]["detailed"].set(state["statement"])
-            state.setdefault("parents", {})[state["notebook"].select()] = parent  # Escape comes back to the trial balance
+            selected_options = {**options, "account_from": code, "account_to": code, "detailed": True}
+            self.run_balance_report(state, options=selected_options)
+            if state["notebook"].select() != parent:
+                state.setdefault("parents", {})[state["notebook"].select()] = parent
 
-    def open_transaction(self, entry_number):
-        other_year = getattr(self, "_report_view_year", "")  # 2.9.109: a line of another fiscal year (read only)
+    def open_transaction(self, entry_number, *, view_year=None, return_state=None):
+        current_year = int(self.current_fiscal_year)
+        year = current_year if view_year is None else int(view_year)
+        read_only = year != current_year
+        client = self.client
+        context = client.company_id, client.fiscal_year
         try:
-            if other_year: rows = [r for r in self.client.fiscal_year_journal(int(other_year)) if r["entry_number"] == entry_number]
-            else: rows = [r for r in self.client.journal(entry_number=entry_number) if r["entry_number"] == entry_number]
-        except Exception as exc: return messagebox.showerror("Transaction", str(exc))
-        if not rows: return messagebox.showinfo("Transaction", f"{entry_number} was not found in this fiscal year")
+            rows = (client.fiscal_year_journal(year, entry_number=entry_number) if read_only
+                    else client.journal(entry_number=entry_number))
+        except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+            return messagebox.showerror("Transaction", str(exc))
+        if not rows:
+            return messagebox.showinfo("Transaction", f"{entry_number} was not found in this fiscal year")
         first = rows[0]
-        window = tk.Toplevel(self); window.title(f"Transaction {entry_number}"); window.configure(bg=LIGHT); window.geometry("860x380"); window.transient(self)
+        window = tk.Toplevel(self); window.title(f"Transaction {entry_number}"); window.configure(bg=LIGHT); window.transient(self)
+        self.fit_dialog(window, 860, 380, 480, 300)
+        status = tk.Frame(window, bg=LIGHT); status.pack(fill="x", padx=10, pady=6)
+        if read_only:
+            tk.Label(status, text="Read-only", bg=LIGHT, fg=RED, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 8))
+        tk.Label(status, text=str(year), bg=LIGHT, fg=NAVY, font=("Segoe UI", 10, "bold")).pack(side="left")
         tk.Label(window, text=f"{entry_number}   |   {_date_text(first['entry_date'])}   |   {first.get('description') or ''}", bg=LIGHT, fg=NAVY,
-                font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=10, pady=8)
-        tree = ttk.Treeview(window, columns=("account", "name", "party", "debit", "credit"), show="headings", height=9)
-        for key, label, width in (("account", "Account", 110), ("name", "Account Name", 260), ("party", "Customer / Supplier", 200), ("debit", "Debit", 110), ("credit", "Credit", 110)):
+                font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=10, pady=(0, 8))
+        buttons = tk.Frame(window, bg=LIGHT); buttons.pack(side="bottom", pady=8)
+        tk.Button(buttons, text="Close (Esc)", command=window.destroy, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="right", padx=4)
+        debit = sum(Decimal(str(r["debit"] or 0)) for r in rows)
+        credit = sum(Decimal(str(r["credit"] or 0)) for r in rows)
+        tk.Label(window, text=f'Total  Debit {debit:,.2f}   Credit {credit:,.2f}  {first["currency"]}',
+                 bg=LIGHT, fg=NAVY).pack(side="bottom", anchor="e", padx=10)
+        frame = tk.Frame(window)
+        frame.pack(fill="both", expand=True, padx=10)
+        tree = ttk.Treeview(frame, columns=("account", "name", "party", "debit", "credit"), show="headings", height=9)
+        for key, label, width in (("account", "Account", 100), ("name", "Account Name", 220), ("party", "Customer / Supplier", 155), ("debit", "Debit", 100), ("credit", "Credit", 100)):
             tree.heading(key, text=label); tree.column(key, width=width, anchor="e" if key in ("debit", "credit") else "w")
-        for r in rows: tree.insert("", "end", values=(r["account_code"], r.get("account_name") or "", r.get("party_name") or "", f'{float(r["debit"] or 0):,.2f}', f'{float(r["credit"] or 0):,.2f}'))
-        tree.pack(fill="both", expand=True, padx=10)
-        tk.Label(window, text=f'Total  Debit {sum(float(r["debit"] or 0) for r in rows):,.2f}   Credit {sum(float(r["credit"] or 0) for r in rows):,.2f}  {first["currency"]}',
-                bg=LIGHT, fg=NAVY).pack(anchor="e", padx=10)
-        buttons = tk.Frame(window, bg=LIGHT); buttons.pack(pady=8)
-        def edit(_event=None):
-            window.destroy(); self.open_entry_source(first, return_state)
-        return_state = getattr(self, "_opening_from_state", None); self._opening_from_state = None
-        tk.Button(buttons, text="Edit this entry", command=edit, bg=GOLD, fg=NAVY, border=0, padx=14, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
-        tk.Button(buttons, text="Close (Esc)", command=window.destroy, bg=NAVY, fg="white", border=0, padx=14, pady=6).pack(side="left", padx=4)
-        tree.bind("<Double-1>", edit); window.bind("<Escape>", lambda _e: window.destroy()); window.bind("<Return>", edit)
+        for row in rows:
+            dr, cr = Decimal(str(row["debit"] or 0)), Decimal(str(row["credit"] or 0))
+            tree.insert("", "end", values=(row["account_code"], row.get("account_name") or "", row.get("party_name") or "", f"{dr:,.2f}", f"{cr:,.2f}"))
+        scroll = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        tree.pack(fill="both", expand=True)
+        if not read_only:
+            def edit(_event=None):
+                if self.client is not client or (client.company_id, client.fiscal_year) != context:
+                    return messagebox.showwarning("Transaction", "The company or fiscal year has changed.", parent=window)
+                window.destroy()
+                self.open_entry_source(first, return_state)
+            tk.Button(buttons, text="Edit this entry", command=edit, bg=GOLD, fg=NAVY, border=0, padx=14, pady=6,
+                      font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
+            tree.bind("<Double-1>", edit)
+            window.bind("<Return>", edit)
+        window.bind("<Escape>", lambda _e: window.destroy())
         window.focus_set()
         return window
 
@@ -277,6 +342,9 @@ class BalanceReportsMixin:
         selected = self.journal_tree.selection()
         if not selected: return messagebox.showwarning("General Journal", "Select a line of the entry you want to edit")
         number = str(self.journal_tree.item(selected[0], "values")[0])
+        year = self.__dict__.get("_journal_loaded_year")
+        if year is not None and year != int(self.current_fiscal_year):
+            return self.open_transaction(number, view_year=year)
         try: rows = [r for r in self.client.journal(entry_number=number) if r["entry_number"] == number]
         except Exception as exc: return messagebox.showerror("General Journal", str(exc))
         if not rows: return messagebox.showinfo("General Journal", f"{number} was not found")
@@ -306,11 +374,11 @@ class BalanceReportsMixin:
 
     def balance_party_search(self, v):
         from desktop import row_matches_search
-        typed = v["party"].get().strip(); names = list(getattr(self, "balance_party_map", {}))
+        typed = v["party"].get().strip(); names = list(v.get("_party_map", {}))
         v["party_box"]["values"] = [n for n in names if row_matches_search((n,), typed)] if typed else names
 
     def balance_party_chosen(self, v):
-        party = getattr(self, "balance_party_map", {}).get(v["party"].get())
+        party = v.get("_party_map", {}).get(v["party"].get())
         if party and party.get("account_number"):
             code=party["account_number"]
             v["account_from"].set(code); v["account_to"].set(code)
@@ -331,7 +399,6 @@ class BalanceReportsMixin:
         view_year = v["view_year"].get() if "view_year" in v else ""
         current = str(getattr(self, "current_fiscal_year", "") or "")
         options["view_year"] = view_year if view_year and view_year != current else ""  # 2.9.109: another year, read only
-        self._report_view_year = options["view_year"]
         if options["view_year"]: options["filter_text"] = (options.get("filter_text", "") + f"   Fiscal year {view_year} (read only)").strip()
         if options.get("tax_basis"):  # 2.9.112: said on the report, so it is never mistaken for the accounting P&L
             options["profit_loss_only"] = True
@@ -339,43 +406,58 @@ class BalanceReportsMixin:
             options["filter_text"] = (options.get("filter_text", "") + basis).strip()
         branches = chosen_values(v["branch"].get())
         if branches:  # 2.9.62: one or several branches ticked
-            try: known = {row["name"]: row["id"] for row in self.client.branches()}
+            historical = v.get("_historical_choices")
+            try: known = {row["name"]: row["id"] for row in (historical["branches"] if historical else self.client.branches())}
             except Exception: known = {}
             options["branch_ids"] = [known[name] for name in branches if name in known]
         shown = [f"{label}: {', '.join(values)}" for label, values in (("Branch", branches), ("Department", options["departments"]), ("Project", options["projects"])) if values]
-        if shown: options["filter_text"] = "   ".join(shown)
+        if shown: options["filter_text"] = "   ".join(filter(None, [options.get("filter_text"), *shown]))
         for key in ("date_from", "date_to", "print_date"):
             if options[key]:
                 try: datetime.strptime(options[key], "%d-%m-%Y")
                 except ValueError: raise ValueError(f"{key.replace('_', ' ').title()} must be DD-MM-YYYY")
         return options
 
-    def branch_multi_selector(self, parent, variable):
+    def branch_multi_selector(self, parent, variable, filters=None):
         """2.9.62: tick one or several branches (empty = all)."""
         def names():
-            try: return [row["name"] for row in self.client.branches()] if self.client else []
+            historical = (filters or {}).get("_historical_choices")
+            try: return [row["name"] for row in (historical["branches"] if historical else self.client.branches())] if self.client else []
             except Exception: return []
         if variable.get() in ("", "All Branches"): variable.set("All")
         def reload(box): box["values"] = names()
         return MultiSelect(parent, variable, names(), width=16, title="Branch", before_open=reload, bg=LIGHT)
 
-    def run_balance_report(self, state, refresh=False):
-        try:
-            if state["statement"] and not state["vars"]["account_from"].get().strip():
-                raise ValueError("Choose a customer / supplier (or an account range) first")
-            options = self.balance_options(state); result = self.client.account_report(options)
-        except Exception as exc: return messagebox.showerror("Statement of Account" if state["statement"] else "Trial Balance", str(exc))
-        if refresh and state.get("viewer") is not None and state["notebook"].select() in state["tabs"]: viewer = state["viewer"]
-        else:
-            v = state["vars"]; party = v.get("party").get() if v.get("party") is not None else ""
-            name = party.split(" | ")[0] if party and v["account_from"].get() == v["account_to"].get() else f'{v["account_from"].get() or "first"} - {v["account_to"].get() or "last"}'
-            frame, viewer = self.new_result_tab(state, ("Statement " if state["statement"] or options.get("detailed") else "TB ") + name)
-            state["tabs"][str(frame)] = (result, viewer)
-        state["result"] = result; state["viewer"] = viewer
+    def run_balance_report(self, state, refresh=False, *, options=None):
         current = state["notebook"].select()
-        if current: state["tabs"][current] = (result, viewer)
+        existing = state["tabs"].get(current) if refresh else None
+        try:
+            if options is None:
+                options = existing[0]["_options"] if existing else self.balance_options(state)
+            if state["statement"] and not options["account_from"]:
+                raise ValueError("Choose a customer / supplier (or an account range) first")
+            result = self.client.account_report(options)
+        except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
+            return messagebox.showerror("Statement of Account" if state["statement"] else "Trial Balance", str(exc))
+        year = int(options.get("view_year") or self.current_fiscal_year)
+        result.update(_year=year, _options=options)
+        if existing:
+            viewer = existing[1]
+        else:
+            first, last = options["account_from"], options["account_to"]
+            party = state["vars"]["party"].get().split(" | ")[0] if first == last else ""
+            name = party or (first if first == last and first else f"{first or 'first'} - {last or 'last'}")
+            title = "Statement" if state["statement"] or options.get("detailed") else "TB"
+            frame, viewer = self.new_result_tab(state, f"{title} {year} {name}")
+            current = str(frame)
+        state["result"], state["viewer"] = result, viewer
+        state["tabs"][current] = (result, viewer)
         self.show_sections(viewer, result["sections"])
-        if getattr(viewer, "_info", None): viewer._info.config(text=f"{result['title']}  |  {result['account_count']} account(s)  |  " + result["meta"][2])
+        if getattr(viewer, "_info", None):
+            from arabic_ui import active, translate
+            access = translate("Read-only") if active() else "Read-only"
+            historical = f"  |  {year} {access}" if options.get("view_year") else ""
+            viewer._info.config(text=f"{result['title']}  |  {result['account_count']} account(s)  |  {result['meta'][2]}{historical}")
         state["info"].config(text=f"{result['title']}  |  {result['account_count']} account(s)  |  " + "   ".join(result["meta"][1:3]), fg=NAVY)
 
     def export_balance_report(self, state, format_name):
@@ -419,11 +501,18 @@ class BalanceReportsMixin:
     def load_statement_parties(self):
         state = getattr(self, "statement_state", None)
         if not state: return
-        try: parties = self.client.parties()
-        except Exception: parties = []
-        self.party_rows = parties
-        self.balance_party_map = {f'{p["name"]} | {p.get("account_number") or ""} | {p["kind"]}': p for p in parties}
-        state["vars"]["party_box"]["values"] = list(self.balance_party_map)
+        filters = state["vars"]
+        historical = filters.get("_historical_choices")
+        try: parties = historical["parties"] if historical else self.client.parties()
+        except RuntimeError: parties = []
+        if not historical:
+            self.party_rows = parties
+        self.set_statement_parties(filters, parties)
+
+    @staticmethod
+    def set_statement_parties(filters, parties):
+        filters["_party_map"] = {f'{p["name"]} | {p.get("account_number") or ""} | {p["kind"]}': p for p in parties}
+        filters["party_box"]["values"] = list(filters["_party_map"])
 
     def refresh_statement_parties(self): self.load_statement_parties()
 

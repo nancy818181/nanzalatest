@@ -150,8 +150,12 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         next(b for b in self.buttons(items) if self.english(b) == "Add Item Line").invoke()
         app.update()
         row = sheet.tree.focus()
+        pending_builders = tuple(app._pending_builders)
+        self.assertIsNone(app.__dict__.get("items_tree"))
         app.purchase_item_lookup()
         app.update()
+        self.assertEqual(tuple(app._pending_builders), pending_builders)
+        self.assertIsNone(app.__dict__.get("items_tree"))
         dialog = next(w for w in app.winfo_children() if isinstance(w, tk.Toplevel) and w.title() == "Items - F2")
         lookup_tree = next(w for frame in dialog.winfo_children() for w in frame.winfo_children() if isinstance(w, ttk.Treeview))
         match = next(item for item in lookup_tree.get_children() if lookup_tree.item(item, "values")[0] == "GRID-PAPER")
@@ -193,6 +197,9 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         app.update()
         window = next(w for w in app.winfo_children() if isinstance(w, tk.Toplevel) and hasattr(w, "_commercial"))
         state = window._commercial
+        tabs = state["tabs"]
+        self.assertEqual([tabs.tab(tab, "text") for tab in tabs.tabs()], ["Quotation", "Search"])
+        self.assertEqual(state["number"].get(), "Assigned on Save")
         state["fields"]["party"].set(next(label for label, pid in state["party_map"].items() if pid == customer["id"]))
         state["fields"]["currency"].set("USD")
         next(b for b in self.buttons(window) if self.english(b) == "Add line").invoke()
@@ -205,6 +212,10 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         next(b for b in self.buttons(line) if self.english(b) == "Use line").invoke()
         next(b for b in self.buttons(window) if self.english(b) == "Save draft").invoke()
         quotation = state["document"]["number"]
+        self.assertRegex(quotation, r"^QUO-\d{4}-\d{6}$")
+        self.assertEqual(state["number"].get(), quotation)
+        tabs.select(1)
+        app.update()
 
         def widgets(widget):
             for child in widget.winfo_children():
@@ -212,16 +223,25 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                 yield from widgets(child)
 
         search = next(w for w in widgets(window) if isinstance(w, tk.Entry) and
-                      any(isinstance(other, tk.Label) and other.cget("text") == "Find document"
+                      any(isinstance(other, tk.Label) and other.cget("text") == "Find quotation"
                           for other in w.master.winfo_children()))
-        search.insert(0, "QUOTE-UI-PAPER")
+        results = next(w for w in widgets(window) if isinstance(w, ttk.Treeview) and "number" in w["columns"])
+        search_button = next(b for b in self.buttons(window) if self.english(b) == "Search")
+        for query in (quotation, "Quotation UI customer"):
+            search.delete(0, "end")
+            search.insert(0, query)
+            search_button.invoke()
+            self.assertIn(quotation, [results.set(iid, "number") for iid in results.get_children()])
+        search.delete(0, "end")
+        search.insert(0, "QUOTE-UI-PAPER Quotation UI paper")
         app.after(300, app.quit)
         app.mainloop()
-        results = next(w for w in widgets(window) if isinstance(w, ttk.Treeview) and "number" in w["columns"])
         match = next(item for item in results.get_children() if quotation in results.item(item, "values"))
         self.assertIn("QUOTE-UI-PAPER", results.item(match, "values")[-1])
         results.selection_set(match)
         next(b for b in self.buttons(window) if self.english(b) == "Open selected").invoke()
+        self.assertEqual(tabs.index(tabs.select()), 0)
+        self.assertEqual(state["number"].get(), quotation)
         next(b for b in self.buttons(window) if self.english(b) == "Convert to Sales Invoice").invoke()
         app.update()
         invoice = app.client.invoice_detail(app.sales_edit_id)

@@ -6,6 +6,13 @@ AR = {
         'تغيّرت الشركة أو السنة المالية. أعد فتح المستندات التجارية.',
     'Search items (F2)': 'البحث عن الأصناف (F2)',
     'Find document': 'البحث عن مستند',
+    'Find quotation': 'البحث عن عرض سعر',
+    'View Selected Entry': 'عرض القيد المحدد',
+    'Read-only': 'للقراءة فقط',
+    'Quotation No.': 'رقم عرض السعر',
+    'Assigned on Save': 'يُعيّن عند الحفظ',
+    'F2 to find an item · double-click to edit': '‏F2 للبحث عن صنف · انقر مرتين للتعديل',
+    'Number, customer, item code or description': 'الرقم أو العميل أو رمز الصنف أو وصفه',
     'Transfer': 'تحويل',
     'Tick the lines to transfer and enter their quantities. The sales invoice is saved as a draft.':
         'حدّد سطور الأصناف المراد تحويلها وأدخل كمياتها. تُحفظ فاتورة البيع كمسوّدة.',

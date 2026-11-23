@@ -661,8 +661,21 @@ class ApiHandler(BaseHTTPRequestHandler):
             try:
                 year=int(query.get("year",[""])[0]); year_db=self._year_db(year)
                 if year_db is None: return self._json(409,self._year_unavailable(year))
-                return self._json(200,{"items":year_db.journal(query.get("from_date",[None])[0],query.get("to_date",[None])[0],query.get("currency",[None])[0]),"year":year,"read_only":True})
+                items = year_db.journal(self._query(parsed, "from_date"), self._query(parsed, "to_date"),
+                                        self._query(parsed, "currency"), entry_number=self._query(parsed, "entry_number"))
+                return self._json(200, {"items": items, "year": year, "read_only": True})
             except Exception as exc: return self._json(400,{"error":str(exc)})
+        if path == "/api/fiscal-year/report-choices":
+            try:
+                year = int(self._query(parsed, "year"))
+                books = self._year_db(year)
+                if books is None:
+                    return self._json(409, self._year_unavailable(year))
+                return self._json(200, {"accounts": books.list_accounts(), "parties": books.list_parties(),
+                                        "branches": books.list_branches(), "departments": books.list_departments(),
+                                        "projects": books.list_projects(), "year": year, "read_only": True})
+            except (TypeError, ValueError) as exc:
+                return self._json(400, {"error": str(exc)})
         if path == "/api/fiscal-year/cash-flow":  # 2.9.79: cash flow of any fiscal year (its own file when kept per year)
             try:
                 year=int(self._query(parsed,"year")); year_db=self._year_db(year)
@@ -694,7 +707,9 @@ class ApiHandler(BaseHTTPRequestHandler):
             try: return self._json(200,{"items":self.db.invoice_detail(int(path.split("/")[-2])).get("items",[])})
             except KeyError: return self._json(404,{"error":"Invoice not found"})
         if path == "/api/invoices":
-            return self._json(200, {"items": self.db.list_invoices()})
+            if self._query(parsed, "view") == "sales-lookup":
+                return self._json(200, {"items": self.db.sales_invoice_choices()})
+            return self._json(200, {"items": self.db.list_invoices(kind=self._query(parsed, "kind") or None)})
         if path.startswith("/api/invoices/") and path.endswith("/detail"):
             try: result=self.db.invoice_detail(int(path.split("/")[-2]))
             except KeyError: return self._json(404,{"error":"Invoice not found"})
