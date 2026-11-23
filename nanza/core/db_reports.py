@@ -408,7 +408,7 @@ class ReportsStore:
         where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
         parameters.append(int(limit) if limit else -1)  # SQLite: LIMIT -1 = every line
         with self.connect() as db:
-            rows = [dict(row) for row in db.execute(f"""SELECT e.id entry_id,e.entry_number,e.entry_date,
+            cursor = db.execute(f"""SELECT e.id entry_id,e.entry_number,e.entry_date,
                 e.description,e.source_type,e.source_id,e.voucher_type,e.currency,e.branch_id,COALESCE(b.name,'Head Office') branch_name,a.code account_code,a.name_en account_name,
                 CASE WHEN e.source_type='payroll' THEN 'Payroll' WHEN e.source_type='expense' THEN 'Expenses'
                      WHEN e.source_type='journal_voucher' AND e.voucher_type='07' THEN 'DOE'
@@ -416,17 +416,18 @@ class ReportsStore:
                      WHEN e.source_type='invoice' AND i.kind='sale' THEN 'Sales'
                      WHEN e.source_type='invoice' AND COALESCE(i.entry_type,i.kind)='expenses' THEN 'Expenses'
                      WHEN e.source_type='invoice' THEN 'Purchases' ELSE 'Other' END journal_category,
-                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,j.debit debit,j.credit credit,j.id line_id,
+                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,j.debit debit,j.credit credit,
                 COALESCE(pr.code,'') project_code,COALESCE(dp.code,'') department_code
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id
                 JOIN accounts a ON a.id=j.account_id LEFT JOIN parties p ON p.id=j.party_id LEFT JOIN branches b ON b.id=e.branch_id
                 LEFT JOIN projects pr ON pr.id=j.project_id LEFT JOIN departments dp ON dp.id=j.department_id
                 LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
                 {where_clause}
-                ORDER BY {normalized_date},e.id,j.id LIMIT ?""", parameters)]
+                ORDER BY {normalized_date},e.id,j.id LIMIT ?""", parameters)
+            fields = tuple(column[0] for column in cursor.description)
+            rows = [dict(zip(fields, row)) for row in cursor]
         balances = {}
         for row in rows:
-            row.pop("line_id", None)
             row["debit"] = _report_number(Decimal(str(row["debit"] or 0)))
             row["credit"] = _report_number(Decimal(str(row["credit"] or 0)))
             if not running_balance: continue  # 2.9.132 (performance): the general ledger computes its own balances
@@ -519,8 +520,7 @@ class ReportsStore:
             if from_date and normalized<from_date:
                 opening[key]=opening.get(key,Decimal("0"))+movement; continue
             balances[key]=balances.get(key,opening.get(key,Decimal("0")))+movement
-            row["debit"] = _report_number(Decimal(str(row["debit"] or 0)))
-            row["credit"] = _report_number(Decimal(str(row["credit"] or 0)))
+            # journal() already returned the exact report representation for debit and credit.
             row["balance"]=_report_number(balances[key]); items.append(row)
         return {"opening":[{"currency":k[0],"account_code":k[1],"amount":float(v)} for k,v in opening.items()],"items":items}
 

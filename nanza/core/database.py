@@ -480,8 +480,12 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             import owner_access  # 2.9.101: the hidden owner account
             owner_access.migrate(db)
             invoice_columns={row["name"] for row in db.execute("PRAGMA table_info(invoices)")}
+            if "org" not in invoice_columns:
+                db.execute("ALTER TABLE invoices ADD COLUMN org TEXT NOT NULL DEFAULT 'Yes' CHECK(org IN ('Yes','No'))")
             if "vat_recoverable" not in invoice_columns: db.execute("ALTER TABLE invoices ADD COLUMN vat_recoverable INTEGER NOT NULL DEFAULT 1")
             expense_columns={row["name"] for row in db.execute("PRAGMA table_info(expenses)")}
+            if "org" not in expense_columns:
+                db.execute("ALTER TABLE expenses ADD COLUMN org TEXT NOT NULL DEFAULT 'Yes' CHECK(org IN ('Yes','No'))")
             if "vat_recoverable" not in expense_columns: db.execute("ALTER TABLE expenses ADD COLUMN vat_recoverable INTEGER NOT NULL DEFAULT 1")
             # 2.9.110: an expense without an official invoice stays in the books but is added back to the taxable profit
             if "tax_deductible" not in expense_columns: db.execute("ALTER TABLE expenses ADD COLUMN tax_deductible INTEGER NOT NULL DEFAULT 1")

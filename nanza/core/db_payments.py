@@ -206,7 +206,7 @@ class PaymentsStore:
             expense_id=result.lastrowid
             import numbering  # 2.9.116
             number=str(item.get("expense_number") or "").strip() or self._next_number(db,"expenses","expense_number",numbering.series(db,"expense"),date)
-            db.execute("UPDATE expenses SET expense_number=? WHERE id=?",(number,expense_id))
+            db.execute("UPDATE expenses SET org=?,expense_number=? WHERE id=?",(item.get("org","Yes"),number,expense_id))
             posting_status="draft" if defer_posting else "posted"
             entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
                 created_by,created_at,posting_status,posted_at,posted_by)
@@ -238,7 +238,7 @@ class PaymentsStore:
 
     def list_expenses(self):
         with self.connect() as db:
-            return [dict(row) for row in db.execute("""SELECT id,expense_date,description,category,currency,
+            return [dict(row) for row in db.execute("""SELECT id,org,expense_date,description,category,currency,
                 CAST(subtotal AS REAL) subtotal,CAST(with_vat_subtotal AS REAL) with_vat_subtotal,CAST(without_vat_subtotal AS REAL) without_vat_subtotal,CAST(vat AS REAL) vat,CAST(total AS REAL) total,
                 expense_account,expense_without_vat_account,vat_account,payment_account,expense_side,expense_without_vat_side,vat_side,payment_side,reference,vat_recoverable,
                 expense_number,department_id,project_id,vat_use,tax_deductible,
@@ -479,7 +479,7 @@ class PaymentsStore:
             files = [dict(r) for r in db.execute("SELECT file_name,mime_type,content FROM expense_attachments WHERE expense_id=?", (int(expense_id),))]
         self._assert_period_open(row["expense_date"]); self._assert_vat_open(row["expense_date"], item.get("expense_date"))
         self.delete_expense(expense_id, user_id)
-        new_id = self.add_expense({**item, "expense_number": row["expense_number"]}, user_id)
+        new_id = self.add_expense({"org":row["org"], **item, "expense_number": row["expense_number"]}, user_id)
         for f in files: self.add_expense_attachment(new_id, f["file_name"], f["mime_type"], f["content"], user_id)
         return new_id
 

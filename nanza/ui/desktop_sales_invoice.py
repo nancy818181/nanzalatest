@@ -80,6 +80,14 @@ class SalesInvoiceMixin:
         nav=tk.Frame(header,bg=LIGHT); nav.pack(fill="x",pady=(0,4))
         tk.Label(nav,text="Sales Invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",11,"bold")).pack(side="left",padx=(0,8))
         tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,4))
+        self.sales_org = tk.StringVar(value="Yes")
+        tk.Label(nav, text="Org", bg=LIGHT).pack(side="left")
+        ttk.Combobox(nav, textvariable=self.sales_org, values=("Yes", "No"), state="readonly", width=4).pack(side="left")
+        self.sales_org_filter = tk.StringVar(value="All")
+        tk.Label(nav, text="Find Org", bg=LIGHT).pack(side="left")
+        org_filter = ttk.Combobox(nav, textvariable=self.sales_org_filter, values=("All", "Yes", "No"), state="readonly", width=4)
+        org_filter.pack(side="left")
+        org_filter.bind("<<ComboboxSelected>>", lambda _event: self.load_sales_customer_list())
         tabs_row=tk.Frame(header,bg=LIGHT); tabs_row.pack(fill="x")
         self.sales_open_box=ttk.Combobox(nav,textvariable=self.sales_open_choice,width=34); self.sales_open_box.pack(side="left",padx=(0,4))
         self.sales_open_box.bind("<<ComboboxSelected>>",lambda _event:self.open_sales_invoice()); self.sales_open_box.bind("<KeyRelease>",self.search_open_sales)
@@ -276,6 +284,8 @@ class SalesInvoiceMixin:
         self.sales_party_box["values"]=list(self.sales_customers)
         try: invoices=self.client.sales_invoice_choices()
         except Exception: invoices=[]
+        if self.sales_org_filter.get() != "All":
+            invoices = [row for row in invoices if row["org"] == self.sales_org_filter.get()]
         invoices.sort(key=lambda r:(sortable_date(r["invoice_date"]),str(r["invoice_number"]),r["id"]))
         self.sales_open_map={}
         for row in invoices:
@@ -420,6 +430,7 @@ class SalesInvoiceMixin:
         if confirm and self.sales_items and not messagebox.askyesno("Sales Invoice","Start a new invoice? Lines that are not saved will be cleared."): return
         import arabic_ui
         self.sales_save_button.config(text=arabic_ui.translate("Save"), state="normal")
+        self.sales_org.set("Yes")
         self._sales_quotation = None
         self.sales_edit_id=None; self.sales_items=[]; self.sales_pdf_path=None; self.sales_sheet.delete(*self.sales_sheet.get_children())
         if hasattr(self,"sales_exempt_reason"):
@@ -770,6 +781,7 @@ class SalesInvoiceMixin:
         except Exception as exc:
             messagebox.showerror("Sales Invoice", str(exc))
             return False
+        self.sales_org.set(detail["org"])
         self._sales_quotation = record.get("quotation_number")
         self._sales_linked_status = detail["status"]
         import arabic_ui
@@ -831,7 +843,7 @@ class SalesInvoiceMixin:
         return True
 
     def sales_form_state(self):
-        fields=(self.sales_no,self.sales_date,self.sales_party,self.sales_currency,self.sales_supplier_account,self.sales_vat_account,
+        fields=(self.sales_org,self.sales_no,self.sales_date,self.sales_party,self.sales_currency,self.sales_supplier_account,self.sales_vat_account,
                 self.sales_expense_account,self.sales_supplier_side,self.sales_vat_side,self.sales_expense_side,self.sales_payment_method,
                 self.sales_due_date,self.sales_amount_paid,self.sales_branch,self.sales_department,self.sales_project,self.sales_treatment,
                 self.sales_doc_type,self.sales_category,self.sales_discount_percent,self.sales_discount_amount)
@@ -864,7 +876,7 @@ class SalesInvoiceMixin:
         if orphan: return messagebox.showwarning("Sales Invoice",
                 "A line has an amount but no description. Add a description or delete that line before saving, so the saved total matches what you see.")
         if not lines: return messagebox.showwarning("Sales Invoice","Add at least one line with a description")
-        invoice={"invoice_number":self.sales_no.get().strip(),"invoice_date":self.sales_date.get().strip(),
+        invoice={"org": self.sales_org.get(), "invoice_number":self.sales_no.get().strip(),"invoice_date":self.sales_date.get().strip(),
                  "party_name":self.sales_party.get().strip(),"kind":"sales","currency":self.sales_currency.get(),
                  "supplier_account":self.sales_supplier_account.get().split(" - ",1)[0].strip(),
                  "vat_account":self.sales_vat_account.get().split(" - ",1)[0].strip() or "4427",

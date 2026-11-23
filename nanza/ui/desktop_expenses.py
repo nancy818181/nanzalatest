@@ -34,6 +34,9 @@ class ExpensesMixin:
         tk.Label(r1, text="Category", bg=LIGHT).pack(side="left"); tk.Entry(r1, textvariable=v["category"], width=13).pack(side="left", padx=(4, 8))
         ttk.Combobox(r1, textvariable=v["currency"], values=self.currency_codes, state="readonly", width=5).pack(side="left", padx=4)
         tk.Label(r1, text="Reference", bg=LIGHT).pack(side="left"); tk.Entry(r1, textvariable=v["reference"], width=13).pack(side="left", padx=4)
+        f["org"] = tk.StringVar(value="Yes")
+        tk.Label(r1, text="Org", bg=LIGHT).pack(side="left")
+        ttk.Combobox(r1, textvariable=f["org"], values=("Yes", "No"), state="readonly", width=4).pack(side="left")
         r2 = tk.Frame(box, bg=LIGHT); r2.pack(fill="x", pady=(5, 0))
         for label, key, width in (("With VAT (before VAT)", "with_vat", 12), ("Without VAT", "without_vat", 11), ("VAT", "vat", 10)):
             tk.Label(r2, text=label, bg=LIGHT).pack(side="left"); entry = tk.Entry(r2, textvariable=v[key], width=width); entry.pack(side="left", padx=(4, 8))
@@ -68,6 +71,11 @@ class ExpensesMixin:
         f["tree"] = ttk.Treeview(page, columns=[f"c{i}" for i in range(12)])  # kept hidden: the Find box replaces the list
         find = tk.Frame(page, bg=LIGHT); find.pack(fill="x", padx=8, pady=(0, 4), before=box); f["find"] = tk.StringVar()
         tk.Label(find, text="Find expense (No., description, date)", bg=LIGHT, font=("Segoe UI", 9, "bold")).pack(side="left")
+        f["org_filter"] = tk.StringVar(value="All")
+        tk.Label(find, text="Find Org", bg=LIGHT).pack(side="left")
+        org_filter = ttk.Combobox(find, textvariable=f["org_filter"], values=("All", "Yes", "No"), state="readonly", width=4)
+        org_filter.pack(side="left")
+        org_filter.bind("<<ComboboxSelected>>", lambda _event: self.load_expenses())
         f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=50); f["find_box"].pack(side="left", padx=6)
         f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.expense_found())
         f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_expenses())
@@ -115,6 +123,7 @@ class ExpensesMixin:
     def new_expense(self):
         f = self.expense_form; v = f["vars"]; f["id"] = None; f["pdf"] = None; f["vat_typed"] = False; f["pdf_vat_review"] = False; f["pdf_suggested_type"] = ""
         f["supplier_hint"] = ""  # 2.9.120: the supplier read on the PDF (the posting rule is learned for it)
+        f["org"].set("Yes")
         for key in ("description", "with_vat", "without_vat", "vat", "reference"): v[key].set("")
         v["date"].set(self.fiscal_today()); f["non_deductible"].set(False); f["tax_non_deductible"].set(False); f["department"].set("(none)"); f["project"].set("(none)")
         f["pdf_label"].config(text="No PDF", fg=MUTED); f["total"].config(text="Total: 0.00"); f["number_label"].config(text="New expense")
@@ -234,7 +243,7 @@ class ExpensesMixin:
         for key, amount_key, label in (("account", "with_vat", "Expense A/C"), ("no_vat_account", "without_vat", "No-VAT A/C")):
             if amounts[amount_key] and not v[key].get().split(" - ", 1)[0].strip():
                 raise ValueError(f"Choose the {label}: the class 6 account of this expense (F2 to search), for example 6263.1 rent")
-        return {"expense_date": v["date"].get().strip(), "description": v["description"].get().strip(), "category": v["category"].get().strip(), "currency": v["currency"].get(),
+        return {"org": f["org"].get(), "expense_date": v["date"].get().strip(), "description": v["description"].get().strip(), "category": v["category"].get().strip(), "currency": v["currency"].get(),
                 "with_vat_subtotal": amounts["with_vat"], "without_vat_subtotal": amounts["without_vat"], "vat": amounts["vat"], "reference": v["reference"].get().strip(),
                 "expense_account": v["account"].get().split(" - ", 1)[0].strip(), "expense_without_vat_account": v["no_vat_account"].get().split(" - ", 1)[0].strip(),
                 "vat_account": v["vat_account"].get().split(" - ", 1)[0].strip(), "payment_account": v["payment_account"].get().split(" - ", 1)[0].strip(),
@@ -293,6 +302,8 @@ class ExpensesMixin:
         if not f or not f["tree"].winfo_exists(): return
         try: rows = self.client.expenses()
         except Exception: rows = []
+        if f["org_filter"].get() != "All":
+            rows = [row for row in rows if row["org"] == f["org_filter"].get()]
         lists = self.dimension_lists(); departments = {d["id"]: d["code"] for d in lists["departments"]}; projects = {p["id"]: p["code"] for p in lists["projects"]}
         f["rows"] = {str(r["id"]): r for r in rows}; f["tree"].delete(*f["tree"].get_children())
         f["find_map"] = {f'{r.get("expense_number") or r["id"]} | {_dd(r["expense_date"])} | {r["description"]} | {r["total"]:,.2f} {r["currency"]}': r["id"] for r in \
@@ -369,6 +380,7 @@ class ExpensesMixin:
         f = self.expense_form; selected = f["tree"].selection()
         if not selected: return
         r = f["rows"][selected[0]]; v = f["vars"]; f["id"] = r["id"]; f["pdf"] = None; f["supplier_hint"] = ""; f["vat_typed"] = True
+        f["org"].set(r["org"])
         for key, value in (("date", _dd(r["expense_date"])), ("description", r["description"]), ("category", r.get("category") or ""), ("currency", r["currency"]),
                            ("with_vat", f'{r.get("with_vat_subtotal") or 0:.2f}'), ("without_vat", f'{r.get("without_vat_subtotal") or 0:.2f}'), ("vat", f'{r["vat"]:.2f}'),
                            ("reference", r.get("reference") or ""), ("account", r["expense_account"]), ("no_vat_account", r.get("expense_without_vat_account") or "601100001"),

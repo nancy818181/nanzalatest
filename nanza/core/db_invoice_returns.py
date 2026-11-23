@@ -76,7 +76,7 @@ class InvoiceReturnsStore:
         is_sale=source["kind"]=="sale"; date=iso_date(return_date or source["invoice_date"],"Return date")
         def opposite(side,default):
             return "C" if str(side or default).upper()=="D" else "D"
-        invoice={"invoice_number":self.next_invoice_number("credit_note" if is_sale else "supplier_credit_note",date),
+        invoice={"org":source["org"],"invoice_number":self.next_invoice_number("credit_note" if is_sale else "supplier_credit_note",date),
             "invoice_date":date,"party_name":source["party_name"],"kind":"sales" if is_sale else "purchases",
             "currency":source["currency"],"exchange_rate":str(source_exchange_rate),"status":"posted","source_file":"Sales Return" if is_sale else "Purchase Return",
             "supplier_account":source["supplier_account"],"vat_account":source["vat_account"],

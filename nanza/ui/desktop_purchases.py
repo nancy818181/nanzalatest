@@ -217,6 +217,14 @@ class PurchasesMixin:
         f["find_box"].bind("<Return>", lambda _e: self.purchase_found())
         self.action_button(heading, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(6, 3))
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
+        f["org"] = tk.StringVar(value="Yes")
+        tk.Label(heading, text="Org", bg=LIGHT).pack(side="left")
+        ttk.Combobox(heading, textvariable=f["org"], values=("Yes", "No"), state="readonly", width=4).pack(side="left")
+        f["org_filter"] = tk.StringVar(value="All")
+        tk.Label(heading, text="Find Org", bg=LIGHT).pack(side="left")
+        org_filter = ttk.Combobox(heading, textvariable=f["org_filter"], values=("All", "Yes", "No"), state="readonly", width=4)
+        org_filter.pack(side="left")
+        org_filter.bind("<<ComboboxSelected>>", lambda _event: self.load_purchases())
         # The existing controls and callbacks stay in the same order below.
         actions = tk.Frame(box, bg=LIGHT); actions.pack(side="bottom", fill="x")
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
@@ -642,6 +650,7 @@ class PurchasesMixin:
 
     def new_purchase(self):
         f = self.purchase_form; v = f["vars"]; f["id"] = None; f["pdf"] = None; f["pdf_pending_invoice_id"] = None
+        f["org"].set("Yes")
         if "not_deductible" in f: f["not_deductible"].set(False)
         f["vat_typed"] = False; f["pdf_vat_review"] = False; f["pdf_suggested_type"] = ""; f["pdf_review_warnings"] = []
         for key in ("supplier", "number", "due", "taxable", "exempt", "vat"): v[key].set("")
@@ -871,7 +880,7 @@ class PurchasesMixin:
         discount=self.purchase_discount(taxable)
         net_taxable=round(taxable-discount,2)
         party = f.get("supplier_map", {}).get(v["supplier"].get())
-        invoice = {"invoice_number": v["number"].get().strip(), "invoice_date": v["date"].get().strip(), "due_date": v["due"].get().strip(),
+        invoice = {"org": f["org"].get(), "invoice_number": v["number"].get().strip(), "invoice_date": v["date"].get().strip(), "due_date": v["due"].get().strip(),
                 "party_name": party["name"] if party else v["supplier"].get().strip(),
                    "kind": "assets" if v["type"].get() == "Assets" else "purchases", "currency": v["currency"].get(), "status": "posted", "source_file": "Purchase Invoice",
                    "expense_account": asset_account or "601100000", "vat_account": v["vat_account"].get().split(" - ", 1)[0].strip() or "442660000",
@@ -1048,6 +1057,8 @@ class PurchasesMixin:
         if f.get("lc_party_box"): f["lc_party_box"]["values"] = list(f["lc_party_map"])
         f["rows"] = {str(r["id"]): r for r in self.purchase_rows_list()
                      if not (r.get("description") or "").startswith("Landed cost of")}
+        if f["org_filter"].get() != "All":
+            f["rows"] = {key: row for key, row in f["rows"].items() if row["org"] == f["org_filter"].get()}
         if f.get("selected_id") not in f["rows"]:
             f["selected_id"] = None
         f["find_map"] = {f'{r["invoice_number"]} | {_dd(r["invoice_date"])} | {r.get("party_name") or ""} | {float(r.get("total") or 0):,.2f} {r["currency"]}': r["id"] for r in f["rows"].values()}
@@ -1075,6 +1086,7 @@ class PurchasesMixin:
         if not row: return
         if row.get("status") in ("deleted","cancelled"):
             return messagebox.showwarning("Purchases","Deleted or cancelled purchases cannot be edited")
+        f["org"].set(row["org"])
         f["id"] = row["id"]; f["pdf"] = None; f["vat_typed"] = True
         if "not_deductible" in f: load_tax_flag(self.client, "invoice", row["id"], f["not_deductible"])
         discount=_num(row.get("invoice_discount_amount")) or 0

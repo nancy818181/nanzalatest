@@ -159,7 +159,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
                 db.execute("UPDATE invoices SET posted_at=?,posted_by=? WHERE id=?",
                            (utcnow(),user_id,invoice_id))
             branch_id=self._branch_id(db,item)
-            db.execute("UPDATE invoices SET payment_method=?,description=?,branch_id=? WHERE id=?",(str(item.get("payment_method") or "").strip() or None,
+            db.execute("UPDATE invoices SET org=?,payment_method=?,description=?,branch_id=? WHERE id=?",(item.get("org","Yes"),str(item.get("payment_method") or "").strip() or None,
                     str(item.get("description") or "").strip() or None,branch_id,invoice_id))
             entry_number = f"INV-{invoice_id}"
             posting_status="posted" if status=="posted" else "draft"
@@ -604,7 +604,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             approved.append(row["invoice_number"])
         return {"approved": approved, "skipped": skipped}
 
-    SNAPSHOT_FIELDS = ("invoice_number", "invoice_date", "party_id", "currency", "subtotal", "vat", "total", "status", "expense_account", "vat_account", "supplier_account", "due_date", "amount_paid")
+    SNAPSHOT_FIELDS = ("org","invoice_number", "invoice_date", "party_id", "currency", "subtotal", "vat", "total", "status", "expense_account", "vat_account", "supplier_account", "due_date", "amount_paid")
 
     def _invoice_snapshot(self, invoice_id):
         with self.connect() as db:
@@ -751,7 +751,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                        (user_id, "update", "invoice", invoice_id, json.dumps({"fields": sorted(item.keys())}), utcnow()))
             self._post_invoice_payment(db, invoice_id, user_id, item.get("cash_account"))
-            row = db.execute("""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,i.kind,i.currency,
+            row = db.execute("""SELECT i.id,i.org,i.invoice_number,i.invoice_date,p.name party_name,i.kind,i.currency,
                 i.subtotal,i.deductible_subtotal,i.non_deductible_subtotal,i.vat,i.total,i.status,i.currency_issue,i.supplier_account,i.vat_account,
                 i.expense_account,i.entry_type,i.debit_override,i.credit_override,i.supplier_side,i.vat_side,i.expense_side,i.expense_no_vat_account,i.expense_no_vat_side,i.source_row,i.due_date,i.payment_status,i.amount_paid,
                 CAST(i.total AS REAL)-CAST(i.amount_paid AS REAL) outstanding
@@ -856,7 +856,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             source = dict(row)
             items = [dict(item) for item in db.execute("SELECT * FROM invoice_items WHERE invoice_id=? ORDER BY id", (invoice_id,))]
         new_number = self.next_invoice_number(source["kind"], source["invoice_date"])
-        payload = {key:source.get(key) for key in ("invoice_date","party_name","kind","entry_type","currency","exchange_rate",
+        payload = {key:source.get(key) for key in ("org","invoice_date","party_name","kind","entry_type","currency","exchange_rate",
             "subtotal","vat","total","supplier_account","vat_account","expense_account","expense_no_vat_account","supplier_side","vat_side","expense_side",
                     "expense_no_vat_side","due_date","payment_method")}
         payload.update({"debit":source.get("debit_override"),"credit":source.get("credit_override")})
@@ -914,7 +914,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
         invoice_filter = "WHERE " + " AND ".join(conditions) if conditions else ""
         parameters.append(limit)
         with self.connect() as db:
-            return [dict(r) for r in db.execute(f"""SELECT i.id,i.invoice_number,i.invoice_date,p.name party_name,
+            return [dict(r) for r in db.execute(f"""SELECT i.id,i.org,i.invoice_number,i.invoice_date,p.name party_name,
                 i.kind,i.entry_type,i.currency,i.exchange_rate,
                 CASE WHEN i.status IN ('deleted','void') THEN '0' ELSE i.subtotal END subtotal,
                 CASE WHEN i.status IN ('deleted','void') THEN '0' ELSE i.deductible_subtotal END deductible_subtotal,
@@ -943,7 +943,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
     def sales_invoice_choices(self):
         with self.connect() as db:
             return [dict(row) for row in db.execute("""
-                SELECT id, invoice_number, invoice_date, status
+                SELECT id, org, invoice_number, invoice_date, status
                 FROM invoices WHERE kind='sale' AND status IS NOT 'cancelled'
                 ORDER BY id DESC
             """)]
@@ -964,7 +964,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             files = [dict(r) for r in db.execute("SELECT file_name,mime_type,content FROM invoice_attachments WHERE invoice_id=?", (int(invoice_id),))]
             linked = [r["id"] for r in db.execute("SELECT id FROM invoices WHERE linked_invoice_id=?", (int(invoice_id),))]
             self._assert_period_open(old["invoice_date"]); self._assert_vat_open(old["invoice_date"], item.get("invoice_date"))
-            item = {**item, "invoice_number": item.get("invoice_number") or old["invoice_number"], "replaces_invoice_id": int(invoice_id)}  # 2.9.134 (D3)
+            item = {"org": old["org"], **item, "invoice_number": item.get("invoice_number") or old["invoice_number"], "replaces_invoice_id": int(invoice_id)}  # 2.9.134 (D3)
             import inventory
             inventory.remove_invoice_documents(db, invoice_id)
             new_id = self.create_manual_invoice(item, line_items, user_id)
