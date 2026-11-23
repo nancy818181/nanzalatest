@@ -1,6 +1,6 @@
 """Purchases & Expenses tab and the purchases page (moved out of desktop_stage3.py in 2.9.42, unchanged)."""
 from __future__ import annotations
-from desktop_common import search_arrows  # 2.9.78
+from desktop_common import bulk_action, search_arrows  # 2.9.78
 from desktop_tax_flag import tax_tick, save_tax_flag, load_tax_flag, place as place_tick  # 2.9.113
 import logging
 
@@ -330,6 +330,7 @@ class PurchasesMixin:
                     height=5)
         f["items_sheet"].tree.bind("<F2>", lambda _e: self.purchase_item_lookup())
         f["items_sheet"].tree.master.pack_configure(expand=True, fill="both", padx=0, pady=(1, 0))
+        self.action_button(tax_options, "Delete / void multiple purchases", self.delete_multiple_purchases).pack(anchor="w")
         tax_options.pack_forget()
         more_state={"shown":False}
         def toggle_purchase_more():
@@ -1122,6 +1123,45 @@ class PurchasesMixin:
         if "doc" in f: f["doc"].set("Return" if row.get("doc_subtype") == "credit_note" and row.get("is_return") else
                                     {"credit_note": "Credit Note", "debit_note": "Debit Note"}.get(row.get("doc_subtype") or "", "Invoice"))
         f["pdf_label"].config(text=f"Editing {row['invoice_number']} ({row.get('attachment_count') or 0} document(s) attached)", fg=NAVY); self.purchase_amounts_changed("none")
+
+    def delete_multiple_purchases(self):
+        rows = [row for row in self.purchase_form["rows"].values()
+                if row.get("status") not in ("deleted", "cancelled", "void")]
+        if not rows:
+            return messagebox.showinfo("Purchases", "No purchases available.", parent=self)
+        window = tk.Toplevel(self)
+        window.title("Delete / void purchases")
+        window.transient(self)
+        window.grab_set()
+        tk.Label(window, text="Select purchases with Ctrl or Shift. Posted purchases will be voided.").pack()
+        choices = tk.Listbox(window, selectmode="extended", width=80, height=16)
+        choices.pack(fill="both", expand=True)
+        for row in rows:
+            choices.insert("end", f'{row["invoice_number"]} | {row["party_name"]} | {row["invoice_date"]} | {row["status"]}')
+
+        def confirm():
+            selected = [rows[index] for index in choices.curselection()]
+            if not selected:
+                return
+            reason = None
+            if any(row["status"] == "posted" for row in selected):
+                reason = simpledialog.askstring("Void purchases", "Reason for voiding posted purchases:", parent=window)
+                if not reason or not reason.strip():
+                    return
+            if not messagebox.askyesno("Purchases", f"Delete or void the {len(selected)} selected purchases?", parent=window):
+                return
+            done = bulk_action("Purchases", [(row["id"], row["invoice_number"]) for row in selected],
+                               lambda key: self.client.delete_invoice(key, reason=reason), parent=window)
+            window.destroy()
+            if done:
+                if self.purchase_form["id"] in done:
+                    self.new_purchase()
+                self.load_purchases()
+                self.load_invoices()
+                self.load_journal()
+                self.load_trial()
+
+        self.action_button(window, "Delete / void selected", confirm).pack()
 
     def delete_purchase(self):
         row = self.selected_purchase() if not self.purchase_form["id"] else self.purchase_form["rows"].get(str(self.purchase_form["id"]))
