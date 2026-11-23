@@ -880,7 +880,7 @@ class PurchasesMixin:
         discount=self.purchase_discount(taxable)
         net_taxable=round(taxable-discount,2)
         party = f.get("supplier_map", {}).get(v["supplier"].get())
-        invoice = {"org": f["org"].get(), "invoice_number": v["number"].get().strip(), "invoice_date": v["date"].get().strip(), "due_date": v["due"].get().strip(),
+        invoice = {"org": f["org"].get() if "org" in f else "Yes", "invoice_number": v["number"].get().strip(), "invoice_date": v["date"].get().strip(), "due_date": v["due"].get().strip(),
                 "party_name": party["name"] if party else v["supplier"].get().strip(),
                    "kind": "assets" if v["type"].get() == "Assets" else "purchases", "currency": v["currency"].get(), "status": "posted", "source_file": "Purchase Invoice",
                    "expense_account": asset_account or "601100000", "vat_account": v["vat_account"].get().split(" - ", 1)[0].strip() or "442660000",
