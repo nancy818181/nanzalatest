@@ -34,6 +34,7 @@ class ApiClient:
         self.confirm_negative_stock = None  # callable(message) -> bool, set by the desktop window
         self.confirm_duplicate = None  # 2.9.103: callable(message) -> bool - an invoice / expense with the same number is already saved
         self._local = threading.local()      # one kept-open connection per thread
+        self._cache_generation = 0
         self._cache = {}; self._cache_lock = threading.Lock()
 
     # ------------------------------------------------------------ connection handling
@@ -103,22 +104,27 @@ class ApiClient:
         return None
 
     def clear_cache(self):
-        with self._cache_lock: self._cache.clear()
+        with self._cache_lock:
+            self._cache.clear()
+            self._cache_generation += 1
 
     def request(self, method, path, body=None):
         cacheable = method == "GET" and path.split("?", 1)[0] in CACHED_PATHS
-        key = (self.token, self.company_id, self.fiscal_year, path)
+        token, company, year = self.token, self.company_id, self.fiscal_year
+        cache_key = (token, company, year, path)
         if cacheable:
-            with self._cache_lock: hit = self._cache.get(key)
+            with self._cache_lock:
+                generation = self._cache_generation
+                hit = self._cache.get(cache_key)
             if hit and time.monotonic() - hit[0] < CACHE_SECONDS: return json.loads(hit[1])
         elif method != "GET":
             self.clear_cache()  # anything may have changed
         data = json.dumps(body).encode("utf-8") if body is not None else None
         headers = {"Content-Type": "application/json"}
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        if self.company_id: headers["X-Company-ID"]=str(self.company_id)
-        if self.fiscal_year: headers["X-Fiscal-Year"]=str(self.fiscal_year)
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        if company: headers["X-Company-ID"]=str(company)
+        if year: headers["X-Fiscal-Year"]=str(year)
         key = self._local_key()
         if key: headers["X-Saber-Key"] = key
         try:
@@ -152,7 +158,11 @@ class ApiClient:
             raise RuntimeError(message)
         result = json.loads(payload.decode("utf-8"))
         if cacheable:
-            with self._cache_lock: self._cache[key] = (time.monotonic(), payload)
+            with self._cache_lock:
+                if generation == self._cache_generation:
+                    self._cache[cache_key] = (time.monotonic(), payload)
+        elif method != "GET":
+            self.clear_cache()
         return result
 
     def login(self, username, password):

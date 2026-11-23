@@ -774,8 +774,13 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
 
     def _run_page_builder(self,build):
         self.__dict__["_building_depth"]=self.__dict__.get("_building_depth",0)+1
+        previous_choices = self.__dict__.get("_building_account_choices")
+        self._building_account_choices = {}
         try:
-            build()
+            try:
+                build()
+            finally:
+                self._building_account_choices = previous_choices
             # Decorate only the newly built screen, not previously opened pages. Keep
             # a full-notebook fallback for an unregistered builder.
             builder_pages = {
@@ -1289,10 +1294,21 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         return tk.Button(parent,text=text,command=command,bg=NAVY,fg="white",border=0,padx=15,pady=7)
 
     def account_search_box(self,parent,variable,width=22,replace_on_focus=False):
-        try: accounts=self.client.accounts() if self.client else []
-        except Exception: accounts=[]
-        accounts=[row for row in accounts if len(str(row.get("code") or ""))>=3 and str(row.get("code") or "").isdigit()]
-        choices=[f'{row["code"]} - {row["name_en"]}' for row in accounts]
+        cache = self.__dict__.get("_building_account_choices")
+        client = self.client
+        context = (client, getattr(client, "company_id", None), getattr(client, "fiscal_year", None), getattr(client, "token", None))
+        if cache is not None and cache.get("context") == context:
+            accounts, choices = cache["choices"]
+        else:
+            try:
+                rows = client.accounts() if client else []
+            except Exception:
+                accounts, choices = [], []
+            else:
+                accounts = [row for row in rows if len(str(row.get("code") or "")) >= 3 and str(row["code"]).isdigit()]
+                choices = [f'{row["code"]} - {row["name_en"]}' for row in accounts]
+                if cache is not None:
+                    cache.update(context=context, choices=(accounts, choices))
         box=ttk.Combobox(parent,textvariable=variable,values=choices,width=width)
         def matches(value):
             return [row for row in accounts if row_matches_search((row["code"],row["name_en"],row.get("name_ar"),row.get("name_fr")),value)]

@@ -279,6 +279,8 @@ def _english(button):
 
 def fold_toolbar(frame):
     """Fold one row (safe to call again; buttons added to the row later are folded too)."""
+    if len(frame.children) < FOLD_AT:
+        return False
     items, mode = _row_items(frame)
     if not items: return False
     light = [w for w in items if isinstance(w, tk.Button) and getattr(w, "_saber_kind", "") in ("secondary", "outline")

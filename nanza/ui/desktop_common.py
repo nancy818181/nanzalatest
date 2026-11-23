@@ -256,7 +256,10 @@ def _install_column_fit():
     def fit(tree):
         tree.__dict__["_fit_pending"] = False
         try:
-            if not tree.winfo_exists(): return
+            if not tree.winfo_ismapped():
+                tree.__dict__["_fit_on_map"] = True
+                return
+            tree.__dict__.pop("_fit_on_map", None)
             columns = list(tree["columns"]); shown = list(tree["displaycolumns"])
             if not columns: return
             if not shown or shown[0] == "#all": shown = columns
@@ -299,10 +302,16 @@ def _install_column_fit():
         if tree.__dict__.get("_fit_last") != event.width:
             tree.__dict__["_fit_last"] = event.width; schedule(tree)
 
+    def on_map(event):
+        if event.widget.__dict__.pop("_fit_on_map", False):
+            schedule(event.widget)
+
     def watch(tree):
         if not tree.__dict__.get("_fit_bound"):
             tree.__dict__["_fit_bound"] = True
-            try: tree.bind("<Configure>", on_resize, add="+")
+            try:
+                tree.bind("<Configure>", on_resize, add="+")
+                tree.bind("<Map>", on_map, add="+")
             except tk.TclError: pass
         schedule(tree)
 

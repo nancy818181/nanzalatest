@@ -259,6 +259,7 @@ class SalesInvoiceMixin:
         if self.sales_payment_method.get().startswith("On Account"): self.sales_amount_paid.set("0")
 
     def sales_date_changed(self):
+        if self.__dict__.get("_resetting_sales_invoice"): return
         self.update_sales_totals()
         if not self.sales_edit_id and len(self.sales_date.get())==10: self.refresh_sales_number()
 
@@ -428,17 +429,20 @@ class SalesInvoiceMixin:
         self._sales_loaded_state=None
         self.sales_party.set(""); self.sales_supplier_account.set(""); self.sales_amount_paid.set("0"); getattr(self,"sales_cash_account",
                 tk.StringVar()).set(""); self.sales_due_date.set(""); self.sales_open_choice.set("")
-        self.sales_doc_type.set("Invoice"); self.sales_category.set("Services"); self.sales_currency.set(main_currency(self, 1))  # 2.9.71
-        self.sales_category_box["values"]=["Goods","Products","Services"]
-        self.sales_revenue_caption.config(text="Revenue Account")
-        self.sales_supplier_side.set("D - Debit"); self.sales_vat_side.set("C - Credit"); self.sales_expense_side.set("C - Credit")
-        self.sales_payment_method.set("On Account (Not Cash)"); self.sales_date.set(self.fiscal_today())
-        self.sales_department.set("(none)"); self.sales_project.set("(none)"); self.sales_treatment.set(TAXABLE_LABEL)
-        self.sales_discount_percent.set("0"); self.sales_discount_amount.set("0")
+        self._resetting_sales_invoice = True
+        try:
+            self.sales_doc_type.set("Invoice"); self.sales_category.set("Services"); self.sales_currency.set(main_currency(self, 1))  # 2.9.71
+            self.sales_category_box["values"]=["Goods","Products","Services"]
+            self.sales_revenue_caption.config(text="Revenue Account")
+            self.sales_supplier_side.set("D - Debit"); self.sales_vat_side.set("C - Credit"); self.sales_expense_side.set("C - Credit")
+            self.sales_payment_method.set("On Account (Not Cash)"); self.sales_date.set(self.fiscal_today())
+            self.sales_department.set("(none)"); self.sales_project.set("(none)"); self.sales_treatment.set(TAXABLE_LABEL)
+            self.sales_discount_percent.set("0"); self.sales_discount_amount.set("0")
+        finally:
+            self._resetting_sales_invoice = False
         self.sales_category_changed()
         self.sales_mode_label.config(text="NEW INVOICE",bg=GOLD); self.load_sales_customer_list(); self.refresh_sales_number()
-        self.update_sales_navigation()
-        self.add_sales_item(); self.update_sales_totals()
+        self.add_sales_item()
 
     def sales_row_values(self,item):
         return (item.get("item_code") or "",item.get("description",""),f'{float(item.get("quantity") or 0):g}',item.get("unit") or "",f'{float(item.get("unit_price") or 0):,.2f}',
@@ -631,6 +635,7 @@ class SalesInvoiceMixin:
     def calculate_sales_line(self): return None
 
     def update_sales_totals(self):
+        if self.__dict__.get("_resetting_sales_invoice"): return
         import invoice_calc
         from tafqeet import amount_in_words
         lines=[i for i in self.sales_items if str(i.get("description") or "").strip() or float(i.get("unit_price") or 0)]

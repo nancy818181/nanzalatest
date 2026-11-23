@@ -847,11 +847,11 @@ class ReportsMixin:
                 if not self.winfo_exists(): return
             except tk.TclError: return  # the window was closed
             try: kind,value=events.get_nowait()
-            except queue.Empty: return self.after(100,poll)
+            except queue.Empty: return self.after(16,poll)
             if kind=="error": failed(value)
             else: apply(value)
         threading.Thread(target=run,daemon=True,name="NanzaFinancialReports").start()
-        self.after(100,poll)
+        self.after(16,poll)
 
     def load_ageing_report(self):
         try: as_of=parse_user_date(self.ageing_as_of.get()).strftime("%Y-%m-%d")

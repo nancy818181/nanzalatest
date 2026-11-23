@@ -998,6 +998,6 @@ def _with_libraries(function):
 
 for _name, _value in list(globals().items()):
     if callable(_value) and getattr(_value, "__module__", None) == __name__ and isinstance(_value, type(_load_libraries)) \
-            and _name not in ("_load_libraries", "_with_libraries"):
+            and _name not in ("_load_libraries", "_with_libraries", "shape_arabic", "has_arabic"):
         globals()[_name] = _with_libraries(_value)
 del _name, _value
