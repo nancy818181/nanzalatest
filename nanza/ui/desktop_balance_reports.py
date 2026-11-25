@@ -192,10 +192,18 @@ class BalanceReportsMixin:
             tk.Button(bar, text=text, command=lambda f=fmt: self.export_balance_report(state, f), bg=NAVY, fg="white", border=0, padx=10, pady=5).pack(side="right", padx=2)
         tk.Button(bar, text="< Options", command=lambda: state["notebook"].select(state["options_page"]), bg=GOLD, fg=NAVY, border=0, padx=10, pady=5).pack(side="right", padx=(2, 10))
         flow_toolbars(bar)
-        info = tk.Label(bar, text="", bg=LIGHT, fg=NAVY, anchor="w", font=("Segoe UI", 9, "bold")); info.pack(side="left", fill="x", expand=True)
+        # The flowing toolbar owns its children's geometry. Put the long report
+        # description outside it so it cannot consume the buttons' height/width.
+        info = tk.Label(frame, text="", bg=LIGHT, fg=NAVY, anchor="w", justify="left", wraplength=800, font=("Segoe UI", 9, "bold")); info.pack(fill="x", padx=12, pady=4)
+        def wrap_info(_event=None):
+            width=max(240,frame.winfo_width()-24)
+            if int(info.cget('wraplength'))!=width: info.configure(wraplength=width)
+        frame.bind('<Configure>',wrap_info,add='+')
         viewer = self.report_viewer(frame, [95, 130, 330, 110, 110, 110, 110, 115, 115, 115]); viewer.bind("<Double-1>", lambda event: self.open_report_line(state, viewer, event)); viewer._info = info
         tk.Label(frame, text="Double-click a line to open the transaction (statement) or the statement of the account (trial balance).", bg=LIGHT, fg=MUTED).pack(anchor="w", padx=12, pady=(0, 4))
-        state["notebook"].select(frame); return frame, viewer
+        state["notebook"].select(frame)
+        self.after_idle(lambda: self._scroll_to_top(self.main_tab_container(frame)))
+        return frame, viewer
 
     def result_tab_changed(self, state):
         current = state["notebook"].select()

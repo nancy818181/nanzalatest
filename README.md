@@ -4,6 +4,17 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 ## Version 2.9.140
 
+Audit repair (24–25 November 2026; version kept at the owner's request):
+- Payroll rule reload/save is atomic, preserves earlier history, and records the prior settings; no statutory rates changed.
+- Owner-approved allocation-linked realized FX journals use configured gain/loss accounts; repeat allocation and reversal preserve balanced, auditable entries and zero native party adjustment.
+- Manual invoice and purchase calculations use explicit HALF_UP cents without early unit-price rounding. Historical posted documents are not rewritten.
+- Historical ageing ignores allocations to invoices after the report date and exposes recorded unallocated advances before FIFO presentation.
+- Logout revokes the selected server session; allocation choices exclude drafts; payment refresh/status and replacement-number feedback are clearer.
+- Sales totals now match the Purchases summary, stay visible while scrolling, and retain currency and amount in words. Purchase actions/totals and statement result controls remain accessible.
+- Settings opens stored rates lazily instead of refreshing online while navigating; long invoice returns are aggregated once. No database schema change.
+- The DOE UI test now supplies synthetic historical rates explicitly instead of depending on the removed incidental online refresh. No DOE accounting rule changed.
+- OCR implausible dates require correction; general Arabic OCR accuracy and unreviewed official VAT advance fields remain limitations. A unified statutory-update channel needs a separately approved, sourced rule package.
+
 - Purchase Invoice shows more item rows while keeping totals visible.
 - Sales Quotations support item search and conversion to a linked invoice draft.
 - Purchase and Sales tab switching repaints fewer controls. Windows installer validation is pending.

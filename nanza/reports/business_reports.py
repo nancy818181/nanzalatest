@@ -86,10 +86,12 @@ def ageing(db, options):
              AND {posted_payment_sql()}) allocated
             FROM invoices i LEFT JOIN parties p ON p.id=i.party_id WHERE i.kind=? AND i.status='posted'""", (as_of, kind))]
         payment_kind = "customer_receipt" if kind == "sale" else "supplier_payment"
-        payments = [dict(r) for r in connection.execute(f"""SELECT x.party_id,x.kind,x.currency,x.payment_date,x.amount,x.exchange_difference,x.party_account,
+        payments = [dict(r) for r in connection.execute(f"""SELECT x.party_id,x.kind,x.currency,x.payment_date,x.payment_number,x.amount,x.exchange_difference,x.party_account,
             p.name party_name,p.kind party_kind,p.account_number,
-            (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a WHERE a.payment_id=x.id) allocated
-            FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE x.kind IN ('customer_receipt','supplier_payment') AND {posted_payment_sql()}""")]
+            (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN invoices allocated_invoice ON allocated_invoice.id=a.invoice_id
+             WHERE a.payment_id=x.id AND allocated_invoice.status='posted' AND
+             (CASE WHEN allocated_invoice.invoice_date GLOB '??-??-????' THEN substr(allocated_invoice.invoice_date,7,4)||'-'||substr(allocated_invoice.invoice_date,4,2)||'-'||substr(allocated_invoice.invoice_date,1,2) ELSE allocated_invoice.invoice_date END)<=?) allocated
+            FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE x.kind IN ('customer_receipt','supplier_payment') AND {posted_payment_sql()}""",(as_of,))]
     parties = {}
     for inv in invoices:
         try: day = iso_date(inv["invoice_date"])
@@ -111,12 +113,16 @@ def ageing(db, options):
         party["invoices"].append(line)
         party.setdefault("open", []).append({"due": due, "number": str(inv["invoice_number"]), "index": index, "days": days, "value": value,
                                               "amount": open_amount, "line": line})
+    unallocated_detail=[]
     for pay in payments:
         try: day = iso_date(pay["payment_date"])
         except ValueError: continue
         free = settlement_amount(pay) - _d(pay["allocated"])
         if day > as_of or abs(free) < Decimal("0.005"): continue
         if invoice_kind(pay) != kind: continue
+        signed_free=free*(1 if pay['kind']==payment_kind else -1)
+        unallocated_detail.append([pay['party_name'] or '-',pay['account_number'] or '',pay['payment_number'],display_date(day),pay['currency'],
+            _money(settlement_amount(pay)),_money(_d(pay['allocated'])),_money(signed_free),_money(convert(signed_free,pay['currency'],day))])
         party = parties.setdefault(pay["party_id"], {"name": pay["party_name"] or "-", "account": pay.get("account_number") or "",
                                                      "buckets": [ZERO] * len(labels), "unallocated": ZERO, "invoices": [], "due_by": ZERO})
         party["unallocated"] += convert(free, pay["currency"], day) * (1 if pay["kind"] == payment_kind else -1)
@@ -169,6 +175,11 @@ def ageing(db, options):
     sections.append({"heading": f"Expected {'collection' if kind == 'sale' else 'payment'} due by {display_date(as_of)} (based on recorded open invoices)",
                      "headers": [who, "Account", f"Invoice balance due by date ({basis})", "Unallocated", f"Expected due ({basis})"],
                      "rows": outlook, "total_rows": [len(outlook) - 1]})
+    if options.get('detail',True):
+        # Keep the existing expected-due summary last for report consumers.
+        sections.insert(len(sections)-1,{'heading':'Unallocated receipts / payments (recorded allocations, before FIFO presentation)',
+            'headers':[who,'Account','Receipt / Payment','Date','Currency','Settlement','Allocated by date','Unallocated',f'Unallocated ({basis})'],
+            'rows':unallocated_detail or [['No unallocated receipts / payments']+['']*8],'total_rows':[]})
     company = db.settings()
     meta = [f"Company: {company.get('company_name') or '-'}   Amounts in {basis} (converted at each document date)", f"Situation at {display_date(as_of)}"]
     if fifo: meta.append("Receipts / payments not allocated to an invoice are applied to the oldest open invoices first (FIFO, by due date).")

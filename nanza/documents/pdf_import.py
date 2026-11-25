@@ -997,6 +997,14 @@ def _require_ocr_review(result):
     """OCR confidence is an estimate; require explicit review even at 100%."""
     warning = "OCR reading requires review against the original before Save; confidence is not a guarantee"
     warnings = result.setdefault("review_warnings", [])
+    day=result.get('invoice_date')
+    if day:
+        try:
+            plausible=1900 <= datetime.strptime(day,'%d-%m-%Y').year <= 2100
+        except (ValueError,TypeError): plausible=False
+        if not plausible:
+            result['invoice_date']=''
+            warnings.append('OCR date is invalid or outside 1900–2100; enter the date from the original')
     if warning not in warnings: warnings.insert(0, warning)
     result["review_required"] = True
     for key, label in (("invoice_number", "invoice number"), ("invoice_date", "invoice date"),

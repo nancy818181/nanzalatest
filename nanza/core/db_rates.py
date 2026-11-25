@@ -91,9 +91,9 @@ class RatesStore:
 
     DAILY_PEGGED = ("AED", "SAR")  # 2.9.78: filled every day like EUR (fixed to the US dollar, no internet needed)
 
-    def _pegged_rows(self, display):
+    def _pegged_rows(self, display, codes=None):
         """AED / SAR -> USD and -> LBP for one day (DD-MM-YYYY), for the currencies the company has."""
-        codes=self.currency_codes(); rows=[]
+        codes=self.currency_codes() if codes is None else codes; rows=[]
         for code in self.DAILY_PEGGED:
             if code not in codes: continue
             per_usd=Decimal(self.PEGGED_TO_USD[code]); to_usd=(Decimal("1")/per_usd).quantize(Decimal("0.0000000001"))
@@ -139,7 +139,7 @@ class RatesStore:
                 logging.getLogger("saber.database").info("EUR rates of %s were not downloaded: %s", year, exc)
                 continue
         # Only carry observations forward. A latest quote must never fill older days.
-        rows=[]; current=start
+        rows=[]; current=start; codes=self.currency_codes()
         while current<=end:
             if current.isoformat() in collected: previous=collected[current.isoformat()]
             display=current.strftime("%d-%m-%Y")
@@ -147,7 +147,7 @@ class RatesStore:
             if previous is not None:
                 eur_lbp=(previous*Decimal("89500")).quantize(Decimal("0.01"))
                 rows.extend(((display,"EUR","USD",str(previous),utcnow()),(display,"EUR","LBP",str(eur_lbp),utcnow())))
-            rows.extend(self._pegged_rows(display))  # 2.9.78: AED and SAR every day too
+            rows.extend(self._pegged_rows(display, codes))  # Read company currencies once per refresh.
             current+=timedelta(days=1)
         with self.connect() as db:
             if previous is not None:  # 2.9.119: the 1 EUR = 1 USD days written offline by earlier versions get the real rate

@@ -1,6 +1,7 @@
 """Sales invoice screen (split from desktop_invoices.py in 2.9.94, no change in behaviour)."""
 from __future__ import annotations
 from pathlib import Path
+from decimal import Decimal, ROUND_HALF_UP
 from tkinter import simpledialog
 
 from desktop_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -62,8 +63,14 @@ def _responsive_invoice_details(form, fields, dimensions):
 class SalesInvoiceMixin:
     def build_sales_invoice(self):
         self.sales_items=[]; self.sales_edit_id=None
+        # The summary belongs to the visible page, outside its scrollable content.
+        self.sales_tab._fit_sales_invoice = True
+        bottom=tk.Frame(self.sales_tab,bg=LIGHT); bottom.pack(side="bottom",fill="x",padx=10,pady=(0,4))
+        content_outer, content = self.scrollable_page(self.sales_tab,fit_width=True,fill_height=True)
+        content_outer.pack(fill="x")
+        content_outer.grid_propagate(False)
         import desktop_design as design  # 2.9.134: framed panel with a gold-marked title (same controls and bindings as before)
-        header_outer,header=design.panel(self.sales_tab,pady=5); header_outer.pack(fill="x",padx=10,pady=(2,3))
+        header_outer,header=design.panel(content,pady=5); header_outer.pack(fill="x",padx=10,pady=(2,3))
         self.sales_no=tk.StringVar(); self.sales_date=tk.StringVar(value=self.fiscal_today())
         self.sales_party=tk.StringVar(); self.sales_kind=tk.StringVar(value="sales"); self.sales_currency=tk.StringVar(value="USD")
         self.sales_supplier_account=tk.StringVar(value="")
@@ -196,7 +203,6 @@ class SalesInvoiceMixin:
         self.action_button(toolbar,"Free PDF Read",self.ai_read_sales_pdf).pack(side="left",padx=2)
         flow_toolbar(toolbar)  # 2.9.95: wraps onto a second line on a narrow screen instead of being cut off
         # Totals bar is pinned to the very bottom of the tab FIRST, so it can never be pushed off-screen by the table
-        bottom=tk.Frame(self.sales_tab,bg=LIGHT); bottom.pack(side="bottom",fill="x",padx=10,pady=(0,4))
         body=tk.Frame(self.sales_tab,bg=LIGHT); body.pack(side="top",fill="both",expand=True,padx=10,pady=(2,4))
         # Item table on top, enlarged
         items_area=tk.Frame(body,bg=LIGHT); items_area.pack(side="top",fill="both",expand=True)
@@ -228,30 +234,36 @@ class SalesInvoiceMixin:
         self.sales_sheet.bind("<Double-1>",self.edit_sales_cell); self.sales_sheet.bind("<Return>",self.edit_sales_cell)
         self.sales_sheet.bind("<Delete>",lambda _event:self.remove_sales_item())
         self.sales_sheet.bind("<F2>",lambda _event:self.sales_item_lookup())
-        # 2.9.118: the totals in a card at the bottom right, one line each and the total to pay last, as in Zoho
+        # Match Purchases: discount inputs above a full-width, wrapping summary.
         card_bg="white"; line="#DDE4EC"
-        totals=tk.Frame(bottom,bg=LIGHT); totals.pack(side="right",fill="y",padx=(8,0))
+        totals=tk.Frame(bottom,bg=LIGHT); totals.pack(fill="x")
         box=tk.Frame(totals,bg=card_bg,padx=12,pady=6,highlightthickness=1,highlightbackground=line); box.pack(side="top",fill="x")
         self.sales_total_labels={}
-        # Total | Discount on the first line, Total HT | VAT on the second, then the total to pay
-        for row,column,key,caption in ((0,0,"Total","Total"),(0,1,"Discount","Discount"),(1,0,"Total HT","Total HT"),(1,1,"VAT",f"VAT {vat_rate_text(self)}")):
-            label=tk.Label(box,text=caption,bg=card_bg,fg="#5F6B76",font=("Segoe UI",9))
-            label.grid(row=row,column=3*column,sticky="w",padx=(0 if column==0 else 18,6))
+        discount=tk.Frame(box,bg=card_bg); discount.pack(fill="x",pady=(0,2))
+        summary=tk.Frame(box,bg=card_bg); summary.pack(fill="x")
+        for key,caption in (("Total","Total"),("Discount","Discount"),("Total HT","Total HT"),("VAT",f"VAT {vat_rate_text(self)}"),("TOTAL","TOTAL TTC")):
+            pair=tk.Frame(summary,bg=card_bg); pair.pack(side="left",padx=(0,12))
+            label=tk.Label(pair,text=caption,bg=card_bg,fg="#5F6B76",font=("Segoe UI",9))
+            label.pack(side="left",padx=(0,5))
             if key=="VAT": self.sales_vat_caption=label
-            value=tk.Label(box,text="0.00",bg=card_bg,fg=NAVY,width=11,anchor="e",font=("Segoe UI",10,"bold"))
-            value.grid(row=row,column=3*column+1,sticky="e"); self.sales_total_labels[key]=value
-        discount=tk.Frame(box,bg=card_bg); discount.grid(row=2,column=0,columnspan=5,sticky="w",pady=(2,0))
+            value=tk.Label(pair,text="0.00",bg=card_bg,fg=NAVY,anchor="e",font=("Segoe UI",13 if key=="TOTAL" else 10,"bold"))
+            value.pack(side="left"); self.sales_total_labels[key]=value
+        flow_toolbar(summary)
         tk.Label(discount,text="Discount %",bg=card_bg,fg="#5F6B76",font=("Segoe UI",8)).pack(side="left")
         e1=tk.Entry(discount,textvariable=self.sales_discount_percent,width=5); e1.pack(side="left",padx=2)
         tk.Label(discount,text="or amount",bg=card_bg,fg="#5F6B76",font=("Segoe UI",8)).pack(side="left")
         e2=tk.Entry(discount,textvariable=self.sales_discount_amount,width=9); e2.pack(side="left",padx=2)
         for entry in (e1,e2): entry.bind("<KeyRelease>",lambda _event:self.update_sales_totals())
-        tk.Label(box,text="TOTAL TTC",bg=card_bg,fg=NAVY,font=("Segoe UI",10,"bold")).grid(row=2,column=3,sticky="e",padx=(18,6),pady=(2,0))
-        value=tk.Label(box,text="0.00",bg=card_bg,fg=NAVY,anchor="e",font=("Segoe UI",14,"bold"))
-        value.grid(row=2,column=4,sticky="e",pady=(2,0)); self.sales_total_labels["TOTAL"]=value
-        self.sales_totals=tk.Label(totals,text="",bg=LIGHT,fg=NAVY); self.sales_totals.pack(side="top",anchor="e",padx=8,pady=3)
+        self.sales_totals=tk.Label(bottom,text="",bg=LIGHT,fg=NAVY); self.sales_totals.pack(side="right",padx=8)
         self.sales_words=tk.Label(bottom,text="",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=380,font=("Segoe UI",8))
-        self.sales_words.pack(side="left",fill="x",expand=True,padx=4,pady=(3,0))
+        self.sales_words.pack(side="left",fill="x",expand=True,padx=4,pady=(1,0))
+        self.sales_words.bind("<Configure>",lambda event:self.sales_words.configure(wraplength=max(120,event.width)))
+        def fit_header(_event=None):
+            # Long headers scroll independently, leaving room for lines and Save.
+            height=min(header_outer.winfo_reqheight()+8,max(120,int(self.sales_tab.winfo_height()*0.45)))
+            if content_outer.winfo_height()!=height: content_outer.configure(height=height)
+        self.sales_tab.bind("<Configure>",fit_header,add="+")
+        self.sales_tab.after_idle(fit_header)
         self.new_sales_invoice(confirm=False)
 
     # ---- sales invoice helpers
@@ -456,7 +468,9 @@ class SalesInvoiceMixin:
         self.add_sales_item()
 
     def sales_row_values(self,item):
-        return (item.get("item_code") or "",item.get("description",""),f'{float(item.get("quantity") or 0):g}',item.get("unit") or "",f'{float(item.get("unit_price") or 0):,.2f}',
+        price=Decimal(str(item.get("unit_price") or 0))
+        price_text=format(price,",f") if price!=price.quantize(Decimal(".01")) else format(price,",.2f")
+        return (item.get("item_code") or "",item.get("description",""),f'{float(item.get("quantity") or 0):g}',item.get("unit") or "",price_text,
                 f'{float(item.get("gross_amount") or 0):,.2f}',f'{float(item.get("discount_percent") or 0):g}%' if float(item.get("discount_percent") or 0) else "",
                 f'{float(item.get("vat_rate") or 0):g}',f'{float(item.get("net") or 0):,.2f}')
 
@@ -464,7 +478,9 @@ class SalesInvoiceMixin:
         """Line: Amount = Qty x Price, less the line discount %. VAT and the invoice discount are shared in update_sales_totals."""
         item["quantity"]=float(item.get("quantity") or 0); item["unit_price"]=float(item.get("unit_price") or 0)
         item["discount_percent"]=float(item.get("discount_percent") or 0); item["vat_rate"]=float(item.get("vat_rate") if item.get("vat_rate") not in (None,"") else vat_rate(self))
-        item["gross_amount"]=round(item["quantity"]*item["unit_price"],2); item["net"]=round(item["gross_amount"]*(1-item["discount_percent"]/100),2)
+        raw=Decimal(str(item["quantity"]))*Decimal(str(item["unit_price"]))
+        item["gross_amount"]=float(raw.quantize(Decimal('.01'),rounding=ROUND_HALF_UP))
+        item["net"]=float((raw*(1-Decimal(str(item["discount_percent"]))/100)).quantize(Decimal('.01'),rounding=ROUND_HALF_UP))
         item.setdefault("unit",""); item.setdefault("subtotal",item["net"]); item.setdefault("vat",0.0); item.setdefault("total",item["net"])
         return item
 
@@ -657,7 +673,7 @@ class SalesInvoiceMixin:
             if hasattr(self,"sales_total_labels"): self.sales_total_labels["TOTAL"].config(text=str(exc),fg="#8B1E1E")
             return
         for item,calculated in zip(lines,result["lines"]):
-            for key in ("deductible_subtotal","non_deductible_subtotal","vat","subtotal","total","gross_amount","discount_amount","discount_percent","vat_rate"): item[key]=calculated[key]
+            for key in ("deductible_subtotal","non_deductible_subtotal","vat","subtotal","total","gross_amount","discount_amount","discount_percent","vat_rate","net"): item[key]=calculated[key]
             iid=item.get("_iid")
             if iid and self.sales_sheet.exists(iid): self.sales_sheet.item(iid,values=self.sales_row_values(item))
         self.sales_calculation=result; currency=self.sales_currency.get()

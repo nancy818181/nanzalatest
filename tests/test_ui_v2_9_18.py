@@ -431,6 +431,11 @@ class ProgramWindowFixesTest(unittest.TestCase):
 
     def test_automatic_doe_posts_one_voucher_per_currency(self):
         api = self.app.client; year = self.app.current_fiscal_year
+        # Navigation no longer fetches online exchange history. This scenario needs
+        # explicit synthetic carrying rates, independently of internet availability.
+        for source,target,rate in (("EUR","USD","1.10"),("EUR","LBP","98450"),("USD","LBP","89500")):
+            api.save_exchange_rate({"date_from":f"01-01-{year}","date_to":f"31-12-{year}",
+                                    "from_currency":source,"to_currency":target,"rate":rate})
         for currency, account, amount in (("USD", "4011", "100"), ("USD", "4111", "50"), ("EUR", "5121", "200")):
             try: api.save_journal_voucher({"entry_date": f"01-03-{year}", "description": f"{currency} balance", "currency": currency, "voucher_type": "01"},
                                           [{"account_code": account, "debit": amount}, {"account_code": "211", "credit": amount}])

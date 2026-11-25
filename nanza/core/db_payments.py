@@ -403,6 +403,18 @@ class PaymentsStore:
             values["debit"], values["credit"] = str(debit), str(credit)
             db.execute(insert_sql, (new, *(values[column] for column in columns)))
         if total_debit != total_credit: raise ValueError("Reversal does not balance - nothing was saved")
+        # Realized exchange entries belong to the same settlement. Reverse their
+        # original equivalent fields too, so the foreign amount remains zero.
+        for fx in db.execute("SELECT * FROM journal_entries WHERE source_type='payment_fx' AND source_id=?", (int(row['id']),)).fetchall():
+            if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=?", (fx['id'],)).fetchone(): continue
+            fx_id=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
+                created_by,created_at,posting_status,posted_at,posted_by,reversal_of)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",(f"REV-{fx['entry_number']}",reversal_date,f"Reversal of {fx['entry_number']}",
+                'payment_fx_reversal',int(row['id']),fx['currency'],user_id,utcnow(),'posted',utcnow(),user_id,fx['id'])).lastrowid
+            for line in db.execute("SELECT * FROM journal_lines WHERE entry_id=?",(fx['id'],)).fetchall():
+                values={column:line[column] for column in columns}
+                values['debit'],values['credit']=line['credit'],line['debit']
+                db.execute(insert_sql,(fx_id,*(values[column] for column in columns)))
         return number
 
     def _replace_payment_on_stage(self, payment_id, item, user_id):
@@ -508,7 +520,7 @@ class PaymentsStore:
                 CAST(COALESCE(i.amount_paid,'0') AS REAL) paid,
                 (SELECT COALESCE(DSUM(CAST(a.amount AS REAL)),0) FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
                  WHERE a.invoice_id=i.id AND {posted_payment_sql()}) allocated
-                FROM invoices i WHERE i.party_id=? AND i.status NOT IN ('cancelled','deleted','void') ORDER BY i.id""", (int(party_id),))]
+                FROM invoices i WHERE i.party_id=? AND i.status='posted' ORDER BY i.id""", (int(party_id),))]
         for row in rows:
             sign = -1 if row.get("doc_subtype") == "credit_note" else 1
             row["open_amount"] = round(sign * (row["total"] - row["paid"] - row["allocated"]), 2)
@@ -552,7 +564,57 @@ class PaymentsStore:
                                      "the rest of the payment stays unapplied (an advance) on the account")
             if total > settlement_amount(payment) + Decimal("0.005"):
                 raise ValueError(f"Allocated {total:,.2f} is more than the payment party settlement {settlement_amount(payment):,.2f}")
+            self._post_allocation_fx(db,payment,user_id)
         return self.payment_allocations(payment_id)
+
+    def _post_allocation_fx(self, db, payment, user_id):
+        """Owner-approved realized FX: only allocated cash, no native-amount movement.
+
+        Existing explicit exchange_difference is a manual settlement and is not
+        processed a second time. Repeated allocations append only a changed
+        difference; no posted journal line is rewritten.
+        """
+        if Decimal(str(payment['exchange_difference'] or 0)) or not self._payment_is_posted(db,payment['id']): return
+        basis=self.settings().get('base_currency','USD') or 'USD'
+        if payment['currency']==basis: return
+        self._assert_period_open(payment['payment_date']); self._assert_books_unlocked(payment['payment_date'])
+        from decimal import ROUND_HALF_UP
+        desired=Decimal('0')
+        direction=Decimal('1') if payment['kind']=='customer_receipt' else Decimal('-1')
+        for row in db.execute("""SELECT a.amount,i.invoice_date FROM payment_allocations a
+                JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=?""",(payment['id'],)):
+            native=Decimal(str(row['amount']))
+            desired+=direction*(self._converted_amount(native,payment['currency'],basis,payment['payment_date'])-
+                self._converted_amount(native,payment['currency'],basis,row['invoice_date']))
+        desired=desired.quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
+        previous=Decimal(str(db.execute("""SELECT COALESCE(DSUM_EXACT(j.debit),0) FROM journal_entries e
+            JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
+            WHERE e.source_type='payment_fx' AND e.source_id=? AND a.code=?""",(payment['id'],payment['party_account'])).fetchone()[0]))
+        previous-=Decimal(str(db.execute("""SELECT COALESCE(DSUM_EXACT(j.credit),0) FROM journal_entries e
+            JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
+            WHERE e.source_type='payment_fx' AND e.source_id=? AND a.code=?""",(payment['id'],payment['party_account'])).fetchone()[0]))
+        difference=(desired-previous).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
+        if not difference: return
+        defaults=self.default_accounts()
+        offset=(payment['exchange_gain_account'] or defaults['exchange_gain']) if difference>0 else (payment['exchange_loss_account'] or defaults['exchange_loss'])
+        value=abs(difference); zero=Decimal('0')
+        usd=self._converted_amount(value,basis,'USD',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+        lbp=self._converted_amount(value,basis,'LBP',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+        sequence=db.execute("SELECT COUNT(*) FROM journal_entries WHERE source_type='payment_fx' AND source_id=?",(payment['id'],)).fetchone()[0]+1
+        number=f"FX-{payment['payment_number']}-{sequence}"
+        entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
+            created_by,created_at,posting_status,posted_at,posted_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+            (number,payment['payment_date'],f"Realized exchange on {payment['payment_number']}",'payment_fx',payment['id'],basis,
+                user_id,utcnow(),'posted',utcnow(),user_id)).lastrowid
+        for account,debit,credit,native,currency in [(payment['party_account'],value if difference>0 else zero,value if difference<0 else zero,zero,payment['currency']),
+                (offset,value if difference<0 else zero,value if difference>0 else zero,value,basis)]:
+            db.execute("""INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit,line_currency,amount,amount_usd,amount_lbp,
+                revalue_currency,revalue_amount,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (entry,self._account_id(db,account),payment['party_id'] if account==payment['party_account'] else None,str(debit),str(credit),currency,str(native),
+                str(usd),str(lbp),basis if basis not in ('USD','LBP') and not native else None,
+                str(value) if basis not in ('USD','LBP') and not native else None,payment['payment_number']))
+        db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
+            (user_id,'realized_fx','payment',payment['id'],json.dumps({'entry':number,'currency':basis,'difference':str(difference)}),utcnow()))
 
     def payment_allocations(self, payment_id):
         with self.connect() as db:

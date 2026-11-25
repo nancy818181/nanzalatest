@@ -689,7 +689,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             frame=tk.Frame(canvas,bg=LIGHT)
             item=canvas.create_window((0,0),window=frame,anchor="nw")
             def resize_page(_event=None, *, page=frame, view=canvas, window=item, vbar=vertical, hbar=horizontal):
-                if getattr(page, "_fit_purchase_invoice", False):
+                if getattr(page, "_fit_purchase_invoice", False) or getattr(page, "_fit_sales_invoice", False):
                     vbar.grid_remove()
                     hbar.grid_remove()
                     view.itemconfigure(window, width=view.winfo_width(), height=view.winfo_height())
@@ -923,6 +923,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
 
     def check_auto_logout(self):
         if self.client and time.monotonic()-self.last_activity>=1800:
+            try: self.client.logout()
+            except Exception: logging.getLogger("saber.ui").info("Server sign-out unavailable; local session cleared",exc_info=True)
             self.client=None; self.current_user=None; self.login_screen(); messagebox.showinfo("Nanza Accounting","Signed out automatically after 30 minutes of inactivity"); return
         self.after(60000,self.check_auto_logout)
 

@@ -84,7 +84,7 @@ class FinalFeaturesMixin:
         inner = tk.Frame(canvas, bg=LIGHT); window = canvas.create_window((0, 0), window=inner, anchor="nw")
         def resize(_event=None):
             width = canvas.winfo_width() if fit_width else max(canvas.winfo_width(), inner.winfo_reqwidth())
-            height = max(inner.winfo_reqheight(), canvas.winfo_height()) if fill_height else inner.winfo_reqheight()
+            height = canvas.winfo_height() if inner.__dict__.get('_fit_invoice_content') else max(inner.winfo_reqheight(), canvas.winfo_height()) if fill_height else inner.winfo_reqheight()
             canvas.itemconfigure(window, width=width, height=height)
             canvas.configure(scrollregion=canvas.bbox("all"))
             if fit_width:
