@@ -170,10 +170,14 @@ class PurchasesMixin:
             pair_gap = max(10, measure.measure("00"))      # space between two label | field pairs
             label_gap = max(5, measure.measure("0") // 2 + 3)  # space between a label and its field
             field_min = max(widget.winfo_reqwidth() for kind, _l, widget in cells if kind == "short")
+            unspanned_min = max(widget.winfo_reqwidth() for _kind, _l, widget in cells)
             available = view_width()
-            def needed(n): return label_widths(n) + n * (label_gap + field_min) + (n - 1) * pair_gap
+            # Wide account selectors span multiple columns only in a four-pair grid.
+            # At three/two pairs their own requested width must fit each field column.
+            def minimum(n): return field_min if n >= 4 else unspanned_min
+            def needed(n): return label_widths(n) + n * (label_gap + minimum(n)) + (n - 1) * pair_gap
             pairs = next((n for n in (4, 3, 2, 1) if needed(n) <= available), 1)
-            field_width = max(field_min, (available - label_widths(pairs) - pairs * label_gap - (pairs - 1) * pair_gap) // pairs)
+            field_width = max(minimum(pairs), (available - label_widths(pairs) - pairs * label_gap - (pairs - 1) * pair_gap) // pairs)
             key = (pairs, field_width)
             if key == state["key"]: return
             state["key"] = key

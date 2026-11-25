@@ -570,6 +570,15 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         for _ in range(4): app.update_idletasks(); app.update()
         self.check_layout(app, rtl=False)
 
+    def test_three_pair_header_respects_wide_field_minimums(self):
+        for language in ("en", "ar"):
+            app = self.open(language)
+            app.tk.call("tk", "scaling", 96 / 72)
+            app.state("normal"); app.geometry("1028x749+0+0")
+            app.after(250, app.quit); app.mainloop()
+            for _ in range(5): app.update_idletasks(); app.update()
+            self.check_layout(app, rtl=language == "ar")
+
 
 if __name__ == "__main__":
     unittest.main()
