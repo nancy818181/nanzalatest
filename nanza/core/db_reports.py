@@ -195,24 +195,28 @@ class ReportsStore:
         with self.connect() as db:
             # 2.9.119: the open invoices brought in by Start with Nanza are not sales / purchases of the year (still receivables / payables)
             has_source={row[1] for row in db.execute("PRAGMA table_info(invoices)")} >= {"source_file"}
+            invoice_columns={row[1] for row in db.execute('PRAGMA table_info(invoices)')}
+            document_sign="CASE WHEN doc_subtype='credit_note' THEN -1 ELSE 1 END" if 'doc_subtype' in invoice_columns else '1'
+            tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            has_ledger={'accounts','journal_entries','journal_lines','parties','payments','payment_allocations'}<=tables
             sales_amount="CASE WHEN COALESCE(source_file,'')='Opening balances' THEN 0 ELSE CAST(subtotal AS REAL) END" if has_source else "CAST(subtotal AS REAL)"
             not_opening=" AND COALESCE(source_file,'')<>'Opening balances'" if has_source else ""
             invoice_rows=db.execute(f"""SELECT kind,currency,
-                DSUM({sales_amount}) subtotal,
-                DSUM(CAST(total AS REAL)-CAST(COALESCE(amount_paid,'0') AS REAL)) outstanding
-                FROM invoices WHERE status NOT IN ('cancelled','deleted','void')
+                DSUM(({document_sign})*({sales_amount})) subtotal,
+                DSUM(({document_sign})*(CAST(total AS REAL)-CAST(COALESCE(amount_paid,'0') AS REAL))) outstanding
+                FROM invoices WHERE status='posted'
                 GROUP BY kind,currency""").fetchall()
             expense_rows=db.execute("""SELECT currency,DSUM(CAST(subtotal AS REAL)) subtotal
                 FROM expenses GROUP BY currency""").fetchall()
             # Preserve the existing DD-MM-YYYY due date interpretation.
             overdue_rows=db.execute("""SELECT currency,COUNT(*) overdue FROM invoices
-                WHERE status NOT IN ('cancelled','deleted','void')
+                WHERE status='posted'
                   AND CAST(total AS REAL)>CAST(COALESCE(amount_paid,'0') AS REAL)
                   AND due_date GLOB '??-??-????'
                   AND substr(due_date,7,4)||'-'||substr(due_date,4,2)||'-'||substr(due_date,1,2)<?
                 GROUP BY currency""",(datetime.now().strftime("%Y-%m-%d"),)).fetchall()
             monthly=[dict(row) for row in db.execute(f"""SELECT substr(CASE WHEN invoice_date GLOB '??-??-????' THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2) ELSE invoice_date END,1,7) month,
-                currency,kind,DSUM(CAST(subtotal AS REAL)) amount FROM invoices WHERE status NOT IN ('cancelled','deleted','void')
+                currency,kind,DSUM(({document_sign})*CAST(subtotal AS REAL)) amount FROM invoices WHERE status='posted'
                 {not_opening} GROUP BY month,currency,kind ORDER BY month""")]  # 2.9.119: not the open invoices brought in
         for row in invoice_rows:
             values=metric(row["currency"]); amount=float(row["subtotal"] or 0)
@@ -227,7 +231,27 @@ class ReportsStore:
             metric(row["currency"])["overdue"]=int(row["overdue"])
         for values in metrics.values():
             values["profit"]=values["sales"]-values["purchases"]-values["expenses"]
-        return {"metrics":list(metrics.values()),"monthly":monthly}
+        if has_ledger:
+            # Document balances alone omit allocations/advances, payroll, depreciation
+            # and manual adjustments. Use the same posted ledger as the reports.
+            for values in metrics.values():values.update(expenses=0.0,profit=0.0,receivables=0.0,payables=0.0,overdue=0)
+            profit={};expenses={}
+            for row in self.profit_and_loss():
+                code=row['currency'];amount=Decimal(str(row['amount']))
+                profit[code]=profit.get(code,Decimal(0))+(amount if row['type']=='income' else -amount)
+                if row['type']=='expense':expenses[code]=expenses.get(code,Decimal(0))+amount
+            for code,amount in profit.items():metric(code).update(profit=_report_number(amount),expenses=_report_number(expenses.get(code,Decimal(0))))
+            with self.connect() as db:party_accounts={r['account_number']:r['kind'] for r in db.execute('SELECT account_number,kind FROM parties')}
+            debt={}
+            for row in self.trial_balance():
+                side=party_accounts.get(row['code'])
+                if side not in ('customer','supplier'):continue
+                key=(row['currency'],'receivables' if side=='customer' else 'payables')
+                debt[key]=debt.get(key,Decimal(0))+Decimal(str(row['closing_balance']))*(1 if side=='customer' else -1)
+            for (code,key),amount in debt.items():metric(code)[key]=_report_number(amount)
+            for row in self.aging_report(datetime.now().strftime('%Y-%m-%d')):
+                if Decimal(str(row['outstanding']))>0 and row['days_overdue']>0:metric(row['currency'])['overdue']+=1
+        return {"metrics":list(metrics.values()),"monthly":monthly,'basis':'posted_ledger' if has_ledger else 'documents_only'}
 
     def statement_of_account(self, party_id, from_date=None, to_date=None, currency=None, include_opening=True, display_currency=None, branch_id=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
@@ -379,7 +403,7 @@ class ReportsStore:
             return [dict(r) for r in rows]
 
     def journal(self, from_date=None, to_date=None, currency=None, limit=None, branch_id=None, entry_number=None, account_code=None, source_type=None,
-                posted_only=False, running_balance=True):
+                posted_only=False, running_balance=True, native_fx=False):
         """Return journal lines with a running balance per account and currency.
         2.9.51: no line limit any more (5,000 lines used to hide later entries from the journal, the general ledger and
         'open transaction'); one entry, one account or one kind of entry can be asked for directly."""
@@ -400,8 +424,14 @@ class ReportsStore:
         if to_date:
             conditions.append(f"{normalized_date} <= ?")
             parameters.append(to_date)
+        # Journal keeps the balanced voucher currency; the native General Ledger
+        # follows each FX line's document currency, as Trial Balance does.
+        fx = "e.source_type IN ('payment_fx','payment_fx_reversal')"
+        line_currency = f"CASE WHEN {fx} THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END" if native_fx else "e.currency"
+        debit = f"CASE WHEN {fx} THEN CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.debit END" if native_fx else "j.debit"
+        credit = f"CASE WHEN {fx} THEN CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.credit END" if native_fx else "j.credit"
         if currency:
-            conditions.append("e.currency = ?")
+            conditions.append(f"{line_currency} = ?")
             parameters.append(currency)
         if branch_id:
             conditions.append("e.branch_id=?"); parameters.append(int(branch_id))
@@ -409,14 +439,14 @@ class ReportsStore:
         parameters.append(int(limit) if limit else -1)  # SQLite: LIMIT -1 = every line
         with self.connect() as db:
             cursor = db.execute(f"""SELECT e.id entry_id,e.entry_number,e.entry_date,
-                e.description,e.source_type,e.source_id,e.voucher_type,e.currency,e.branch_id,COALESCE(b.name,'Head Office') branch_name,a.code account_code,a.name_en account_name,
+                e.description,e.source_type,e.source_id,e.voucher_type,{line_currency} currency,e.branch_id,COALESCE(b.name,'Head Office') branch_name,a.code account_code,a.name_en account_name,
                 CASE WHEN e.source_type='payroll' THEN 'Payroll' WHEN e.source_type='expense' THEN 'Expenses'
                      WHEN e.source_type='journal_voucher' AND e.voucher_type='07' THEN 'DOE'
                      WHEN e.source_type='journal_voucher' THEN 'Journal Vouchers' WHEN e.source_type IN ('opening','year_close') THEN 'Opening / Closing'
                      WHEN e.source_type='invoice' AND i.kind='sale' THEN 'Sales'
                      WHEN e.source_type='invoice' AND COALESCE(i.entry_type,i.kind)='expenses' THEN 'Expenses'
                      WHEN e.source_type='invoice' THEN 'Purchases' ELSE 'Other' END journal_category,
-                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,j.debit debit,j.credit credit,
+                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,{debit} debit,{credit} credit,
                 COALESCE(pr.code,'') project_code,COALESCE(dp.code,'') department_code
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id
                 JOIN accounts a ON a.id=j.account_id LEFT JOIN parties p ON p.id=j.party_id LEFT JOIN branches b ON b.id=e.branch_id
@@ -520,7 +550,7 @@ class ReportsStore:
 
     def general_ledger(self, account_code=None, from_date=None, to_date=None, currency=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
-        rows=self.journal(None,to_date,currency,account_code=account_code,posted_only=True,running_balance=False)
+        rows=self.journal(None,to_date,currency,account_code=account_code,posted_only=True,running_balance=False,native_fx=True)
         opening={}; items=[]; balances={}; days={}  # 2.9.132 (performance): each day parsed once
         for row in rows:
             normalized=str(row["entry_date"] or "")

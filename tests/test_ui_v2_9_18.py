@@ -59,6 +59,11 @@ class ProgramWindowFixesTest(unittest.TestCase):
         # Tk objects must be freed on this (main) thread, never by a data-service thread's garbage collection.
         import gc; self.addCleanup(gc.collect)
         self.app = desktop.SaberApp(); self.addCleanup(self.app.destroy)
+        # These checks address English registry captions. Earlier bilingual UI
+        # tests can persist Arabic; do not accidentally test the last page when
+        # looking up the English Payroll caption.
+        import arabic_ui
+        self.app.language.set("en"); arabic_ui.switch(self.app, "en")
         self.app.server.set(self.url); self.app.password.set(self.test_password); self.app.login()
         year = self.company["years"][0]["year"]
         self.app.client.select_company_year(self.company["id"], year); self.app.current_company = self.company; self.app.current_fiscal_year = int(year)

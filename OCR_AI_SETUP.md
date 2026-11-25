@@ -152,22 +152,15 @@ Anomaly flags identify review candidates, not proven fraud.
 ## Tests and actual accuracy
 
 ```bash
-python -m pytest tests/test_ocr.py tests/test_ai_accountant.py -v
+python -m unittest tests.test_ai_accountant_real tests.test_expense_classification_safety tests.test_ocr_review_safety tests.test_pdf_ocr -v
 ```
 
-15 local tests verify code contracts, parsing, language routing, preprocessing,
-low-confidence review policy, sklearn learning and SQLite queries. Model outputs
-are explicit test doubles. `test_handwritten_arabic_accuracy` now tests the requested
-policy: if confidence <0.7, needs_review is True. It does not invent a CER score.
-
-The real user image and exact transcription are in tests/data/. For a real model
-measurement after configuring local weights:
-
-```bash
-python -m nanza.ocr.benchmark tests/data/arabic_handwritten_sample.png --gold tests/data/arabic_handwritten_gold.json --out accuracy.json --country LB
-# Inspect actual downloaded disk usage; never substitute nominal parameter counts:
-du -h ~/.cache/huggingface/hub/
-```
+These tests cover local queries, classification safeguards and OCR review contracts.
+Some optical inference responses are explicit test doubles. They do not measure
+real handwriting accuracy. No verified real handwritten invoice and transcription
+are supplied in this checkout. Supply an isolated synthetic handwritten fixture
+and its independent transcription before running the benchmark CLI against actual
+configured local weights. A handwriting-style font is not a handwriting benchmark.
 
 No model recognition accuracy, speed or total installed-size percentage/limit is
 claimed without measurement. Source ZIP size is measured separately. First setup

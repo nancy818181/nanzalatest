@@ -70,7 +70,14 @@ jobs:
       - name: Prepare bundled offline OCR (English, Arabic and French)
         shell: pwsh
         run: |
-          choco install tesseract --yes --no-progress --version=5.5.0.20241111
+          # The package feed occasionally returns a transient not-found response.
+          # Keep the pinned engine and fail explicitly after bounded retries.
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install tesseract --yes --no-progress --version=5.5.0.20241111
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -eq 3) { throw "Pinned Tesseract installation failed after three attempts." }
+            Start-Sleep -Seconds (5 * $attempt)
+          }
           $engine = "Assets\ocr\engine"
           $tessdata = "Assets\ocr\tessdata"
           New-Item -ItemType Directory -Force -Path $engine, $tessdata | Out-Null
@@ -93,7 +100,15 @@ jobs:
           }
 
       - name: Run all tests
-        run: python -m unittest discover -v -s tests -t . -p "test_*.py"
+        shell: pwsh
+        run: |
+          # Match the explicit laptop/large-window layout tests; the hosted default is only 1024px wide.
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          Write-Host "Test display: $($bounds.Width)x$($bounds.Height)"
+          if ($bounds.Width -lt 1920 -or $bounds.Height -lt 1080) { throw "The laptop layout matrix requires a 1920x1080 test desktop." }
+          python -m unittest discover -v -s tests -t . -p "test_*.py"
 
       # 2.9.116: the help pictures are taken again from this version's screens (Windows fonts). If the runner cannot
       # show windows, the pictures already in Assets/help are used - the build never stops here.

@@ -61,18 +61,21 @@ class FinalFeaturesMixin:
 
     def status_bar(self):
         user = self.current_user or {}
+        language=getattr(self,'language',None)
+        ar=bool(language is not None and language.get()=='ar')
         bar = tk.Frame(self, bg=NAVY); bar.pack(fill="x", side="bottom")
         expires = user.get("expires_at")
-        validity = f"Account valid until {_display(expires)}" if expires else "Account without expiry"
+        validity = (f"الحساب صالح حتى {_display(expires)}" if expires else "حساب دون انتهاء") if ar else (f"Account valid until {_display(expires)}" if expires else "Account without expiry")
         licence = user.get("licence") or {}
         if licence.get("valid_until"):  # 2.9.101 / 2.9.103
-            validity += f"   |   {'Trial' if licence.get('trial') else 'Licence'} until {_display(licence['valid_until'])}"
-        text = f"Signed in: {user.get('username', '')}   |   Role: {str(user.get('role', '')).title()}   |   {validity}"
+            validity += (f"   |   {'الفترة التجريبية' if licence.get('trial') else 'الترخيص'} حتى {_display(licence['valid_until'])}" if ar else f"   |   {'Trial' if licence.get('trial') else 'Licence'} until {_display(licence['valid_until'])}")
+        role={'admin':'مدير','accountant':'محاسب','viewer':'عرض فقط'}.get(user.get('role'),user.get('role',''))
+        text = f"المستخدم: {user.get('username', '')}   |   الدور: {role}   |   {validity}" if ar else f"Signed in: {user.get('username', '')}   |   Role: {str(user.get('role', '')).title()}   |   {validity}"
         tk.Label(bar, text=text, bg=NAVY, fg="white", font=("Segoe UI", 8)).pack(side="left", padx=12, pady=3)
         if expires:
             try:
                 days = (datetime.strptime(expires, "%Y-%m-%d").date() - datetime.now().date()).days
-                if days <= 30: tk.Label(bar, text=f"Account expires in {days} day(s) - ask the administrator to renew", bg=NAVY, fg=GOLD, font=("Segoe UI", 8, "bold")).pack(side="left", padx=8)
+                if days <= 30: tk.Label(bar, text=f"ينتهي الحساب خلال {days} يوم؛ اطلب التجديد من المدير" if ar else f"Account expires in {days} day(s) - ask the administrator to renew", bg=NAVY, fg=GOLD, font=("Segoe UI", 8, "bold")).pack(side="left", padx=8)
             except ValueError: pass
 
     def scrollable_page(self, parent, *, fit_width=False, fill_height=False):
@@ -453,6 +456,7 @@ class FinalFeaturesMixin:
         ttk.Combobox(controls, textvariable=self.vat_currency, values=["All Currencies", "USD", "EUR", "LBP", "AED"], state="readonly", width=13).pack(side="left", padx=4)
         tk.Checkbutton(controls, text="Include Review documents", variable=self.vat_include_review, bg=LIGHT).pack(side="left", padx=6)
         tk.Button(controls, text="Generate", command=self.load_vat_return, bg=GOLD, fg=NAVY, border=0, padx=16, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
+        self.action_button(controls,"Update Rules",lambda:self.open_rule_updates("vat")).pack(side="left",padx=4)
         law = tk.Frame(page, bg=LIGHT); law.pack(fill="x", padx=10, pady=(0, 4))
         self.vat_ratio = tk.StringVar(); self.vat_refund = tk.StringVar()
         tk.Label(law, text=f"Credit B/F ({vat_currency(self)}, optional)", bg=LIGHT).pack(side="left"); tk.Entry(law, textvariable=self.vat_credit_override, width=13).pack(side="left", padx=(4, 12))

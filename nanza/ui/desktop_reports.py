@@ -1245,6 +1245,7 @@ class ReportsMixin:
         self.ai_accountant_viewer.bind("<Double-1>", self.open_ai_accountant_source, add="+")
 
     def run_ai_accountant_query(self):
+        language = self.language.get()
         question=self.ai_accountant_question.get().strip()
         if not question:
             return messagebox.showwarning("AI Accountant", "Enter a question first")

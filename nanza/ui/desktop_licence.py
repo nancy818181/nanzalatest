@@ -35,7 +35,7 @@ def _copy(widget, text):
 
 
 def licence_box(app, parent):
-    box = tk.LabelFrame(parent, text="Licence of this installation | ترخيص البرنامج", bg=LIGHT, fg=NAVY, font=(FONT, 10, "bold"), padx=8, pady=6)
+    box = tk.LabelFrame(parent, text="Licence of this installation", bg=LIGHT, fg=NAVY, font=(FONT, 10, "bold"), padx=8, pady=6)
     box.pack(fill="x", padx=10, pady=8)
     ident, state_text, code = tk.StringVar(), tk.StringVar(), tk.StringVar()
     def refresh(state=None):

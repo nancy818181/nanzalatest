@@ -23,7 +23,7 @@ from client import ApiClient
 from server import run_server
 
 HEADER = ("Supplier", "Supplier Invoice No.", "Date", "Due Date", "Currency", "Type", "Document",
-          "Cost / Asset A/C", "VAT A/C", "Paid", "Paid from A/C")
+          "Cost / Asset A/C", "VAT A/C", "Paid", "Paid from A/C", "VAT Treatment")
 
 
 @unittest.skipUnless(HAVE_DISPLAY, "needs a display for the program window")
@@ -40,7 +40,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         for _ in range(100):
             try: ApiClient(cls.url).login("admin", cls.password); break
             except Exception: time.sleep(0.1)
-        api = ApiClient(cls.url); api.login("admin", cls.password); cls.company = api.companies()[0]
+        api = ApiClient(cls.url); api.login("admin", cls.password); cls.company = api.companies()[0]; api.close()
 
     @classmethod
     def tearDownClass(cls):
@@ -55,6 +55,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         self.addCleanup(gc.collect)
         app = desktop.SaberApp(); self.addCleanup(app.destroy); self.addCleanup(arabic_ui.switch, app, "en")
         app.server.set(self.url); app.password.set(self.password); app.language.set(language); app.login()
+        self.addCleanup(app.client.close)
         year = self.company["years"][0]["year"]
         app.client.select_company_year(self.company["id"], year); app.current_company = self.company; app.current_fiscal_year = int(year)
         app.geometry("1366x728+0+0"); app.update(); app.main_screen(); app.update()
@@ -63,6 +64,8 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         return app
 
     def header(self, app):
+        app.purchase_form["set_posting_details"](True)
+        app.update()
         widgets = app.purchase_form["header_widgets"]
         labels = {}
         for label in widgets["Supplier"].master.winfo_children():
@@ -93,7 +96,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                 self.assertTrue(0 <= gap <= 24, f"{text}: label {gap}px from its field (wrong side if negative)")
                 heights.add(field.winfo_height())
         self.assertLessEqual(max(heights) - min(heights), 2, f"input heights differ: {sorted(heights)}")
-        save = next(b for b in self.buttons(app.purchase_form["pdf_label"].master.master) if self.english(b) == "Save Purchase")
+        save = next(b for b in self.buttons(app.purchase_invoice_page) if self.english(b) == "Save Purchase")
         row = [b for b in save.master.winfo_children() if isinstance(b, tk.Button) and b.winfo_ismapped()]
         self.assertEqual(len({b.winfo_height() for b in row}), 1, [(self.english(b), b.winfo_height()) for b in row])
 
@@ -149,6 +152,120 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         rows=[app.rates_tree.item(i,"values") for i in app.rates_tree.get_children()]
         self.assertTrue(any(r[0]=="04-04-2024" and r[1:3]==("EUR","USD") and abs(float(r[3])-1.234567)<1e-9 for r in rows),rows)
 
+    def test_rule_updates_review_is_bilingual_read_only_and_reachable(self):
+        import arabic_ui
+        app=self.open("en")
+        before=app.client.payroll_settings_list()
+        for language in ("en", "ar"):
+            app.language.set(language);arabic_ui.switch(app,language)
+            window=app.open_rule_updates();app.update()
+            self.assertEqual(window.title(),"تحديث القواعد" if language=="ar" else "Update Rules")
+            captions=[str(b.cget("text")) for b in self.buttons(window)]
+            self.assertIn("مراجعة / تحديث الفترات" if language=="ar" else "Review / update periods",captions)
+            window.geometry("760x460");app.update()
+            close=next(b for b in self.buttons(window) if str(b.cget("text")) in ("Close","إغلاق"))
+            self.assertLessEqual(close.winfo_rooty()+close.winfo_height(),window.winfo_rooty()+window.winfo_height())
+            window.destroy();app.update()
+        self.assertEqual(app.client.payroll_settings_list(),before)
+        self.assertFalse([m for m in self.messages if m[0]=="showerror"],self.messages)
+
+    def test_ai_accountant_query_runs_from_the_bilingual_application_page(self):
+        for language, question in (("en", "fuel this year"), ("ar", "مصاريف البنزين هذه السنة")):
+            app = self.open(language)
+            app.open_ai_accountant(); app.update()
+            app.ai_accountant_question.set(question)
+            app.ai_accountant_report = None
+            app.run_ai_accountant_query()
+            deadline = time.monotonic() + 15
+            while app.ai_accountant_report is None and time.monotonic() < deadline:
+                app.update(); time.sleep(.02)
+            self.assertIsNotNone(app.ai_accountant_report)
+            self.assertIn("sources", app.ai_accountant_report)
+            self.assertFalse([m for m in self.messages if m[0] == "showerror"], self.messages)
+
+    def test_english_save_captions_across_main_pages(self):
+        """English page creation must not leak the Arabic save caption."""
+        app = self.open("en")
+        captions = []
+        def inspect(widget):
+            try:
+                text = str(widget.cget("text"))
+            except (tk.TclError, AttributeError):
+                text = ""
+            if "Save" in text or "حفظ" in text:
+                captions.append(text)
+                self.assertNotIn("حفظ", text, (str(widget), text))
+            for child in widget.winfo_children():
+                inspect(child)
+        for page in list(app.main_tab_pages):
+            app.select_main_tab(page)
+            app.update()
+            inspect(page)
+        self.assertGreaterEqual(len(captions), 10, captions)
+
+    def test_sales_save_uses_selected_language_after_reset(self):
+        import arabic_ui
+        app=self.open('en')
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index('sales_tab')])
+        for language,caption in [('en','Save'),('ar','حفظ'),('en','Save')]:
+            arabic_ui.switch(app,language)
+            app.new_sales_invoice(confirm=False);app.update()
+            self.assertEqual(app.sales_save_button.cget('text'),caption)
+
+    def test_sales_five_line_edit_save_reopen_and_resize_matrix(self):
+        import arabic_ui,json
+        import traceback
+        from decimal import Decimal
+        app=self.open('en');app.select_main_tab(app.main_tab_pages[app._page_attributes.index('sales_tab')])
+        app.report_callback_exception=lambda kind,value,tb:self.messages.append(('showerror',('callback',''.join(traceback.format_exception(kind,value,tb)))))
+        observations=[]
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language);app.new_sales_invoice(confirm=False)
+            app.sales_items=[];app.sales_sheet.delete(*app.sales_sheet.get_children())
+            app.sales_party.set('Synthetic sales matrix '+language);app.sales_currency.set('USD')
+            for i in range(5):app.add_sales_item({'description':f'Unique sales item {i+1}','quantity':1,'unit_price':'10','vat_rate':11},update_totals=False)
+            app.update_sales_totals()
+            for scaling in (96/72,120/72,2.0):
+                app.tk.call('tk','scaling',scaling)
+                for width,height in ((1280,720),(1366,768),(1600,900),(1920,1080),(1366,768)):
+                    app.state('normal');app.geometry(f'{width}x{height}+0+0')
+                    for _ in range(5):app.update_idletasks();app.update()
+                    app.after(250,app.quit);app.mainloop()
+                    tree=app.sales_sheet;tree.yview_moveto(0);app.update()
+                    rows=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() and bool(app.sales_item_for(iid).get('description','').strip()) for iid in tree.get_children())
+                    observations.append({'language':language,'requested':[width,height],'actual':app.geometry(),'tk_scaling':float(app.tk.call('tk','scaling')),'rows':rows,'table_height':tree.winfo_height(),'blocks':[(w.winfo_class(),w.winfo_height(),w.winfo_reqheight()) for w in app.sales_tab.winfo_children()]})
+                    if (width,height)==(1366,768):self.assertGreaterEqual(rows,4,observations[-1])
+                    total=app.sales_total_labels['TOTAL'];self.assertLessEqual(total.winfo_rooty()+total.winfo_height(),app.winfo_rooty()+app.winfo_height())
+            fifth=app.sales_items[-1]['_iid'];tree.see(fifth);tree.selection_set(fifth);tree.focus(fifth);app.update()
+            app.edit_sales_cell(column_index=2,iid=fifth);app.update()
+            editor=next(w for w in tree.winfo_children() if isinstance(w,tk.Entry))
+            editor.focus_force();editor.delete(0,'end');editor.insert(0,'2')
+            if language=='en':
+                editor.event_generate('<Return>');app.update()
+                self.assertEqual(app.sales_total_labels['TOTAL'].cget('text'),'66.60 USD')
+            number=app.sales_no.get();app.sales_save_button.invoke();app.update()
+            self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+            invoice=next(row for row in app.client.invoices() if row['invoice_number']==number)
+            app.open_sales_invoice(invoice_id=invoice['id']);app.update()
+            self.assertEqual(Decimal(str(app.sales_items[-1]['quantity'])),Decimal('2'))
+            self.assertEqual(app.sales_total_labels['TOTAL'].cget('text'),'66.60 USD')
+            self.assertEqual(app.sales_save_button.cget('text'),'حفظ' if language=='ar' else 'Save')
+            for target in ('ar','en'):
+                app.switch_language(target);app.update()
+                self.assertEqual(app.sales_edit_id,invoice['id'])
+                self.assertEqual(app.sales_total_labels['TOTAL'].cget('text'),'66.60 USD')
+                self.assertEqual(Decimal(str(app.sales_items[-1]['quantity'])),Decimal('2'))
+                self.assertEqual(app.sales_save_button.cget('text'),'حفظ' if target=='ar' else 'Save')
+        print('PILOT_SALES_MATRIX '+json.dumps(observations))
+
+    def test_cancel_language_change_preserves_unsaved_sales(self):
+        app=self.open('en');app.select_main_tab(app.main_tab_pages[app._page_attributes.index('sales_tab')])
+        app.add_sales_item({'description':'Unsaved must survive cancel','quantity':2,'unit_price':'10','vat_rate':11})
+        before=app.sales_form_state()
+        with mock.patch('tkinter.messagebox.askyesno',return_value=False):app.switch_language('ar')
+        self.assertEqual(app.language.get(),'en')
+        self.assertEqual(app.sales_form_state(),before)
+
     def test_purchase_first_item_is_inside_every_scroll_viewport(self):
         app=self.open("en")
         import arabic_ui
@@ -173,6 +290,74 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         for child in widget.winfo_children():
             if isinstance(child, tk.Button): yield child
             yield from self.buttons(child)
+
+    def test_five_line_purchase_has_four_complete_rows_at_laptop_scaling(self):
+        import arabic_ui,json
+        from tkinter import ttk
+        app=self.open('en');form=app.purchase_form
+        sheet=form['items_sheet'];tree=sheet.tree
+        for i in range(5):
+            app.purchase_item_line({'name':f'Synthetic five-line item {i+1}', 'quantity':1,'unit_cost':'10','vat_flag':'Yes'})
+        observations=[]
+        for scaling in (96/72,120/72,2.0):
+            app.tk.call('tk','scaling',scaling)
+            for language in ('en','ar'):
+                arabic_ui.switch(app,language)
+                app.state('normal');app.geometry('1366x768+0+0')
+                for _ in range(8):app.update_idletasks();app.update()
+                tree.yview_moveto(0);app.update()
+                visible=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() for iid in tree.get_children())
+                observations.append({'language':language,'tk_scaling':float(app.tk.call('tk','scaling')),'rows':visible,'table_height':tree.winfo_height(),'window':app.geometry()})
+                self.assertGreaterEqual(visible,4,observations)
+                fifth=tree.get_children()[-1];tree.see(fifth);tree.selection_set(fifth);app.update()
+                self.assertTrue(tree.bbox(fifth))
+        print('PILOT_LAYOUT '+json.dumps(observations))
+        from decimal import Decimal
+        for i in range(5):
+            app.client.save_inventory_item({'sku':f'PILOT-R{i}','name':f'Pilot line {i+1}','unit':'unit'})
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language);app.new_purchase()
+            form=app.purchase_form;sheet=form['items_sheet'];tree=sheet.tree
+            form['vars']['supplier'].set('Synthetic pilot supplier')
+            form['vars']['number'].set('PILOT-FIVE-'+language)
+            form['vars']['currency'].set('USD')
+            for i in range(5):
+                app.purchase_item_line({'item_code':f'PILOT-R{i}','name':f'Pilot line {i+1}','quantity':1,'unit_cost':'10','vat_flag':'Yes'})
+            fifth=tree.get_children()[-1];tree.see(fifth);tree.selection_set(fifth);app.update()
+            self.assertIsNot(app.purchase_item_changed(fifth,'quantity','2'),False)
+            self.assertEqual(form['total'].cget('text'),'66.60 USD')
+            pending_before = {build.__name__ for build in app.__dict__.get('_pending_builders', [])}
+            next(b for b in self.buttons(app.purchase_invoice_page) if self.english(b)=='Save Purchase').invoke();app.update()
+            self.assertEqual({build.__name__ for build in app.__dict__.get('_pending_builders', [])}, pending_before, 'Saving must not construct unopened unrelated pages')
+            self.assertFalse([m for m in self.messages if m[0]=='showerror'],self.messages)
+            choice=next(label for label in form['find_map'] if label.startswith('PILOT-FIVE-'+language+' |'))
+            form['find'].set(choice);form['find_box'].event_generate('<<ComboboxSelected>>');app.update()
+            self.assertEqual(len(sheet.rows),5)
+            self.assertEqual(Decimal(str(list(sheet.rows.values())[-1]['quantity'])),Decimal('2'))
+            self.assertEqual(form['total'].cget('text'),'66.60 USD')
+            saved_id=form.get('id') or form.get('selected_id')
+            for target in ('ar','en'):
+                app.switch_language(target);app.update()
+                form=app.purchase_form;sheet=form['items_sheet']
+                self.assertEqual(str(form.get('id') or form.get('selected_id')),str(saved_id))
+                self.assertEqual(len(sheet.rows),5)
+                self.assertEqual(form['total'].cget('text'),'66.60 USD')
+
+    def test_purchase_resize_matrix_keeps_totals_and_editable_lines(self):
+        import arabic_ui,json
+        app=self.open('en');app.state('normal')
+        for i in range(5):app.purchase_item_line({'name':f'Populated resize row {i}','quantity':1,'unit_cost':'10','vat_flag':'Yes'})
+        records=[]
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language)
+            for width,height in ((1280,720),(1366,768),(1600,900),(1920,1080),(1366,768)):
+                app.geometry(f'{width}x{height}+0+0');app.after(250,app.quit);app.mainloop();app.update()
+                tree=app.purchase_form['items_sheet'].tree;tree.yview_moveto(0);app.update()
+                rows=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() for iid in tree.get_children())
+                records.append({'language':language,'requested':[width,height],'actual':app.geometry(),'rows':rows,'table_height':tree.winfo_height()})
+                if width==1366:self.assertGreaterEqual(rows,4,records[-1])
+                total=app.purchase_form['total'];self.assertLessEqual(total.winfo_rooty()+total.winfo_height(),app.winfo_rooty()+app.winfo_height())
+        print('PILOT_PURCHASE_RESIZE '+json.dumps(records))
 
     def test_english_header_is_aligned_and_a_purchase_still_saves(self):
         app = self.open("en")
@@ -403,6 +588,15 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         app.geometry("1024x700")
         for _ in range(4): app.update_idletasks(); app.update()
         self.check_layout(app, rtl=False)
+
+    def test_three_pair_header_respects_wide_field_minimums(self):
+        for language in ("en", "ar"):
+            app = self.open(language)
+            app.tk.call("tk", "scaling", 96 / 72)
+            app.state("normal"); app.geometry("1028x749+0+0")
+            app.after(250, app.quit); app.mainloop()
+            for _ in range(5): app.update_idletasks(); app.update()
+            self.check_layout(app, rtl=language == "ar")
 
 
 if __name__ == "__main__":

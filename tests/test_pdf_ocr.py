@@ -13,6 +13,28 @@ from pdf_import import _ocr_pdf_pages, _parse_invoice_text, read_invoice_pdf, re
 
 
 class OcrPageTests(unittest.TestCase):
+    def test_purchase_refresh_updates_loaded_reports_without_loading_hidden_pages(self):
+        from desktop_purchases import PurchasesMixin
+        screen = types.SimpleNamespace(load_invoices=Mock(), load_journal=Mock(), load_trial=Mock())
+        PurchasesMixin._refresh_loaded_purchase_reports(screen)
+        for refresh in (screen.load_invoices, screen.load_journal, screen.load_trial):
+            refresh.assert_not_called()
+        screen.invoice_tree = object(); screen.journal_tree = object(); screen.trial_state = {}
+        PurchasesMixin._refresh_loaded_purchase_reports(screen)
+        for refresh in (screen.load_invoices, screen.load_journal, screen.load_trial):
+            refresh.assert_called_once_with()
+
+    def test_explicit_quantity_times_price_rows_are_reviewable_items(self):
+        from pdf_import import _line_items
+        for operator in ("x", "X", "×"):
+            with self.subTest(operator=operator):
+                items = _line_items(f"Paper 2 {operator} 50.00 = 100.00")
+                self.assertEqual(len(items), 1)
+                self.assertEqual(items[0]["description"], "Paper")
+                self.assertEqual((items[0]["quantity"], items[0]["unit_price"], items[0]["total"]), (2, 50, 100))
+        self.assertEqual(_line_items("Paper 2 x 50.00 = 900.00"), [])
+        self.assertEqual(_line_items("Total 2 x 50.00 = 100.00"), [])
+
     def test_ocr_uses_selected_pages_and_both_installed_languages(self):
         class FakeImage:
             def __init__(self):

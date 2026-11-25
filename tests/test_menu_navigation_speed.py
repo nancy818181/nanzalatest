@@ -139,6 +139,11 @@ class MenuNavigationSpeedTest(unittest.TestCase):
             return actual(font,label,*args,**kwargs)
         with mock.patch.object(tkfont.Font, "measure", measure):
             root.update_idletasks()
+            # Resize fitting is deferred to a frame, not recursively queued at
+            # idle; exercise the real callback before checking measurement work.
+            root.after(100, root.quit)
+            root.mainloop()
+        self.assertGreater(len(calls), 0)
         self.assertLessEqual(len(calls),20)
         self.assertEqual(len(tree.get_children()),500)
 

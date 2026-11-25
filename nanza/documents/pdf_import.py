@@ -771,8 +771,8 @@ def _line_items(text):
     )
     number = r"[0-9]{1,3}(?:[,\s][0-9]{3})*(?:\.[0-9]{1,3})?|[0-9]+(?:\.[0-9]{1,3})?"
     row_pattern = re.compile(
-        rf"^\s*(?P<description>.+?)\s+(?P<quantity>{number})\s+"
-        rf"(?P<unit_price>{number})\s+(?P<total>{number})\s*$"
+        rf"^\s*(?P<description>.+?)\s+(?P<quantity>{number})\s+(?:[xX×]\s*)?"
+        rf"(?P<unit_price>{number})\s+(?:=\s*)?(?P<total>{number})\s*$"
     )
     for raw in text.splitlines():
         line = " ".join(_normalize_amount_line(raw).split())

@@ -7,6 +7,82 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
 
 
 class SettingsMixin:
+    def open_rule_updates(self, module=None):
+        """A review centre, never an unsourced automatic change of statutory rates."""
+        import webbrowser
+        language = self.language.get()
+        def text(en, ar): return ar if language == "ar" else en
+        window = tk.Toplevel(self)
+        window.title(text("Update Rules", "تحديث القواعد"))
+        window.configure(bg=LIGHT); window.transient(self)
+        self.fit_dialog(window, 1000, 680, 660, 460)
+        heading = tk.Frame(window, bg=NAVY, padx=20, pady=14); heading.pack(fill="x")
+        tk.Label(heading, text=text("Rules & legal updates", "القواعد والتحديثات القانونية"), bg=NAVY, fg="white",
+                 font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        tk.Label(heading, text=text("Review the source. Check the effective date. Approve before applying.",
+                 "راجع المصدر، ثم تاريخ السريان، واعتمد التغيير قبل تطبيقه."), bg=NAVY, fg="#DCE4EF",
+                 font=("Segoe UI", 10)).pack(anchor="w", pady=(3, 0))
+        footer = tk.Frame(window, bg="white", padx=14, pady=8); footer.pack(side="bottom", fill="x")
+        tk.Button(footer, text=text("Close", "إغلاق"), command=window.destroy, bg=NAVY, fg="white",
+                  border=0, padx=24, pady=7).pack(side="right")
+        tk.Label(footer, text=text("Installed rules only • No automatic legal feed is configured",
+                 "القواعد المثبّتة فقط • لا توجد تغذية قانونية تلقائية مهيّأة"), bg="white", fg="#5f6b76").pack(side="left")
+        outer, body = self.scrollable_page(window); outer.pack(fill="both", expand=True, padx=14, pady=10)
+        intro = tk.Label(body, text=text("Official publications may require professional interpretation. This page reads your current rules; it does not replace historical periods or recalculate posted documents.",
+            "قد تحتاج المنشورات الرسمية إلى تفسير المحاسب. هذه الصفحة تعرض القواعد الحالية ولا تستبدل الفترات التاريخية أو تعيد احتساب المستندات المرحلة."),
+            bg=LIGHT, fg=NAVY, justify="left", anchor="w", wraplength=880)
+        intro.pack(fill="x", pady=(0, 10))
+        user = self.current_user or {}; permissions = user.get("permissions") or {}
+        admin = user.get("role") == "admin"
+        editable = user.get("role") != "viewer"
+        def navigate(attribute, caption):
+            window.destroy()
+            if attribute not in self._page_attributes: return
+            self.select_main_tab(self.main_tab_pages[self._page_attributes.index(attribute)])
+            notebook = getattr(self, "payroll_notebook" if attribute == "payroll_tab" else "settings_notebook", None)
+            if notebook:
+                for tab in notebook.tabs():
+                    if notebook.tab(tab, "text") == caption: notebook.select(tab); break
+        def card(title, detail, actions):
+            box = tk.Frame(body, bg="white", highlightbackground="#D7DEE8", highlightthickness=1, padx=16, pady=12)
+            box.pack(fill="x", pady=(0, 10))
+            tk.Label(box, text=title, bg="white", fg=NAVY, font=("Segoe UI", 12, "bold")).pack(anchor="w")
+            tk.Label(box, text=detail, bg="white", fg="#506477", wraplength=850, justify="left", anchor="w").pack(fill="x", pady=(4, 8))
+            row = tk.Frame(box, bg="white"); row.pack(fill="x")
+            for caption, command, allowed in actions:
+                tk.Button(row, text=caption, command=command, state="normal" if allowed else "disabled", bg=GOLD,
+                          fg=NAVY, border=0, padx=14, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 8), pady=2)
+            flow_toolbars(row)
+        current = text("Open the dated settings to review the applicable period.", "افتح الإعدادات المؤرخة لمراجعة الفترة المطبّقة.")
+        if admin or permissions.get("payroll"):
+            try:
+                rule = self.client.payroll_settings(self.fiscal_today())
+                current = text("Current period from: ", "الفترة الحالية من: ") + str(rule.get("date_from") or "—")
+            except Exception as exc: current = str(exc)
+            card(text("Payroll • Tax & NSSF", "الرواتب • الضريبة والضمان"), current + "\n" + text(
+                "Add a reviewed effective period in Tax & NSSF Settings. Saved payroll retains its existing figures.",
+                "أضف فترة سريان مراجَعة من إعدادات الضريبة والضمان. تبقى أرقام الرواتب المحفوظة كما هي."), [
+                (text("Review / update periods", "مراجعة / تحديث الفترات"), lambda:navigate("payroll_tab", "Tax & NSSF Settings"), editable),
+                (text("Official NSSF source", "مصدر الضمان الرسمي"), lambda:webbrowser.open("https://www.cnss.gov.lb/"), True)])
+        if admin or permissions.get("vat"):
+            card(text("VAT • Rate & declaration", "VAT • المعدل والتصريح"), text(
+                "Review the approved rate, deduction method and declaration mapping. A legal change needs a source and effective date; a saved quarter must follow its reopening controls.",
+                "راجع المعدل المعتمد وطريقة الحسم وربط خانات التصريح. يحتاج التغيير القانوني إلى مصدر وتاريخ سريان، ويتبع الفصل المحفوظ صلاحيات إعادة الفتح."), [
+                (text("Review VAT settings", "مراجعة إعدادات VAT"), lambda:navigate("settings_tab", "General Settings"), admin),
+                (text("Ministry of Finance", "وزارة المالية"), lambda:webbrowser.open("https://www.finance.gov.lb/ar-lb/Taxation/Na/VAT"), True)])
+        card(text("Other accounting rules", "القواعد المحاسبية الأخرى"), text(
+            "Posting accounts, exchange differences, depreciation and company policies remain in Accounting Settings. A web publication alone is not an approved rule package.",
+            "تبقى حسابات الترحيل وفروق الصرف والاستهلاك وسياسات الشركة ضمن إعدادات المحاسبة. المنشور على الويب وحده ليس حزمة قواعد معتمدة."), [
+            (text("Accounting Settings", "إعدادات المحاسبة"), lambda:navigate("settings_tab", "Accounting Settings"), admin)])
+        def resize(_event=None):
+            width=max(300, window.winfo_width()-90)
+            intro.configure(wraplength=width)
+            for box in body.winfo_children():
+                for child in box.winfo_children():
+                    if isinstance(child, tk.Label): child.configure(wraplength=width-32)
+        window.bind("<Configure>", resize, add="+"); window.bind("<Escape>", lambda _e:window.destroy())
+        return window
+
     def build_accounts(self):
         # Separate browsing from account creation; existing save, lookup and maintenance callbacks are retained.
         nested=ttk.Notebook(self.accounts_tab); nested.pack(fill="both",expand=True,padx=8,pady=6)
@@ -174,6 +250,8 @@ class SettingsMixin:
             self.accounts_tree.insert("","end",values=values)
 
     def build_settings(self):
+        rules_bar=tk.Frame(self.settings_tab,bg=LIGHT); rules_bar.pack(fill="x",padx=10,pady=(6,0))
+        self.action_button(rules_bar,"Update Rules",self.open_rule_updates).pack(side="left")
         nested=ttk.Notebook(self.settings_tab); self.settings_notebook=nested; nested.pack(fill="both",expand=True,padx=10,pady=10)
         users=tk.Frame(nested,bg=LIGHT); backups=tk.Frame(nested,bg=LIGHT); rates=tk.Frame(nested,bg=LIGHT); branches=tk.Frame(nested,bg=LIGHT); general=tk.Frame(nested,bg=LIGHT)
         self.settings_rates_page=rates
@@ -282,7 +360,7 @@ class SettingsMixin:
         self.vat_currency_box=ttk.Combobox(vat_boxes,textvariable=self.company_vat_currency,values=self.currency_codes,state="readonly",width=7); self.vat_currency_box.pack(side="left")
         self.vat_second_box=ttk.Combobox(vat_boxes,textvariable=self.company_vat_second,values=self.currency_codes,state="readonly",width=7); self.vat_second_box.pack(side="left",padx=(6,0))
         self.show_tax_tick=tk.BooleanVar(master=self,value=True)  # 2.9.113
-        tk.Checkbutton(general,text="Show the tick \"Not deductible for income tax | غير مقبول ضريبياً\" on the entry screens",variable=self.show_tax_tick,
+        tk.Checkbutton(general,text="Show the tick \"Not deductible for income tax\"",variable=self.show_tax_tick,
                        bg=LIGHT).grid(row=12,column=2,columnspan=2,padx=14,pady=7,sticky="w")
         self.enable_exempt_income=tk.BooleanVar(master=self,value=False)  # 2.9.113
         tk.Checkbutton(general,text="Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)",

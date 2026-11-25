@@ -4,6 +4,22 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 ## Version 2.9.140
 
+Pilot delivery follow-up: Purchases keeps its daily fields above the larger item table; posting-account details, secondary PDF tools and amount overrides remain available under More. Upload PDF stays directly accessible. Sales discount overrides move to More, and both live totals use a clear gold final-total box. Five populated rows remain visible in the tested 1366×768 English/Arabic Tk-scale configurations. OS scaling is recorded separately. CI exposed stale menu/toolbar callbacks during language rebuilding; callbacks now tolerate an omitted event, and obsolete notebooks cannot select pages in their replacement. Tests explicitly select their intended language instead of inheriting the previous UI test's persisted setting. Installer OCR dependency installation retries the same pinned package on transient feed failure; no OCR fallback or rate/version change is implied.
+
+The pilot layout matrix needs a desktop large enough to host its requested 1366×768 client window. CI now explicitly uses a 1920×1080 desktop (Windows display resolution and Linux Xvfb), and verifies the Windows dimensions before testing. The original hosted 1024px desktop clamped requests to 1028×749; failures on that smaller viewport are retained as evidence, not accepted as a 1366×768 result. No row-count assertion was weakened.
+
+The same investigation reproduced a real narrow-width Purchase header overflow: in a three-pair layout, unspanned account selectors required more width than the short fields used to choose the column count. The layout now includes those widths before selecting its columns. English/Arabic 1028px regression checks and the five-line 1366px save/reopen matrix pass.
+
+Owner confirmation (25 November 2026): the third fractional digit rounds the second (HALF_UP); journal lines must balance exactly after that rounding. Existing code already implements this. Three obsolete strict expected-failure cases were updated to the approved expectation; their historical function names remain unchanged. No rounding plug or stored-document rewrite was added.
+
+Update Rules is available from Payroll, VAT and Settings. Its review centre links to official MoF/NSSF sources and the existing effective-period/settings editors. It clearly states that no automatic legal feed is configured. It does not claim to fetch/apply the latest law, replace historical periods or recalculate posted payroll. Applying a new statutory package still requires a sourced, effective-dated review. Other accounting policies remain in Accounting Settings.
+
+Pilot closure (working branch, version unchanged): Purchase amount overrides are available under More; PDF/OCR tools scroll with the header, leaving the live totals and Save fixed. The header reserves room for at least four item rows. VAT Treatment is also available with the main header fields. Regression coverage exercises five-line entry, fifth-line quantity editing, save/reopen, and English/Arabic laptop layouts. Tk scaling tests do not change Windows display scaling.
+
+Native General Ledger also follows realized-FX line currencies and zero-native adjustments consistently with Trial Balance; the General Journal retains the original balanced voucher representation. Regression coverage checks customer/supplier gain/loss, currency filters, repeat allocation and reversal.
+
+Further pilot fixes on the same working branch: Sales uses compact document tabs, an expanding line table and fixed totals. Saving commits the active line editor before posting. English save captions remain English after reset/reopen; language switching protects unsaved lines and restores a saved invoice. Dashboard excludes draft invoices and signs credit notes; expenses, profit and party balances reconcile to posted native-currency ledgers when the full schema is available. Board captions and review settings follow the selected language. No statutory VAT advance policy, schema, version or posted historical entries were changed. Windows 100%/125% OS-scale acceptance and professional VAT declaration sign-off remain separate open checks; automated Tk scale checks are not equivalent to changing OS display scaling.
+
 Audit repair (24–25 November 2026; version kept at the owner's request):
 - Payroll rule reload/save is atomic, preserves earlier history, and records the prior settings; no statutory rates changed.
 - Owner-approved allocation-linked realized FX journals use configured gain/loss accounts; repeat allocation and reversal preserve balanced, auditable entries and zero native party adjustment.
@@ -241,7 +257,7 @@ See `mobile/README.md`. The ZIP contains `lib/main.dart` and `pubspec.yaml`, not
 
 ## Compliance and known limits
 
-NANZA is Lebanon-oriented. No ZATCA Phase 2, UAE FAF, Saudi GOSI or other GCC statutory certification is claimed. Payroll rules are aids requiring category/date-specific review; EOS is an accounting estimate. Existing custom reports are constrained sales reports, not a general formula/pivot designer. Mobile OCR queue processing is incomplete in this snapshot. See the [historical accounting engineering audit](docs/accountant-engineering-audit-2026-10-17.md) and [handwriting-reader validation notes](docs/handwriting-reader-work.md); both document earlier checkpoints and must be read with their dates and limitations.
+NANZA is Lebanon-oriented. No ZATCA Phase 2, UAE FAF, Saudi GOSI or other GCC statutory certification is claimed. Payroll rules are aids requiring category/date-specific review; EOS is an accounting estimate. Custom Reports supports constrained sales reports and versioned ledger definitions with grouping and filters; it is not a general formula/pivot designer. Mobile OCR queue processing is incomplete in this snapshot. See the [historical accounting engineering audit](docs/accountant-engineering-audit-2026-10-17.md) and [handwriting-reader validation notes](docs/handwriting-reader-work.md); both document earlier checkpoints and must be read with their dates and limitations.
 
 Optional external OCR exists in `azure_reader.py`; do not describe all available OCR modes as permanently local. Enable external transfer only through the existing explicit opt-in flow. The proposed free AI path needs no paid API, but model downloads, compute and licenses still need review.
 
@@ -255,5 +271,14 @@ Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source ar
 
 The [handwriting-reader work log](docs/handwriting-reader-work.md) records the
 current OCR experiments and explicitly states that real-model accuracy is not
-measured. The supplied handwritten Arabic image and ground truth are in
-`tests/data/`; mocked-inference tests do not establish real-model CER/WER.
+measured. No verified real handwritten invoice fixture is supplied in this checkout;
+mocked-inference tests and handwriting-style fonts do not establish real handwriting
+accuracy or real-model CER/WER.
+
+## Pilot AI and OCR controls
+
+The desktop AI Accountant uses the local validated query service without a paid API.
+Its bilingual query entry point has a runtime regression covering the actual local
+HTTP response. Expense account suggestions use the selected company chart and
+require review; ambiguous inputs abstain. Optional model-backed OCR needs separately
+configured weights. Printed invoice OCR success does not establish handwriting accuracy.

@@ -42,8 +42,8 @@ class MultiSelect(tk.Frame):
                                 bg="white", fg="#102a43", activebackground="#eef2f6", font=("Segoe UI", 9), highlightthickness=0)
         self.button._saber_keep = True  # the design pass leaves it as it is
         self.button.pack(side="left", fill="y", padx=0)
-        self.entry.bind("<Button-1>", lambda _e: self.open())
-        self.entry.bind("<Return>", lambda _e: self.open()); self.entry.bind("<space>", lambda _e: self.open())
+        self.entry.bind("<Button-1>", lambda _e=None: self.open())
+        self.entry.bind("<Return>", lambda _e=None: self.open()); self.entry.bind("<space>", lambda _e=None: self.open())
         self.popup = None
 
     def text(self):
@@ -104,6 +104,6 @@ class MultiSelect(tk.Frame):
         tk.Button(buttons, text="Clear", command=lambda: tick(False)).pack(side="left", padx=4)
         tk.Button(buttons, text="OK", command=done, width=8).pack(side="right")
         tk.Button(buttons, text="All (no filter)", command=no_filter).pack(side="right", padx=4)
-        popup.bind("<Escape>", lambda _e: popup.destroy()); popup.bind("<Return>", done)
+        popup.bind("<Escape>", lambda _e=None: popup.destroy()); popup.bind("<Return>", done)
         search.focus_set()
         return "break"

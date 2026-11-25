@@ -3856,4 +3856,15 @@ AR.update({
     'Find purchase': 'البحث عن مشتريات',
     'Paid from A/C': 'مدفوع من حساب',
     'Department and Project': 'القسم والمشروع',
+    'Switch language': 'تغيير اللغة',
+    'Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today.': 'المبيعات والمشتريات: مستندات مرحلة. المصاريف وصافي الربح: الأستاذ المرحل. المتأخرات: بتاريخ اليوم.',
+    'Switching language reloads the current document. Unsaved changes will be discarded. Continue?': 'تغيير اللغة يعيد فتح المستند الحالي. ستُفقد التعديلات غير المحفوظة. هل تريد المتابعة؟',
 })
+
+# Pilot closure: application-owned captions use the selected language.
+AR.update({'Fill in': 'لغة التعبئة', 'Stock below zero': 'مخزون سالب', 'Show in the inventory screens': 'يظهر في الشاشات', 'New item on a purchase: ask for': 'صنف جديد في المشتريات: اطلب', 'Licence of this installation': 'ترخيص البرنامج', 'Family changes': 'الوضع العائلي', 'Married during the year': 'تزوّج خلال السنة', 'Employee register': 'سجل المستخدمين', 'Official forms details': 'معلومات النماذج الرسمية', 'Monthly Payroll Sheet': 'الحركة الشهرية', 'Income not subject to income tax': 'إيراد غير خاضع لضريبة الدخل - السبب القانوني', 'Show the tick "Not deductible for income tax"': 'غير مقبول ضريبياً" on the entry screens', 'Loading': 'جارٍ التحميل…', 'Updating preview': 'تحديث المعاينة…', 'Preparing complete export': 'تحضير التصدير الكامل…', 'Auto-send at 6pm': 'إرسال تلقائي: requires a configured messaging gateway', 'Preparing local preview': 'تحضير المعاينة…', 'Review then copy. Nothing is sent automatically.': 'راجع النص ثم انسخه.', '30-day cash illustration': 'تقدير نقدي ٣٠ يوماً', 'Copied': 'تم النسخ', 'Posted P&L only; preceding equal-length period': 'حسابات مرحّلة فقط', '6pm local reminder': 'تذكير الساعة ٦ (البرنامج مفتوح)', 'Loading board': 'تحميل اللوحة…', 'I reviewed all mappings; empty groups mean confirmed zero': 'راجعت الربط'})
+
+# Pilot document captions; canonical storage values are unchanged.
+AR.update({"New Invoice": "فاتورة جديدة", "Item Description": "وصف الصنف", "Item Code (F2)": "رمز الصنف (F2)"})
+
+AR.update({"Update Rules": "تحديث القواعد"})

@@ -440,7 +440,7 @@ def flow_toolbar(frame, gap=4):
         frame.bind("<Destroy>",cancel_flow,add="+")
     widest = max((w.winfo_reqwidth() + l + r for w, _s, (l, r), _p in frame._flow_order if w.winfo_exists()), default=100)
     frame.configure(width=widest)
-    for widget, *_rest in order: widget.bind("<Configure>", lambda _e, f=frame: f._flow_schedule(), add="+")
+    for widget, *_rest in order: widget.bind("<Configure>", lambda _e=None, f=frame: f._flow_schedule(), add="+")
     schedule()
     return frame
 

@@ -205,28 +205,21 @@ def test_posting_rejects_imbalance_above_approved_tolerance(synthetic_db):
 
 
 @pytest.mark.parametrize("amount", ["1.004", "1500000.004"])
-@pytest.mark.xfail(
-    strict=True,
-    reason="POST-DECIMAL-001 (Decision 2): nonzero sub-cent imbalance acceptance depends on the owner's approved posting tolerance.",
-)
+# Owner confirmed 25-11-2026: HALF_UP to two places per line, then exact balance.
 def test_posting_rejects_nonzero_subcent_imbalance(amount, synthetic_db):
     with synthetic_db.connect() as connection:
         cash = connection.execute("SELECT code FROM accounts WHERE code='531'").fetchone()["code"]
         equity = connection.execute("SELECT code FROM accounts WHERE type='equity' LIMIT 1").fetchone()["code"]
-    with pytest.raises(ValueError, match="(?i)unbalanced"):
-        synthetic_db.save_journal_voucher(
-            {"entry_number": f"SYN-SUBCENT-{amount}", "entry_date": "10-03-2026",
-             "description": "Synthetic sub-cent difference", "currency": "LBP"},
-            [{"account_code": cash, "debit": amount},
-             {"account_code": equity, "credit": str(Decimal(amount).quantize(Decimal("1")))}],
-            1,
-        )
+    # Historical test name retained; the owner approved rounding, rather than rejecting raw sub-cent input.
+    saved = synthetic_db.save_journal_voucher(
+        {"entry_number": f"SYN-SUBCENT-{amount}", "entry_date": "10-03-2026", "currency": "LBP"},
+        [{"account_code": cash, "debit": amount}, {"account_code": equity, "credit": str(Decimal(amount).quantize(Decimal("1")))}], 1)
+    expected = Decimal(amount).quantize(Decimal(".01"))
+    assert sum(Decimal(str(line["debit"])) for line in saved["lines"]) == expected
+    assert sum(Decimal(str(line["credit"])) for line in saved["lines"]) == expected
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="POST-ROUNDING-LINE-001 (Decision 2): a separately identified rounding-difference line is not specified/implemented.",
-)
+# Owner confirmed 25-11-2026: HALF_UP to two places per line, then exact balance.
 def test_posting_rounding_difference_line_is_visible(synthetic_db):
     from tests.test_accounting_safety_net import _account_codes
 
@@ -247,7 +240,10 @@ def test_posting_rounding_difference_line_is_visible(synthetic_db):
             "JOIN accounts a ON a.id=j.account_id WHERE j.entry_id=?",
             (entry_id,),
         ).fetchall()
-    assert any("round" in row["code"].lower() for row in lines)
+    # No balancing plug is needed: 1.004 rounds to 1.00 before the equality check.
+    assert len(lines) == 2
+    assert sum(Decimal(str(row["debit"])) for row in lines) == Decimal("1.00")
+    assert sum(Decimal(str(row["credit"])) for row in lines) == Decimal("1.00")
 
 
 # 2.9.134 (D3, owner approved): fixed - a second invoice with the same identity is refused

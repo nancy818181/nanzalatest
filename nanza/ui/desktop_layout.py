@@ -128,7 +128,7 @@ def build_side_menu(app, holder, attributes, pages, names):
     for group, members in grouped_pages(attributes):
         header = tk.Label(inner, text=f"{'▸' if group in folded else '▾'}  {group.upper()}", bg=MENU_BG, fg=GOLD, anchor="w",
                           font=("Segoe UI", 8, "bold"), padx=14, pady=3, cursor="hand2")
-        header.pack(fill="x", pady=(6, 0)); header.bind("<Button-1>", lambda _e, g=group: toggle(g))
+        header.pack(fill="x", pady=(6, 0)); header.bind("<Button-1>", lambda _e=None, g=group: toggle(g))
         body = tk.Frame(inner, bg=MENU_BG)
         if group not in folded: body.pack(fill="x")
         app.side_menu_groups[group] = (body, header)
@@ -144,8 +144,8 @@ def build_side_menu(app, holder, attributes, pages, names):
                 button.configure(image=button._saber_icons[0], compound="left", padx=16)
             except (ImportError, OSError, ValueError, tk.TclError): log.debug("Menu icon left out", exc_info=True)
             button.pack(fill="x")
-            button.bind("<Enter>", lambda _e, b=button: b.config(bg=MENU_HOVER) if b.cget("bg") == MENU_BG else None)
-            button.bind("<Leave>", lambda _e, b=button: b.config(bg=MENU_BG) if b.cget("bg") == MENU_HOVER else None)
+            button.bind("<Enter>", lambda _e=None, b=button: b.config(bg=MENU_HOVER) if b.cget("bg") == MENU_BG else None)
+            button.bind("<Leave>", lambda _e=None, b=button: b.config(bg=MENU_BG) if b.cget("bg") == MENU_HOVER else None)
             if attribute == "sales_tab":
                 def open_quotations(page=page):
                     app.select_main_tab(page)
