@@ -222,7 +222,10 @@ class PurchasesMixin:
         box_outer, box = design.panel(header_parent, pady=2); box_outer.pack(fill="x", padx=8, pady=(1, 1))
         if header_view is not None:
             def fit_header(_event=None):
-                height=min(header_parent.winfo_reqheight()+6,max(120,int(page.winfo_height()*.45)))
+                # Reserve physical space for the item toolbar, heading and rows
+                # even when Arabic totals wrap onto an additional line.
+                table_space=round(page.winfo_fpixels('1.5i'))
+                height=min(header_parent.winfo_reqheight()+6,max(80,page.winfo_height()-table_space))
                 if header_view.winfo_height()!=height:header_view.configure(height=height)
             page.bind('<Configure>',fit_header,add='+');page.after_idle(fit_header)
         if totals_parent is None:
@@ -298,8 +301,8 @@ class PurchasesMixin:
             ("ht_summary", "Total HT"), ("vat_summary", "VAT"), ("total", "TOTAL TTC"),
         ):
             pair = tk.Frame(summary, bg=card_bg)
-            pair.pack(side="left", padx=(0, 12))
-            tk.Label(pair, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED).pack(side="left", padx=(0, 5))
+            pair.pack(side="left", padx=(0, 8))
+            tk.Label(pair, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",9)).pack(side="left", padx=(0, 5))
             f[key] = tk.Label(pair, text="0.00", bg=card_bg, fg=NAVY,
                               font=("Segoe UI", 13 if key == "total" else 10, "bold"))
             f[key].pack(side="left")

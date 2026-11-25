@@ -151,19 +151,23 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
 
     def test_purchase_first_item_is_inside_every_scroll_viewport(self):
         app=self.open("en")
+        import arabic_ui
         app.state("normal");app.geometry("1366x728+0+0")
         app.purchase_item_line({"name":"Synthetic visible line","quantity":2,"unit_cost":"50","vat_flag":"Yes"})
-        for _ in range(5):app.update_idletasks();app.update()
-        tree=app.purchase_form['items_sheet'].tree
-        box=tree.bbox(tree.get_children()[0]);self.assertTrue(box)
-        row_top=tree.winfo_rooty()+box[1];row_bottom=row_top+box[3]
-        ancestor=tree.master
-        while ancestor is not None:
-            if getattr(ancestor,'_saber_scroll_page',False):
-                self.assertGreaterEqual(row_top,ancestor.winfo_rooty())
-                self.assertLessEqual(row_bottom,ancestor.winfo_rooty()+ancestor.winfo_height())
-            ancestor=ancestor.master
-        self.assertLessEqual(row_bottom,app.winfo_rooty()+app.winfo_height())
+        for language in ('en','ar'):
+            with self.subTest(language=language):
+                arabic_ui.switch(app,language)
+                for _ in range(5):app.update_idletasks();app.update()
+                tree=app.purchase_form['items_sheet'].tree
+                box=tree.bbox(tree.get_children()[0]);self.assertTrue(box)
+                row_top=tree.winfo_rooty()+box[1];row_bottom=row_top+box[3]
+                ancestor=tree.master
+                while ancestor is not None:
+                    if getattr(ancestor,'_saber_scroll_page',False):
+                        self.assertGreaterEqual(row_top,ancestor.winfo_rooty())
+                        self.assertLessEqual(row_bottom,ancestor.winfo_rooty()+ancestor.winfo_height())
+                    ancestor=ancestor.master
+                self.assertLessEqual(row_bottom,app.winfo_rooty()+app.winfo_height())
 
     def buttons(self, widget):
         for child in widget.winfo_children():
