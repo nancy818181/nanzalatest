@@ -255,7 +255,7 @@ See `mobile/README.md`. The ZIP contains `lib/main.dart` and `pubspec.yaml`, not
 
 ## Compliance and known limits
 
-NANZA is Lebanon-oriented. No ZATCA Phase 2, UAE FAF, Saudi GOSI or other GCC statutory certification is claimed. Payroll rules are aids requiring category/date-specific review; EOS is an accounting estimate. Existing custom reports are constrained sales reports, not a general formula/pivot designer. Mobile OCR queue processing is incomplete in this snapshot. See the [historical accounting engineering audit](docs/accountant-engineering-audit-2026-10-17.md) and [handwriting-reader validation notes](docs/handwriting-reader-work.md); both document earlier checkpoints and must be read with their dates and limitations.
+NANZA is Lebanon-oriented. No ZATCA Phase 2, UAE FAF, Saudi GOSI or other GCC statutory certification is claimed. Payroll rules are aids requiring category/date-specific review; EOS is an accounting estimate. Custom Reports supports constrained sales reports and versioned ledger definitions with grouping and filters; it is not a general formula/pivot designer. Mobile OCR queue processing is incomplete in this snapshot. See the [historical accounting engineering audit](docs/accountant-engineering-audit-2026-10-17.md) and [handwriting-reader validation notes](docs/handwriting-reader-work.md); both document earlier checkpoints and must be read with their dates and limitations.
 
 Optional external OCR exists in `azure_reader.py`; do not describe all available OCR modes as permanently local. Enable external transfer only through the existing explicit opt-in flow. The proposed free AI path needs no paid API, but model downloads, compute and licenses still need review.
 
@@ -269,5 +269,14 @@ Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source ar
 
 The [handwriting-reader work log](docs/handwriting-reader-work.md) records the
 current OCR experiments and explicitly states that real-model accuracy is not
-measured. The supplied handwritten Arabic image and ground truth are in
-`tests/data/`; mocked-inference tests do not establish real-model CER/WER.
+measured. No verified real handwritten invoice fixture is supplied in this checkout;
+mocked-inference tests and handwriting-style fonts do not establish real handwriting
+accuracy or real-model CER/WER.
+
+## Pilot AI and OCR controls
+
+The desktop AI Accountant uses the local validated query service without a paid API.
+Its bilingual query entry point has a runtime regression covering the actual local
+HTTP response. Expense account suggestions use the selected company chart and
+require review; ambiguous inputs abstain. Optional model-backed OCR needs separately
+configured weights. Printed invoice OCR success does not establish handwriting accuracy.

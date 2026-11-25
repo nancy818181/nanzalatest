@@ -166,6 +166,20 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         self.assertEqual(app.client.payroll_settings_list(),before)
         self.assertFalse([m for m in self.messages if m[0]=="showerror"],self.messages)
 
+    def test_ai_accountant_query_runs_from_the_bilingual_application_page(self):
+        for language, question in (("en", "fuel this year"), ("ar", "مصاريف البنزين هذه السنة")):
+            app = self.open(language)
+            app.open_ai_accountant(); app.update()
+            app.ai_accountant_question.set(question)
+            app.ai_accountant_report = None
+            app.run_ai_accountant_query()
+            deadline = time.monotonic() + 15
+            while app.ai_accountant_report is None and time.monotonic() < deadline:
+                app.update(); time.sleep(.02)
+            self.assertIsNotNone(app.ai_accountant_report)
+            self.assertIn("sources", app.ai_accountant_report)
+            self.assertFalse([m for m in self.messages if m[0] == "showerror"], self.messages)
+
     def test_english_save_captions_across_main_pages(self):
         """English page creation must not leak the Arabic save caption."""
         app = self.open("en")
