@@ -136,6 +136,18 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                 self.assertEqual(positions,{key:label.winfo_rooty() for key,label in app.sales_total_labels.items()})
         self.assertFalse([m for m in self.messages if m[0]=="showerror"],self.messages)
 
+    def test_rate_refresh_reads_change_from_a_second_session(self):
+        app=self.open("en")
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index("settings_tab")])
+        app._load_settings_rates(force=True)
+        other=ApiClient(self.url);self.addCleanup(other.close)
+        other.login("admin",self.password)
+        other.select_company_year(app.client.company_id,app.client.fiscal_year)
+        other.save_exchange_rate({"date_from":"04-04-2024","from_currency":"EUR","to_currency":"USD","rate":"1.234567"})
+        app._load_settings_rates(force=True)
+        rows=[app.rates_tree.item(i,"values") for i in app.rates_tree.get_children()]
+        self.assertTrue(any(r[0]=="04-04-2024" and r[1:3]==("EUR","USD") and abs(float(r[3])-1.234567)<1e-9 for r in rows),rows)
+
     def buttons(self, widget):
         for child in widget.winfo_children():
             if isinstance(child, tk.Button): yield child

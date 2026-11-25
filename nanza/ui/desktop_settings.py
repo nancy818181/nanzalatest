@@ -340,6 +340,7 @@ class SettingsMixin:
     def _load_settings_rates(self, force=False):
         if not hasattr(self,'rates_tree'): return
         if not force and self.settings_notebook.select()!=str(self.settings_rates_page): return
+        if force: self.client.clear_cache()
         key=(self.client.company_id,self.client.fiscal_year,getattr(self.client,'_cache_generation',None))
         if not force and getattr(self,'_settings_rates_key',None)==key: return
         try: rates=self.client.exchange_rates(cached=True)
