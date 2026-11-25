@@ -282,7 +282,7 @@ class SettingsMixin:
         self.vat_currency_box=ttk.Combobox(vat_boxes,textvariable=self.company_vat_currency,values=self.currency_codes,state="readonly",width=7); self.vat_currency_box.pack(side="left")
         self.vat_second_box=ttk.Combobox(vat_boxes,textvariable=self.company_vat_second,values=self.currency_codes,state="readonly",width=7); self.vat_second_box.pack(side="left",padx=(6,0))
         self.show_tax_tick=tk.BooleanVar(master=self,value=True)  # 2.9.113
-        tk.Checkbutton(general,text="Show the tick \"Not deductible for income tax | غير مقبول ضريبياً\" on the entry screens",variable=self.show_tax_tick,
+        tk.Checkbutton(general,text="Show the tick \"Not deductible for income tax\"",variable=self.show_tax_tick,
                        bg=LIGHT).grid(row=12,column=2,columnspan=2,padx=14,pady=7,sticky="w")
         self.enable_exempt_income=tk.BooleanVar(master=self,value=False)  # 2.9.113
         tk.Checkbutton(general,text="Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)",

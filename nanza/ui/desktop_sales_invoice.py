@@ -32,9 +32,11 @@ def _responsive_invoice_details(form, fields, dimensions):
         gap = max(16, round(form.winfo_fpixels("0.16i")))
         # Keep three roomy groups on typical desktop widths so the last account/payment
         # controls do not run into the viewport edge. Use four only on extra-wide pages.
-        columns = 4 if width >= 1700 else 3 if width >= 1050 else 2 if width >= 650 else 1
+        columns = 4 if width >= 1700 else 3 if width >= 900 else 2 if width >= 650 else 1
         if columns == state["columns"] and width == state["width"]: return
         state.update(columns=columns, width=width)
+        for _label,widget in fields:
+            if isinstance(widget,(tk.Entry,ttk.Combobox)):widget.configure(width=1)
         for column in range(8):
             form.grid_columnconfigure(column, weight=0, minsize=0, uniform="")
         for column in range(columns):
@@ -57,6 +59,13 @@ def _responsive_invoice_details(form, fields, dimensions):
 
     form.bind("<Configure>", resized, add="+")
     if viewport is not None: viewport.bind("<Configure>", resized, add="+")
+    if viewport is not None:
+        def reveal_field(event):
+            widget=event.widget;top=widget.winfo_rooty()-viewport.winfo_rooty()
+            if top<0 or top+widget.winfo_height()>viewport.winfo_height():
+                bounds=viewport.bbox('all')
+                if bounds:viewport.yview_moveto(max(0,(viewport.canvasy(0)+top-4)/max(1,bounds[3])))
+        for _label,widget in fields:widget.bind('<FocusIn>',reveal_field,add='+')
     resized()
 
 
@@ -84,19 +93,24 @@ class SalesInvoiceMixin:
         self.sales_open_choice=tk.StringVar(); self.sales_doc_type=tk.StringVar(value="Invoice"); self.sales_category=tk.StringVar(value="Services")
         self.sales_department=tk.StringVar(); self.sales_project=tk.StringVar()
         # Keep the title, invoice lookup, navigation, numbering and new action in one wrapping toolbar.
-        nav=tk.Frame(header,bg=LIGHT); nav.pack(fill="x",pady=(0,4))
-        tk.Label(nav,text="Sales Invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",11,"bold")).pack(side="left",padx=(0,8))
+        tabs_row=tk.Frame(header,bg=LIGHT); tabs_row.pack(fill="x")
+        details=ttk.Notebook(tabs_row); details.pack(side="left",fill="x",expand=True)
+        invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT); extra_details=tk.Frame(details,bg=LIGHT)
+        details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
+        details.add(extra_details,text="More")
+        nav=tk.Frame(invoice_details,bg=LIGHT); nav.pack(fill="x",pady=(0,1))
+        self.sales_navigation=nav
+        lookup_options=tk.Frame(extra_details,bg=LIGHT);lookup_options.pack(fill="x")
         tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,4))
         self.sales_org = tk.StringVar(value="Yes")
-        tk.Label(nav, text="Org", bg=LIGHT).pack(side="left")
-        ttk.Combobox(nav, textvariable=self.sales_org, values=("Yes", "No"), state="readonly", width=4).pack(side="left")
+        tk.Label(lookup_options, text="Org", bg=LIGHT).pack(side="left")
+        ttk.Combobox(lookup_options, textvariable=self.sales_org, values=("Yes", "No"), state="readonly", width=4).pack(side="left")
         self.sales_org_filter = tk.StringVar(value="All")
-        tk.Label(nav, text="Find Org", bg=LIGHT).pack(side="left")
-        org_filter = ttk.Combobox(nav, textvariable=self.sales_org_filter, values=("All", "Yes", "No"), state="readonly", width=4)
+        tk.Label(lookup_options, text="Find Org", bg=LIGHT).pack(side="left")
+        org_filter = ttk.Combobox(lookup_options, textvariable=self.sales_org_filter, values=("All", "Yes", "No"), state="readonly", width=4)
         org_filter.pack(side="left")
         org_filter.bind("<<ComboboxSelected>>", lambda _event: self.load_sales_customer_list())
-        tabs_row=tk.Frame(header,bg=LIGHT); tabs_row.pack(fill="x")
-        self.sales_open_box=ttk.Combobox(nav,textvariable=self.sales_open_choice,width=34); self.sales_open_box.pack(side="left",padx=(0,4))
+        self.sales_open_box=ttk.Combobox(nav,textvariable=self.sales_open_choice,width=20); self.sales_open_box.pack(side="left",padx=(0,4))
         self.sales_open_box.bind("<<ComboboxSelected>>",lambda _event:self.open_sales_invoice()); self.sales_open_box.bind("<KeyRelease>",self.search_open_sales)
         self.sales_open_box.bind("<Return>",lambda _event:self.open_sales_by_number())
         self.sales_previous=tk.Button(nav,text="◀ Previous",command=lambda:self.navigate_sales_invoice(-1),bg=NAVY,fg="white",border=0,padx=7,pady=3)
@@ -106,20 +120,19 @@ class SalesInvoiceMixin:
         if (self.current_user or {}).get("role") == "admin":
             self.action_button(nav,"Numbering",self.open_numbering_settings).pack(side="left",padx=3)
         self.action_button(nav,"New Invoice",self.new_sales_invoice).pack(side="left",padx=3)
-        self.action_button(nav, "Quotations", lambda: self.open_commercial_documents(quotations_only=True)).pack(
+        self.action_button(lookup_options, "Quotations", lambda: self.open_commercial_documents(quotations_only=True)).pack(
             side="left", padx=3
         )
-        details=ttk.Notebook(tabs_row); details.pack(side="left",fill="x",expand=True)
-        invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT)
-        details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
         # Keep the existing controls and their bindings; distribute them across the available width.
         form=tk.Frame(invoice_details,bg=LIGHT); form.pack(anchor="w",fill="x",pady=(2,0))
+        extras=tk.Frame(extra_details,bg=LIGHT);extras.pack(anchor='w',fill='x',pady=4)
         detail_fields=[]
         def put(row,column,label,widget,bold=False):
             if label:
-                caption=tk.Label(form,text=label,bg=LIGHT,font=("Segoe UI",9,"bold") if bold else None)
+                caption=tk.Label(widget.master,text=label,bg=LIGHT,font=("Segoe UI",9,"bold") if bold else None)
                 caption.grid(row=row,column=2*column,sticky="w",padx=(0 if column==0 else 28,8),pady=1)
-                detail_fields.append((caption,widget))
+                if widget.master==form:detail_fields.append((caption,widget))
+                caption._nanza_field_key=label
             widget.grid(row=row,column=2*column+1,sticky="w",pady=1)
             return widget
         doc_box=ttk.Combobox(form,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
@@ -144,15 +157,15 @@ class SalesInvoiceMixin:
         dims=tk.Frame(account_details,bg=LIGHT); dims.pack(fill="x",anchor="w",pady=(0,2))
         self.dimension_selectors(dims,self.sales_department,self.sales_project); flow_toolbar(dims)
         put(2,1,"Date",self.date_entry(form,self.sales_date,12))
-        self.sales_category_box=ttk.Combobox(form,textvariable=self.sales_category,values=["Goods","Products","Services"],state="readonly",width=9)
-        put(3,0,"Sales Type",self.sales_category_box); self.sales_category_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_category_changed())
+        self.sales_category_box=ttk.Combobox(extras,textvariable=self.sales_category,values=["Goods","Products","Services"],state="readonly",width=9)
+        put(2,0,"Sales Type",self.sales_category_box); self.sales_category_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_category_changed())
         self.sales_category_box.bind("<space>",lambda _event:self.cycle_sales_type())
         self.sales_category_box.bind("<Key-space>",lambda _event:self.cycle_sales_type())
         put(3,1,"Payment Mode",ttk.Combobox(form,textvariable=self.sales_payment_method,values=["On Account (Not Cash)","Cash","Bank Transfer","Cheque","Card","Other"],
                 state="readonly",width=16))
-        put(4,0,"Due Date",self.date_entry(form,self.sales_due_date,12))
+        put(0,0,"Due Date",self.date_entry(extras,self.sales_due_date,12))
         vat_row=form
-        put(5,0,"Branch",self.branch_selector(form,self.sales_branch,14,False))
+        put(1,0,"Branch",self.branch_selector(extras,self.sales_branch,14,False))
         # 2.9.116: the branch can be in the number (Settings > Numbering): a new invoice takes the number of its branch
         self.sales_branch.trace_add("write",lambda *_a:(not getattr(self,"sales_edit_id",None) and len(self.sales_date.get())==10
                                                        and self.after_idle(self.refresh_sales_number)))
@@ -162,6 +175,8 @@ class SalesInvoiceMixin:
         self.sales_treatment=tk.StringVar(value=TAXABLE_LABEL)
         treatment_box=put(6,1,"VAT Treatment",ttk.Combobox(form,textvariable=self.sales_treatment,values=list(SALE_TREATMENTS),state="readonly",width=19),True)
         treatment_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_treatment_changed())
+        order=('Customer','Client Account','Invoice No.','Date','Currency','Document','Payment Mode','Amount Paid','Paid into','Due Date','Sales Type','Branch','VAT Treatment')
+        detail_fields.sort(key=lambda pair:order.index(pair[0]._nanza_field_key))
         _responsive_invoice_details(form,detail_fields,None)
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
         self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
@@ -176,7 +191,7 @@ class SalesInvoiceMixin:
         tk.Checkbutton(exempt_toggle,text="Income exempt from income tax (legal reason required)",
             variable=self.sales_income_exempt,command=self.toggle_sales_income_exempt,bg=LIGHT,fg=NAVY).pack(side="left")
         self.sales_exempt_row=tk.Frame(account_details,bg=LIGHT)
-        tk.Label(self.sales_exempt_row,text="Income not subject to income tax | إيراد غير خاضع لضريبة الدخل - legal reason",bg=LIGHT,fg=NAVY).pack(side="left")
+        tk.Label(self.sales_exempt_row,text="Income not subject to income tax",bg=LIGHT,fg=NAVY).pack(side="left")
         ttk.Combobox(self.sales_exempt_row,textvariable=self.sales_exempt_reason,values=("",)+EXEMPT_REASONS,state="readonly",width=46).pack(side="left",padx=4)
         tk.Label(self.sales_exempt_row,text="Article / law",bg=LIGHT).pack(side="left",padx=(8,2))
         tk.Entry(self.sales_exempt_row,textvariable=self.sales_exempt_article,width=22).pack(side="left")
@@ -241,8 +256,11 @@ class SalesInvoiceMixin:
         self.sales_total_labels={}
         discount=tk.Frame(box,bg=card_bg); discount.pack(fill="x",pady=(0,2))
         summary=tk.Frame(box,bg=card_bg); summary.pack(fill="x")
+        import arabic_ui
+        short_ar={'Total':'قبل الخصم','Discount':'الخصم','Total HT':'قبل الضريبة','VAT':'الضريبة','TOTAL':'الإجمالي'}
         for key,caption in (("Total","Total"),("Discount","Discount"),("Total HT","Total HT"),("VAT",f"VAT {vat_rate_text(self)}"),("TOTAL","TOTAL TTC")):
-            pair=tk.Frame(summary,bg=card_bg); pair.pack(side="left",padx=(0,12))
+            if arabic_ui.active():caption=short_ar[key]
+            pair=tk.Frame(summary,bg=card_bg); pair.pack(side="left",padx=(0,8))
             label=tk.Label(pair,text=caption,bg=card_bg,fg="#5F6B76",font=("Segoe UI",9))
             label.pack(side="left",padx=(0,5))
             if key=="VAT": self.sales_vat_caption=label
@@ -260,10 +278,25 @@ class SalesInvoiceMixin:
         self.sales_words.bind("<Configure>",lambda event:self.sales_words.configure(wraplength=max(120,event.width)))
         def fit_header(_event=None):
             # Long headers scroll independently, leaving room for lines and Save.
-            height=min(header_outer.winfo_reqheight()+8,max(120,int(self.sales_tab.winfo_height()*0.45)))
-            if content_outer.winfo_height()!=height: content_outer.configure(height=height)
-        self.sales_tab.bind("<Configure>",fit_header,add="+")
-        self.sales_tab.after_idle(fit_header)
+            if not content_outer.winfo_exists():return
+            # Keep the header scrollable and leave most of the viewport for lines.
+            # A cap based on the fixed page avoids feedback between tree and header
+            # heights when RTL toolbars or totals wrap during a language change.
+            height=min(header_outer.winfo_reqheight()+8,max(80,int(self.sales_tab.winfo_height()*.32)))
+            if abs(content_outer.winfo_height()-height)>2:content_outer.configure(height=height)
+        fit_state={'pending':False}
+        def schedule_fit(_event=None):
+            if fit_state['pending']:return
+            fit_state['pending']=True
+            def run():
+                fit_state['pending']=False
+                fit_header()
+            self.after_idle(run)
+        self.sales_tab.bind("<Configure>",schedule_fit,add="+")
+        bottom.bind('<Configure>',schedule_fit,add='+')
+        toolbar.bind('<Configure>',schedule_fit,add='+')
+        self._fit_sales_header=schedule_fit
+        self.sales_tab.after_idle(schedule_fit)
         self.new_sales_invoice(confirm=False)
 
     # ---- sales invoice helpers
@@ -441,7 +474,7 @@ class SalesInvoiceMixin:
     def new_sales_invoice(self,confirm=True):
         if confirm and self.sales_items and not messagebox.askyesno("Sales Invoice","Start a new invoice? Lines that are not saved will be cleared."): return
         import arabic_ui
-        self.sales_save_button.config(text=arabic_ui.translate("Save"), state="normal")
+        self.sales_save_button.config(text="Save", state="normal")
         self.sales_org.set("Yes")
         self._sales_quotation = None
         self.sales_edit_id=None; self.sales_items=[]; self.sales_pdf_path=None; self.sales_sheet.delete(*self.sales_sheet.get_children())
@@ -617,8 +650,14 @@ class SalesInvoiceMixin:
         editor=tk.Entry(tree,justify="left" if key in ("description","item_code","unit") else "right"); editor.insert(0,str(value if key in ("description",
                 "item_code","unit") else f"{float(value or 0):g}"))
         editor.place(x=bbox[0],y=bbox[1],width=bbox[2],height=bbox[3]); editor.focus_set(); editor.select_range(0,"end")
+        committed=False
+        editor._nanza_valid=False
         def commit(move=0):
+            nonlocal committed
+            if committed or not editor.winfo_exists():return
+            committed=True
             text=editor.get().strip(); editor.destroy()
+            if self.__dict__.get('sales_sheet') is not tree or not tree.exists(iid):return
             if key=="description": item["description"]=text
             elif key=="unit": item["unit"]=text
             elif key=="item_code":
@@ -635,6 +674,7 @@ class SalesInvoiceMixin:
                 if key=="vat": item["_vat_typed"]=True
                 if key in ("quantity","unit_price","deductible_subtotal","vat_rate"): item["_vat_typed"]=False
             self.recalculate_sales_item(item); tree.item(iid,values=self.sales_row_values(item)); self.update_sales_totals()
+            editor._nanza_valid=True
             if move:
                 position=editable.index(key) if key in editable else 0
                 if position+1<len(editable): self.after(10,lambda:self.edit_sales_cell(column_index=[c[0] for c in self.sales_columns].index(editable[position+1]),iid=iid))
@@ -642,6 +682,7 @@ class SalesInvoiceMixin:
                     rows=tree.get_children(); index=rows.index(iid)
                     if index+1<len(rows): self.after(10,lambda:self.edit_sales_cell(column_index=0,iid=rows[index+1]))
                     elif item["description"]: self.add_sales_item()
+        editor._nanza_commit=commit
         editor.bind("<Return>",lambda _event:commit(1)); editor.bind("<Tab>",lambda _event:(commit(1),"break")[1])
         editor.bind("<F2>",lambda _event:(self.sales_item_lookup(iid,editor),"break")[1]) if key == "item_code" else None
         editor.bind("<FocusOut>",lambda _event:commit(0) if editor.winfo_exists() else None); editor.bind("<Escape>",lambda _event:editor.destroy())
@@ -682,15 +723,22 @@ class SalesInvoiceMixin:
                     "Total HT":result["total_ht"],"VAT":result["vat"],"TOTAL":result["grand_total"]}
             for key,label in self.sales_total_labels.items():
                 label.config(text=f"{values[key]:,.2f} {currency}" if key=="TOTAL" else f"{values[key]:,.2f}",fg=NAVY)
-            self.sales_vat_caption.config(text=f"VAT {vat_rate_text(self)}" if not export else f"VAT {vat_rate_text(self)}  ({self.sales_treatment.get()})",
+            import arabic_ui
+            vat_caption=f'الضريبة {vat_rate_text(self)}' if arabic_ui.active() else f'VAT {vat_rate_text(self)}'
+            if export:vat_caption+=f' ({arabic_ui.translate(self.sales_treatment.get()) if arabic_ui.active() else self.sales_treatment.get()})'
+            self.sales_vat_caption.config(text=vat_caption,
                     font=("Segoe UI",9,"overstrike") if export else ("Segoe UI",9))
             from report_export import shape_arabic
-            key=(str(result["grand_total"]),currency); cache=self.__dict__.setdefault("_sales_words_cache",{})  # 2.9.91: drawn once per amount
+            import arabic_ui
+            key=(str(result["grand_total"]),currency,arabic_ui.active()); cache=self.__dict__.setdefault("_sales_words_cache",{})  # language is part of the rendered value
             if key not in cache:
-                words=amount_in_words(result["grand_total"],currency); cache[key]=f'{words["en"]}\n{shape_arabic(words["ar"])}'
+                words=amount_in_words(result["grand_total"],currency); cache[key]=shape_arabic(words['ar']) if arabic_ui.active() else words['en']
                 if len(cache)>500: cache.clear()
             if self.sales_words.cget("text")!=cache[key]: self.sales_words.config(text=cache[key])
-        self.sales_totals.config(text=f'{len(lines)} line(s)')
+        import arabic_ui
+        self.sales_totals.config(text=f'{len(lines)} أسطر' if arabic_ui.active() else f'{len(lines)} line(s)')
+        fit=getattr(self,'_fit_sales_header',None)
+        if fit is not None:self.after_idle(fit)
 
     def sales_type_changed(self):
         self.calculate_sales_line(); self.update_sales_totals()
@@ -801,7 +849,7 @@ class SalesInvoiceMixin:
         self._sales_quotation = record.get("quotation_number")
         self._sales_linked_status = detail["status"]
         import arabic_ui
-        self.sales_save_button.config(text=arabic_ui.translate("Post") if self._sales_quotation else arabic_ui.translate("Save"),
+        self.sales_save_button.config(text="Post" if self._sales_quotation else "Save",
                                       state="disabled" if self._sales_quotation and detail["status"] != "review" else "normal")
         if invoice_id is not None:
             self.sales_open_choice.set(next(
@@ -869,6 +917,11 @@ class SalesInvoiceMixin:
         return tuple(field.get() for field in fields) + exempt,lines
 
     def save_sales_invoice(self,post=False):
+        for editor in self.sales_sheet.winfo_children():
+            commit=getattr(editor,'_nanza_commit',None)
+            if commit is not None:
+                commit(0)
+                if not getattr(editor,'_nanza_valid',False):return
         if self.sales_edit_id and self.__dict__.get("_sales_quotation"):
             if not post or self._sales_linked_status != "review":
                 return messagebox.showinfo("Sales Invoice", "Linked quotation invoice. Use Post to approve the draft.")

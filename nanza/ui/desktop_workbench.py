@@ -226,7 +226,7 @@ def export_current(owner, title, headers, rows, extension="xlsx"):
     def completed(_result):
         owner._wb_export_done = True
         if hasattr(owner, "status"):
-            owner.status.configure(text="Export saved / تم حفظ الملف", fg=NAVY)
+            owner.status.configure(text="تم حفظ الملف" if app.language.get()=='ar' else "Export saved", fg=NAVY)
         job.destroy()
 
     async_call(
@@ -321,7 +321,7 @@ class AgeingWindow(WorkbenchWindow):
 
     def load(self):
         day, kind = self.day.get(), self.kind.get()
-        self.status.configure(text="Loading / جارٍ التحميل…")
+        self.status.configure(text="Loading")
         async_call(
             self, self.app, lambda c: c.workbench("ageing", date=day, kind=kind), self.loaded, self.status
         )
@@ -745,7 +745,7 @@ class CustomReportWindow(WorkbenchWindow):
             self.tree.delete(*self.tree.get_children())
             self.status.configure(text=str(exc))
             return
-        self.status.configure(text="Updating preview / تحديث المعاينة…")
+        self.status.configure(text="Updating preview")
         page = self.page
         async_call(
             self,
@@ -779,7 +779,7 @@ class CustomReportWindow(WorkbenchWindow):
         if not self.result:
             return
         filters = dict(self.result["filters"])
-        self.status.configure(text="Preparing complete export / تحضير التصدير الكامل…")
+        self.status.configure(text="Preparing complete export")
 
         def done(result):
             rows = self.report_rows(result)
@@ -794,7 +794,7 @@ class CustomReportWindow(WorkbenchWindow):
         except ValueError as exc:
             self.status.configure(text=str(exc))
             return
-        name = simpledialog.askstring("Template", "Name / اسم التقرير", parent=self)
+        name = simpledialog.askstring("Template", "Name", parent=self)
         if not name:
             return
 
@@ -802,7 +802,7 @@ class CustomReportWindow(WorkbenchWindow):
             self.templates[result["name"]] = result["filters"]
             self.template_box.configure(values=list(self.templates))
             self.template.set(result["name"])
-            self.status.configure(text="Template saved / تم الحفظ")
+            self.status.configure(text="تم حفظ القالب" if self.app.language.get()=='ar' else "Template saved")
 
         async_call(
             self.meta_owner, self.app, lambda c: c.save_custom_report(name, filters), saved, self.status
@@ -859,13 +859,13 @@ class WhatsAppWindow(WorkbenchWindow):
         bar.pack(fill="x", padx=12)
         ttk.Checkbutton(
             bar,
-            text="6pm local reminder / تذكير الساعة ٦ (البرنامج مفتوح)",
+            text="6pm local reminder",
             variable=self.reminder,
             command=self.save_reminder,
         ).pack(anchor="w")
         auto = ttk.Checkbutton(
             bar,
-            text="Auto-send at 6pm / إرسال تلقائي: requires a configured messaging gateway",
+            text="Auto-send at 6pm",
             state="disabled",
         )
         auto.pack(anchor="w")
@@ -883,7 +883,7 @@ class WhatsAppWindow(WorkbenchWindow):
     def load(self):
         day, currency, language = self.day.get(), self.currency.get(), self.app.language.get()
         self.invalidate()
-        self.status.configure(text="Preparing local preview / تحضير المعاينة…")
+        self.status.configure(text="Preparing local preview")
         async_call(
             self,
             self.app,
@@ -900,14 +900,14 @@ class WhatsAppWindow(WorkbenchWindow):
         self.ready = True
         self.copy_button.configure(state="normal")
         self.status.configure(
-            text="Review then copy. Nothing is sent automatically. / راجع النص ثم انسخه.", fg=NAVY
+            text="Review then copy. Nothing is sent automatically.", fg=NAVY
         )
 
     def copy(self):
         if self.ready:
             self.clipboard_clear()
             self.clipboard_append(self.text.get("1.0", "end-1c"))
-            self.status.configure(text="Copied / تم النسخ")
+            self.status.configure(text="Copied")
 
     def save_reminder(self):
         enabled = self.reminder.get()
@@ -922,7 +922,7 @@ class WhatsAppWindow(WorkbenchWindow):
 
     def preferences_saved(self, result):
         self.app._wb_reminder = result["reminder_6pm"]
-        self.status.configure(text="Reminder saved / تم حفظ التذكير")
+        self.status.configure(text="تم حفظ التذكير" if self.app.language.get()=='ar' else "Reminder saved")
 
 
 class WorkbenchMixin:
@@ -963,7 +963,7 @@ class WorkbenchMixin:
         self._wb_canvas = tk.Canvas(panel, height=85, bg="white", highlightthickness=0)
         self._wb_canvas.pack(fill="x", padx=12, pady=4)
         self._wb_status = tk.Label(
-            panel, text="30-day cash illustration / تقدير نقدي ٣٠ يوماً", bg="white", fg=NAVY, anchor="w"
+            panel, text="30-day cash illustration", bg="white", fg=NAVY, anchor="w"
         )
         self._wb_status.pack(fill="x", padx=12)
         self.bind("<Control-w>", lambda _e: self.open_whatsapp_summary())
@@ -1082,7 +1082,7 @@ class WorkbenchMixin:
         def done(result):
             text.insert("1.0", result["text"])
             text.configure(state="disabled")
-            window.status.configure(text="Posted P&L only; preceding equal-length period / حسابات مرحّلة فقط")
+            window.status.configure(text="Posted P&L only; preceding equal-length period")
 
         async_call(
             window,

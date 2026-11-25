@@ -439,15 +439,15 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             entry.grid(row=row,column=1,pady=7)
             if secret:
                 entry.bind("<Return>",lambda _event:self.login())
-        tk.Label(card,text="Language | اللغة",bg="white").grid(row=5,column=0,sticky="w",pady=7)
+        tk.Label(card,text="Language",bg="white").grid(row=5,column=0,sticky="w",pady=7)
         ttk.Combobox(card,textvariable=self.language,values=["en","ar","fr"],state="readonly",width=31).grid(row=5,column=1,pady=7)
         tk.Button(card,text="Sign in",command=self.login,bg=NAVY,fg="white",activebackground=GOLD,width=29,pady=8,border=0).grid(row=6,column=0,columnspan=2,pady=(22,0))
 
     def login(self):
         try:
             self.client = ApiClient(self.server.get(), on_unauthorized=self.session_ended)
-            self.client.confirm_negative_stock=lambda text: messagebox.askyesno("Stock below zero | مخزون سالب",text,icon="warning")
-            self.client.confirm_duplicate=lambda text: messagebox.askyesno("Already saved | مكرر",text,icon="warning",default="no")  # 2.9.103
+            self.client.confirm_negative_stock=lambda text: messagebox.askyesno("Stock below zero",text,icon="warning")
+            self.client.confirm_duplicate=lambda text: messagebox.askyesno("Already saved",text,icon="warning",default="no")  # 2.9.103
             self.current_user=self.client.login(self.username.get(), self.password.get())
             import arabic_ui
             arabic_ui.switch(self, self.language.get())  # 2.9.118: Language = ar -> the screens in Arabic, right to left
@@ -593,7 +593,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             log.warning("Header logo could not be shown", exc_info=True)
         tk.Label(top,text=tr(lang,"title"),bg=NAVY,fg="white",font=("Segoe UI",16,"bold")).pack(side="left",padx=8,pady=12)
         tk.Label(top,text="11% VAT  |  " + " · ".join(self.currency_codes[:5]),bg=NAVY,fg=GOLD,font=("Segoe UI",10,"bold")).pack(side="right",padx=28)
-        tk.Button(top,text="Help / مساعدة",command=self.open_user_guide,bg=NAVY,fg="white",activebackground=GOLD,border=0,padx=10).pack(side="right",padx=4)
+        tk.Button(top,text="Help",command=self.open_user_guide,bg=NAVY,fg="white",activebackground=GOLD,border=0,padx=10).pack(side="right",padx=4)
         # 2.9.118: one click turns every screen to Arabic (right to left) or back to English
         language_button=tk.Button(top,text="AR | EN",command=lambda:self.switch_language("en" if lang=="ar" else "ar"),
                                   bg=NAVY,fg=GOLD,activebackground=GOLD,border=1,padx=10,cursor="hand2",font=("Segoe UI",9,"bold"))
@@ -988,10 +988,25 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         try:
             current=self.main_notebook.select(); attribute=self._page_attributes[[str(p) for p in self.main_tab_pages].index(str(current))]
         except (AttributeError,ValueError,IndexError,tk.TclError): attribute=None
+        document_id=None;dirty=False
+        if attribute=='sales_tab':
+            document_id=getattr(self,'sales_edit_id',None)
+            dirty=bool(document_id and getattr(self,'_sales_loaded_state',None)!=self.sales_form_state()) or bool(not document_id and any(str(i.get('description') or '').strip() or i.get('unit_price') for i in getattr(self,'sales_items',[])))
+        elif attribute=='purchases_tab':
+            form=getattr(self,'purchase_form',{})
+            document_id=form.get('id') or form.get('selected_id')
+            dirty=bool(getattr(form.get('items_sheet'),'rows',{}))
+        if dirty and not messagebox.askyesno('Switch language','Switching language reloads the current document. Unsaved changes will be discarded. Continue?',default='no'):
+            return
         self.language.set(language); arabic_ui.switch(self,language)
         self.main_screen()
         if attribute in getattr(self,"_page_attributes",[]):
             self.select_main_tab(self.main_tab_pages[self._page_attributes.index(attribute)])
+            if document_id and attribute=='sales_tab':self.open_sales_invoice(invoice_id=document_id)
+            elif document_id and attribute=='purchases_tab':
+                form=self.purchase_form
+                choice=next((label for label,value in form.get('find_map',{}).items() if str(value)==str(document_id)),None)
+                if choice:form['find'].set(choice);self.purchase_found()
 
     def select_main_tab(self,page):
         page=self.main_tab_container(page)
@@ -1210,6 +1225,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         # day-to-day tools do not disappear below the charts on laptop screens.
         self.build_workbench_tools(self.dashboard_tab)
         tk.Label(self.dashboard_tab,text="KEY FIGURES",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),anchor="w").pack(fill="x",padx=14,pady=(2,0))
+        tk.Label(self.dashboard_tab,text="Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today.",bg=LIGHT,fg="#506274",font=("Segoe UI",8),anchor="w",wraplength=900,justify='left').pack(fill='x',padx=14,pady=(0,2))
         self.dashboard_cards=tk.Frame(self.dashboard_tab,bg=LIGHT); self.dashboard_cards.pack(fill="x",padx=12)
         self.dashboard_chart=tk.Canvas(self.dashboard_tab,height=105,bg="white",highlightthickness=0)
         # 2.9.60: the small monthly strip repeated the "by month" chart below; it is kept (exports use it) but not shown
@@ -1487,21 +1503,35 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         except Exception: return None
 
     def export_report(self,report,format_name):
+        ar=self.language.get()=='ar'
         if report == "dashboard":
-            title="Nanza Accounting - Dashboard"; headers=["Currency","Sales","Purchases","Expenses","Net Profit","Receivables","Payables","Overdue"]
+            title="نانزا للمحاسبة - لوحة القيادة" if ar else "Nanza Accounting - Dashboard"; headers=["Currency","Sales","Purchases","Expenses","Net Profit","Receivables","Payables","Overdue"]
             rows=[[r["currency"],r["sales"],r["purchases"],r["expenses"],r["profit"],r["receivables"],r["payables"],r["overdue"]] for r in getattr(self,"dashboard_rows",[])]
         else:
-            title="Nanza Accounting - Trial Balance"
+            title="نانزا للمحاسبة - ميزان المراجعة" if ar else "Nanza Accounting - Trial Balance"
             if self.trial_from_date.get().strip() or self.trial_to_date.get().strip():
-                title += f" ({self.trial_from_date.get().strip() or 'Beginning'} to {self.trial_to_date.get().strip() or 'Today'})"
+                title += f" ({self.trial_from_date.get().strip() or ('البداية' if ar else 'Beginning')} {'حتى' if ar else 'to'} {self.trial_to_date.get().strip() or ('اليوم' if ar else 'Today')})"
             headers=["Currency","Account","Account Name","Opening Balance","Debit","Credit","Closing Balance"]
             rows=[[r["currency"],r["code"],r["name_en"],r.get("opening",0),r["debit"] or 0,r["credit"] or 0,r.get("closing_balance",0)] for r in getattr(self,"trial_rows",[])]
+        company=str((getattr(self,'current_company',None) or {}).get('name',''))
+        year=str(getattr(self,'current_fiscal_year',''))
+        title+=f" - {company} - {'السنة المالية' if ar else 'Fiscal year'} {year}"
+        if report=='dashboard':
+            base=self.dashboard_base_currency.get();target=self.dashboard_display_currency.get()
+            if ar:
+                base={'All Currencies':'جميع العملات','Original':'الأصلية'}.get(base,base)
+                target={'All Currencies':'جميع العملات','Original':'الأصلية'}.get(target,target)
+            title+=f" - {'العملة الأساسية' if ar else 'Base currency'}: {base} - {'العرض' if ar else 'Display'}: {target}"
+        if ar:
+            import arabic_ui
+            headers=[arabic_ui.translate(h) for h in headers]
         if not rows: return messagebox.showwarning("Nanza Accounting","No report data to export")
         try:
             if format_name == "print": print_rows(title,headers,rows); return
             extension=".xlsx" if format_name=="xlsx" else ".pdf"
+            safe_title=''.join('_' if c in '<>:"/\\|?*' else c for c in title)
             path=filedialog.asksaveasfilename(defaultextension=extension,filetypes=[("Excel workbook","*.xlsx")] if format_name=="xlsx" else [("PDF document",
-                    "*.pdf")],initialfile=title.replace(" - ","_").replace(" ","_")+extension)
+                    "*.pdf")],initialfile=safe_title.replace(" - ","_").replace(" ","_")+extension)
             if not path: return
             (export_excel if format_name=="xlsx" else export_pdf)(path,title,headers,rows)
             messagebox.showinfo("Nanza Accounting",f"Saved successfully:\n{path}")

@@ -118,7 +118,7 @@ class PayrollMixin:
         payroll_actions=tk.Frame(run,bg=LIGHT); payroll_actions.pack(fill="x",padx=10)
         self.action_button(payroll_actions,"Post Selected to Accounting",self.post_selected_payroll).pack(side="left",padx=4,pady=3)
         self.action_button(payroll_actions,"Record salary payment",self.salary_payment_dialog).pack(side="left",padx=4,pady=3)
-        tk.Button(payroll_actions,text="Monthly Payroll Sheet | الحركة الشهرية",command=self.open_payroll_sheet,bg=GOLD,fg=NAVY,border=0,padx=12,pady=6,
+        tk.Button(payroll_actions,text="Monthly Payroll Sheet",command=self.open_payroll_sheet,bg=GOLD,fg=NAVY,border=0,padx=12,pady=6,
                 font=("Segoe UI",9,"bold")).pack(side="left",padx=4,pady=3)
         self.payroll_tree=self.table(run,[("number","Payroll No.",135),("period","Salary month",110),("employee","Employee",190),("currency","Currency",65),
             ("gross","Gross",105),("tax","Tax",95),("nssf","Employee NSSF",110),("net","Net Salary",110),("status","Status",75)])
@@ -272,12 +272,12 @@ class PayrollMixin:
                 values=["male","female"],state="readonly",width=25).grid(row=11,column=3)
         # 2.9.44 register (like the official declaration workbook): unit, recurring allowances, NSSF branches, address.
         # 2.9.96: family changes during the year - the spouse counts from the marriage month, a new child from the birth month
-        family=tk.LabelFrame(form,text="Family changes | الوضع العائلي",bg=LIGHT,padx=6,pady=4)
+        family=tk.LabelFrame(form,text="Family changes",bg=LIGHT,padx=6,pady=4)
         family.grid(row=12,column=0,columnspan=4,padx=10,pady=(8,0),sticky="ew")
         # 2.9.99: tick boxes and dates instead of typing a list - marriage during the year, new children one by one
         family_vars={"marriage_date":tk.StringVar(value=safe_display_date(data.get("marriage_date"))),"children_birth_dates":tk.StringVar()}
         married_now=tk.BooleanVar(value=bool(data.get("marriage_date")))
-        marriage_box=tk.Checkbutton(family,text="Married during the year | تزوّج خلال السنة",variable=married_now,bg=LIGHT)
+        marriage_box=tk.Checkbutton(family,text="Married during the year",variable=married_now,bg=LIGHT)
         marriage_box.grid(row=0,column=0,padx=6,pady=3,sticky="w")
         tk.Label(family,text="Date of marriage",bg=LIGHT).grid(row=0,column=1,padx=(12,4),pady=3,sticky="e")
         marriage_entry=self.date_entry(family,family_vars["marriage_date"],13); marriage_entry.grid(row=0,column=2,padx=4,pady=3,sticky="w")
@@ -288,7 +288,7 @@ class PayrollMixin:
             else: family_vars["marriage_date"].set("")
         marriage_box.configure(command=marriage_toggled)
         new_child=tk.BooleanVar(value=False); birth_var=tk.StringVar()
-        child_box=tk.Checkbutton(family,text="New child | مولود جديد",variable=new_child,bg=LIGHT)
+        child_box=tk.Checkbutton(family,text="New child",variable=new_child,bg=LIGHT)
         child_box.grid(row=1,column=0,padx=6,pady=3,sticky="w")
         tk.Label(family,text="Date of birth",bg=LIGHT).grid(row=1,column=1,padx=(12,4),pady=3,sticky="e")
         birth_entry=self.date_entry(family,birth_var,13); birth_entry.grid(row=1,column=2,padx=4,pady=3,sticky="w")
@@ -324,7 +324,7 @@ class PayrollMixin:
         family_vars["_births"]=births
         tk.Label(family,text="Payroll counts the spouse from the month of the marriage and each child from the month of birth (salary-tax deductions and NSSF family allowance). "
                  "Adding a child raises Children by one.",bg=LIGHT,fg="#5f6b76",wraplength=760,justify="left").grid(row=2,column=0,columnspan=6,padx=6,pady=(2,3),sticky="w")
-        register=tk.LabelFrame(form,text="Employee register | سجل المستخدمين",bg=LIGHT,padx=6,pady=4)
+        register=tk.LabelFrame(form,text="Employee register",bg=LIGHT,padx=6,pady=4)
         register.grid(row=13,column=0,columnspan=4,padx=10,pady=8,sticky="ew")
         register_vars={key:tk.StringVar(value=str(data.get(key) or "")) for key in ("unit_code","unit_name","cost_of_living","extra_indemnity","representation_taxable","representation_exempt",
             "addr_governorate","addr_caza","addr_town","addr_district","addr_street","addr_building","addr_floor","phone2","leave_reason",
@@ -351,7 +351,7 @@ class PayrollMixin:
             else:
                 tk.Entry(register,textvariable=register_vars[key],width=26,justify="right" if key.endswith("_ar") else "left").grid(row=row,column=column+1,padx=6,pady=3,sticky="w")
         # 2.9.109: spouse, as on MOF R3 (معلومات خاصة بالزوج/الزوجة)
-        spouse=tk.LabelFrame(form,text="Spouse | معلومات خاصة بالزوج/الزوجة",bg=LIGHT,padx=6,pady=4)
+        spouse=tk.LabelFrame(form,text="Spouse",bg=LIGHT,padx=6,pady=4)
         spouse.grid(row=14,column=0,columnspan=4,padx=10,pady=8,sticky="ew")
         spouse_rows=(("spouse_name","Spouse name | إسم الزوج/الزوجة","spouse_name_ar"),("spouse_maiden_name","Name before marriage | الشهرة قبل الزواج","spouse_maiden_name_ar"),
             ("spouse_father","Father's name | إسم الأب","spouse_father_ar"),("spouse_mother","Mother's name | إسم الأم وشهرتها","spouse_mother_ar"),
@@ -370,7 +370,7 @@ class PayrollMixin:
             (self.date_entry(spouse,register_vars[key],26) if key=="spouse_birth_date" else tk.Entry(spouse,textvariable=register_vars[key],width=26)).grid(
                 row=index,column=1,padx=6,pady=2,sticky="w")
         # 2.9.112: every box of the NSSF / MOF forms (registry, sect, hours, wage at hire, work permit, other / previous employer)
-        official=tk.LabelFrame(form,text="Official forms details | معلومات النماذج الرسمية",bg=LIGHT,padx=6,pady=4)
+        official=tk.LabelFrame(form,text="Official forms details",bg=LIGHT,padx=6,pady=4)
         official.grid(row=15,column=0,columnspan=4,padx=10,pady=8,sticky="ew")
         from payroll_excel_forms import EMPLOYEE_FORM_FIELDS
         register_vars.update({key:tk.StringVar(value=str(data.get(key) or "")) for key in EMPLOYEE_FORM_FIELDS+("registry_place_ar",)})

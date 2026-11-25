@@ -272,6 +272,14 @@ class PurchasesMixin:
             ("VAT Treatment", lambda parent: ttk.Combobox(parent,textvariable=f["use"],values=list(PURCHASE_USES),state="readonly",width=23)),
         ])
         f["header_widgets"]["VAT Treatment"].bind("<<ComboboxSelected>>",lambda _e:self.purchase_amounts_changed("use"))
+        if header_view is not None:
+            def reveal_field(event):
+                canvas=header_parent.master;widget=event.widget
+                top=widget.winfo_rooty()-canvas.winfo_rooty()
+                if top<0 or top+widget.winfo_height()>canvas.winfo_height():
+                    bounds=canvas.bbox('all')
+                    if bounds:canvas.yview_moveto(max(0,(canvas.canvasy(0)+top-4)/max(1,bounds[3])))
+            for widget in f['header_widgets'].values():widget.bind('<FocusIn>',reveal_field,add='+')
         f["supplier_box"] = f["header_widgets"]["Supplier"]
         f["supplier_box"].bind("<KeyRelease>", lambda _e: self.filter_suppliers()); f["supplier_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_supplier_chosen())
         doc_box = f["header_widgets"]["Document"]

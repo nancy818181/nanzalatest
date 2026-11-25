@@ -195,24 +195,28 @@ class ReportsStore:
         with self.connect() as db:
             # 2.9.119: the open invoices brought in by Start with Nanza are not sales / purchases of the year (still receivables / payables)
             has_source={row[1] for row in db.execute("PRAGMA table_info(invoices)")} >= {"source_file"}
+            invoice_columns={row[1] for row in db.execute('PRAGMA table_info(invoices)')}
+            document_sign="CASE WHEN doc_subtype='credit_note' THEN -1 ELSE 1 END" if 'doc_subtype' in invoice_columns else '1'
+            tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            has_ledger={'accounts','journal_entries','journal_lines','parties','payments','payment_allocations'}<=tables
             sales_amount="CASE WHEN COALESCE(source_file,'')='Opening balances' THEN 0 ELSE CAST(subtotal AS REAL) END" if has_source else "CAST(subtotal AS REAL)"
             not_opening=" AND COALESCE(source_file,'')<>'Opening balances'" if has_source else ""
             invoice_rows=db.execute(f"""SELECT kind,currency,
-                DSUM({sales_amount}) subtotal,
-                DSUM(CAST(total AS REAL)-CAST(COALESCE(amount_paid,'0') AS REAL)) outstanding
-                FROM invoices WHERE status NOT IN ('cancelled','deleted','void')
+                DSUM(({document_sign})*({sales_amount})) subtotal,
+                DSUM(({document_sign})*(CAST(total AS REAL)-CAST(COALESCE(amount_paid,'0') AS REAL))) outstanding
+                FROM invoices WHERE status='posted'
                 GROUP BY kind,currency""").fetchall()
             expense_rows=db.execute("""SELECT currency,DSUM(CAST(subtotal AS REAL)) subtotal
                 FROM expenses GROUP BY currency""").fetchall()
             # Preserve the existing DD-MM-YYYY due date interpretation.
             overdue_rows=db.execute("""SELECT currency,COUNT(*) overdue FROM invoices
-                WHERE status NOT IN ('cancelled','deleted','void')
+                WHERE status='posted'
                   AND CAST(total AS REAL)>CAST(COALESCE(amount_paid,'0') AS REAL)
                   AND due_date GLOB '??-??-????'
                   AND substr(due_date,7,4)||'-'||substr(due_date,4,2)||'-'||substr(due_date,1,2)<?
                 GROUP BY currency""",(datetime.now().strftime("%Y-%m-%d"),)).fetchall()
             monthly=[dict(row) for row in db.execute(f"""SELECT substr(CASE WHEN invoice_date GLOB '??-??-????' THEN substr(invoice_date,7,4)||'-'||substr(invoice_date,4,2)||'-'||substr(invoice_date,1,2) ELSE invoice_date END,1,7) month,
-                currency,kind,DSUM(CAST(subtotal AS REAL)) amount FROM invoices WHERE status NOT IN ('cancelled','deleted','void')
+                currency,kind,DSUM(({document_sign})*CAST(subtotal AS REAL)) amount FROM invoices WHERE status='posted'
                 {not_opening} GROUP BY month,currency,kind ORDER BY month""")]  # 2.9.119: not the open invoices brought in
         for row in invoice_rows:
             values=metric(row["currency"]); amount=float(row["subtotal"] or 0)
@@ -227,7 +231,27 @@ class ReportsStore:
             metric(row["currency"])["overdue"]=int(row["overdue"])
         for values in metrics.values():
             values["profit"]=values["sales"]-values["purchases"]-values["expenses"]
-        return {"metrics":list(metrics.values()),"monthly":monthly}
+        if has_ledger:
+            # Document balances alone omit allocations/advances, payroll, depreciation
+            # and manual adjustments. Use the same posted ledger as the reports.
+            for values in metrics.values():values.update(expenses=0.0,profit=0.0,receivables=0.0,payables=0.0,overdue=0)
+            profit={};expenses={}
+            for row in self.profit_and_loss():
+                code=row['currency'];amount=Decimal(str(row['amount']))
+                profit[code]=profit.get(code,Decimal(0))+(amount if row['type']=='income' else -amount)
+                if row['type']=='expense':expenses[code]=expenses.get(code,Decimal(0))+amount
+            for code,amount in profit.items():metric(code).update(profit=_report_number(amount),expenses=_report_number(expenses.get(code,Decimal(0))))
+            with self.connect() as db:party_accounts={r['account_number']:r['kind'] for r in db.execute('SELECT account_number,kind FROM parties')}
+            debt={}
+            for row in self.trial_balance():
+                side=party_accounts.get(row['code'])
+                if side not in ('customer','supplier'):continue
+                key=(row['currency'],'receivables' if side=='customer' else 'payables')
+                debt[key]=debt.get(key,Decimal(0))+Decimal(str(row['closing_balance']))*(1 if side=='customer' else -1)
+            for (code,key),amount in debt.items():metric(code)[key]=_report_number(amount)
+            for row in self.aging_report(datetime.now().strftime('%Y-%m-%d')):
+                if Decimal(str(row['outstanding']))>0 and row['days_overdue']>0:metric(row['currency'])['overdue']+=1
+        return {"metrics":list(metrics.values()),"monthly":monthly,'basis':'posted_ledger' if has_ledger else 'documents_only'}
 
     def statement_of_account(self, party_id, from_date=None, to_date=None, currency=None, include_opening=True, display_currency=None, branch_id=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD

@@ -483,11 +483,22 @@ def render_board(data):
     background.set_ylim(0, 1)
     background.add_patch(Rectangle((0, 0.915), 1, 0.085, color=BLACK))
 
+    board_ar={'Net income':'صافي الربح','Interest':'الفوائد','Income tax':'ضريبة الدخل','D&A':'الاستهلاك والإطفاء','Senior debt':'الدين الممتاز','Equity':'حقوق الملكية','Subordinated':'الدين الثانوي','Current ratio':'نسبة التداول','Debt / equity':'الدين إلى حقوق الملكية','ROIC':'عائد رأس المال','Year-end cash':'نقد نهاية السنة','Interest coverage':'تغطية الفوائد','Other movements':'حركات أخرى','not configured':'غير محدد','DSCR: —  ·  debt-service schedule needed':'تغطية خدمة الدين: —  ·  يلزم جدول خدمة الدين'}
+    def board_label(text):
+        if not ar:return text
+        text=str(text)
+        if text in board_ar:return board_ar[text]
+        for prefix in ('Senior debt  ','Equity  ','Subordinated  ','Limit: '):
+            if text.startswith(prefix):
+                label='الحد: ' if prefix=='Limit: ' else board_ar[prefix.strip()]+'  '
+                return label+board_ar.get(text[len(prefix):],text[len(prefix):])
+        return text
     def txt(ax, x, y, text, size=10, color=BLACK, weight="normal", ha="left", va="center", **kw):
+        literal=kw.pop('literal',False)
         return ax.text(
             x,
             y,
-            _display(text, "ar" if ar else "en"),
+            _display(text if literal else board_label(text), "ar" if ar else "en"),
             fontsize=size,
             color=color,
             fontweight=weight,
@@ -519,8 +530,9 @@ def render_board(data):
         ),
         9,
         "#e1e1e1",
+        literal=True,
     )
-    txt(background, 0.965, 0.961, f"FY{data['year']} • Board Review", 11, GOLD, "bold", ha="right")
+    txt(background, 0.965, 0.961, f"السنة {data['year']} • مراجعة الإدارة" if ar else f"FY{data['year']} • Board Review", 11, GOLD, "bold", ha="right")
     txt(background, 0.965, 0.936, f"{data['end']} • {data['currency']}", 9, "white", ha="right")
     metrics = data["metrics"]
     currency = data["currency"]
@@ -714,7 +726,7 @@ def render_board(data):
         color=[GOLD if i in (0, len(rows) - 1) else GREEN if v >= 0 else RED for i, v in enumerate(values)],
         height=0.62,
     )
-    bridge_ax.set_yticks(range(len(rows)), [r["label"] for r in rows], fontsize=7)
+    bridge_ax.set_yticks(range(len(rows)), [_display(board_label(r["label"]),'ar' if ar else 'en') for r in rows], fontsize=7)
     bridge_ax.invert_yaxis()
     bridge_ax.spines[["top", "right", "bottom"]].set_visible(False)
     bridge_ax.tick_params(axis="x", bottom=False, labelbottom=False)
@@ -871,6 +883,7 @@ def open_board(app):
                 command=self.configure_accounts,
             )
             self.configure_button.pack(side="right", padx=4)
+            if (getattr(app,'current_user',None) or {}).get('role')!='admin':self.configure_button.configure(state='disabled')
             self.pdf_button = ctk.CTkButton(
                 self.bar,
                 text="PDF",
@@ -888,16 +901,16 @@ def open_board(app):
                 min(max(620,self.bar.winfo_reqwidth()),screen_width),
                 min(max(400,self.bar.winfo_reqheight()+300),screen_height),
             )
-            tooltip(self.refresh_button, "تحديث بيانات الشركة والسنة المختارتين؛ لا يتم ترحيل أي قيد")
+            tooltip(self.refresh_button, "تحديث بيانات الشركة والسنة المختارتين؛ لا يتم ترحيل أي قيد" if app.language.get()=='ar' else 'Refresh the selected company and year; no entry is posted')
             tooltip(
                 self.configure_button,
-                "ربط المؤشرات بالحسابات الفعلية وإدخال حدود التعهدات بعد مراجعة المحاسب",
+                "ربط المؤشرات بالحسابات الفعلية وإدخال حدود التعهدات بعد مراجعة المحاسب" if app.language.get()=='ar' else 'Review account mappings and covenant limits with the accountant',
             )
-            tooltip(self.pdf_button, "تصدير كامل اللوحة إلى PDF، بلا روابط أو تذييل أو إعلانات")
+            tooltip(self.pdf_button, "تصدير كامل اللوحة إلى PDF، بلا روابط أو تذييل أو إعلانات" if app.language.get()=='ar' else 'Export the complete dashboard to PDF')
             self.holder = tk.Frame(self, bg="white")
             self.holder.pack(fill="both", expand=True)
             self.state_label = tk.Label(
-                self.holder, text="Loading board / تحميل اللوحة…", bg="white", fg=BLACK
+                self.holder, text="Loading board", bg="white", fg=BLACK
             )
             self.state_label.pack(expand=True)
             self.bind("<Control-b>", lambda _e: self.lift())
@@ -1075,7 +1088,7 @@ def open_board(app):
                 reviewed = tk.BooleanVar(value=config.get("reviewed", False))
                 ctk.CTkCheckBox(
                     dialog,
-                    text="I reviewed all mappings; empty groups mean confirmed zero / راجعت الربط",
+                    text="I reviewed all mappings; empty groups mean confirmed zero",
                     variable=reviewed,
                     text_color=BLACK,
                 ).pack(pady=8)
@@ -1101,7 +1114,7 @@ def open_board(app):
                         saved,
                     )
 
-                ctk.CTkButton(dialog, text="Save reviewed settings / حفظ", command=save).pack(pady=8)
+                ctk.CTkButton(dialog, text="حفظ الإعدادات المراجعة" if app.language.get()=="ar" else "Save reviewed settings", command=save).pack(pady=8)
 
             async_call(
                 owner,

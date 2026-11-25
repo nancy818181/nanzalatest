@@ -149,6 +149,89 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         rows=[app.rates_tree.item(i,"values") for i in app.rates_tree.get_children()]
         self.assertTrue(any(r[0]=="04-04-2024" and r[1:3]==("EUR","USD") and abs(float(r[3])-1.234567)<1e-9 for r in rows),rows)
 
+    def test_english_save_captions_across_main_pages(self):
+        """English page creation must not leak the Arabic save caption."""
+        app = self.open("en")
+        captions = []
+        def inspect(widget):
+            try:
+                text = str(widget.cget("text"))
+            except (tk.TclError, AttributeError):
+                text = ""
+            if "Save" in text or "حفظ" in text:
+                captions.append(text)
+                self.assertNotIn("حفظ", text, (str(widget), text))
+            for child in widget.winfo_children():
+                inspect(child)
+        for page in list(app.main_tab_pages):
+            app.select_main_tab(page)
+            app.update()
+            inspect(page)
+        self.assertGreaterEqual(len(captions), 10, captions)
+
+    def test_sales_save_uses_selected_language_after_reset(self):
+        import arabic_ui
+        app=self.open('en')
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index('sales_tab')])
+        for language,caption in [('en','Save'),('ar','حفظ'),('en','Save')]:
+            arabic_ui.switch(app,language)
+            app.new_sales_invoice(confirm=False);app.update()
+            self.assertEqual(app.sales_save_button.cget('text'),caption)
+
+    def test_sales_five_line_edit_save_reopen_and_resize_matrix(self):
+        import arabic_ui,json
+        import traceback
+        from decimal import Decimal
+        app=self.open('en');app.select_main_tab(app.main_tab_pages[app._page_attributes.index('sales_tab')])
+        app.report_callback_exception=lambda kind,value,tb:self.messages.append(('showerror',('callback',''.join(traceback.format_exception(kind,value,tb)))))
+        observations=[]
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language);app.new_sales_invoice(confirm=False)
+            app.sales_items=[];app.sales_sheet.delete(*app.sales_sheet.get_children())
+            app.sales_party.set('Synthetic sales matrix '+language);app.sales_currency.set('USD')
+            for i in range(5):app.add_sales_item({'description':f'Unique sales item {i+1}','quantity':1,'unit_price':'10','vat_rate':11},update_totals=False)
+            app.update_sales_totals()
+            for scaling in (96/72,120/72,2.0):
+                app.tk.call('tk','scaling',scaling)
+                for width,height in ((1280,720),(1366,768),(1600,900),(1920,1080),(1366,768)):
+                    app.state('normal');app.geometry(f'{width}x{height}+0+0')
+                    for _ in range(5):app.update_idletasks();app.update()
+                    app.after(250,app.quit);app.mainloop()
+                    tree=app.sales_sheet;tree.yview_moveto(0);app.update()
+                    rows=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() and bool(app.sales_item_for(iid).get('description','').strip()) for iid in tree.get_children())
+                    observations.append({'language':language,'requested':[width,height],'actual':app.geometry(),'tk_scaling':float(app.tk.call('tk','scaling')),'rows':rows,'table_height':tree.winfo_height(),'blocks':[(w.winfo_class(),w.winfo_height(),w.winfo_reqheight()) for w in app.sales_tab.winfo_children()]})
+                    if (width,height)==(1366,768):self.assertGreaterEqual(rows,4,observations[-1])
+                    total=app.sales_total_labels['TOTAL'];self.assertLessEqual(total.winfo_rooty()+total.winfo_height(),app.winfo_rooty()+app.winfo_height())
+            fifth=app.sales_items[-1]['_iid'];tree.see(fifth);tree.selection_set(fifth);tree.focus(fifth);app.update()
+            app.edit_sales_cell(column_index=2,iid=fifth);app.update()
+            editor=next(w for w in tree.winfo_children() if isinstance(w,tk.Entry))
+            editor.focus_force();editor.delete(0,'end');editor.insert(0,'2')
+            if language=='en':
+                editor.event_generate('<Return>');app.update()
+                self.assertEqual(app.sales_total_labels['TOTAL'].cget('text'),'66.60 USD')
+            number=app.sales_no.get();app.sales_save_button.invoke();app.update()
+            self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+            invoice=next(row for row in app.client.invoices() if row['invoice_number']==number)
+            app.open_sales_invoice(invoice_id=invoice['id']);app.update()
+            self.assertEqual(Decimal(str(app.sales_items[-1]['quantity'])),Decimal('2'))
+            self.assertEqual(app.sales_total_labels['TOTAL'].cget('text'),'66.60 USD')
+            self.assertEqual(app.sales_save_button.cget('text'),'حفظ' if language=='ar' else 'Save')
+            for target in ('ar','en'):
+                app.switch_language(target);app.update()
+                self.assertEqual(app.sales_edit_id,invoice['id'])
+                self.assertEqual(app.sales_total_labels['TOTAL'].cget('text'),'66.60 USD')
+                self.assertEqual(Decimal(str(app.sales_items[-1]['quantity'])),Decimal('2'))
+                self.assertEqual(app.sales_save_button.cget('text'),'حفظ' if target=='ar' else 'Save')
+        print('PILOT_SALES_MATRIX '+json.dumps(observations))
+
+    def test_cancel_language_change_preserves_unsaved_sales(self):
+        app=self.open('en');app.select_main_tab(app.main_tab_pages[app._page_attributes.index('sales_tab')])
+        app.add_sales_item({'description':'Unsaved must survive cancel','quantity':2,'unit_price':'10','vat_rate':11})
+        before=app.sales_form_state()
+        with mock.patch('tkinter.messagebox.askyesno',return_value=False):app.switch_language('ar')
+        self.assertEqual(app.language.get(),'en')
+        self.assertEqual(app.sales_form_state(),before)
+
     def test_purchase_first_item_is_inside_every_scroll_viewport(self):
         app=self.open("en")
         import arabic_ui
@@ -216,6 +299,29 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
             self.assertEqual(len(sheet.rows),5)
             self.assertEqual(Decimal(str(list(sheet.rows.values())[-1]['quantity'])),Decimal('2'))
             self.assertEqual(form['total'].cget('text'),'66.60 USD')
+            saved_id=form.get('id') or form.get('selected_id')
+            for target in ('ar','en'):
+                app.switch_language(target);app.update()
+                form=app.purchase_form;sheet=form['items_sheet']
+                self.assertEqual(str(form.get('id') or form.get('selected_id')),str(saved_id))
+                self.assertEqual(len(sheet.rows),5)
+                self.assertEqual(form['total'].cget('text'),'66.60 USD')
+
+    def test_purchase_resize_matrix_keeps_totals_and_editable_lines(self):
+        import arabic_ui,json
+        app=self.open('en');app.state('normal')
+        for i in range(5):app.purchase_item_line({'name':f'Populated resize row {i}','quantity':1,'unit_cost':'10','vat_flag':'Yes'})
+        records=[]
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language)
+            for width,height in ((1280,720),(1366,768),(1600,900),(1920,1080),(1366,768)):
+                app.geometry(f'{width}x{height}+0+0');app.after(250,app.quit);app.mainloop();app.update()
+                tree=app.purchase_form['items_sheet'].tree;tree.yview_moveto(0);app.update()
+                rows=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() for iid in tree.get_children())
+                records.append({'language':language,'requested':[width,height],'actual':app.geometry(),'rows':rows,'table_height':tree.winfo_height()})
+                if width==1366:self.assertGreaterEqual(rows,4,records[-1])
+                total=app.purchase_form['total'];self.assertLessEqual(total.winfo_rooty()+total.winfo_height(),app.winfo_rooty()+app.winfo_height())
+        print('PILOT_PURCHASE_RESIZE '+json.dumps(records))
 
     def test_english_header_is_aligned_and_a_purchase_still_saves(self):
         app = self.open("en")

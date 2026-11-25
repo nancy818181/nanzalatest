@@ -6,6 +6,8 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 Pilot closure (working branch, version unchanged): Purchase amount overrides are available under More; PDF/OCR tools scroll with the header, leaving the live totals and Save fixed. The header reserves room for at least four item rows. VAT Treatment is also available with the main header fields. Regression coverage exercises five-line entry, fifth-line quantity editing, save/reopen, and English/Arabic laptop layouts. Tk scaling tests do not change Windows display scaling.
 
+Further pilot fixes on the same working branch: Sales uses compact document tabs, an expanding line table and fixed totals. Saving commits the active line editor before posting. English save captions remain English after reset/reopen; language switching protects unsaved lines and restores a saved invoice. Dashboard excludes draft invoices and signs credit notes; expenses, profit and party balances reconcile to posted native-currency ledgers when the full schema is available. Board captions and review settings follow the selected language. No statutory VAT advance policy, schema, version or posted historical entries were changed. Windows 100%/125% OS-scale acceptance and professional VAT declaration sign-off remain separate open checks; automated Tk scale checks are not equivalent to changing OS display scaling.
+
 Audit repair (24–25 November 2026; version kept at the owner's request):
 - Payroll rule reload/save is atomic, preserves earlier history, and records the prior settings; no statutory rates changed.
 - Owner-approved allocation-linked realized FX journals use configured gain/loss accounts; repeat allocation and reversal preserve balanced, auditable entries and zero native party adjustment.

@@ -603,13 +603,13 @@ class InventoryMixin:
         tk.Label(box, text="Costing method", bg=LIGHT).pack(side="left"); ttk.Combobox(box, textvariable=self.inv_method, values=["Weighted average", "FIFO"],
                 state="readonly", width=16).pack(side="left", padx=(4, 10))
         self.inv_show = {key: tk.BooleanVar(value=True) for key in ("brand", "warehouse", "project", "branch")}
-        show_box = tk.LabelFrame(page, text="Show in the inventory screens | يظهر في الشاشات", bg=LIGHT, padx=8, pady=4); show_box.pack(fill="x", padx=8, pady=(0, 6))
+        show_box = tk.LabelFrame(page, text="Show in the inventory screens", bg=LIGHT, padx=8, pady=4); show_box.pack(fill="x", padx=8, pady=(0, 6))
         for key, label in (("brand", "Brand"), ("warehouse", "Warehouse"), ("project", "Project"), ("branch", "Branch")):
             tk.Checkbutton(show_box, text=label, variable=self.inv_show[key], bg=LIGHT).pack(side="left", padx=8)
         tk.Label(show_box, text="Tick only what you use; the others disappear from items, stock documents and report filters. Save Settings to keep the choice.",
                 bg=LIGHT, fg=MUTED).pack(side="left", padx=8)
         self.inv_ask = {key: tk.BooleanVar(value=False) for key in ("category", "subcategory", "brand")}  # 2.9.101
-        ask_box = tk.LabelFrame(page, text="New item on a purchase: ask for | صنف جديد في المشتريات: اطلب", bg=LIGHT, padx=8, pady=4); ask_box.pack(fill="x", padx=8, pady=(0, 6))
+        ask_box = tk.LabelFrame(page, text="New item on a purchase: ask for", bg=LIGHT, padx=8, pady=4); ask_box.pack(fill="x", padx=8, pady=(0, 6))
         for key, label in (("category", "Category"), ("subcategory", "Subcategory"), ("brand", "Brand")):
             tk.Checkbutton(ask_box, text=label, variable=self.inv_ask[key], bg=LIGHT).pack(side="left", padx=8)
         tk.Label(ask_box, bg=LIGHT, fg=MUTED,

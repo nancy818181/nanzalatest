@@ -64,7 +64,7 @@ class CNSSFormsMixin:
         self.cnss_period_index_combo = ttk.Combobox(controls, textvariable=self.cnss_period_index_var, state="readonly", width=15)
         self.cnss_period_index_combo.grid(row=1, column=5, padx=4, pady=4, sticky="w")
         self.cnss_period_index_combo.bind("<<ComboboxSelected>>", self._cnss_period_changed)
-        ttk.Label(controls, text="Fill in | لغة التعبئة").grid(row=1, column=6, padx=4, pady=4, sticky="w")
+        ttk.Label(controls, text="Fill in").grid(row=1, column=6, padx=4, pady=4, sticky="w")
         language = ttk.Combobox(controls, textvariable=self.cnss_language_var, values=LANGUAGES, state="readonly", width=16)
         language.grid(row=1, column=7, padx=4, pady=4, sticky="w")
         language.bind("<<ComboboxSelected>>", lambda _event: self.refresh_cnss_form_preview())
