@@ -13,6 +13,17 @@ from pdf_import import _ocr_pdf_pages, _parse_invoice_text, read_invoice_pdf, re
 
 
 class OcrPageTests(unittest.TestCase):
+    def test_purchase_refresh_updates_loaded_reports_without_loading_hidden_pages(self):
+        from desktop_purchases import PurchasesMixin
+        screen = types.SimpleNamespace(load_invoices=Mock(), load_journal=Mock(), load_trial=Mock())
+        PurchasesMixin._refresh_loaded_purchase_reports(screen)
+        for refresh in (screen.load_invoices, screen.load_journal, screen.load_trial):
+            refresh.assert_not_called()
+        screen.invoice_tree = object(); screen.journal_tree = object(); screen.trial_state = {}
+        PurchasesMixin._refresh_loaded_purchase_reports(screen)
+        for refresh in (screen.load_invoices, screen.load_journal, screen.load_trial):
+            refresh.assert_called_once_with()
+
     def test_explicit_quantity_times_price_rows_are_reviewable_items(self):
         from pdf_import import _line_items
         for operator in ("x", "X", "×"):

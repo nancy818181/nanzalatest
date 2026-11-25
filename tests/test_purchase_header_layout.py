@@ -324,7 +324,9 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
             fifth=tree.get_children()[-1];tree.see(fifth);tree.selection_set(fifth);app.update()
             self.assertIsNot(app.purchase_item_changed(fifth,'quantity','2'),False)
             self.assertEqual(form['total'].cget('text'),'66.60 USD')
+            pending_before = {build.__name__ for build in app.__dict__.get('_pending_builders', [])}
             next(b for b in self.buttons(app.purchase_invoice_page) if self.english(b)=='Save Purchase').invoke();app.update()
+            self.assertEqual({build.__name__ for build in app.__dict__.get('_pending_builders', [])}, pending_before, 'Saving must not construct unopened unrelated pages')
             self.assertFalse([m for m in self.messages if m[0]=='showerror'],self.messages)
             choice=next(label for label in form['find_map'] if label.startswith('PILOT-FIVE-'+language+' |'))
             form['find'].set(choice);form['find_box'].event_generate('<<ComboboxSelected>>');app.update()

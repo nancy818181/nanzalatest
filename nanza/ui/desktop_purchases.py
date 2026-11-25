@@ -622,7 +622,7 @@ class PurchasesMixin:
         notify_new_items(self, "Import Purchases")  # 2.9.86: which items were new
         (messagebox.showwarning if errors else messagebox.showinfo)("Import Purchases",
                 f"{done} purchase(s) imported and received into stock; {created} new item(s) created." + ("\n" + "\n".join(errors[:12]) if errors else ""))
-        self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
+        self.load_purchases(); PurchasesMixin._refresh_loaded_purchase_reports(self)
 
     def filter_suppliers(self):
         f = self.purchase_form; typed = f["vars"]["supplier"].get().strip().casefold(); names = list(f.get("supplier_map", {}))
@@ -1031,7 +1031,7 @@ class PurchasesMixin:
                 return messagebox.showwarning("Purchases",
                     f"Purchase {pending_id} is already SAVED; PDF is not confirmed attached: {exc}\n"
                     "Press Save to retry ONLY the PDF, or check Attachments. Do not create the invoice again.")
-            self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
+            self.new_purchase(); self.load_purchases(); PurchasesMixin._refresh_loaded_purchase_reports(self)
             return messagebox.showinfo("Purchases", f"PDF attached to the already saved purchase {pending_id}; invoice was not posted again.")
         if pending_id:
             f["pdf_pending_invoice_id"] = None
@@ -1074,7 +1074,7 @@ class PurchasesMixin:
                 f["id"] = invoice_id
                 f["pdf_pending_invoice_id"] = invoice_id
                 f["pdf_label"].config(text=f"Purchase {invoice_id} SAVED, PDF not attached; press Save to retry PDF only", fg=RED)
-                self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
+                self.load_purchases(); PurchasesMixin._refresh_loaded_purchase_reports(self)
                 return messagebox.showwarning("Purchases",
                     f"Purchase {invoice_id} is SAVED, but the PDF attachment failed: {exc}\n"
                     "Press Save again to retry ONLY the PDF; the purchase and its items will not be posted twice.")
@@ -1087,7 +1087,20 @@ class PurchasesMixin:
                                 + (", items received in stock" if len(lines) > 1 or lines[0].get("item_code") else "") + (" and PDF attached." if f["pdf"] else "."))
         else:
             messagebox.showinfo("Purchases", "Purchase invoice saved" + (" with its PDF" if f["pdf"] else ""))
-        self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
+        self.new_purchase(); self.load_purchases(); PurchasesMixin._refresh_loaded_purchase_reports(self)
+
+    def _refresh_loaded_purchase_reports(self):
+        """Keep opened reports current without constructing unopened pages.
+
+        Their page builders fetch current data when the user opens them.
+        Inspect __dict__ to avoid SaberApp's eager missing-widget fallback.
+        """
+        loaded = self.__dict__
+        for attribute, method in (("invoice_tree", "load_invoices"),
+                                  ("journal_tree", "load_journal"),
+                                  ("trial_state", "load_trial")):
+            if attribute in loaded:
+                getattr(self, method)()
 
     def purchase_rows_list(self):
         try: rows = self.client.invoices(kind="purchase")
@@ -1221,7 +1234,7 @@ class PurchasesMixin:
         if not messagebox.askyesno("Purchases", f"{action} purchase {row['invoice_number']}? Original entries and its number will remain when posted."): return
         try: self.client.delete_invoice(row["id"], reason=reason)
         except Exception as exc: return messagebox.showerror("Purchases", str(exc))
-        self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
+        self.new_purchase(); self.load_purchases(); PurchasesMixin._refresh_loaded_purchase_reports(self)
 
     def cancel_purchase(self):
         """2.9.97: a saved purchase that came out wrong is CANCELLED: a reversing journal entry is posted, the purchase stays in
@@ -1241,7 +1254,7 @@ class PurchasesMixin:
             if not reason.get().strip(): return messagebox.showwarning("Cancel Purchase", "Enter the reason", parent=window)
             try: self.client.cancel_invoice(row["id"], reason.get().strip())
             except Exception as exc: return messagebox.showerror("Cancel Purchase", str(exc), parent=window)
-            window.destroy(); self.new_purchase(); self.load_purchases(); self.load_invoices(); self.load_journal(); self.load_trial()
+            window.destroy(); self.new_purchase(); self.load_purchases(); PurchasesMixin._refresh_loaded_purchase_reports(self)
             messagebox.showinfo("Cancel Purchase", f"Purchase {row['invoice_number']} cancelled: the reversing entry was posted.")
         buttons = tk.Frame(window, bg=LIGHT); buttons.grid(row=3, column=0, columnspan=2, pady=(0, 12))
         tk.Button(buttons, text="Confirm Cancellation", command=confirm, bg=RED, fg="white", border=0, padx=18, pady=7, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
