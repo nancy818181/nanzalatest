@@ -4,6 +4,8 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 ## Version 2.9.140
 
+Pilot closure (working branch, version unchanged): Purchase amount overrides are available under More; PDF/OCR tools scroll with the header, leaving the live totals and Save fixed. The header reserves room for at least four item rows. VAT Treatment is also available with the main header fields. Regression coverage exercises five-line entry, fifth-line quantity editing, save/reopen, and English/Arabic laptop layouts. Tk scaling tests do not change Windows display scaling.
+
 Audit repair (24–25 November 2026; version kept at the owner's request):
 - Payroll rule reload/save is atomic, preserves earlier history, and records the prior settings; no statutory rates changed.
 - Owner-approved allocation-linked realized FX journals use configured gain/loss accounts; repeat allocation and reversal preserve balanced, auditable entries and zero native party adjustment.

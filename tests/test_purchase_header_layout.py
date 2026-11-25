@@ -23,7 +23,7 @@ from client import ApiClient
 from server import run_server
 
 HEADER = ("Supplier", "Supplier Invoice No.", "Date", "Due Date", "Currency", "Type", "Document",
-          "Cost / Asset A/C", "VAT A/C", "Paid", "Paid from A/C")
+          "Cost / Asset A/C", "VAT A/C", "Paid", "Paid from A/C", "VAT Treatment")
 
 
 @unittest.skipUnless(HAVE_DISPLAY, "needs a display for the program window")
@@ -93,7 +93,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                 self.assertTrue(0 <= gap <= 24, f"{text}: label {gap}px from its field (wrong side if negative)")
                 heights.add(field.winfo_height())
         self.assertLessEqual(max(heights) - min(heights), 2, f"input heights differ: {sorted(heights)}")
-        save = next(b for b in self.buttons(app.purchase_form["pdf_label"].master.master) if self.english(b) == "Save Purchase")
+        save = next(b for b in self.buttons(app.purchase_invoice_page) if self.english(b) == "Save Purchase")
         row = [b for b in save.master.winfo_children() if isinstance(b, tk.Button) and b.winfo_ismapped()]
         self.assertEqual(len({b.winfo_height() for b in row}), 1, [(self.english(b), b.winfo_height()) for b in row])
 
@@ -173,6 +173,49 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         for child in widget.winfo_children():
             if isinstance(child, tk.Button): yield child
             yield from self.buttons(child)
+
+    def test_five_line_purchase_has_four_complete_rows_at_laptop_scaling(self):
+        import arabic_ui,json
+        from tkinter import ttk
+        app=self.open('en');form=app.purchase_form
+        sheet=form['items_sheet'];tree=sheet.tree
+        for i in range(5):
+            app.purchase_item_line({'name':f'Synthetic five-line item {i+1}', 'quantity':1,'unit_cost':'10','vat_flag':'Yes'})
+        observations=[]
+        for scaling in (96/72,120/72,2.0):
+            app.tk.call('tk','scaling',scaling)
+            for language in ('en','ar'):
+                arabic_ui.switch(app,language)
+                app.state('normal');app.geometry('1366x768+0+0')
+                for _ in range(8):app.update_idletasks();app.update()
+                tree.yview_moveto(0);app.update()
+                visible=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() for iid in tree.get_children())
+                observations.append({'language':language,'tk_scaling':float(app.tk.call('tk','scaling')),'rows':visible,'table_height':tree.winfo_height(),'window':app.geometry()})
+                self.assertGreaterEqual(visible,4,observations)
+                fifth=tree.get_children()[-1];tree.see(fifth);tree.selection_set(fifth);app.update()
+                self.assertTrue(tree.bbox(fifth))
+        print('PILOT_LAYOUT '+json.dumps(observations))
+        from decimal import Decimal
+        for i in range(5):
+            app.client.save_inventory_item({'sku':f'PILOT-R{i}','name':f'Pilot line {i+1}','unit':'unit'})
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language);app.new_purchase()
+            form=app.purchase_form;sheet=form['items_sheet'];tree=sheet.tree
+            form['vars']['supplier'].set('Synthetic pilot supplier')
+            form['vars']['number'].set('PILOT-FIVE-'+language)
+            form['vars']['currency'].set('USD')
+            for i in range(5):
+                app.purchase_item_line({'item_code':f'PILOT-R{i}','name':f'Pilot line {i+1}','quantity':1,'unit_cost':'10','vat_flag':'Yes'})
+            fifth=tree.get_children()[-1];tree.see(fifth);tree.selection_set(fifth);app.update()
+            self.assertIsNot(app.purchase_item_changed(fifth,'quantity','2'),False)
+            self.assertEqual(form['total'].cget('text'),'66.60 USD')
+            next(b for b in self.buttons(app.purchase_invoice_page) if self.english(b)=='Save Purchase').invoke();app.update()
+            self.assertFalse([m for m in self.messages if m[0]=='showerror'],self.messages)
+            choice=next(label for label in form['find_map'] if label.startswith('PILOT-FIVE-'+language+' |'))
+            form['find'].set(choice);form['find_box'].event_generate('<<ComboboxSelected>>');app.update()
+            self.assertEqual(len(sheet.rows),5)
+            self.assertEqual(Decimal(str(list(sheet.rows.values())[-1]['quantity'])),Decimal('2'))
+            self.assertEqual(form['total'].cget('text'),'66.60 USD')
 
     def test_english_header_is_aligned_and_a_purchase_still_saves(self):
         app = self.open("en")

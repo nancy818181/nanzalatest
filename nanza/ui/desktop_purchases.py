@@ -224,7 +224,11 @@ class PurchasesMixin:
             def fit_header(_event=None):
                 # Reserve physical space for the item toolbar, heading and rows
                 # even when Arabic totals wrap onto an additional line.
-                table_space=round(page.winfo_fpixels('1.5i'))
+                # Four complete rows, the heading and the item toolbar must fit.
+                sheet=f.get('items_sheet')
+                tree=sheet.tree if sheet is not None else None
+                row_height=int(ttk.Style(tree).lookup('Treeview','rowheight') or 28) if tree is not None else 28
+                table_space=4*row_height+round(page.winfo_fpixels('1.25i'))
                 height=min(header_parent.winfo_reqheight()+6,max(80,page.winfo_height()-table_space))
                 if header_view.winfo_height()!=height:header_view.configure(height=height)
             page.bind('<Configure>',fit_header,add='+');page.after_idle(fit_header)
@@ -265,7 +269,9 @@ class PurchasesMixin:
             ("VAT A/C", lambda parent: self.account_search_box(parent, v["vat_account"], 18)),
             ("Paid", lambda parent: ttk.Combobox(parent, textvariable=f["paid_by"], values=PAID_BY, state="readonly", width=18)),
             ("Paid from A/C", lambda parent: self.account_search_box(parent, f["paid_account"], 18)),
+            ("VAT Treatment", lambda parent: ttk.Combobox(parent,textvariable=f["use"],values=list(PURCHASE_USES),state="readonly",width=23)),
         ])
+        f["header_widgets"]["VAT Treatment"].bind("<<ComboboxSelected>>",lambda _e:self.purchase_amounts_changed("use"))
         f["supplier_box"] = f["header_widgets"]["Supplier"]
         f["supplier_box"].bind("<KeyRelease>", lambda _e: self.filter_suppliers()); f["supplier_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_supplier_chosen())
         doc_box = f["header_widgets"]["Document"]
@@ -273,8 +279,8 @@ class PurchasesMixin:
         card_bg = "white"
         totals_box = tk.Frame(totals_parent or page, bg=card_bg, padx=6, pady=2,
                               highlightthickness=1, highlightbackground="#DDE4EC")
-        r2 = tk.Frame(totals_box, bg=card_bg)
-        r2.pack(side="top", fill="x")
+        r2 = tk.Frame(header_parent, bg=card_bg)
+        # Amount overrides are advanced controls; keep the live summary fixed.
         for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11),
                                   ("VAT %", "rate", 5), ("VAT", "vat", 11)):
             field = tk.Frame(r2, bg=card_bg)
@@ -313,6 +319,7 @@ class PurchasesMixin:
         # The treatment/dimension controls are placed after the items table below,
         # where they remain part of this same invoice workflow and scroll together.
         tax_options=tk.LabelFrame(header_parent,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3)
+        r2.pack(in_=tax_options,side="bottom",fill="x")
         dimensions=tk.Frame(tax_options,bg=LIGHT); dimensions.pack(fill="x")
         self.dimension_selectors(dimensions,f["department"],f["project"])
         treatment=tk.Frame(tax_options,bg=LIGHT); treatment.pack(fill="x",pady=(2,0))
@@ -366,7 +373,7 @@ class PurchasesMixin:
             else:
                 tax_options.pack_forget(); more_button.config(text="More ▾")
         r4 = tk.Frame(actions, bg=LIGHT); r4.pack(side="top", fill="x", pady=(2, 0))
-        r5 = tk.Frame(actions, bg=LIGHT); r5.pack(side="top", fill="x", pady=(1, 0))
+        r5 = tk.Frame(header_parent, bg=LIGHT); r5.pack(side="top", fill="x", pady=(1, 0))
         more_button=self.action_button(r4,"More ▾",toggle_purchase_more); more_button.pack(side="left",padx=(0,4))
         f["pdf_label"] = tk.Label(r5, text="No PDF", bg=LIGHT, fg=MUTED)
         self.action_button(r4, "New", self.new_purchase).pack(side="left", padx=(0, 3))
