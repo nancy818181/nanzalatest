@@ -170,6 +170,7 @@ class AuditRegressionTest(unittest.TestCase):
                     'name':f'Synthetic {kind} {rate}','currency':'EUR'},1)
                 for day,value in [('01-01-2026','1.1'),('01-02-2026',rate)]:
                     self.db.save_exchange_rate({'date_from':day,'from_currency':'EUR','to_currency':'USD','rate':value},1)
+                self.db.save_exchange_rate({'date_from':'01-01-2026','from_currency':'USD','to_currency':'LBP','rate':'89500'},1)
                 self.db.__dict__.pop('_rate_state',None)
                 iid=self.db.create_manual_invoice({'invoice_date':'15-01-2026','party_name':party['name'],'kind':kind,
                     'currency':'EUR'},[{'description':'Synthetic EUR','quantity':1,'unit_price':100,'vat_rate':0}],1)
@@ -197,6 +198,7 @@ class AuditRegressionTest(unittest.TestCase):
                 trial=[r for r in self.db.trial_balance(account_code=party['account_number'],include_subaccounts=False)]
                 self.assertEqual(sum(Decimal(str(r['closing_balance'])) for r in trial),0)
                 self.assertEqual(sum(Decimal(str(r['usd_closing_balance'])) for r in trial),0)
+                self.assertEqual(sum(Decimal(str(r['lbp_closing_balance'])) for r in trial),0)
                 lines=ledger_reports._load_lines(self.db,{'account_from':party['account_number'],'account_to':party['account_number'],
                     'first_column':'USD','second_column':'account'})
                 self.assertEqual(sum(r['signed']['USD'] for r in lines),0)
@@ -207,6 +209,7 @@ class AuditRegressionTest(unittest.TestCase):
                 trial=self.db.trial_balance(account_code=party['account_number'],include_subaccounts=False)
                 expected_balance=Decimal('110')*(1 if kind=='sale' else -1)
                 self.assertEqual(sum(Decimal(str(r['usd_closing_balance'])) for r in trial),expected_balance)
+                self.assertEqual(sum(Decimal(str(r['lbp_closing_balance'])) for r in trial),expected_balance*Decimal('89500'))
                 self.assertFalse(self.db.unbalanced_entries())
 
 

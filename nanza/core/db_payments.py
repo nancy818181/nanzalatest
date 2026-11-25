@@ -598,6 +598,8 @@ class PaymentsStore:
         defaults=self.default_accounts()
         offset=(payment['exchange_gain_account'] or defaults['exchange_gain']) if difference>0 else (payment['exchange_loss_account'] or defaults['exchange_loss'])
         value=abs(difference); zero=Decimal('0')
+        usd=self._converted_amount(value,basis,'USD',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+        lbp=self._converted_amount(value,basis,'LBP',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
         sequence=db.execute("SELECT COUNT(*) FROM journal_entries WHERE source_type='payment_fx' AND source_id=?",(payment['id'],)).fetchone()[0]+1
         number=f"FX-{payment['payment_number']}-{sequence}"
         entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
@@ -609,7 +611,7 @@ class PaymentsStore:
             db.execute("""INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit,line_currency,amount,amount_usd,amount_lbp,
                 revalue_currency,revalue_amount,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (entry,self._account_id(db,account),payment['party_id'] if account==payment['party_account'] else None,str(debit),str(credit),currency,str(native),
-                str(value if basis=='USD' else zero),str(value if basis=='LBP' else zero),basis if basis not in ('USD','LBP') and not native else None,
+                str(usd),str(lbp),basis if basis not in ('USD','LBP') and not native else None,
                 str(value) if basis not in ('USD','LBP') and not native else None,payment['payment_number']))
         db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
             (user_id,'realized_fx','payment',payment['id'],json.dumps({'entry':number,'currency':basis,'difference':str(difference)}),utcnow()))
