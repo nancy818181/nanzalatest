@@ -262,6 +262,8 @@ class PurchasesMixin:
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
         lookup_options = tk.Frame(header_parent, bg=LIGHT)
         self.action_button(heading, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=3)
+        for button in heading.winfo_children():
+            if isinstance(button, tk.Button): button._saber_compact = True
         f["org"] = tk.StringVar(value="Yes")
         tk.Label(lookup_options, text="Org", bg=LIGHT).pack(side="left")
         ttk.Combobox(lookup_options, textvariable=f["org"], values=("Yes", "No"), state="readonly", width=4).pack(side="left")
@@ -329,19 +331,20 @@ class PurchasesMixin:
         amount_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("amount"))
         summary = tk.Frame(totals_box, bg=card_bg)
         summary.pack(fill="x", pady=(2, 0))
-        for key, label in (
+        for column, (key, label) in enumerate((
             ("gross_summary", "Total"), ("discount_value", "Discount"),
             ("ht_summary", "Total HT"), ("vat_summary", "VAT"), ("total", "TOTAL TTC"),
-        ):
+        )):
             accent = key == "total"
             pair_bg = "#F7EACB" if accent else card_bg
             pair = tk.Frame(summary, bg=pair_bg, padx=10 if accent else 5, pady=3,
                             highlightthickness=1 if accent else 0, highlightbackground=GOLD)
-            pair.pack(side="left", padx=(0, 8))
-            tk.Label(pair, text=label, bg=pair_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",9)).pack(side="left", padx=(0, 5))
+            summary.grid_columnconfigure(column, weight=1, uniform="purchase_totals")
+            pair.grid(row=0, column=column, sticky="nsew", padx=2)
+            tk.Label(pair, text=label, bg=pair_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",8)).pack(anchor="w")
             f[key] = tk.Label(pair, text="0.00", bg=pair_bg, fg=NAVY,
-                              font=("Segoe UI", 15 if key == "total" else 11, "bold"))
-            f[key].pack(side="left")
+                              font=("Segoe UI", 13 if key == "total" else 10, "bold"))
+            f[key].pack(anchor="w")
         f["discount_summary"] = tk.Label(totals_box, text="", bg=card_bg, fg=RED)
         f["discount_summary"].pack(side="bottom", anchor="w")
         f["discount_summary"].pack_forget()
