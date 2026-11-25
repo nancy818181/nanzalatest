@@ -202,6 +202,12 @@ class AuditRegressionTest(unittest.TestCase):
                 self.assertEqual(sum(Decimal(str(r['closing_balance'])) for r in trial),0)
                 self.assertEqual(sum(Decimal(str(r['usd_closing_balance'])) for r in trial),0)
                 self.assertEqual(sum(Decimal(str(r['lbp_closing_balance'])) for r in trial),0)
+                for currency in (None, 'EUR', 'USD'):
+                    ledger=self.db.general_ledger(account_code=party['account_number'],currency=currency)
+                    self.assertEqual(sum(Decimal(str(r['debit']))-Decimal(str(r['credit'])) for r in ledger['items']),0)
+                    self.assertTrue(all(r['currency']=='EUR' for r in ledger['items']))
+                fx_journal=self.db.journal(source_type='payment_fx')
+                self.assertEqual(sum(Decimal(str(r['debit']))-Decimal(str(r['credit'])) for r in fx_journal),0)
                 lines=ledger_reports._load_lines(self.db,{'account_from':party['account_number'],'account_to':party['account_number'],
                     'first_column':'USD','second_column':'account'})
                 self.assertEqual(sum(r['signed']['USD'] for r in lines),0)

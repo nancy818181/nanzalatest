@@ -403,7 +403,7 @@ class ReportsStore:
             return [dict(r) for r in rows]
 
     def journal(self, from_date=None, to_date=None, currency=None, limit=None, branch_id=None, entry_number=None, account_code=None, source_type=None,
-                posted_only=False, running_balance=True):
+                posted_only=False, running_balance=True, native_fx=False):
         """Return journal lines with a running balance per account and currency.
         2.9.51: no line limit any more (5,000 lines used to hide later entries from the journal, the general ledger and
         'open transaction'); one entry, one account or one kind of entry can be asked for directly."""
@@ -424,8 +424,14 @@ class ReportsStore:
         if to_date:
             conditions.append(f"{normalized_date} <= ?")
             parameters.append(to_date)
+        # Journal keeps the balanced voucher currency; the native General Ledger
+        # follows each FX line's document currency, as Trial Balance does.
+        fx = "e.source_type IN ('payment_fx','payment_fx_reversal')"
+        line_currency = f"CASE WHEN {fx} THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END" if native_fx else "e.currency"
+        debit = f"CASE WHEN {fx} THEN CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.debit END" if native_fx else "j.debit"
+        credit = f"CASE WHEN {fx} THEN CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.credit END" if native_fx else "j.credit"
         if currency:
-            conditions.append("e.currency = ?")
+            conditions.append(f"{line_currency} = ?")
             parameters.append(currency)
         if branch_id:
             conditions.append("e.branch_id=?"); parameters.append(int(branch_id))
@@ -433,14 +439,14 @@ class ReportsStore:
         parameters.append(int(limit) if limit else -1)  # SQLite: LIMIT -1 = every line
         with self.connect() as db:
             cursor = db.execute(f"""SELECT e.id entry_id,e.entry_number,e.entry_date,
-                e.description,e.source_type,e.source_id,e.voucher_type,e.currency,e.branch_id,COALESCE(b.name,'Head Office') branch_name,a.code account_code,a.name_en account_name,
+                e.description,e.source_type,e.source_id,e.voucher_type,{line_currency} currency,e.branch_id,COALESCE(b.name,'Head Office') branch_name,a.code account_code,a.name_en account_name,
                 CASE WHEN e.source_type='payroll' THEN 'Payroll' WHEN e.source_type='expense' THEN 'Expenses'
                      WHEN e.source_type='journal_voucher' AND e.voucher_type='07' THEN 'DOE'
                      WHEN e.source_type='journal_voucher' THEN 'Journal Vouchers' WHEN e.source_type IN ('opening','year_close') THEN 'Opening / Closing'
                      WHEN e.source_type='invoice' AND i.kind='sale' THEN 'Sales'
                      WHEN e.source_type='invoice' AND COALESCE(i.entry_type,i.kind)='expenses' THEN 'Expenses'
                      WHEN e.source_type='invoice' THEN 'Purchases' ELSE 'Other' END journal_category,
-                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,j.debit debit,j.credit credit,
+                COALESCE(p.name,'') party_name,COALESCE(j.description,'') line_description,i.invoice_number,{debit} debit,{credit} credit,
                 COALESCE(pr.code,'') project_code,COALESCE(dp.code,'') department_code
                 FROM journal_lines j JOIN journal_entries e ON e.id=j.entry_id
                 JOIN accounts a ON a.id=j.account_id LEFT JOIN parties p ON p.id=j.party_id LEFT JOIN branches b ON b.id=e.branch_id
@@ -544,7 +550,7 @@ class ReportsStore:
 
     def general_ledger(self, account_code=None, from_date=None, to_date=None, currency=None):
         from_date=_soft_iso(from_date); to_date=_soft_iso(to_date)  # 2.9.63: DD-MM-YYYY or YYYY-MM-DD
-        rows=self.journal(None,to_date,currency,account_code=account_code,posted_only=True,running_balance=False)
+        rows=self.journal(None,to_date,currency,account_code=account_code,posted_only=True,running_balance=False,native_fx=True)
         opening={}; items=[]; balances={}; days={}  # 2.9.132 (performance): each day parsed once
         for row in rows:
             normalized=str(row["entry_date"] or "")
