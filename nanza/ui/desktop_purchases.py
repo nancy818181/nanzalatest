@@ -146,10 +146,16 @@ class PurchasesMixin:
         for kind, specs in (("short", short_fields), ("wide", wide_fields)):
             for text, make_widget in specs:
                 label = tk.Label(grid, text=text, bg=LIGHT, fg=NAVY, font=label_font, anchor="e")
+                label._purchase_field_key = text
                 widget = make_widget(grid)
+                # Let the grid allocate account widths; a large requested combo
+                # width otherwise forces every column wide and creates extra rows.
+                if isinstance(widget, (tk.Entry, ttk.Combobox)):
+                    widget.configure(font=("Segoe UI", 9))
+                    if kind == "wide": widget.configure(width=1)
                 widgets[text] = widget
                 cells.append((kind, label, widget))
-        state = {"key": None, "pending": False}
+        state = {"key": None, "pending": False, "details": False}
 
         def view_width():
             return max(1, parent.winfo_width())  # the panel is kept inside the visible page width (_fit_panel_to_view)
@@ -157,20 +163,24 @@ class PurchasesMixin:
         def layout():
             state["pending"] = False
             if not grid.winfo_exists(): return
+            advanced = {"Cost / Asset A/C", "VAT A/C", "Type"}
+            current = [cell for cell in cells if state["details"] or cell[1].__dict__.get("_purchase_field_key") not in advanced]
+            for cell in cells:
+                if cell not in current: cell[1].grid_remove(); cell[2].grid_remove()
             measure = tkfont.Font(font=label_font)
             def label_widths(pairs):
                 """Each label column is as wide as its longest label (the labels of one column line up)."""
                 widths = [0] * pairs
-                short_count = sum(1 for c in cells if c[0] == "short")
-                for index, (kind, label, _w) in enumerate(cells):
+                short_count = sum(1 for c in current if c[0] == "short")
+                for index, (kind, label, _w) in enumerate(current):
                     if kind == "short": column = index % pairs
                     else: column = ((index - short_count) % max(1, pairs // 2)) * 2 if pairs >= 4 else (index - short_count) % pairs
                     widths[column] = max(widths[column], label.winfo_reqwidth())
                 return sum(widths)
             pair_gap = max(10, measure.measure("00"))      # space between two label | field pairs
             label_gap = max(5, measure.measure("0") // 2 + 3)  # space between a label and its field
-            field_min = max(widget.winfo_reqwidth() for kind, _l, widget in cells if kind == "short")
-            unspanned_min = max(widget.winfo_reqwidth() for _kind, _l, widget in cells)
+            field_min = max(widget.winfo_reqwidth() for kind, _l, widget in current if kind == "short")
+            unspanned_min = max(widget.winfo_reqwidth() for _kind, _l, widget in current)
             available = view_width()
             # Wide account selectors span multiple columns only in a four-pair grid.
             # At three/two pairs their own requested width must fit each field column.
@@ -181,12 +191,12 @@ class PurchasesMixin:
             key = (pairs, field_width)
             if key == state["key"]: return
             state["key"] = key
-            target = max((w.winfo_reqheight() for _k, _l, w in cells if isinstance(w, ttk.Combobox)), default=0)
+            target = max((w.winfo_reqheight() for _k, _l, w in current if isinstance(w, ttk.Combobox)), default=0)
             for column in range(8):
                 used = column < 2 * pairs
                 grid.grid_columnconfigure(column, weight=0, uniform="nz_field" if used and column % 2 else "",
                                           minsize=field_width if used and column % 2 else 0)
-            short = [c for c in cells if c[0] == "short"]; wide = [c for c in cells if c[0] == "wide"]
+            short = [c for c in current if c[0] == "short"]; wide = [c for c in current if c[0] == "wide"]
             def place(label, widget, row, pair, span=1):
                 label.grid(row=row, column=2 * pair, sticky="e", padx=(pair_gap if pair else 0, label_gap), pady=1)
                 extra = {}
@@ -205,6 +215,9 @@ class PurchasesMixin:
             if state["pending"]: return
             state["pending"] = True
             grid.after_idle(layout)
+        def show_details(shown):
+            state["details"] = bool(shown); state["key"] = None; schedule()
+        f["set_posting_details"] = show_details
         parent.bind("<Configure>", schedule, add="+")
         schedule()
         return grid
@@ -242,17 +255,19 @@ class PurchasesMixin:
         find = tk.Frame(heading, bg=LIGHT); find.pack(side="left", padx=(0, 6))
         f["find"] = tk.StringVar()
         tk.Label(find, text="Find purchase", bg=LIGHT, fg=NAVY, font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
-        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=24); f["find_box"].pack(side="left")
+        f["find_box"] = ttk.Combobox(find, textvariable=f["find"], width=18); f["find_box"].pack(side="left")
         f["find_box"].bind("<<ComboboxSelected>>", lambda _e: self.purchase_found()); f["find_box"].bind("<KeyRelease>", lambda _e: self.filter_found_purchases())
         f["find_box"].bind("<Return>", lambda _e: self.purchase_found())
         self.action_button(heading, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(6, 3))
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
+        lookup_options = tk.Frame(header_parent, bg=LIGHT)
+        self.action_button(heading, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=3)
         f["org"] = tk.StringVar(value="Yes")
-        tk.Label(heading, text="Org", bg=LIGHT).pack(side="left")
-        ttk.Combobox(heading, textvariable=f["org"], values=("Yes", "No"), state="readonly", width=4).pack(side="left")
+        tk.Label(lookup_options, text="Org", bg=LIGHT).pack(side="left")
+        ttk.Combobox(lookup_options, textvariable=f["org"], values=("Yes", "No"), state="readonly", width=4).pack(side="left")
         f["org_filter"] = tk.StringVar(value="All")
-        tk.Label(heading, text="Find Org", bg=LIGHT).pack(side="left")
-        org_filter = ttk.Combobox(heading, textvariable=f["org_filter"], values=("All", "Yes", "No"), state="readonly", width=4)
+        tk.Label(lookup_options, text="Find Org", bg=LIGHT).pack(side="left")
+        org_filter = ttk.Combobox(lookup_options, textvariable=f["org_filter"], values=("All", "Yes", "No"), state="readonly", width=4)
         org_filter.pack(side="left")
         org_filter.bind("<<ComboboxSelected>>", lambda _event: self.load_purchases())
         # The existing controls and callbacks stay in the same order below.
@@ -318,11 +333,14 @@ class PurchasesMixin:
             ("gross_summary", "Total"), ("discount_value", "Discount"),
             ("ht_summary", "Total HT"), ("vat_summary", "VAT"), ("total", "TOTAL TTC"),
         ):
-            pair = tk.Frame(summary, bg=card_bg)
+            accent = key == "total"
+            pair_bg = "#F7EACB" if accent else card_bg
+            pair = tk.Frame(summary, bg=pair_bg, padx=10 if accent else 5, pady=3,
+                            highlightthickness=1 if accent else 0, highlightbackground=GOLD)
             pair.pack(side="left", padx=(0, 8))
-            tk.Label(pair, text=label, bg=card_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",9)).pack(side="left", padx=(0, 5))
-            f[key] = tk.Label(pair, text="0.00", bg=card_bg, fg=NAVY,
-                              font=("Segoe UI", 13 if key == "total" else 10, "bold"))
+            tk.Label(pair, text=label, bg=pair_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",9)).pack(side="left", padx=(0, 5))
+            f[key] = tk.Label(pair, text="0.00", bg=pair_bg, fg=NAVY,
+                              font=("Segoe UI", 15 if key == "total" else 11, "bold"))
             f[key].pack(side="left")
         f["discount_summary"] = tk.Label(totals_box, text="", bg=card_bg, fg=RED)
         f["discount_summary"].pack(side="bottom", anchor="w")
@@ -332,6 +350,7 @@ class PurchasesMixin:
         # where they remain part of this same invoice workflow and scroll together.
         tax_options=tk.LabelFrame(header_parent,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3)
         r2.pack(in_=tax_options,side="bottom",fill="x")
+        lookup_options.pack(in_=tax_options, fill="x", pady=(0, 3))
         dimensions=tk.Frame(tax_options,bg=LIGHT); dimensions.pack(fill="x")
         self.dimension_selectors(dimensions,f["department"],f["project"])
         treatment=tk.Frame(tax_options,bg=LIGHT); treatment.pack(fill="x",pady=(2,0))
@@ -377,6 +396,7 @@ class PurchasesMixin:
         more_state={"shown":False}
         def toggle_purchase_more():
             more_state["shown"]=not more_state["shown"]
+            f["set_posting_details"](more_state["shown"])
             if more_state["shown"]:
                 tax_options.pack(fill="x",padx=8,pady=(2,3),after=box_outer if header_view is not None else items)
                 if header_view is not None:
@@ -385,7 +405,7 @@ class PurchasesMixin:
             else:
                 tax_options.pack_forget(); more_button.config(text="More ▾")
         r4 = tk.Frame(actions, bg=LIGHT); r4.pack(side="top", fill="x", pady=(2, 0))
-        r5 = tk.Frame(header_parent, bg=LIGHT); r5.pack(side="top", fill="x", pady=(1, 0))
+        r5 = tk.Frame(header_parent, bg=LIGHT); r5.pack(in_=tax_options, side="top", fill="x", pady=(1, 0))
         more_button=self.action_button(r4,"More ▾",toggle_purchase_more); more_button.pack(side="left",padx=(0,4))
         f["pdf_label"] = tk.Label(r5, text="No PDF", bg=LIGHT, fg=MUTED)
         self.action_button(r4, "New", self.new_purchase).pack(side="left", padx=(0, 3))
@@ -394,7 +414,6 @@ class PurchasesMixin:
         tk.Button(r4, text="Cancel Purchase", command=self.cancel_purchase, bg=RED, fg="white", border=0, padx=12, pady=6).pack(side="left", padx=3)  # 2.9.97
         tk.Button(r4, text="Return (goods back)", command=self.return_open_purchase, bg=NAVY, fg="white", border=0, padx=10, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=3)
         tk.Button(r4, text="Auto Calculate", command=self.purchase_auto_calculate, bg=NAVY, fg="white", border=0, padx=12, pady=6).pack(side="left", padx=3)  # 2.9.90
-        self.action_button(r5, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=(0, 3))  # level with More ▾ above
         free_read = self.action_button(r5, "Free PDF Read", self.ai_read_purchase_pdf); free_read.pack(side="left", padx=3)
         self.action_button(r5, "Attachments", lambda: self.purchase_attachments()).pack(side="left", padx=3)
         self.azure_button(r5, self.azure_read_purchase, free_read)  # 2.9.120: only where Azure is set up

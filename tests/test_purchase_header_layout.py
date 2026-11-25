@@ -64,6 +64,8 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         return app
 
     def header(self, app):
+        app.purchase_form["set_posting_details"](True)
+        app.update()
         widgets = app.purchase_form["header_widgets"]
         labels = {}
         for label in widgets["Supplier"].master.winfo_children():

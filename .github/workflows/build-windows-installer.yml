@@ -70,7 +70,14 @@ jobs:
       - name: Prepare bundled offline OCR (English, Arabic and French)
         shell: pwsh
         run: |
-          choco install tesseract --yes --no-progress --version=5.5.0.20241111
+          # The package feed occasionally returns a transient not-found response.
+          # Keep the pinned engine and fail explicitly after bounded retries.
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install tesseract --yes --no-progress --version=5.5.0.20241111
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -eq 3) { throw "Pinned Tesseract installation failed after three attempts." }
+            Start-Sleep -Seconds (5 * $attempt)
+          }
           $engine = "Assets\ocr\engine"
           $tessdata = "Assets\ocr\tessdata"
           New-Item -ItemType Directory -Force -Path $engine, $tessdata | Out-Null

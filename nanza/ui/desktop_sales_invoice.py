@@ -29,7 +29,7 @@ def _responsive_invoice_details(form, fields, dimensions):
         if width <= 1: return
         label_width = max(label.winfo_reqwidth() for label, _widget in fields)
         field_width = max(widget.winfo_reqwidth() for _label, widget in fields)
-        gap = max(16, round(form.winfo_fpixels("0.16i")))
+        gap = max(10, round(form.winfo_fpixels("0.10i")))
         # Keep three roomy groups on typical desktop widths so the last account/payment
         # controls do not run into the viewport edge. Use four only on extra-wide pages.
         columns = 4 if width >= 1700 else 3 if width >= 900 else 2 if width >= 650 else 1
@@ -46,8 +46,8 @@ def _responsive_invoice_details(form, fields, dimensions):
             form.grid_columnconfigure(2 * column + 1, minsize=field_size)
         for index, (label, widget) in enumerate(fields):
             row, column = divmod(index, columns)
-            label.grid_configure(row=row, column=2 * column, padx=(0 if column == 0 else gap, 6), pady=2)
-            widget.grid_configure(row=row, column=2 * column + 1, sticky="ew", padx=(0, 2), pady=2)
+            label.grid_configure(row=row, column=2 * column, padx=(0 if column == 0 else gap, 5), pady=1)
+            widget.grid_configure(row=row, column=2 * column + 1, sticky="ew", padx=(0, 2), pady=1)
         if dimensions is not None:
             dimensions.grid_configure(row=(len(fields) + columns - 1) // columns,
                                       column=0, columnspan=2 * columns, sticky="ew", pady=(3, 1))
@@ -79,7 +79,7 @@ class SalesInvoiceMixin:
         content_outer.pack(fill="x")
         content_outer.grid_propagate(False)
         import desktop_design as design  # 2.9.134: framed panel with a gold-marked title (same controls and bindings as before)
-        header_outer,header=design.panel(content,pady=5); header_outer.pack(fill="x",padx=10,pady=(2,3))
+        header_outer,header=design.panel(content,pady=2); header_outer.pack(fill="x",padx=10,pady=(2,3))
         self.sales_no=tk.StringVar(); self.sales_date=tk.StringVar(value=self.fiscal_today())
         self.sales_party=tk.StringVar(); self.sales_kind=tk.StringVar(value="sales"); self.sales_currency=tk.StringVar(value="USD")
         self.sales_supplier_account=tk.StringVar(value="")
@@ -123,6 +123,8 @@ class SalesInvoiceMixin:
         self.action_button(lookup_options, "Quotations", lambda: self.open_commercial_documents(quotations_only=True)).pack(
             side="left", padx=3
         )
+        for button in nav.winfo_children():
+            if isinstance(button, tk.Button): button._saber_compact = True
         # Keep the existing controls and their bindings; distribute them across the available width.
         form=tk.Frame(invoice_details,bg=LIGHT); form.pack(anchor="w",fill="x",pady=(2,0))
         extras=tk.Frame(extra_details,bg=LIGHT);extras.pack(anchor='w',fill='x',pady=4)
@@ -254,17 +256,20 @@ class SalesInvoiceMixin:
         totals=tk.Frame(bottom,bg=LIGHT); totals.pack(fill="x")
         box=tk.Frame(totals,bg=card_bg,padx=12,pady=6,highlightthickness=1,highlightbackground=line); box.pack(side="top",fill="x")
         self.sales_total_labels={}
-        discount=tk.Frame(box,bg=card_bg); discount.pack(fill="x",pady=(0,2))
+        discount=tk.Frame(extra_details,bg=card_bg); discount.pack(fill="x",padx=4,pady=3)
         summary=tk.Frame(box,bg=card_bg); summary.pack(fill="x")
         import arabic_ui
         short_ar={'Total':'قبل الخصم','Discount':'الخصم','Total HT':'قبل الضريبة','VAT':'الضريبة','TOTAL':'الإجمالي'}
         for key,caption in (("Total","Total"),("Discount","Discount"),("Total HT","Total HT"),("VAT",f"VAT {vat_rate_text(self)}"),("TOTAL","TOTAL TTC")):
             if arabic_ui.active():caption=short_ar[key]
-            pair=tk.Frame(summary,bg=card_bg); pair.pack(side="left",padx=(0,8))
-            label=tk.Label(pair,text=caption,bg=card_bg,fg="#5F6B76",font=("Segoe UI",9))
+            accent=key=="TOTAL"; pair_bg="#F7EACB" if accent else card_bg
+            pair=tk.Frame(summary,bg=pair_bg,padx=10 if accent else 5,pady=3,
+                          highlightthickness=1 if accent else 0,highlightbackground=GOLD)
+            pair.pack(side="left",padx=(0,8))
+            label=tk.Label(pair,text=caption,bg=pair_bg,fg="#5F6B76",font=("Segoe UI",9))
             label.pack(side="left",padx=(0,5))
             if key=="VAT": self.sales_vat_caption=label
-            value=tk.Label(pair,text="0.00",bg=card_bg,fg=NAVY,anchor="e",font=("Segoe UI",13 if key=="TOTAL" else 10,"bold"))
+            value=tk.Label(pair,text="0.00",bg=pair_bg,fg=NAVY,anchor="e",font=("Segoe UI",15 if key=="TOTAL" else 11,"bold"))
             value.pack(side="left"); self.sales_total_labels[key]=value
         flow_toolbar(summary)
         tk.Label(discount,text="Discount %",bg=card_bg,fg="#5F6B76",font=("Segoe UI",8)).pack(side="left")

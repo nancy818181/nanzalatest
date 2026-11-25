@@ -730,7 +730,7 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
                 button._saber_keep=True  # 2.9.115: its colour shows the open page - the design pass leaves it alone
                 nav_buttons.append(button)
         self.after_idle(size_navigation)
-        notebook.bind("<<NotebookTabChanged>>",lambda _event:self.highlight_main_tab())
+        notebook.bind("<<NotebookTabChanged>>",lambda _event=None, owner=notebook: self.highlight_main_tab() if owner is self.__dict__.get("main_notebook") else None)
         self.highlight_main_tab()
         # 2.9.95: page title (SECTION > Screen) on the left, the currency filter on the right
         self.page_title=page_title_bar(filter_bar); self.page_title.pack(side="left",fill="x",expand=True)

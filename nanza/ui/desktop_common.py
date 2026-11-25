@@ -239,11 +239,7 @@ def _install_column_fit():
     def schedule(tree):
         if tree.__dict__.get("_fit_pending"): return
         tree.__dict__["_fit_pending"] = True
-        # Column widths can change the parent geometry, which emits another
-        # Configure event. Requeueing at idle can prevent update_idletasks()
-        # from ever draining (observed on X11 during lazy page construction).
-        # Coalesce resize work on the next frame so input/geometry can finish.
-        try: tree.after(16, lambda: fit(tree))
+        try: tree.after_idle(lambda: fit(tree))
         except tk.TclError: pass
 
     def fonts(tree):
@@ -297,9 +293,7 @@ def _install_column_fit():
             # than the table and it can scroll sideways, they keep their width and the horizontal scrollbar shows the rest
             keep = total > space + 8 and bool(str(tree.cget("xscrollcommand") or ""))
             for column, width in widths.items():
-                if (int(real_column(tree, column, "width")) != width
-                        or bool(real_column(tree, column, "stretch")) != (not keep)):
-                    real_column(tree, column, width=width, stretch=not keep)
+                real_column(tree, column, width=width, stretch=not keep)
         except (tk.TclError, ValueError, ZeroDivisionError):
             return
 
@@ -446,7 +440,7 @@ def flow_toolbar(frame, gap=4):
         frame.bind("<Destroy>",cancel_flow,add="+")
     widest = max((w.winfo_reqwidth() + l + r for w, _s, (l, r), _p in frame._flow_order if w.winfo_exists()), default=100)
     frame.configure(width=widest)
-    for widget, *_rest in order: widget.bind("<Configure>", lambda _e, f=frame: f._flow_schedule(), add="+")
+    for widget, *_rest in order: widget.bind("<Configure>", lambda _e=None, f=frame: f._flow_schedule(), add="+")
     schedule()
     return frame
 
