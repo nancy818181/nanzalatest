@@ -40,7 +40,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         for _ in range(100):
             try: ApiClient(cls.url).login("admin", cls.password); break
             except Exception: time.sleep(0.1)
-        api = ApiClient(cls.url); api.login("admin", cls.password); cls.company = api.companies()[0]
+        api = ApiClient(cls.url); api.login("admin", cls.password); cls.company = api.companies()[0]; api.close()
 
     @classmethod
     def tearDownClass(cls):
@@ -55,6 +55,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         self.addCleanup(gc.collect)
         app = desktop.SaberApp(); self.addCleanup(app.destroy); self.addCleanup(arabic_ui.switch, app, "en")
         app.server.set(self.url); app.password.set(self.password); app.language.set(language); app.login()
+        self.addCleanup(app.client.close)
         year = self.company["years"][0]["year"]
         app.client.select_company_year(self.company["id"], year); app.current_company = self.company; app.current_fiscal_year = int(year)
         app.geometry("1366x728+0+0"); app.update(); app.main_screen(); app.update()

@@ -239,7 +239,11 @@ def _install_column_fit():
     def schedule(tree):
         if tree.__dict__.get("_fit_pending"): return
         tree.__dict__["_fit_pending"] = True
-        try: tree.after_idle(lambda: fit(tree))
+        # Column widths can change the parent geometry, which emits another
+        # Configure event. Requeueing at idle can prevent update_idletasks()
+        # from ever draining (observed on X11 during lazy page construction).
+        # Coalesce resize work on the next frame so input/geometry can finish.
+        try: tree.after(16, lambda: fit(tree))
         except tk.TclError: pass
 
     def fonts(tree):
@@ -293,7 +297,9 @@ def _install_column_fit():
             # than the table and it can scroll sideways, they keep their width and the horizontal scrollbar shows the rest
             keep = total > space + 8 and bool(str(tree.cget("xscrollcommand") or ""))
             for column, width in widths.items():
-                real_column(tree, column, width=width, stretch=not keep)
+                if (int(real_column(tree, column, "width")) != width
+                        or bool(real_column(tree, column, "stretch")) != (not keep)):
+                    real_column(tree, column, width=width, stretch=not keep)
         except (tk.TclError, ValueError, ZeroDivisionError):
             return
 
