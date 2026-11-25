@@ -72,6 +72,9 @@ class AuditRegressionTest(unittest.TestCase):
                 line={'description':'Synthetic rounding','quantity':qty,'unit_price':price,'vat_rate':'0'}
                 oracle=invoice_calc.calculate([line],exact=True)['total_ht']
                 self.assertEqual(oracle,Decimal(expected))
+                from desktop_sales_invoice import SalesInvoiceMixin
+                screen_line=SalesInvoiceMixin().recalculate_sales_item(dict(line))
+                self.assertEqual(Decimal(str(screen_line['net'])),Decimal(expected))
                 iid=self.db.create_manual_invoice({'invoice_date':'01-01-2026','party_name':'Synthetic customer',
                     'kind':'sale','currency':'USD'},[line],1)
                 detail=self.db.invoice_detail(iid)

@@ -1,7 +1,7 @@
 """Sales invoice screen (split from desktop_invoices.py in 2.9.94, no change in behaviour)."""
 from __future__ import annotations
 from pathlib import Path
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from tkinter import simpledialog
 
 from desktop_common import (  # 2.9.102: the names this module uses (no more 'import *')
@@ -478,7 +478,9 @@ class SalesInvoiceMixin:
         """Line: Amount = Qty x Price, less the line discount %. VAT and the invoice discount are shared in update_sales_totals."""
         item["quantity"]=float(item.get("quantity") or 0); item["unit_price"]=float(item.get("unit_price") or 0)
         item["discount_percent"]=float(item.get("discount_percent") or 0); item["vat_rate"]=float(item.get("vat_rate") if item.get("vat_rate") not in (None,"") else vat_rate(self))
-        item["gross_amount"]=round(item["quantity"]*item["unit_price"],2); item["net"]=round(item["gross_amount"]*(1-item["discount_percent"]/100),2)
+        raw=Decimal(str(item["quantity"]))*Decimal(str(item["unit_price"]))
+        item["gross_amount"]=float(raw.quantize(Decimal('.01'),rounding=ROUND_HALF_UP))
+        item["net"]=float((raw*(1-Decimal(str(item["discount_percent"]))/100)).quantize(Decimal('.01'),rounding=ROUND_HALF_UP))
         item.setdefault("unit",""); item.setdefault("subtotal",item["net"]); item.setdefault("vat",0.0); item.setdefault("total",item["net"])
         return item
 
@@ -671,7 +673,7 @@ class SalesInvoiceMixin:
             if hasattr(self,"sales_total_labels"): self.sales_total_labels["TOTAL"].config(text=str(exc),fg="#8B1E1E")
             return
         for item,calculated in zip(lines,result["lines"]):
-            for key in ("deductible_subtotal","non_deductible_subtotal","vat","subtotal","total","gross_amount","discount_amount","discount_percent","vat_rate"): item[key]=calculated[key]
+            for key in ("deductible_subtotal","non_deductible_subtotal","vat","subtotal","total","gross_amount","discount_amount","discount_percent","vat_rate","net"): item[key]=calculated[key]
             iid=item.get("_iid")
             if iid and self.sales_sheet.exists(iid): self.sales_sheet.item(iid,values=self.sales_row_values(item))
         self.sales_calculation=result; currency=self.sales_currency.get()

@@ -113,6 +113,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
             app.add_sales_item({"description":f"Synthetic line {i}","quantity":3,"unit_price":"1.005","vat_rate":11},update_totals=False)
         app.update_sales_totals()
         self.assertEqual(app.sales_sheet.item(app.sales_items[0]["_iid"],"values")[4],"1.005")
+        self.assertEqual(app.sales_sheet.item(app.sales_items[0]["_iid"],"values")[-1],"3.02")
         for language in ("en","ar"):
             with self.subTest(language=language):
                 arabic_ui.switch(app,language)
