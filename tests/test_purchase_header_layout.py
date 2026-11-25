@@ -149,6 +149,23 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         rows=[app.rates_tree.item(i,"values") for i in app.rates_tree.get_children()]
         self.assertTrue(any(r[0]=="04-04-2024" and r[1:3]==("EUR","USD") and abs(float(r[3])-1.234567)<1e-9 for r in rows),rows)
 
+    def test_rule_updates_review_is_bilingual_read_only_and_reachable(self):
+        import arabic_ui
+        app=self.open("en")
+        before=app.client.payroll_settings_list()
+        for language in ("en", "ar"):
+            app.language.set(language);arabic_ui.switch(app,language)
+            window=app.open_rule_updates();app.update()
+            self.assertEqual(window.title(),"تحديث القواعد" if language=="ar" else "Update Rules")
+            captions=[str(b.cget("text")) for b in self.buttons(window)]
+            self.assertIn("مراجعة / تحديث الفترات" if language=="ar" else "Review / update periods",captions)
+            window.geometry("760x460");app.update()
+            close=next(b for b in self.buttons(window) if str(b.cget("text")) in ("Close","إغلاق"))
+            self.assertLessEqual(close.winfo_rooty()+close.winfo_height(),window.winfo_rooty()+window.winfo_height())
+            window.destroy();app.update()
+        self.assertEqual(app.client.payroll_settings_list(),before)
+        self.assertFalse([m for m in self.messages if m[0]=="showerror"],self.messages)
+
     def test_english_save_captions_across_main_pages(self):
         """English page creation must not leak the Arabic save caption."""
         app = self.open("en")

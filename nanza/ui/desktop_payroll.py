@@ -39,6 +39,7 @@ class PayrollMixin:
         self.action_button(primary_actions,"New Employee",lambda:self.employee_dialog()).pack(side="left",padx=4)
         self.action_button(primary_actions,"Edit Selected",self.edit_selected_employee).pack(side="left",padx=4)
         self.action_button(primary_actions,"Refresh",self.load_payroll).pack(side="left",padx=4)
+        self.action_button(primary_actions,"Update Rules",lambda:self.open_rule_updates("payroll")).pack(side="left",padx=4)
         tk.Button(secondary_actions,text="Official Forms (Excel)",command=self.official_excel_form,bg=GOLD,fg=NAVY,border=0,padx=12,pady=7,font=("Segoe UI",9,"bold")).pack(side="right",padx=4)
         columns_button=tk.Menubutton(secondary_actions,text="Columns ▾",bg="white",fg=NAVY,relief="solid",bd=1,padx=12,pady=6,font=("Segoe UI",9,"bold"),activebackground="#E8EEF4")
         columns_button.pack(side="right",padx=4)

@@ -3866,3 +3866,5 @@ AR.update({'Fill in': 'لغة التعبئة', 'Stock below zero': 'مخزون �
 
 # Pilot document captions; canonical storage values are unchanged.
 AR.update({"New Invoice": "فاتورة جديدة", "Item Description": "وصف الصنف", "Item Code (F2)": "رمز الصنف (F2)"})
+
+AR.update({"Update Rules": "تحديث القواعد"})

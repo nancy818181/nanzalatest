@@ -22,6 +22,16 @@ class AuditRegressionTest(unittest.TestCase):
         self.db=Database(self.path)
         self.addCleanup(self.db.release)
 
+    def test_owner_rounding_policy_rounds_third_digit_before_balancing(self):
+        for amount,expected in [('1.004','1.00'),('1.005','1.01'),('1.006','1.01'),('2.675','2.68')]:
+            saved=self.db.save_journal_voucher({'entry_number':'OWNER-ROUND-'+amount,'entry_date':'2026-03-15','currency':'USD'},
+                [{'account_code':'531','debit':amount},{'account_code':'1013','credit':expected}],1)
+            self.assertEqual(sum(Decimal(str(r['debit'])) for r in saved['lines']),Decimal(expected))
+            self.assertEqual(sum(Decimal(str(r['credit'])) for r in saved['lines']),Decimal(expected))
+        with self.assertRaisesRegex(ValueError,'unbalanced'):
+            self.db.save_journal_voucher({'entry_number':'OWNER-ROUND-REJECT','entry_date':'2026-03-15','currency':'USD'},
+                [{'account_code':'531','debit':'1.005'},{'account_code':'1013','credit':'1.000'}],1)
+
     def test_rule_update_failure_rolls_back_after_writing_and_reopening(self):
         self.db.apply_lebanese_payroll_rules(1)
         before=self.db.list_payroll_settings()

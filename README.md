@@ -4,6 +4,10 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 ## Version 2.9.140
 
+Owner confirmation (25 November 2026): the third fractional digit rounds the second (HALF_UP); journal lines must balance exactly after that rounding. Existing code already implements this. Three obsolete strict expected-failure cases were updated to the approved expectation; their historical function names remain unchanged. No rounding plug or stored-document rewrite was added.
+
+Update Rules is available from Payroll, VAT and Settings. Its review centre links to official MoF/NSSF sources and the existing effective-period/settings editors. It clearly states that no automatic legal feed is configured. It does not claim to fetch/apply the latest law, replace historical periods or recalculate posted payroll. Applying a new statutory package still requires a sourced, effective-dated review. Other accounting policies remain in Accounting Settings.
+
 Pilot closure (working branch, version unchanged): Purchase amount overrides are available under More; PDF/OCR tools scroll with the header, leaving the live totals and Save fixed. The header reserves room for at least four item rows. VAT Treatment is also available with the main header fields. Regression coverage exercises five-line entry, fifth-line quantity editing, save/reopen, and English/Arabic laptop layouts. Tk scaling tests do not change Windows display scaling.
 
 Native General Ledger also follows realized-FX line currencies and zero-native adjustments consistently with Trial Balance; the General Journal retains the original balanced voucher representation. Regression coverage checks customer/supplier gain/loss, currency filters, repeat allocation and reversal.

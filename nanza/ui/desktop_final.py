@@ -456,6 +456,7 @@ class FinalFeaturesMixin:
         ttk.Combobox(controls, textvariable=self.vat_currency, values=["All Currencies", "USD", "EUR", "LBP", "AED"], state="readonly", width=13).pack(side="left", padx=4)
         tk.Checkbutton(controls, text="Include Review documents", variable=self.vat_include_review, bg=LIGHT).pack(side="left", padx=6)
         tk.Button(controls, text="Generate", command=self.load_vat_return, bg=GOLD, fg=NAVY, border=0, padx=16, pady=6, font=("Segoe UI", 9, "bold")).pack(side="left", padx=4)
+        self.action_button(controls,"Update Rules",lambda:self.open_rule_updates("vat")).pack(side="left",padx=4)
         law = tk.Frame(page, bg=LIGHT); law.pack(fill="x", padx=10, pady=(0, 4))
         self.vat_ratio = tk.StringVar(); self.vat_refund = tk.StringVar()
         tk.Label(law, text=f"Credit B/F ({vat_currency(self)}, optional)", bg=LIGHT).pack(side="left"); tk.Entry(law, textvariable=self.vat_credit_override, width=13).pack(side="left", padx=(4, 12))
