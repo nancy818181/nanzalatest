@@ -50,6 +50,12 @@ jobs:
         # filesystems we add a lowercase symlink so both spellings resolve.
         run: ln -sf Assets assets
 
+      - name: Check purchase layout event-loop progress
+        timeout-minutes: 4
+        run: |
+          . .venv/bin/activate
+          xvfb-run -a -s "-screen 0 1920x1080x24" python -c 'import faulthandler, unittest; faulthandler.dump_traceback_later(120, exit=True); unittest.main(module=None, argv=["unittest", "tests.test_purchase_header_layout.PurchaseHeaderLayoutTest.test_five_line_purchase_has_four_complete_rows_at_laptop_scaling", "-v"])'
+
       - name: Run all tests
         run: |
           . .venv/bin/activate
