@@ -176,7 +176,8 @@ def ageing(db, options):
                      "headers": [who, "Account", f"Invoice balance due by date ({basis})", "Unallocated", f"Expected due ({basis})"],
                      "rows": outlook, "total_rows": [len(outlook) - 1]})
     if options.get('detail',True):
-        sections.append({'heading':'Unallocated receipts / payments (recorded allocations, before FIFO presentation)',
+        # Keep the existing expected-due summary last for report consumers.
+        sections.insert(len(sections)-1,{'heading':'Unallocated receipts / payments (recorded allocations, before FIFO presentation)',
             'headers':[who,'Account','Receipt / Payment','Date','Currency','Settlement','Allocated by date','Unallocated',f'Unallocated ({basis})'],
             'rows':unallocated_detail or [['No unallocated receipts / payments']+['']*8],'total_rows':[]})
     company = db.settings()
