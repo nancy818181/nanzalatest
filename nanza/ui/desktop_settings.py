@@ -176,6 +176,7 @@ class SettingsMixin:
     def build_settings(self):
         nested=ttk.Notebook(self.settings_tab); self.settings_notebook=nested; nested.pack(fill="both",expand=True,padx=10,pady=10)
         users=tk.Frame(nested,bg=LIGHT); backups=tk.Frame(nested,bg=LIGHT); rates=tk.Frame(nested,bg=LIGHT); branches=tk.Frame(nested,bg=LIGHT); general=tk.Frame(nested,bg=LIGHT)
+        self.settings_rates_page=rates
         is_admin=(self.current_user or {}).get("role")=="admin"
         if is_admin: nested.add(users,text="Users & Permissions")
         is_viewer=(self.current_user or {}).get("role")=="viewer"
@@ -223,6 +224,7 @@ class SettingsMixin:
         self.rate_to_box=ttk.Combobox(rate_controls,textvariable=self.rate_to,values=self.currency_codes,state="readonly",width=7); self.rate_to_box.pack(side="left",padx=4)
         tk.Entry(rate_controls,textvariable=self.rate_value,width=14).pack(side="left",padx=4)
         self.action_button(rate_controls,"Add Daily Rate",self.save_exchange_rate).pack(side="left",padx=5)
+        self.action_button(rate_controls,tr(self.language.get(),'refresh'),lambda:self._load_settings_rates(force=True)).pack(side='left',padx=5)
         self.action_button(rate_controls,"Restore EUR Rates 2024-Today",self.restore_euro_rates).pack(side="left",padx=5)
         self.action_button(rate_controls,"Restore ALL Currencies 2024-Today",self.restore_all_rates).pack(side="left",padx=5)
         flow_toolbars(rate_controls)
@@ -238,6 +240,7 @@ class SettingsMixin:
         flow_toolbars(currency_controls)
         self.rates_tree=self.table(rates,[("date","Date",110),("from","From",80),("to","To",80),("rate","Daily Average",150),("samples","Entries",75),("created","Saved",180)])
         self.rates_tree.bind("<Double-1>",lambda _event:self.edit_selected_exchange_rate())
+        nested.bind('<<NotebookTabChanged>>',lambda _e:self._load_settings_rates(),add='+')
         branch_controls=tk.Frame(branches,bg=LIGHT); branch_controls.pack(fill="x",padx=10,pady=10)
         self.new_branch_name=tk.StringVar(); tk.Label(branch_controls,text="New Branch Name",bg=LIGHT).pack(side="left"); tk.Entry(branch_controls,
                 textvariable=self.new_branch_name,width=32).pack(side="left",padx=6)
@@ -295,7 +298,8 @@ class SettingsMixin:
     def load_settings_pages(self):
         if not hasattr(self,"rates_tree"): return
         try:
-            settings=self.client.settings(); rates=self.client.exchange_rates()
+            # Navigation reads saved rates; an online refresh remains an explicit action.
+            settings=self.client.settings()
             self.refresh_books_lock()
             self.base_currency.set(settings.get("base_currency","USD")); self.second_currency.set(settings.get("second_currency",
                     "LBP")); self.backup_hours.set(settings.get("backup_interval_hours","24"))
@@ -314,8 +318,7 @@ class SettingsMixin:
                     self.company_vat_second.set(settings.get("vat_second_currency") or "USD")
                 for box in (self.vat_currency_box,self.vat_second_box): box.configure(values=self.currency_codes)
         except Exception as exc: return messagebox.showerror("Settings",str(exc))
-        self.rates_tree.delete(*self.rates_tree.get_children())
-        for row in rates: self.rates_tree.insert("","end",values=(row["rate_date"],row["from_currency"],row["to_currency"],row["rate"],row.get("samples",0),row["created_at"][:19]))
+        self._load_settings_rates()
         try: branch_rows=self.client.branches()
         except Exception: branch_rows=[]
         self.branches_tree.delete(*self.branches_tree.get_children())
@@ -333,6 +336,18 @@ class SettingsMixin:
             for row in backups: self.backups_tree.insert("","end",iid=row["name"],values=(row["name"],row.get("kind","backup"),row.get("checked","not checked"),
                     f'{row["size"]/1024/1024:,.2f} MB',row["modified"][:19].replace("T"," ")))
         if hasattr(self,"backup_scope"): self.backup_scope.config(text=f'Backups of {getattr(self,"current_company",{}).get("name","")} - fiscal year {getattr(self,"current_fiscal_year","")}')
+
+    def _load_settings_rates(self, force=False):
+        if not hasattr(self,'rates_tree'): return
+        if not force and self.settings_notebook.select()!=str(self.settings_rates_page): return
+        key=(self.client.company_id,self.client.fiscal_year,getattr(self.client,'_cache_generation',None))
+        if not force and getattr(self,'_settings_rates_key',None)==key: return
+        try: rates=self.client.exchange_rates(cached=True)
+        except Exception as exc: return messagebox.showerror('Exchange Rates',str(exc))
+        self.rates_tree.delete(*self.rates_tree.get_children())
+        for row in rates:
+            self.rates_tree.insert('','end',values=(row['rate_date'],row['from_currency'],row['to_currency'],row['rate'],row.get('samples',0),row['created_at'][:19]))
+        self._settings_rates_key=key
 
     def save_branch(self):
         try: branch=self.client.save_branch(self.new_branch_name.get().strip())

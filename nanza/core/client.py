@@ -170,6 +170,14 @@ class ApiClient:
         self.token = result["token"]
         return result
 
+    def logout(self):
+        try:
+            return self.request("POST", "/api/logout", {})
+        finally:
+            self.token=None
+            self.company_id=None; self.fiscal_year=None
+            self.clear_cache(); self.close()
+
     def dashboard(self): return self.request("GET", "/api/dashboard")["items"]
     def companies(self): return self.request("GET","/api/companies")["items"]
     def create_company(self,item): return self.request("POST","/api/companies",item)["company"]

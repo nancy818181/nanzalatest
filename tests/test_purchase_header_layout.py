@@ -101,6 +101,41 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         import arabic_ui
         return arabic_ui.english(str(widget.cget("text")))
 
+    def test_sales_summary_stays_visible_while_header_and_items_scroll(self):
+        app = self.open("en")
+        import arabic_ui
+        app.tk.call("tk", "scaling", 2.0)
+        app.state("normal"); app.geometry("1366x728+0+0")
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index("sales_tab")])
+        app.sales_currency.set("USD"); app.sales_items=[]
+        app.sales_sheet.delete(*app.sales_sheet.get_children())
+        for i in range(12):
+            app.add_sales_item({"description":f"Synthetic line {i}","quantity":3,"unit_price":"1.005","vat_rate":11},update_totals=False)
+        app.update_sales_totals()
+        self.assertEqual(app.sales_sheet.item(app.sales_items[0]["_iid"],"values")[4],"1.005")
+        for language in ("en","ar"):
+            with self.subTest(language=language):
+                arabic_ui.switch(app,language)
+                for _ in range(4): app.update_idletasks(); app.update()
+                expected={"Total":"36.24","Discount":"0.00","Total HT":"36.24","VAT":"3.96","TOTAL":"40.20 USD"}
+                positions={}
+                for key,label in app.sales_total_labels.items():
+                    self.assertEqual(label.cget("text"),expected[key])
+                    self.assertTrue(label.winfo_ismapped())
+                    self.assertGreaterEqual(label.winfo_rootx(),app.winfo_rootx())
+                    self.assertLessEqual(label.winfo_rootx()+label.winfo_width(),app.winfo_rootx()+app.winfo_width())
+                    self.assertLessEqual(label.winfo_rooty()+label.winfo_height(),app.winfo_rooty()+app.winfo_height())
+                    positions[key]=label.winfo_rooty()
+                self.assertGreater(app.sales_sheet.winfo_height(),60)
+                self.assertTrue(app.sales_save_button.winfo_ismapped())
+                def scrolls(widget):
+                    for child in widget.winfo_children():
+                        if getattr(child,"_saber_scroll_page",False):child.yview_moveto(1)
+                        scrolls(child)
+                scrolls(app.sales_tab); app.sales_sheet.yview_moveto(1); app.update()
+                self.assertEqual(positions,{key:label.winfo_rooty() for key,label in app.sales_total_labels.items()})
+        self.assertFalse([m for m in self.messages if m[0]=="showerror"],self.messages)
+
     def buttons(self, widget):
         for child in widget.winfo_children():
             if isinstance(child, tk.Button): yield child

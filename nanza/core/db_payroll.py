@@ -206,6 +206,7 @@ class PayrollStore:
                 except (TypeError,ValueError): row[key]={}
         return rows
 
+    @atomic
     def save_payroll_settings(self,item,user_id):
         if not str(item.get("date_from") or "").strip(): raise ValueError("Settings Date From is required")
         date_from=iso_date(item.get("date_from"),"Date From")
@@ -260,18 +261,23 @@ class PayrollStore:
                     db.execute(f"UPDATE payroll_settings SET {key}=? WHERE date_from=?",(value,date_from))
         return self.payroll_settings_for(date_from)
 
+    @atomic
     def apply_lebanese_payroll_rules(self,user_id):
         """Replace the effective-dated payroll settings with the official Lebanese periods (2024 onward), keeping the posting accounts."""
         import lebanese_payroll
         current=self.payroll_settings_for(None)
         maps={k:current.get(k) for k in ("employee_account_map","manager_account_map") if current.get(k)}
         accounts={k:current.get(k) for k in ("salary_account","salary_payable_account","payroll_tax_account","nssf_payable_account") if current.get(k)}
-        with self.connect() as db: db.execute("DELETE FROM payroll_settings")
-        for period in lebanese_payroll.official_periods():
+        periods=lebanese_payroll.official_periods()
+        before=self.list_payroll_settings()
+        # The explicit reload replaces the published range, never older history.
+        # Its prior values remain recoverable in the existing audit log.
+        with self.connect() as db: db.execute("DELETE FROM payroll_settings WHERE date_from>=?",(min(p['date_from'] for p in periods),))
+        for period in periods:
             self.save_payroll_settings({**period,**accounts,**maps},user_id)
         with self.connect() as db:
             db.execute("INSERT INTO audit_log(user_id,action,entity,details,created_at) VALUES(?,?,?,?,?)",(user_id,"apply","payroll_rules",
-                    json.dumps({"periods":len(lebanese_payroll.PERIODS)}),utcnow()))
+                    json.dumps({"periods":len(periods),"previous_settings":before}),utcnow()))
         return self.list_payroll_settings()
 
     @staticmethod

@@ -805,6 +805,11 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 "expires_at": user["expires_at"], "permissions": parse_permissions(user["permissions"]) if user["role"]!="admin" else {m:True for m in PERMISSION_MODULES},
                 "licence": state, "read_only": bool(state["expired"]), "companies": user_companies(user)}
 
+    def logout(self, token):
+        if token:
+            with self.connect() as db:
+                db.execute("DELETE FROM sessions WHERE token=?", (session_token_hash(token),))
+
     def user_for_token(self, token):
         if not token: return None
         with self.connect() as db:

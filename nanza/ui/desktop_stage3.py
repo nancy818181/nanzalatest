@@ -594,6 +594,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
 
     # ================================================================ Payment & Receipt
     def build_transactions(self):
+        refresh = tk.Frame(self.transactions_tab, bg=LIGHT); refresh.pack(fill="x", padx=10, pady=(4, 0))
+        self.action_button(refresh, tr(self.language.get(), "refresh"), self.refresh_transactions).pack(side="right")
         nested = ttk.Notebook(self.transactions_tab); nested.pack(fill="both", expand=True, padx=8, pady=8)
         self.payment_forms = {}
         for kind, title in (("customer_receipt", "Add Customer Receipt"), ("supplier_payment", "Add Supplier Payment")):
@@ -691,7 +693,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         tk.Label(buttons, text="Double-click a line in the list to edit it.", bg=LIGHT, fg=MUTED).pack(side="left", padx=10)
         flow_toolbar(row3)
         form["tree"] = self.table(page, [("number", "Number", 125), ("date", "Date", 90), ("party", "Customer" if kind == "customer_receipt" else "Supplier", 210), ("currency", "Currency", 65),
-            ("amount", "Amount", 110), ("method", "Method", 100), ("cash", "Cash / Bank", 220), ("reference", "Reference", 110), ("description", "Description", 200), ("dims", "Dep. / Project", 110)])
+            ("amount", "Amount", 110), ("method", "Method", 100), ("cash", "Cash / Bank", 220), ("reference", "Reference", 110), ("description", "Description", 200), ("dims", "Dep. / Project", 110), ("status", "Status", 100)])
         form["find"] = form["tree"].search_var
         form["preview"] = tk.Label(box, text="", bg="#eef3f8", fg=NAVY, anchor="w", justify="left", font=("Consolas", 9))
         # The preview is created after the action row so More can be inserted before it.
@@ -886,9 +888,13 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
             if allocations: self.client.save_allocations(payment_id, allocations)
         except Exception as exc: return messagebox.showerror("Payment & Receipt", str(exc))
         if "not_deductible" in form: save_tax_flag(self.client, "payment", payment_id, form["not_deductible"])
-        number = form["vars"]["number"].get()
-        messagebox.showinfo("Payment & Receipt", f"{'Receipt' if form['kind'] == 'customer_receipt' else 'Payment'} {number} saved")
-        self.load_transactions(); self.new_payment(form); self.load_journal(); self.load_trial()
+        old_number = form["vars"]["number"].get()
+        self.load_transactions()
+        saved = form.get("rows", {}).get(str(payment_id), {})
+        number = saved.get("payment_number") or old_number
+        detail = f"\nReversed and replaced {old_number}" if form["id"] and number != old_number else ""
+        messagebox.showinfo("Payment & Receipt", f"{'Receipt' if form['kind'] == 'customer_receipt' else 'Payment'} {number} saved{detail}")
+        self.new_payment(form); self.load_journal(); self.load_trial()
 
     def edit_payment(self, form):
         selected = form["tree"].selection()
@@ -945,6 +951,10 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
             messagebox.showwarning("Payment & Receipt", "Enter a reason"); return None
         return reason.strip()
 
+    def refresh_transactions(self):
+        self.client.clear_cache()
+        self.load_transactions()
+
     def load_transactions(self):
         if hasattr(self, "payment_forms") and all(f["tree"].winfo_exists() for f in self.payment_forms.values()):
             try: payments = self.client.payments(); parties = self.client.parties()
@@ -968,7 +978,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
     def _payment_tree_values(self, r):
         return (r.get("payment_number") or f"#{r['id']}", _dd(r["payment_date"]), r["party_name"], r["currency"], f'{r["amount"]:,.2f}',
                 r.get("payment_method") or "", account_label(self, r["cash_account"]), r.get("reference") or "", r.get("description") or "",
-                        " / ".join(x for x in (r.get("department"), r.get("project")) if x))
+                        " / ".join(x for x in (r.get("department"), r.get("project")) if x), r.get("status", "Active"))
 
     def filter_payments(self, form):
         from desktop import row_matches_search

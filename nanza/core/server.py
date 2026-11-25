@@ -1055,6 +1055,10 @@ class ApiHandler(BaseHTTPRequestHandler):
         user = self._user()
         if not user:
             return self._json(401, {"error": "Unauthorized"})
+        if path == "/api/logout":
+            auth=self.headers.get("Authorization", "")
+            self.master_db.logout(auth[7:] if auth.startswith("Bearer ") else "")
+            return self._json(200,{"signed_out":True})
         if self._licence_ended(path): return  # 2.9.121: an ended licence: read only
         if admin_only("POST", path) and user["role"]!="admin": return self._json(403,{"error":"Administrator permission required"})  # 2.9.103
         if path == "/api/companies":

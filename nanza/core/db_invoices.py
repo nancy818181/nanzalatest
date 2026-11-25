@@ -7,6 +7,7 @@ from __future__ import annotations
 from database_common import atomic  # 2.9.121
 import logging
 import sqlite3
+from decimal import ROUND_HALF_UP
 
 from database_common import (  # 2.9.102: the names this module uses (no more 'import *')
     datetime, Decimal, DEFAULT_LEBANESE_ACCOUNTS, EXPENSE_NO_VAT_ACCOUNT_9, hashlib, iso_date, json, utcnow
@@ -317,14 +318,15 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
                 raise ValueError(f"Item {index}: invalid quantity, price, or VAT rate") from exc
             if quantity <= 0 or unit_price < 0 or vat_rate < 0:
                 raise ValueError(f"Item {index}: values cannot be negative and quantity must be above zero")
-            calculated_subtotal = (quantity * unit_price).quantize(Decimal("0.01"))
+            # Keep unit-price precision until multiplication; round money, not price.
+            calculated_subtotal = (quantity * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             supplied_deductible=line.get("deductible_subtotal") if line.get("deductible_subtotal") not in (None,"") else line.get("subtotal")
-            deductible=calculated_subtotal if supplied_deductible in (None,"") else Decimal(str(supplied_deductible)).quantize(Decimal("0.01"))
-            non_deductible=Decimal(str(line.get("non_deductible_subtotal") or 0)).quantize(Decimal("0.01")); subtotal=deductible+non_deductible
+            deductible=calculated_subtotal if supplied_deductible in (None,"") else Decimal(str(supplied_deductible)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            non_deductible=Decimal(str(line.get("non_deductible_subtotal") or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP); subtotal=deductible+non_deductible
             if min(deductible,non_deductible) < 0:
                 raise ValueError(f"Item {index}: total before VAT cannot be negative")
             supplied_vat = line.get("vat")
-            vat = (deductible * vat_rate / Decimal("100")).quantize(Decimal("0.01")) if supplied_vat in (None, "") else Decimal(str(supplied_vat)).quantize(Decimal("0.01"))
+            vat = (deductible * vat_rate / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if supplied_vat in (None, "") else Decimal(str(supplied_vat)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             if vat < 0:
                 raise ValueError(f"Item {index}: VAT cannot be negative")
             total = subtotal + vat
@@ -880,17 +882,23 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
     def invoice_detail(self, invoice_id):
         invoice=self.get_invoice(invoice_id)
         with self.connect() as db:
-            items=[dict(row) for row in db.execute("""SELECT ii.id,ii.description,ii.quantity,ii.unit_price,ii.subtotal,ii.deductible_subtotal,ii.non_deductible_subtotal,
+            items=[dict(row) for row in db.execute("""WITH returned AS (
+                SELECT ret.origin_item_id,
+                    DSUM(CAST(ret.quantity AS REAL)) quantity,
+                    DSUM(CAST(ret.deductible_subtotal AS REAL)) deductible_subtotal,
+                    DSUM(CAST(ret.non_deductible_subtotal AS REAL)) non_deductible_subtotal,
+                    DSUM(CAST(ret.vat AS REAL)) vat
+                FROM invoice_items ret JOIN invoices ri ON ri.id=ret.invoice_id
+                WHERE ri.linked_invoice_id=? AND ri.status NOT IN ('cancelled','deleted','void')
+                GROUP BY ret.origin_item_id)
+                SELECT ii.id,ii.description,ii.quantity,ii.unit_price,ii.subtotal,ii.deductible_subtotal,ii.non_deductible_subtotal,
                 ii.vat_rate,ii.vat,ii.total,ii.item_code,ii.unit,ii.discount_percent,ii.discount_amount,ii.gross_amount,
-                COALESCE((SELECT DSUM(CAST(ret.quantity AS REAL)) FROM invoice_items ret JOIN invoices ri ON ri.id=ret.invoice_id
-                    WHERE ri.linked_invoice_id=? AND ri.status NOT IN ('cancelled','deleted','void') AND ret.origin_item_id=ii.id),0) returned_quantity,
-                COALESCE((SELECT DSUM(CAST(ret.deductible_subtotal AS REAL)) FROM invoice_items ret JOIN invoices ri ON ri.id=ret.invoice_id
-                    WHERE ri.linked_invoice_id=? AND ri.status NOT IN ('cancelled','deleted','void') AND ret.origin_item_id=ii.id),0) returned_deductible_subtotal,
-                COALESCE((SELECT DSUM(CAST(ret.non_deductible_subtotal AS REAL)) FROM invoice_items ret JOIN invoices ri ON ri.id=ret.invoice_id
-                    WHERE ri.linked_invoice_id=? AND ri.status NOT IN ('cancelled','deleted','void') AND ret.origin_item_id=ii.id),0) returned_non_deductible_subtotal,
-                COALESCE((SELECT DSUM(CAST(ret.vat AS REAL)) FROM invoice_items ret JOIN invoices ri ON ri.id=ret.invoice_id
-                    WHERE ri.linked_invoice_id=? AND ri.status NOT IN ('cancelled','deleted','void') AND ret.origin_item_id=ii.id),0) returned_vat
-                FROM invoice_items ii WHERE ii.invoice_id=? ORDER BY ii.id""",(invoice_id,invoice_id,invoice_id,invoice_id,invoice_id))]
+                COALESCE(r.quantity,0) returned_quantity,
+                COALESCE(r.deductible_subtotal,0) returned_deductible_subtotal,
+                COALESCE(r.non_deductible_subtotal,0) returned_non_deductible_subtotal,
+                COALESCE(r.vat,0) returned_vat
+                FROM invoice_items ii LEFT JOIN returned r ON r.origin_item_id=ii.id
+                WHERE ii.invoice_id=? ORDER BY ii.id""",(invoice_id,invoice_id))]
             import commercial_documents
             source = commercial_documents.quotation_for_invoice(db, invoice_id)
         result = {"invoice": invoice, "items": items}

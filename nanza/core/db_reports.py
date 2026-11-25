@@ -460,11 +460,21 @@ class ReportsStore:
         where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
         with self.connect() as db:
             # 2.9.58: summed per account, currency and day by the database (one row per day instead of per line)
-            raw=[dict(r) for r in db.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_date,
-                DSUM_EXACT(j.debit) debit,DSUM_EXACT(j.credit) credit
+            raw=[dict(r) for r in db.execute(f"""SELECT a.code,a.name_en,
+                CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END currency,e.entry_date,
+                DSUM_EXACT(CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.debit END) debit,
+                DSUM_EXACT(CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.credit END) credit,
+                e.source_type fx_type,
+                DSUM_EXACT(CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount_usd ELSE '0' END) fx_usd_debit,
+                DSUM_EXACT(CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount_usd ELSE '0' END) fx_usd_credit,
+                DSUM_EXACT(CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount_lbp ELSE '0' END) fx_lbp_debit,
+                DSUM_EXACT(CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount_lbp ELSE '0' END) fx_lbp_credit
                 FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
                 LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
-                {where_clause} GROUP BY a.code,a.name_en,e.currency,e.entry_date ORDER BY e.currency,a.code""",parameters)]
+                {where_clause} GROUP BY a.code,a.name_en,
+                CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END,
+                e.entry_date,CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type ELSE '' END
+                ORDER BY e.currency,a.code""",parameters)]
         totals={}
         # 2.9.132 (performance): a day's ISO form and a (currency, day) rate are worked out once per report, not once per row;
         # the values are the same (same strptime rule, same _converted_amount factor, same Decimal products)
@@ -490,6 +500,9 @@ class ReportsStore:
             debit=Decimal(str(row["debit"] or 0)); credit=Decimal(str(row["credit"] or 0))
             usd_d=convert(debit,row["currency"],"USD",date); usd_c=convert(credit,row["currency"],"USD",date)
             lbp_d=convert(debit,row["currency"],"LBP",date); lbp_c=convert(credit,row["currency"],"LBP",date)
+            if row['fx_type'] in ('payment_fx','payment_fx_reversal'):
+                usd_d=Decimal(str(row['fx_usd_debit'] or 0)); usd_c=Decimal(str(row['fx_usd_credit'] or 0))
+                lbp_d=Decimal(str(row['fx_lbp_debit'] or 0)); lbp_c=Decimal(str(row['fx_lbp_credit'] or 0))
             if from_date and date<from_date:
                 item["opening"]+=debit-credit; item["usd_opening"]+=usd_d-usd_c; item["lbp_opening"]+=lbp_d-lbp_c  # already exact Decimals
                 continue
