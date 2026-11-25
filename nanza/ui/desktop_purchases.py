@@ -214,7 +214,17 @@ class PurchasesMixin:
         f["discount_percent"] = tk.StringVar(value="0"); f["discount_amount"] = tk.StringVar(value="0"); f["discount_mode"] = "percent"
         f["doc"] = tk.StringVar(value="Invoice")  # 2.9.54: Invoice / Return (goods back to the supplier) / Debit Note / Credit Note
         import desktop_design as design  # 2.9.134: a framed panel with a gold-marked title instead of the plain group box
-        box_outer, box = design.panel(page, pady=2); box_outer.pack(fill="x", padx=8, pady=(1, 1))
+        header_parent=page; header_view=None
+        if totals_parent is not None:
+            page._fit_invoice_content=True
+            header_view,header_parent=self.scrollable_page(page,fit_width=True)
+            header_view.pack(fill="x");header_view.grid_propagate(False)
+        box_outer, box = design.panel(header_parent, pady=2); box_outer.pack(fill="x", padx=8, pady=(1, 1))
+        if header_view is not None:
+            def fit_header(_event=None):
+                height=min(header_parent.winfo_reqheight()+6,max(120,int(page.winfo_height()*.45)))
+                if header_view.winfo_height()!=height:header_view.configure(height=height)
+            page.bind('<Configure>',fit_header,add='+');page.after_idle(fit_header)
         if totals_parent is None:
             PurchasesMixin._fit_panel_to_view(self, box_outer, 8)
         heading = tk.Frame(box, bg=LIGHT); heading.pack(fill="x", pady=(0, 1))
@@ -299,7 +309,7 @@ class PurchasesMixin:
         # Keep the invoice header focused on supplier, account and payment details.
         # The treatment/dimension controls are placed after the items table below,
         # where they remain part of this same invoice workflow and scroll together.
-        tax_options=tk.LabelFrame(page,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3)
+        tax_options=tk.LabelFrame(header_parent,text="VAT treatment and dimensions",bg=LIGHT,padx=6,pady=3)
         dimensions=tk.Frame(tax_options,bg=LIGHT); dimensions.pack(fill="x")
         self.dimension_selectors(dimensions,f["department"],f["project"])
         treatment=tk.Frame(tax_options,bg=LIGHT); treatment.pack(fill="x",pady=(2,0))
@@ -311,7 +321,7 @@ class PurchasesMixin:
         f["not_deductible"]=tk.BooleanVar(value=False); place_tick(tax_tick(treatment,f["not_deductible"],LIGHT),side="left",padx=(10,0))
         items = tk.Frame(page, bg=card_bg, padx=6, pady=2,
                          highlightthickness=1, highlightbackground="#DDE4EC")
-        items.pack(fill="both",expand=True,padx=8,pady=2,after=box_outer)
+        items.pack(fill="both",expand=True,padx=8,pady=2,after=header_view or box_outer)
         if totals_parent is not None: totals_box.pack(fill="x", padx=8, pady=(1, 3))
         else: totals_box.pack(fill="x", padx=8, pady=(2,4), after=items)
         wh = tk.Frame(items, bg=card_bg)
@@ -346,7 +356,9 @@ class PurchasesMixin:
         def toggle_purchase_more():
             more_state["shown"]=not more_state["shown"]
             if more_state["shown"]:
-                tax_options.pack(fill="x",padx=8,pady=(2,3),after=items)
+                tax_options.pack(fill="x",padx=8,pady=(2,3),after=box_outer if header_view is not None else items)
+                if header_view is not None:
+                    header_parent.master.after_idle(lambda:header_parent.master.yview_moveto(1))
                 more_button.config(text="Less ▴")
             else:
                 tax_options.pack_forget(); more_button.config(text="More ▾")
