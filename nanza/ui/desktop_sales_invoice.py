@@ -101,7 +101,7 @@ class SalesInvoiceMixin:
         nav=tk.Frame(invoice_details,bg=LIGHT); nav.pack(fill="x",pady=(0,1))
         self.sales_navigation=nav
         lookup_options=tk.Frame(extra_details,bg=LIGHT);lookup_options.pack(fill="x")
-        tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,4))
+        tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",8,"bold")).pack(side="left",padx=(0,4))
         self.sales_org = tk.StringVar(value="Yes")
         tk.Label(lookup_options, text="Org", bg=LIGHT).pack(side="left")
         ttk.Combobox(lookup_options, textvariable=self.sales_org, values=("Yes", "No"), state="readonly", width=4).pack(side="left")
@@ -131,14 +131,16 @@ class SalesInvoiceMixin:
         detail_fields=[]
         def put(row,column,label,widget,bold=False):
             if label:
-                caption=tk.Label(widget.master,text=label,bg=LIGHT,font=("Segoe UI",9,"bold") if bold else None)
+                caption=tk.Label(widget.master,text=label,bg=LIGHT,font=("Segoe UI",8,"bold") if bold else ("Segoe UI",8))
                 caption.grid(row=row,column=2*column,sticky="w",padx=(0 if column==0 else 28,8),pady=1)
                 if widget.master==form:detail_fields.append((caption,widget))
                 caption._nanza_field_key=label
+            if widget.master == form and isinstance(widget, (tk.Entry, ttk.Combobox)):
+                widget.configure(font=("Segoe UI",9))
             widget.grid(row=row,column=2*column+1,sticky="w",pady=1)
             return widget
-        doc_box=ttk.Combobox(form,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
-        put(0,0,"Document",doc_box); doc_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_doc_type_changed())
+        doc_box=ttk.Combobox(extras,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
+        put(3,0,"Document",doc_box); doc_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_doc_type_changed())
         put(0,1,"Invoice No.",tk.Entry(form,textvariable=self.sales_no,width=18,font=("Segoe UI",10,"bold"),state="readonly",readonlybackground="white"),True)
         self.sales_party_box=put(1,0,"Customer",ttk.Combobox(form,textvariable=self.sales_party,width=28))
         self.sales_party_box.bind("<KeyRelease>",self.search_sales_customers); self.sales_party_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_customer_chosen())
@@ -287,7 +289,7 @@ class SalesInvoiceMixin:
             # Keep the header scrollable and leave most of the viewport for lines.
             # A cap based on the fixed page avoids feedback between tree and header
             # heights when RTL toolbars or totals wrap during a language change.
-            height=min(header_outer.winfo_reqheight()+8,max(80,int(self.sales_tab.winfo_height()*.32)))
+            height=min(header_outer.winfo_reqheight()+8,max(80,int(self.sales_tab.winfo_height()*.40)))
             if abs(content_outer.winfo_height()-height)>2:content_outer.configure(height=height)
         fit_state={'pending':False}
         def schedule_fit(_event=None):
