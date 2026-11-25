@@ -4,6 +4,8 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 ## Version 2.9.140
 
+The pilot layout matrix needs a desktop large enough to host its requested 1366×768 client window. CI now explicitly uses a 1920×1080 desktop (Windows display resolution and Linux Xvfb), and verifies the Windows dimensions before testing. The original hosted 1024px desktop clamped requests to 1028×749; failures on that smaller viewport are retained as evidence, not accepted as a 1366×768 result. No row-count assertion was weakened.
+
 Owner confirmation (25 November 2026): the third fractional digit rounds the second (HALF_UP); journal lines must balance exactly after that rounding. Existing code already implements this. Three obsolete strict expected-failure cases were updated to the approved expectation; their historical function names remain unchanged. No rounding plug or stored-document rewrite was added.
 
 Update Rules is available from Payroll, VAT and Settings. Its review centre links to official MoF/NSSF sources and the existing effective-period/settings editors. It clearly states that no automatic legal feed is configured. It does not claim to fetch/apply the latest law, replace historical periods or recalculate posted payroll. Applying a new statutory package still requires a sourced, effective-dated review. Other accounting policies remain in Accounting Settings.

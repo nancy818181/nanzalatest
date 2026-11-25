@@ -53,7 +53,7 @@ jobs:
       - name: Run all tests
         run: |
           . .venv/bin/activate
-          xvfb-run -a python -m unittest discover -v -s tests -t . -p "test_*.py"
+          xvfb-run -a -s "-screen 0 1920x1080x24" python -m unittest discover -v -s tests -t . -p "test_*.py"
 
   # 2.9.88: the same tests on Windows (the computer the program runs on): start-up with a busy -shm file,
   # several users, speed and every screen.
@@ -80,4 +80,11 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           PYTHONUTF8: "1"
-        run: python -m unittest discover -v -s tests -t . -p "test_*.py"
+        run: |
+          # The default hosted desktop is 1024px wide and clamps a requested 1366px test window.
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Add-Type -AssemblyName System.Windows.Forms
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          Write-Host "Test display: $($bounds.Width)x$($bounds.Height)"
+          if ($bounds.Width -lt 1920 -or $bounds.Height -lt 1080) { throw "The laptop layout matrix requires a 1920x1080 test desktop." }
+          python -m unittest discover -v -s tests -t . -p "test_*.py"
