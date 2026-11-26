@@ -451,6 +451,18 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
             if "origin_item_id" not in item_cols: db.execute("ALTER TABLE invoice_items ADD COLUMN origin_item_id INTEGER")
             db.execute("""CREATE TABLE IF NOT EXISTS payment_allocations (id INTEGER PRIMARY KEY, payment_id INTEGER NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
                 invoice_id INTEGER NOT NULL, amount TEXT NOT NULL, created_at TEXT NOT NULL)""")
+            # Explicit new taxable advances only. Historical receipts are never inferred.
+            db.execute("""CREATE TABLE IF NOT EXISTS payment_vat_advances (
+                payment_id INTEGER PRIMARY KEY REFERENCES payments(id), taxable_base TEXT NOT NULL,
+                vat_amount TEXT NOT NULL, vat_rate TEXT NOT NULL, vat_account TEXT NOT NULL,
+                recognition_entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
+                approved_by INTEGER NOT NULL, created_at TEXT NOT NULL)""")
+            db.execute("""CREATE TABLE IF NOT EXISTS payment_vat_advance_applications (
+                id INTEGER PRIMARY KEY, advance_payment_id INTEGER NOT NULL REFERENCES payment_vat_advances(payment_id),
+                invoice_id INTEGER NOT NULL REFERENCES invoices(id), gross_applied TEXT NOT NULL,
+                base_applied TEXT NOT NULL, vat_applied TEXT NOT NULL, application_date TEXT NOT NULL,
+                settlement_entry_id INTEGER NOT NULL REFERENCES journal_entries(id),
+                reversal_entry_id INTEGER REFERENCES journal_entries(id), created_by INTEGER NOT NULL)""")
             # new default posting accounts for payroll (only where the old defaults were never changed)
             for row in db.execute("SELECT id,employee_account_map,manager_account_map FROM payroll_settings").fetchall():
                 for column,new_map in (("employee_account_map",chart_extra.PAYROLL_MAP),("manager_account_map",chart_extra.MANAGER_PAYROLL_MAP)):

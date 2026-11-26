@@ -54,9 +54,12 @@ def make_plan(output: Path, seed=26112026, sales=80000, purchases=25000):
                     lines = []
                     for n in range(2 + (first + offset) % 3):
                         lines.append({'description': f'Volume item {n+1}', 'quantity': str(rng.randint(1, 5)),
-                                      'unit_price': str(Decimal(rng.randint(100, 10000)) / 100),
+                                      'unit_price': str(Decimal(rng.randint(100, 10000)) / 100 * (89500 if currency == 'LBP' else 1)),
                                       'discount_percent': '5' if n == 0 else '0',
                                       'vat_rate': '0' if n == 2 else '11'})
+                        if n == 2:
+                            # Match the normal screen's explicit exempt-line payload.
+                            lines[-1].update(deductible_subtotal='0', non_deductible_subtotal=str(line_expected(lines[-1])['base']), vat='0')
                     results = [line_expected(line) for line in lines]
                     expected = {key: sum((r[key] for r in results), Decimal(0)) for key in ('base', 'vat', 'total')}
                     emit({'type': 'sales_invoice' if kind == 'sale' else 'purchase_invoice', 'reference': number,

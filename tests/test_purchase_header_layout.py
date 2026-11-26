@@ -422,6 +422,32 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                 self.assertEqual(Decimal(str(saved['total']))-Decimal(str(saved['amount_paid'])),Decimal('111')-Decimal(expected))
         self.assertEqual(signed_account('531')-cash_before,Decimal('-131.00'))
 
+    def test_taxable_advance_receipt_ui_and_allocation_preserve_one_receipt(self):
+        from decimal import Decimal
+        import arabic_ui
+        app=self.open('en')
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index('transactions_tab')]);app.update()
+        for language in ('en','ar'):
+            arabic_ui.switch(app,language)
+            name='VAT advance UI '+language
+            party=app.client.save_party({'name':name,'kind':'customer','currency':'USD'})
+            app.load_transactions();form=app.payment_forms['customer_receipt'];app.new_payment(form)
+            v=form['vars'];v['party'].set(next(k for k,p in form['party_map'].items() if p['id']==party['id']))
+            v['date'].set('20-03-2026');v['currency'].set('USD');v['amount'].set('111');v['cash_account'].set('531')
+            v['reference'].set('VAT-UI-'+language);form['taxable_advance'].set(True)
+            preview=app.payment_journal_preview(form)
+            self.assertEqual(sum(Decimal(str(d)) for _c,d,_cr in preview),Decimal('122'))
+            app.save_payment(form);app.update()
+            self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+            saved=next(p for p in app.client.payments() if p['reference']=='VAT-UI-'+language)
+            self.assertTrue(saved['taxable_advance'])
+            form['tree'].selection_set(str(saved['id']));app.edit_payment(form);app.update()
+            self.assertTrue(form['taxable_advance'].get())
+            # Saving unchanged must not reverse/recreate a receipt in a later quarter.
+            app.save_payment(form);app.update()
+            self.assertEqual(len([p for p in app.client.payments() if p['reference']=='VAT-UI-'+language]),1)
+            self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+
     def test_purchase_item_edit_and_reopen(self):
         from tkinter import ttk
         app = self.open()

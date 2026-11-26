@@ -319,7 +319,9 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             if quantity <= 0 or unit_price < 0 or vat_rate < 0:
                 raise ValueError(f"Item {index}: values cannot be negative and quantity must be above zero")
             # Keep unit-price precision until multiplication; round money, not price.
-            calculated_subtotal = (quantity * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            percent=Decimal(str(line.get('discount_percent') or 0))
+            if not percent.is_finite() or not 0<=percent<=100: raise ValueError(f'Item {index}: discount must be between 0 and 100%')
+            calculated_subtotal = (quantity * unit_price * (1-percent/100)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             supplied_deductible=line.get("deductible_subtotal") if line.get("deductible_subtotal") not in (None,"") else line.get("subtotal")
             deductible=calculated_subtotal if supplied_deductible in (None,"") else Decimal(str(supplied_deductible)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             non_deductible=Decimal(str(line.get("non_deductible_subtotal") or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP); subtotal=deductible+non_deductible
@@ -410,6 +412,11 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
 
     @staticmethod
     def _assert_no_active_linked_returns(db,invoice_id,action):
+        if db.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advance_applications'").fetchone():
+            applied=db.execute("""SELECT DSUM_EXACT(a.gross_applied) amount FROM payment_vat_advance_applications a
+                JOIN payments p ON p.id=a.advance_payment_id WHERE a.invoice_id=? AND p.voided_at IS NULL""",(int(invoice_id),)).fetchone()
+            if applied and Decimal(str(applied['amount'] or 0)):
+                raise ValueError(f'Cannot {action} this invoice while a taxable VAT advance is applied; clear that allocation first')
         linked=db.execute("""SELECT invoice_number FROM invoices WHERE linked_invoice_id=?
             AND doc_subtype='credit_note' AND status NOT IN ('cancelled','deleted','void') LIMIT 1""",(int(invoice_id),)).fetchone()
         if linked:

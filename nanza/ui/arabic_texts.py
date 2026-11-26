@@ -2,6 +2,7 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'Taxable customer advance (VAT included)': 'سلفة عميل خاضعة (المبلغ شامل الضريبة)',
     'The company or fiscal year changed. Reopen Commercial Documents.':
         'تغيّرت الشركة أو السنة المالية. أعد فتح المستندات التجارية.',
     'Search items (F2)': 'البحث عن الأصناف (F2)',
