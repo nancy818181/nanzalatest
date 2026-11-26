@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from decimal import Decimal, InvalidOperation
 
-from database_common import display_date, iso_date, utcnow
+from database_common import atomic, display_date, iso_date, utcnow
 
 OPENING_SOURCE = "Opening balances"
 CLEARING = "479"
@@ -213,6 +213,7 @@ def check(database, data, opening_date):
 
 
 # ---------------------------------------------------------------- import (all lines checked first)
+@atomic
 def apply(database, data, opening_date, user_id):
     result = check(database, data, opening_date)
     if result["problems"]:
