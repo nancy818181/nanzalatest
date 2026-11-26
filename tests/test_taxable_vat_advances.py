@@ -19,6 +19,14 @@ class TaxableAdvanceTest(unittest.TestCase):
         return self.db.add_payment({'kind':'customer_receipt','payment_date':'20-03-2026','party_id':self.party['id'],
             'currency':'USD','amount':'111','cash_account':'531','taxable_advance':taxable},1)
 
+    def test_advance_rounded_to_zero_is_rejected_without_partial_records(self):
+        with self.assertRaisesRegex(ValueError, 'after rounding'):
+            self.db.add_payment({'kind':'customer_receipt','payment_date':'20-03-2026',
+                'party_id':self.party['id'],'currency':'USD','amount':'0.001','taxable_advance':True},1)
+        with self.db.connect() as c:
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM payments').fetchone()[0],0)
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM payment_vat_advances').fetchone()[0],0)
+
     def invoice(self):
         return self.db.create_manual_invoice({'invoice_date':'10-04-2026','party_name':self.party['name'],
             'kind':'sale','currency':'USD'},[{'description':'Final service','quantity':'1','unit_price':'300','vat_rate':'11'}],1)
@@ -101,7 +109,7 @@ class TaxableAdvanceTest(unittest.TestCase):
 
     def test_draft_is_excluded_and_failed_vat_lock_application_is_atomic(self):
         pid=self.db.add_payment({'kind':'customer_receipt','payment_date':'20-03-2026','party_id':self.party['id'],
-            'currency':'USD','amount':'111','taxable_advance':True},1,defer_posting=True)
+            'currency':'USD','amount':'111','taxable_advance':True,'allocations':[]},1,defer_posting=True)
         self.assertEqual(self.output(1),D(0))
         self.db.delete_payment(pid,1)
         payment=self.receipt();invoice=self.invoice()
@@ -120,3 +128,36 @@ class TaxableAdvanceTest(unittest.TestCase):
         with self.db.connect() as c:
             self.assertEqual(c.execute('SELECT COUNT(*) FROM payments').fetchone()[0],1)
             self.assertIsNone(c.execute('SELECT voided_at FROM payments WHERE id=?',(payment,)).fetchone()[0])
+
+    def test_party_vat_configuration_is_preserved(self):
+        import vat_ledgers
+        vat_ledgers.save_settings(self.db,{'enabled':True})
+        payment=self.receipt();invoice=self.invoice()
+        self.db.save_allocations(payment,[{'invoice_id':invoice,'amount':'111'}],1)
+        with self.db.connect() as c:
+            own=c.execute('SELECT vat_account FROM payment_vat_advances WHERE payment_id=?',(payment,)).fetchone()[0]
+            self.assertEqual(own,'44270'+self.party['account_number'][5:])
+            self.assertEqual(own,c.execute('SELECT vat_account FROM invoices WHERE id=?',(invoice,)).fetchone()[0])
+        self.assertEqual(self.output(1),D(11));self.assertEqual(self.output(2),D(22))
+
+    def test_approval_cannot_bypass_a_saved_vat_quarter(self):
+        import approvals
+        pid=self.db.add_payment({'kind':'customer_receipt','payment_date':'20-03-2026','party_id':self.party['id'],
+            'currency':'USD','amount':'111','taxable_advance':True,'allocations':[]},1,defer_posting=True)
+        with self.db.connect() as c:entry=c.execute("SELECT id FROM journal_entries WHERE source_type='payment' AND source_id=?",(pid,)).fetchone()[0]
+        approvals.hold(self.db,entry,1)
+        vat_return.save_return(self.db,2026,1,1)
+        with self.assertRaises(ValueError):approvals.approve_entries(self.db,[entry],{'id':1},require_other=False)
+        self.db.release()
+        with self.db.connect() as c:
+            self.assertEqual(c.execute('SELECT COUNT(*) FROM held_journal_lines WHERE entry_id=?',(entry,)).fetchone()[0],4)
+            self.assertEqual(c.execute('SELECT posting_status FROM journal_entries WHERE id=?',(entry,)).fetchone()[0],'draft')
+        vat_return.reopen_return(self.db,2026,1,1)
+        self.assertEqual(len(approvals.approve_entries(self.db,[entry],{'id':1},require_other=False)['approved']),1)
+        self.assertEqual(self.output(1),D(11))
+
+    def test_refunded_advance_credit_is_not_lost_in_next_year_preview(self):
+        self.db.save_exchange_rate({'date_from':'01-01-2026','from_currency':'USD','to_currency':'LBP','rate':'89500'},1)
+        pid=self.receipt();self.db.delete_payment(pid,1,'Synthetic advance refunded',role='admin')
+        result=vat_return.build_vat_return(self.db,2027,1,previous_year_db=self.db)
+        self.assertEqual(D(str(result['credit_brought_forward_lbp'])),D('984500'))

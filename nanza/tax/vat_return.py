@@ -524,6 +524,12 @@ def _earliest_vat_document(db, memo=None):
                     try: day = iso_date(item["d"])
                     except ValueError: unreadable = True; continue
                     if earliest is None or day < earliest: earliest = day
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advances'").fetchone():
+            for item in connection.execute("""SELECT e.entry_date d FROM payment_vat_advances a JOIN journal_entries e
+                    ON (e.id=a.recognition_entry_id OR e.reversal_of=a.recognition_entry_id) WHERE e.posting_status='posted'"""):
+                try: day=iso_date(item['d'])
+                except ValueError: unreadable=True;continue
+                if earliest is None or day<earliest: earliest=day
     result = (earliest, unreadable)
     if memo is not None: memo[key] = result
     return result

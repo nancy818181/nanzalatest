@@ -597,6 +597,11 @@ class Database(InvoicesStore, JournalStore, DocumentsStore, PaymentsStore, Rates
                 "CREATE INDEX IF NOT EXISTS idx_invoices_party ON invoices(party_id)",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_party_status_date ON invoices(party_id,status,invoice_date,id)",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_kind ON invoices(kind)",
+                # Owner approved these two identity indexes on 26 November 2026.
+                # Keep expressions in sync with InvoiceNumbersStore; no identity
+                # or uniqueness policy changes, and no document data is rewritten.
+                "CREATE INDEX IF NOT EXISTS idx_invoice_identity_numeric ON invoices(kind,RTRIM(UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(invoice_number,'-',''),' ',''),'/',''),'.',''),'_','')),'0123456789'),CAST(SUBSTR(UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(invoice_number,'-',''),' ',''),'/',''),'.',''),'_','')),LENGTH(RTRIM(UPPER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(invoice_number,'-',''),' ',''),'/',''),'.',''),'_','')),'0123456789'))+1) AS INTEGER)) WHERE status NOT IN ('cancelled','deleted','void')",
+                "CREATE INDEX IF NOT EXISTS idx_invoice_identity_other_chars ON invoices(kind) WHERE status NOT IN ('cancelled','deleted','void') AND invoice_number GLOB '*[^A-Za-z0-9 /._-]*'",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date)",
                 "CREATE INDEX IF NOT EXISTS idx_invoices_branch ON invoices(branch_id)",
                 "CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id)",

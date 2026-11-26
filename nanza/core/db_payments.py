@@ -97,6 +97,8 @@ class PaymentsStore:
         if item.get('taxable_advance') is True:
             from decimal import ROUND_HALF_UP
             amount=amount.quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            if amount <= 0:
+                raise ValueError("Payment amount must be above zero after rounding")
         currency=str(item.get("currency") or "USD").upper()
         defaults=self.default_accounts()  # 2.9.81: Settings > Accounting Settings
         cash_account=str(item.get("cash_account") or defaults["cash"]).strip()
@@ -175,6 +177,8 @@ class PaymentsStore:
                 vat_account=str(item.get('advance_vat_account') or defaults['output_vat']).strip()
                 if not vat_account.startswith('4427') or not db.execute('SELECT 1 FROM accounts WHERE code=?',(vat_account,)).fetchone():
                     raise ValueError('Choose an existing output VAT account under 4427')
+                import vat_ledgers
+                vat_account=vat_ledgers.party_vat_account(db,party_account,vat_account,'sale')
                 lines.extend([(party_account,tax,Decimal(0)),(vat_account,Decimal(0),tax)])
                 db.execute('INSERT INTO payment_vat_advances VALUES(?,?,?,?,?,?,?,?)',
                     (payment_id,str(base),str(tax),str(rate),vat_account,entry.lastrowid,user_id,utcnow()))
@@ -633,8 +637,12 @@ class PaymentsStore:
         """Append only the VAT change on application. Repeated saves are inert."""
         advance=db.execute('SELECT * FROM payment_vat_advances WHERE payment_id=?',(payment['id'],)).fetchone()
         if not advance: return
-        if payment['voided_at'] or not self._payment_is_posted(db,payment['id']):
-            raise ValueError('Allocate a taxable advance only after posting; reversed or void receipts cannot be applied')
+        if payment['voided_at']:
+            raise ValueError('Reversed or void taxable advances cannot be applied')
+        if not self._payment_is_posted(db,payment['id']):
+            if db.execute('SELECT 1 FROM payment_allocations WHERE payment_id=?',(payment['id'],)).fetchone():
+                raise ValueError('Save an unallocated advance draft first; apply it after approval')
+            return
         from decimal import ROUND_HALF_UP
         desired={int(r['invoice_id']):Decimal(str(r['amount'])) for r in db.execute(
             'SELECT invoice_id,DSUM_EXACT(amount) amount FROM payment_allocations WHERE payment_id=? GROUP BY invoice_id',(payment['id'],))}

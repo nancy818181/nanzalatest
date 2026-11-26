@@ -114,9 +114,12 @@ def approve_entries(db, entry_ids, user, require_other=True):
     with db.connect() as connection:
         columns = ",".join(_line_columns(connection))
         for entry_id in entry_ids or []:
-            row = connection.execute("SELECT id,entry_number,created_by,approval_status FROM journal_entries WHERE id=?", (int(entry_id),)).fetchone()
+            row = connection.execute("SELECT id,entry_number,entry_date,source_type,source_id,created_by,approval_status FROM journal_entries WHERE id=?", (int(entry_id),)).fetchone()
             if not row or row["approval_status"] != "review": skipped.append(f"{entry_id}: not waiting for approval"); continue
             if require_other and row["created_by"] == user["id"]: skipped.append(f"{row['entry_number']}: prepared by you - another user approves it"); continue
+            if row['source_type']=='payment' and connection.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advances'").fetchone():
+                if connection.execute('SELECT 1 FROM payment_vat_advances WHERE payment_id=?',(row['source_id'],)).fetchone():
+                    db._assert_period_open(row['entry_date']);db._assert_books_unlocked(row['entry_date']);db._assert_vat_open(row['entry_date'])
             back = ",".join(c for c in columns.split(",") if c != "id")  # new line numbers (the old ones may be used again meanwhile)
             connection.execute(f"INSERT INTO journal_lines({back}) SELECT {back} FROM held_journal_lines WHERE entry_id=? ORDER BY id", (int(entry_id),))
             connection.execute("DELETE FROM held_journal_lines WHERE entry_id=?", (int(entry_id),))

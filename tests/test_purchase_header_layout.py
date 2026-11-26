@@ -428,7 +428,9 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         app=self.open('en')
         app.select_main_tab(app.main_tab_pages[app._page_attributes.index('transactions_tab')]);app.update()
         for language in ('en','ar'):
-            arabic_ui.switch(app,language)
+            if app.language.get()!=language:
+                app.switch_language(language);app.update()
+                app.select_main_tab(app.main_tab_pages[app._page_attributes.index('transactions_tab')]);app.update()
             name='VAT advance UI '+language
             party=app.client.save_party({'name':name,'kind':'customer','currency':'USD'})
             app.load_transactions();form=app.payment_forms['customer_receipt'];app.new_payment(form)
@@ -441,11 +443,16 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
             self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
             saved=next(p for p in app.client.payments() if p['reference']=='VAT-UI-'+language)
             self.assertTrue(saved['taxable_advance'])
+            invoice=app.client.create_manual_invoice({'invoice_number':'VAT-UI-FINAL-'+language,'invoice_date':'10-04-2026',
+                'party_name':name,'kind':'sale','currency':'USD'},[{'description':'UI final service','quantity':'1','unit_price':'300','vat_rate':'11'}])
             form['tree'].selection_set(str(saved['id']));app.edit_payment(form);app.update()
             self.assertTrue(form['taxable_advance'].get())
-            # Saving unchanged must not reverse/recreate a receipt in a later quarter.
+            line=next(iid for iid,row in form['alloc_sheet'].rows.items() if row['invoice_id']==invoice['invoice_id'])
+            app.allocation_changed(form,line,'111')
+            # Allocation-only saving must not reverse/recreate the receipt.
             app.save_payment(form);app.update()
             self.assertEqual(len([p for p in app.client.payments() if p['reference']=='VAT-UI-'+language]),1)
+            self.assertEqual(Decimal(str(app.client.payment_allocations(saved['id'])[0]['amount'])),Decimal('111'))
             self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
 
     def test_purchase_item_edit_and_reopen(self):
