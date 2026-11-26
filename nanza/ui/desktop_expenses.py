@@ -13,6 +13,14 @@ from datetime import datetime
 from desktop_stage3_common import _dd, _num
 
 
+def _suggested_expense_field(form):
+    # The two portions may intentionally use different accounts. Change only
+    # the portion being entered, retaining the other accountant's selection.
+    without = _num(form['without_vat'].get()) or 0
+    with_vat = _num(form['with_vat'].get()) or 0
+    return 'no_vat_account' if without and not with_vat else 'account'
+
+
 class ExpensesMixin:
     # ---- expenses
     def build_expenses_page(self, page):
@@ -326,6 +334,11 @@ class ExpensesMixin:
     def suggest_expense_account(self):
         form = self.expense_form["vars"]
         language = self.language.get()
+        target = _suggested_expense_field(form)
+        label = 'No-VAT A/C' if target == 'no_vat_account' else 'Expense A/C (626-69)'
+        if language == 'ar':
+            import arabic_ui
+            label = arabic_ui.translate(label)
         from nanza.ai_accountant.classifier import suggest_account
         try:
             accounts = self.client.accounts()
@@ -340,28 +353,29 @@ class ExpensesMixin:
             )
             choice = simpledialog.askinteger(
                 tr(language, "account_suggestion"),
-                tr(language, "choose_account_candidate").format(choices=choices),
+                label + '\n' + tr(language, "choose_account_candidate").format(choices=choices),
                 parent=self, minvalue=1, maxvalue=len(candidates))
             if choice is not None:
-                form["account"].set(candidates[choice - 1]["account_code"])
+                form[target].set(candidates[choice - 1]["account_code"])
             return
         if suggestion.get("abstain"):
             return messagebox.showinfo(
                 tr(language, "account_suggestion"), tr(language, "account_suggestion_abstained"))
         if messagebox.askyesno(
             tr(language, "account_suggestion"),
-            tr(language, "account_suggestion_confirm").format(
+            label + '\n' + tr(language, "account_suggestion_confirm").format(
                 code=suggestion["account_code"], name=suggestion["account_name"])):
-            form["account"].set(suggestion["account_code"])
+            form[target].set(suggestion["account_code"])
 
     def ai_suggest_expense_account(self):
         from ai_service import suggest_account
         form=self.expense_form["vars"]
+        target = _suggested_expense_field(form)
         description=form["description"].get().strip()
         accounts=list(getattr(self,"_expense_accounts",[]))
         def show(suggestion):
             if messagebox.askyesno("AI account suggestion",f"{suggestion['code']} - {suggestion['name']}\n{suggestion['reason']}\n\nUse this account?"):
-                form["account"].set(suggestion["code"])
+                form[target].set(suggestion["code"])
         self.run_ai_task(lambda key:suggest_account(description,accounts,key),show)
 
     def filter_found_expenses(self):

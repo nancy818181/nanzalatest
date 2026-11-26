@@ -319,9 +319,29 @@ class PaymentsStore:
     def non_deductible_expenses(self, year=None):
         """2.9.110: expenses marked not deductible for income tax (no official invoice ...), to add back to the taxable profit.
         2.9.113: with the expense lines (class 6) of the journal vouchers, purchases and payments ticked the same way."""
+        from db_reports import _report_number
         with self.connect() as db:
-            rows=[dict(row) for row in db.execute("""SELECT id,expense_number,expense_date,description,category,currency,CAST(subtotal AS REAL) subtotal,
-                CAST(vat AS REAL) vat,CAST(total AS REAL) total,expense_account,reference FROM expenses WHERE tax_deductible=0 ORDER BY expense_date,id""")]
+            raw=[dict(row) for row in db.execute("""SELECT id,expense_number,expense_date,description,category,currency,CAST(subtotal AS REAL) subtotal,
+                CAST(vat AS REAL) vat,CAST(total AS REAL) total,expense_account,reference,
+                with_vat_subtotal,without_vat_subtotal,expense_without_vat_account
+                FROM expenses WHERE tax_deductible=0 AND EXISTS(
+                    SELECT 1 FROM journal_entries e JOIN journal_lines l ON l.entry_id=e.id
+                    WHERE e.source_type='expense' AND e.source_id=expenses.id AND e.posting_status='posted')
+                ORDER BY expense_date,id""")]
+            rows=[]
+            for row in raw:
+                with_vat=Decimal(str(row.pop('with_vat_subtotal') or 0))
+                without=Decimal(str(row.pop('without_vat_subtotal') or 0))
+                without_account=row.pop('expense_without_vat_account')
+                # Preserve the before-VAT total while identifying the actual
+                # account of each portion; old unsplit rows keep their account.
+                if not with_vat and not without:
+                    rows.append(row)
+                else:
+                    parts={row['expense_account']:with_vat}
+                    parts[without_account]=parts.get(without_account,Decimal(0))+without
+                    for code,amount in parts.items():
+                        if amount: rows.append({**row,'expense_account':code,'subtotal':_report_number(amount)})
             for row in db.execute("""SELECT e.id,e.entry_number,e.entry_date,e.description,e.source_type,e.currency,a.code,
                     SUM(CAST(j.debit AS REAL)-CAST(j.credit AS REAL)) amount FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
                     JOIN accounts a ON a.id=j.account_id JOIN tax_flags t ON t.source_type=e.source_type
