@@ -394,6 +394,12 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
     def test_purchase_on_account_partial_and_full_payment_survive_reopen(self):
         from decimal import Decimal
         app=self.open('en')
+        def signed_account(code):
+            report=app.client.trial_balance()
+            rows=report.get('items', report) if isinstance(report, dict) else report
+            return sum((Decimal(str(r.get('debit') or 0))-Decimal(str(r.get('credit') or 0))
+                        for r in rows if r['code']==code and r['currency']=='USD'),Decimal(0))
+        cash_before=signed_account('531')
         for suffix, method, amount, expected in (
                 ('credit', 'On Account (Not Cash)', '0', '0'),
                 ('partial', 'Cash', '20.00', '20.00'),
@@ -414,6 +420,7 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                 self.assertEqual(Decimal(form['paid_amount'].get()),Decimal(expected))
                 if Decimal(expected):self.assertEqual(form['paid_account'].get().split(' - ')[0],'531')
                 self.assertEqual(Decimal(str(saved['total']))-Decimal(str(saved['amount_paid'])),Decimal('111')-Decimal(expected))
+        self.assertEqual(signed_account('531')-cash_before,Decimal('-131.00'))
 
     def test_purchase_item_edit_and_reopen(self):
         from tkinter import ttk
