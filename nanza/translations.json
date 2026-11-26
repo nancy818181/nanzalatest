@@ -2121,7 +2121,15 @@
     "Save template": "Save template",
     "Save these filters as a reusable template": "Save these filters as a reusable template",
     "Excel": "Excel",
-    "PDF": "PDF"
+    "PDF": "PDF",
+    "Amount (before VAT)": "Amount (before VAT)",
+    "To add back to the taxable profit": "To add back to the taxable profit",
+    "To deduct from the taxable profit": "To deduct from the taxable profit",
+    "No expense marked not deductible in this year": "No expense marked not deductible in this year",
+    "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation.": "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation.",
+    "Accounts used by company": "Accounts used by company",
+    "Journal lines": "Journal lines",
+    "References": "References"
   },
   "ar": {
     "Handwritten invoices (experimental, offline)": "فواتير خط اليد (تجريبي، دون إنترنت)",
@@ -4245,6 +4253,14 @@
     "Save template": "حفظ القالب",
     "Save these filters as a reusable template": "حفظ هذه الفلاتر كقالب لإعادة استخدامها",
     "Excel": "إكسل",
-    "PDF": "ملف PDF"
+    "PDF": "ملف PDF",
+    "Amount (before VAT)": "المبلغ (قبل الضريبة)",
+    "To add back to the taxable profit": "يضاف إلى الربح الخاضع للضريبة",
+    "To deduct from the taxable profit": "يحسم من الربح الخاضع للضريبة",
+    "No expense marked not deductible in this year": "لا توجد أعباء محددة كغير مقبولة ضريبياً في هذه السنة",
+    "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation.": "تبقى هذه الأعباء في الدفاتر وقائمة الدخل، وتضاف إلى الربح المحاسبي عند احتساب الربح الخاضع لضريبة الدخل.",
+    "Accounts used by company": "الحسابات المستخدمة من الشركة",
+    "Journal lines": "قيود دفتر اليومية",
+    "References": "المراجع"
   }
 }

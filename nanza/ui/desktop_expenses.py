@@ -268,8 +268,8 @@ class ExpensesMixin:
                   r["subtotal"], r.get("reference") or ""] for r in rows]
         totals = {}
         for r in rows: totals[r["currency"]] = totals.get(r["currency"], 0) + float(r["subtotal"] or 0)
-        for currency, amount in sorted(totals.items()): lines.append(["TOTAL | المجموع", "", "To add back to the taxable profit", "", "", currency, amount, ""])
-        sections = [{"heading": f"Expenses not deductible for income tax - {year} | أعباء غير مقبولة ضريبياً",
+        for currency, amount in sorted(totals.items()): lines.append(["TOTAL", "", "To add back to the taxable profit", "", "", currency, amount, ""])
+        sections = [{"heading": f"Expenses not deductible for income tax - {year}",
                      "headers": ["No.", "Date", "Description", "Category", "Account", "Currency", "Amount (before VAT)", "Reference"],
                      "rows": lines or [["No expense marked not deductible in this year", "", "", "", "", "", "", ""]],
                      "total_rows": list(range(len(rows), len(lines)))}]
@@ -279,8 +279,8 @@ class ExpensesMixin:
             rows2 = [[r["entry_number"], _dd(r["date"]), r["description"], r["reason"], r["account"], r["currency"], r["amount"], ""] for r in exempt]
             sums = {}
             for r in exempt: sums[r["currency"]] = sums.get(r["currency"], 0) + float(r["amount"] or 0)
-            for currency, amount in sorted(sums.items()): rows2.append(["TOTAL | المجموع", "", "To deduct from the taxable profit", "", "", currency, amount, ""])
-            sections.append({"heading": f"Income not subject to income tax - {year} | إيرادات غير خاضعة لضريبة الدخل",
+            for currency, amount in sorted(sums.items()): rows2.append(["TOTAL", "", "To deduct from the taxable profit", "", "", currency, amount, ""])
+            sections.append({"heading": f"Income not subject to income tax - {year}",
                              "headers": ["No.", "Date", "Description", "Legal reason", "Account", "Currency", "Amount", ""],
                              "rows": rows2, "total_rows": list(range(len(exempt), len(rows2)))})
         meta = [f"Fiscal year {year}", "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation."]

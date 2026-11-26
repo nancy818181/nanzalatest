@@ -983,8 +983,13 @@ def _build_sections_pdf(path, title, meta, sections, found_pages, contents_pages
             from reportlab.pdfbase.pdfmetrics import stringWidth
             while company and stringWidth(company,font,8)>doc.width:company=company[:-1]
             canvas.setFont(font,8);canvas.drawCentredString(page[0]/2,page[1]-6*mm,company)
-        canvas.setFont(regular,7)
-        canvas.drawString(8*mm, 6*mm, footer_title); canvas.setFont(regular, 7); canvas.drawRightString(page[0] - 8*mm, 6*mm, f"Page {document.page}")
+        # A continuation header may change the font; select the footer font at draw time.
+        footer_font = (arabic_fonts()[0] if has_arabic(footer_title) else regular) or regular
+        canvas.setFont(footer_font, 7)
+        canvas.drawString(8*mm, 6*mm, footer_title)
+        page_label = f"صفحة {document.page}" if report_rtl else f"Page {document.page}"
+        canvas.setFont((arabic_fonts()[0] if has_arabic(page_label) else regular) or regular, 7)
+        canvas.drawRightString(page[0] - 8*mm, 6*mm, shape_arabic(page_label))
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
 

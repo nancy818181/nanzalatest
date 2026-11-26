@@ -418,6 +418,9 @@ msgstr "Amount (Account Currency)"
 msgid "Amount (LBP)"
 msgstr "Amount (LBP)"
 
+msgid "Amount (before VAT)"
+msgstr "Amount (before VAT)"
+
 msgid "Amount LBP"
 msgstr "Amount LBP"
 
@@ -3559,6 +3562,9 @@ msgstr "No duplicate numbers"
 msgid "No entry without its document"
 msgstr "No entry without its document"
 
+msgid "No expense marked not deductible in this year"
+msgstr "No expense marked not deductible in this year"
+
 msgid "No file is attached to this document yet. Use Attach File."
 msgstr "No file is attached to this document yet. Use Attach File."
 
@@ -5743,6 +5749,9 @@ msgstr "There are no saved vouchers yet"
 msgid "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself."
 msgstr "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself."
 
+msgid "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation."
+msgstr "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation."
+
 msgid "This Assets row will create one fixed-asset register item after review. It will NOT create a supplier invoice, journal posting, stock movement, or PDF attachment. Process this row now?"
 msgstr "This Assets row will create one fixed-asset register item after review. It will NOT create a supplier invoice, journal posting, stock movement, or PDF attachment. Process this row now?"
 
@@ -5812,8 +5821,14 @@ msgstr "To Date:"
 msgid "To account"
 msgstr "To account"
 
+msgid "To add back to the taxable profit"
+msgstr "To add back to the taxable profit"
+
 msgid "To correct before importing:"
 msgstr "To correct before importing:"
+
+msgid "To deduct from the taxable profit"
+msgstr "To deduct from the taxable profit"
 
 msgid "To:"
 msgstr "To:"

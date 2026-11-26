@@ -418,6 +418,9 @@ msgstr "المبلغ (بعملة الحساب)"
 msgid "Amount (LBP)"
 msgstr "المبلغ (ل.ل.)"
 
+msgid "Amount (before VAT)"
+msgstr "المبلغ (قبل الضريبة)"
+
 msgid "Amount LBP"
 msgstr "المبلغ بالليرة"
 
@@ -3559,6 +3562,9 @@ msgstr "لا أرقام مكررة"
 msgid "No entry without its document"
 msgstr "لا قيد بدون مستنده"
 
+msgid "No expense marked not deductible in this year"
+msgstr "لا توجد أعباء محددة كغير مقبولة ضريبياً في هذه السنة"
+
 msgid "No file is attached to this document yet. Use Attach File."
 msgstr "لا ملف مرفق بهذا المستند بعد. استعمل إرفاق ملف."
 
@@ -5743,6 +5749,9 @@ msgstr "لا قيود محفوظة بعد"
 msgid "There is no earlier year with revenue in Nanza to measure the growth. Type the % yourself."
 msgstr "لا توجد سنة سابقة بإيرادات في نانزا لقياس النمو. اكتب النسبة بنفسك."
 
+msgid "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation."
+msgstr "تبقى هذه الأعباء في الدفاتر وقائمة الدخل، وتضاف إلى الربح المحاسبي عند احتساب الربح الخاضع لضريبة الدخل."
+
 msgid "This Assets row will create one fixed-asset register item after review. It will NOT create a supplier invoice, journal posting, stock movement, or PDF attachment. Process this row now?"
 msgstr "سينشئ سطر الأصول هذا أصلاً ثابتاً واحداً في السجل بعد المراجعة. ولن ينشئ فاتورة مورد أو قيداً محاسبياً أو حركة مخزون أو مرفق PDF. هل تريد معالجة السطر الآن؟"
 
@@ -5812,8 +5821,14 @@ msgstr "إلى تاريخ:"
 msgid "To account"
 msgstr "إلى حساب"
 
+msgid "To add back to the taxable profit"
+msgstr "يضاف إلى الربح الخاضع للضريبة"
+
 msgid "To correct before importing:"
 msgstr "للتصحيح قبل الاستيراد:"
+
+msgid "To deduct from the taxable profit"
+msgstr "يحسم من الربح الخاضع للضريبة"
 
 msgid "To:"
 msgstr "إلى:"
