@@ -82,6 +82,26 @@ class OnboardingTest(unittest.TestCase):
         with self.db.connect() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0], 0)
 
+    def test_failure_while_saving_opening_stock_rolls_back_the_whole_company_import(self):
+        from unittest.mock import patch
+        tables = ('parties', 'invoices', 'invoice_items', 'journal_entries', 'journal_lines',
+                  'inventory_items', 'stock_documents', 'stock_movements', 'audit_log')
+        def counts():
+            with self.db.connect() as connection:
+                return {table: connection.execute('SELECT COUNT(*) FROM '+table).fetchone()[0] for table in tables}
+        before = counts()
+        with patch('inventory.save_document', side_effect=RuntimeError('Synthetic failure after items were written')):
+            with self.assertRaisesRegex(RuntimeError, 'Synthetic failure'):
+                onboarding.apply(self.db, self.good(), '01-01-2026', self.user)
+        self.db.release()
+        self.assertEqual(counts(), before)
+        # A real retry must succeed once, retaining its stock/GL reconciliation.
+        onboarding.apply(self.db, self.good(), '01-01-2026', self.user)
+        import inventory
+        items = inventory.list_items(self.db)
+        self.assertEqual(Decimal(str(items[0]['quantity'])), Decimal('400'))
+        self.assertEqual(Decimal(str(items[0]['stock_value'])), Decimal('2000'))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,6 +7,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     datetime, Decimal, iso_date, json, logging, timedelta, urllib, utcnow
 )
 from database_common import _soft_iso  # noqa: F401
+from fractions import Fraction
 
 
 
@@ -231,7 +232,11 @@ class RatesStore:
         except ValueError: target_key=datetime.now().strftime("%Y%m%d")
         cache=self._rate_cache(); key=(source,target,target_key)
         if key not in cache: cache[key]=self._rate_factor(source,target,rate_date,target_key)
-        return amount*cache[key]
+        # Cache the exact ratio, not an already rounded reciprocal such as
+        # 1/89500. Multiply before the final Decimal division so exact half-cent
+        # results keep their tie and the caller's rounding policy can apply.
+        converted = Fraction(amount) * cache[key]
+        return Decimal(converted.numerator) / Decimal(converted.denominator)
 
     def _rate_cache(self):
         import time as _time
@@ -276,7 +281,7 @@ class RatesStore:
                              "(Settings > Exchange Rates)") from exc
 
     def _rate_factor(self, source, target, rate_date, target_key):
-        amount=Decimal("1")
+        amount=Fraction(1)
         import bisect
         table=self._rate_table()
         def latest(frm,to):  # same as: WHERE day<=target ORDER BY day DESC,id DESC LIMIT 1
@@ -289,17 +294,17 @@ class RatesStore:
             if row:
                 value=Decimal(str(row[2]))
                 if not value.is_finite() or value<=0: raise ValueError(f"Invalid exchange rate for {frm} to {to} on {rate_date}")
-                return value
+                return Fraction(value)
             row=latest(to,frm)
             if row:
                 value=Decimal(str(row[2]))
                 if not value.is_finite() or value<=0: raise ValueError(f"Invalid exchange rate for {to} to {frm} on {rate_date}")
-                return Decimal("1")/value
+                return Fraction(1)/Fraction(value)
             return None
         direct=find_rate(source,target)
         if direct is not None: return amount*direct
-        usd_rates={"USD":Decimal("1"),"LBP":Decimal("1")/Decimal("89500"),
-                   **{code: Decimal("1")/Decimal(value) for code,value in self.PEGGED_TO_USD.items()}}
+        usd_rates={"USD":Fraction(1),"LBP":Fraction(1,89500),
+                   **{code: Fraction(1)/Fraction(Decimal(value)) for code,value in self.PEGGED_TO_USD.items()}}
         if "EUR" in (source,target):
             eur=find_rate("EUR","USD")
             if eur is None:
@@ -310,12 +315,12 @@ class RatesStore:
         if source in usd_rates and target in usd_rates:
             to_usd=find_rate(source,"USD") or usd_rates[source]
             from_usd=find_rate("USD",target)
-            if from_usd is None: from_usd=Decimal("1")/usd_rates[target]
+            if from_usd is None: from_usd=Fraction(1)/usd_rates[target]
             return amount*to_usd*from_usd
         # any other currency goes through USD (for example LBP -> USD -> SAR for payroll paid in SAR)
-        first=find_rate(source,"USD") if source!="USD" else Decimal("1")
+        first=find_rate(source,"USD") if source!="USD" else Fraction(1)
         if first is None and source in usd_rates: first=usd_rates[source]
-        second=find_rate("USD",target) if target!="USD" else Decimal("1")
-        if second is None and target in usd_rates: second=Decimal("1")/usd_rates[target]
+        second=find_rate("USD",target) if target!="USD" else Fraction(1)
+        if second is None and target in usd_rates: second=Fraction(1)/usd_rates[target]
         if first is not None and second is not None: return amount*first*second
         raise ValueError(f"No exchange rate available for {source} to {target} on {rate_date}")

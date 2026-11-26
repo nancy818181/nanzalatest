@@ -620,6 +620,9 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         grid = tk.Frame(box, bg=LIGHT); grid.pack(fill="x")
         for column in (1, 4, 7): grid.grid_columnconfigure(column, weight=1)
         form["not_deductible"] = tk.BooleanVar(value=False)
+        form["taxable_advance"] = tk.BooleanVar(value=False)
+        if kind == 'customer_receipt':
+            tk.Checkbutton(box,text="Taxable customer advance (VAT included)",variable=form["taxable_advance"],command=lambda:self.update_payment_preview(form),bg=LIGHT).pack(anchor='w')
         def put(row, column, label, widget, bold=False, note=None, parent=grid):
             if label:
                 tk.Label(parent, text=label, bg=LIGHT, fg=NAVY if bold else "#33475B", font=("Segoe UI", 9, "bold") if bold else ("Segoe UI", 9)
@@ -833,6 +836,13 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         balance = round(sum(d for _c, d, _cr in lines) - sum(c for _c, _d, c in lines), 2)
         if balance > 0: lines.append((account_code(v["exchange_gain_account"].get()), 0.0, balance))
         elif balance < 0: lines.append((account_code(v["exchange_loss_account"].get()), -balance, 0.0))
+        if form.get('taxable_advance') and form['taxable_advance'].get():
+            from decimal import Decimal, ROUND_HALF_UP
+            from desktop_common import default_account_code, vat_rate
+            gross=Decimal(str(amount)).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            rate=Decimal(str(vat_rate(self)))
+            tax=gross-(gross/(1+rate/100)).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            lines.extend([(party_account,float(tax),0.0),(default_account_code(self,'output_vat'),0.0,float(tax))])
         return [(code, debit, credit) for code, debit, credit in lines if round(debit, 2) or round(credit, 2)]
 
     def update_payment_preview(self, form):
@@ -851,6 +861,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
 
     def new_payment(self, form):
         form["id"] = None; v = form["vars"]; form.pop("_chosen_party_id", None)
+        if 'taxable_advance' in form: form['taxable_advance'].set(False)
         if "not_deductible" in form: form["not_deductible"].set(False)
         for key in ("party", "amount", "reference", "description", "bank_commission", "exchange_difference"): v[key].set("")
         self.reset_payment_accounts(form)
@@ -866,6 +877,8 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         if not amount or amount <= 0: raise ValueError("Enter an amount above zero")
         datetime.strptime(v["date"].get().strip(), "%d-%m-%Y")
         return {"kind": form["kind"], "party_id": party["id"], "payment_date": v["date"].get().strip(), "currency": v["currency"].get(), "amount": amount,
+                "payment_number":v['number'].get().strip(),
+                "taxable_advance":bool(form.get('taxable_advance') and form['taxable_advance'].get()),
                 "cash_account": v["cash_account"].get().split(" - ", 1)[0].strip() or "531", "reference": v["reference"].get().strip(), "description": v["description"].get().strip(),
                 "payment_method": v["method"].get(), "department": self.dimension_code(form["department"].get()), "project": self.dimension_code(form["project"].get()),
                 "bank_commission": _num(v["bank_commission"].get(), 0.0) or 0.0, "exchange_difference": _num(v["exchange_difference"].get(), 0.0) or 0.0,
@@ -880,12 +893,12 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
             direction = "outgoing payment/refund" if incompatible["expected_kind"] == "supplier_payment" else "incoming receipt/refund"
             return messagebox.showwarning("Payment & Receipt", f"{incompatible['number']} requires an {direction}. A credit-note offset needs a separate journal adjustment.")
         allocations = [{"invoice_id": r["invoice_id"], "amount": r["allocate"]} for r in form["alloc_sheet"].ordered() if r["allocate"]]
+        payload['allocations']=allocations
         if sum(a["amount"] for a in allocations) > payload["amount"] + 0.005: return messagebox.showwarning("Payment & Receipt", "The allocation is more than the amount")
         if form["kind"] == "supplier_payment" and not form["id"] and not self.confirm_cash_enough(payload["cash_account"], payload["currency"], payload["payment_date"],
                 payload["amount"] + (payload.get("bank_commission") or 0), "Payment & Receipt"): return
         try:
             payment_id = self.client.update_payment(form["id"], payload) if form["id"] else self.client.add_payment(payload)["payment_id"]
-            if allocations: self.client.save_allocations(payment_id, allocations)
         except Exception as exc: return messagebox.showerror("Payment & Receipt", str(exc))
         if "not_deductible" in form: save_tax_flag(self.client, "payment", payment_id, form["not_deductible"])
         old_number = form["vars"]["number"].get()
@@ -902,6 +915,7 @@ class Stage3Mixin(PurchasesMixin, AssetRegisterMixin, ExpensesMixin):
         row = form.get("rows", {}).get(selected[0])
         if not row: return
         form["id"] = row["id"]; v = form["vars"]
+        if 'taxable_advance' in form: form['taxable_advance'].set(bool(row.get('taxable_advance')))
         if "not_deductible" in form: load_tax_flag(self.client, "payment", row["id"], form["not_deductible"])
         label = next((name for name, p in form.get("party_map", {}).items() if p["id"] == row["party_id"]), row["party_name"])
         for key, value in (("number", row.get("payment_number") or ""), ("date", _dd(row["payment_date"])), ("party", label), ("currency", row["currency"]), ("amount", f'{row["amount"]:g}'),

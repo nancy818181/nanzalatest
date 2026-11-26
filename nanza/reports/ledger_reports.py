@@ -98,7 +98,7 @@ def _load_lines(db, options):
     high = _key(options.get("account_to") or "", "9") if _digits(options.get("account_to")) else None
     currencies = [c.upper() for c in (options.get("currencies") or []) if c]
     bilan = _truthy(options.get("balance_sheet_only", False)); result = _truthy(options.get("profit_loss_only", False))
-    kept = []; rate_cache = {}
+    kept = []
     requested = {options.get("first_column", "account"), options.get("second_column", "LBP")}
     for row in rows:
         try: row["iso_date"] = iso_date(row["entry_date"])
@@ -137,11 +137,8 @@ def _load_lines(db, options):
             for target in ("LBP", "USD"):
                 if row["currency"] == target: row["signed"][target] = signed; continue
                 if signed == ZERO: row["signed"][target] = ZERO; continue
-                key = (row["currency"], target, row["iso_date"])
-                if key not in rate_cache:
-                    try: rate_cache[key] = db._converted_amount(Decimal("1"), row["currency"], target, row["iso_date"])
-                    except ValueError: rate_cache[key] = None
-                row["signed"][target] = signed * rate_cache[key] if rate_cache[key] is not None else None
+                try: row["signed"][target] = db._converted_amount(signed, row["currency"], target, row["iso_date"])
+                except ValueError: row["signed"][target] = None
         for target in (options.get("first_column"),options.get("second_column")):
             if target in (None,"account","LBP","USD","none") or target in row["signed"]: continue
             if row["account_currency"] == target:
@@ -149,10 +146,7 @@ def _load_lines(db, options):
             elif signed == ZERO:
                 row["signed"][target] = ZERO
             else:
-                key=(row["account_currency"],target,row["iso_date"])
-                if key not in rate_cache:
-                    rate_cache[key]=db._converted_amount(Decimal("1"),row["account_currency"],target,row["iso_date"])
-                row["signed"][target]=row["signed"]["account"]*rate_cache[key]
+                row["signed"][target]=db._converted_amount(row["signed"]["account"],row["account_currency"],target,row["iso_date"])
             if row.get("revalue_currency")==target and row.get("revalue_amount") not in (None,""):  # 2.9.78: DOE in these books
                 row["signed"][target]=row["signed"][target]+Decimal(str(row["revalue_amount"]))*(1 if signed>=0 else -1)
         for target in requested & {"LBP", "USD"}:

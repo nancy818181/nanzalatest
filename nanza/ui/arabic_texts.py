@@ -2,6 +2,7 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'Taxable customer advance (VAT included)': 'سلفة عميل خاضعة (المبلغ شامل الضريبة)',
     'The company or fiscal year changed. Reopen Commercial Documents.':
         'تغيّرت الشركة أو السنة المالية. أعد فتح المستندات التجارية.',
     'Search items (F2)': 'البحث عن الأصناف (F2)',
@@ -3868,3 +3869,19 @@ AR.update({'Fill in': 'لغة التعبئة', 'Stock below zero': 'مخزون �
 AR.update({"New Invoice": "فاتورة جديدة", "Item Description": "وصف الصنف", "Item Code (F2)": "رمز الصنف (F2)"})
 
 AR.update({"Update Rules": "تحديث القواعد"})
+
+AR.update({"Amount Paid (blank = full)": "المبلغ المدفوع (فارغ = كامل)", "Warehouse for all lines": "مستودع جميع السطور"})
+
+# Income-tax reconciliation report: preserve the year in translated headings.
+AR.update({
+    "Amount (before VAT)": "المبلغ (قبل الضريبة)",
+    "To add back to the taxable profit": "يضاف إلى الربح الخاضع للضريبة",
+    "To deduct from the taxable profit": "يحسم من الربح الخاضع للضريبة",
+    "No expense marked not deductible in this year": "لا توجد أعباء محددة كغير مقبولة ضريبياً في هذه السنة",
+    "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation.": "تبقى هذه الأعباء في الدفاتر وقائمة الدخل، وتضاف إلى الربح المحاسبي عند احتساب الربح الخاضع لضريبة الدخل.",
+})
+PATTERNS += (
+    (r"Fiscal year (\d{4})", "السنة المالية {1}"),
+    (r"Expenses not deductible for income tax - (\d{4})", "أعباء غير مقبولة ضريبياً - {1}"),
+    (r"Income not subject to income tax - (\d{4})", "إيرادات غير خاضعة لضريبة الدخل - {1}"),
+)

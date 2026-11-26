@@ -262,6 +262,8 @@ class PurchasesMixin:
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
         lookup_options = tk.Frame(header_parent, bg=LIGHT)
         self.action_button(heading, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=3)
+        for button in heading.winfo_children():
+            if isinstance(button, tk.Button): button._saber_compact = True
         f["org"] = tk.StringVar(value="Yes")
         tk.Label(lookup_options, text="Org", bg=LIGHT).pack(side="left")
         ttk.Combobox(lookup_options, textvariable=f["org"], values=("Yes", "No"), state="readonly", width=4).pack(side="left")
@@ -275,6 +277,7 @@ class PurchasesMixin:
         actions = tk.Frame(totals_parent or box, bg=LIGHT); actions.pack(side="top" if totals_parent is not None else "bottom", fill="x", padx=6)
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
         f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
+        f["paid_amount"]=tk.StringVar(value="")
         PurchasesMixin._purchase_header_grid(self, fields, [
             ("Supplier", lambda parent: ttk.Combobox(parent, textvariable=v["supplier"], width=12)),
             ("Supplier Invoice No.", lambda parent: tk.Entry(parent, textvariable=v["number"], width=10)),
@@ -307,6 +310,11 @@ class PurchasesMixin:
         totals_box = tk.Frame(totals_parent or page, bg=card_bg, padx=6, pady=2,
                               highlightthickness=1, highlightbackground="#DDE4EC")
         r2 = tk.Frame(header_parent, bg=card_bg)
+        payment_amount = tk.Frame(r2, bg=card_bg)
+        payment_amount.pack(side="left", padx=(0, 8))
+        tk.Label(payment_amount, text="Amount Paid (blank = full)", bg=card_bg, fg=MUTED).pack(side="left")
+        f["paid_amount_entry"] = tk.Entry(payment_amount, textvariable=f["paid_amount"], width=15)
+        f["paid_amount_entry"].pack(side="left", padx=3)
         # Amount overrides are advanced controls; keep the live summary fixed.
         for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11),
                                   ("VAT %", "rate", 5), ("VAT", "vat", 11)):
@@ -329,19 +337,20 @@ class PurchasesMixin:
         amount_entry.bind("<KeyRelease>", lambda _event: self.purchase_discount_changed("amount"))
         summary = tk.Frame(totals_box, bg=card_bg)
         summary.pack(fill="x", pady=(2, 0))
-        for key, label in (
+        for column, (key, label) in enumerate((
             ("gross_summary", "Total"), ("discount_value", "Discount"),
             ("ht_summary", "Total HT"), ("vat_summary", "VAT"), ("total", "TOTAL TTC"),
-        ):
+        )):
             accent = key == "total"
             pair_bg = "#F7EACB" if accent else card_bg
             pair = tk.Frame(summary, bg=pair_bg, padx=10 if accent else 5, pady=3,
                             highlightthickness=1 if accent else 0, highlightbackground=GOLD)
-            pair.pack(side="left", padx=(0, 8))
-            tk.Label(pair, text=label, bg=pair_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",9)).pack(side="left", padx=(0, 5))
+            summary.grid_columnconfigure(column, weight=1, uniform="purchase_totals")
+            pair.grid(row=0, column=column, sticky="nsew", padx=2)
+            tk.Label(pair, text=label, bg=pair_bg, fg=NAVY if key == "total" else MUTED,font=("Segoe UI",8)).pack(anchor="w")
             f[key] = tk.Label(pair, text="0.00", bg=pair_bg, fg=NAVY,
-                              font=("Segoe UI", 15 if key == "total" else 11, "bold"))
-            f[key].pack(side="left")
+                              font=("Segoe UI", 13 if key == "total" else 10, "bold"))
+            f[key].pack(anchor="w")
         f["discount_summary"] = tk.Label(totals_box, text="", bg=card_bg, fg=RED)
         f["discount_summary"].pack(side="bottom", anchor="w")
         f["discount_summary"].pack_forget()
@@ -373,7 +382,7 @@ class PurchasesMixin:
         warehouse = tk.Frame(wh, bg=card_bg)
         warehouse.pack(side="left", padx=(0, 4))
         f["warehouse"] = tk.StringVar()
-        tk.Label(warehouse, text="Warehouse", bg=card_bg).pack(side="left")
+        tk.Label(warehouse, text="Warehouse for all lines", bg=card_bg).pack(side="left")
         f["warehouse_box"] = ttk.Combobox(
             warehouse, textvariable=f["warehouse"], state="readonly", width=20
         )
@@ -725,7 +734,7 @@ class PurchasesMixin:
         f["use"].set("Mixed (partial deduction)"); f["reverse"].set(False)
         f["discount_mode"]="percent"; f["discount_percent"].set("0"); f["discount_amount"].set("0")
         if "doc" in f: f["doc"].set("Invoice")
-        if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set("")
+        if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set(""); f["paid_amount"].set("")
         f["pdf_label"].config(text="No PDF", fg=MUTED); f["selected_id"] = None
         f["items_sheet"].clear(); f["find"].set("")
         self.purchase_amounts_changed("none")
@@ -963,7 +972,11 @@ class PurchasesMixin:
         elif doc == "Debit Note": invoice["doc_subtype"] = "debit_note"
         paid_by = f["paid_by"].get() if "paid_by" in f else PAID_BY[0]
         if doc in ("Invoice", "Debit Note") and paid_by != PAID_BY[0]:
-            invoice.update(payment_method=paid_by, amount_paid="full",
+            raw_paid=f["paid_amount"].get().strip()
+            paid_amount="full" if raw_paid.lower() in ("", "full") else _cent(raw_paid)
+            if paid_amount != "full" and (not paid_amount.is_finite() or paid_amount < 0 or paid_amount > net_taxable + exempt + vat):
+                raise ValueError("Amount paid must be between zero and the invoice total")
+            invoice.update(payment_method=paid_by, amount_paid=str(paid_amount),
                            cash_account=f["paid_account"].get().split(" - ", 1)[0].strip())
         else: invoice.update(payment_method=PAID_BY[0], amount_paid="0")
         stock = [r for r in f["items_sheet"].ordered() if (r.get("item_code") or r.get("name")) and _num(r.get("quantity"))]
@@ -1200,6 +1213,7 @@ class PurchasesMixin:
         if "paid_by" in f:
             paid = float(row.get("amount_paid") or 0); method = row.get("payment_method") or ""
             f["paid_by"].set(method if paid and method in PAID_BY else PAID_BY[0]); f["paid_account"].set(row.get("payment_account") or "")
+            f["paid_amount"].set(str(row.get("amount_paid") or "0"))
         if "doc" in f: f["doc"].set("Return" if row.get("doc_subtype") == "credit_note" and row.get("is_return") else
                                     {"credit_note": "Credit Note", "debit_note": "Debit Note"}.get(row.get("doc_subtype") or "", "Invoice"))
         f["pdf_label"].config(text=f"Editing {row['invoice_number']} ({row.get('attachment_count') or 0} document(s) attached)", fg=NAVY); self.purchase_amounts_changed("none")

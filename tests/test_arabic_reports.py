@@ -14,6 +14,25 @@ INVOICE = {"invoice_number": "SAL-1", "invoice_date": "15-10-2026", "currency": 
 
 
 class ArabicReportsTest(unittest.TestCase):
+    def test_expense_report_captions_preserve_year_and_language(self):
+        self.assertEqual(arabic_ui.translate('Fiscal year 2026'), 'السنة المالية 2026')
+        self.assertEqual(arabic_ui.translate('Expenses not deductible for income tax - 2026'),
+                         'أعباء غير مقبولة ضريبياً - 2026')
+        self.assertEqual(arabic_ui.translate('Amount (before VAT)'), 'المبلغ (قبل الضريبة)')
+
+    def test_arabic_footer_keeps_its_embedded_font(self):
+        from unittest.mock import patch
+        from reportlab.pdfgen.canvas import Canvas
+        seen=[];draw=Canvas.drawString
+        def record(canvas,x,y,text,*args,**kwargs):
+            if report_export.has_arabic(text):seen.append(canvas._fontname)
+            return draw(canvas,x,y,text,*args,**kwargs)
+        arabic_ui.ON=True
+        with patch.object(Canvas,'drawString',record):
+            report_export.export_sections_pdf(self.folder/'footer.pdf','Non-deductible Expenses',[],SECTIONS)
+        self.assertTrue(seen)
+        self.assertTrue(all('Amiri' in font for font in seen),seen)
+
     def setUp(self):
         self.folder = Path(tempfile.mkdtemp()); arabic_ui.install()
         self.addCleanup(lambda: setattr(arabic_ui, "ON", False))
