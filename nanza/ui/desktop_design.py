@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 
 FONT = "Segoe UI"
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+from desktop_common import NAVY, GOLD, LIGHT
 CARD, BORDER, MUTED = "#FFFFFF", "#D5DEE8", "#5F6B76"
 # kind -> (background, text colour, edge colour)
 TONES = {

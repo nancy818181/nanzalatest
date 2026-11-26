@@ -10,7 +10,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-NAVY, GOLD, LIGHT, MUTED, RED = "#102A43", "#B78B45", "#F4F7FA", "#5f6b76", "#8B1E1E"
+NAVY, GOLD, LIGHT, MUTED, RED = "#0A1931", "#D4A017", "#F4F7FA", "#5f6b76", "#8B1E1E"
 FONT = "Segoe UI"
 
 

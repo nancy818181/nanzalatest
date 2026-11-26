@@ -2,6 +2,14 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.141 — Classic release candidate
+
+- Classic is the default desktop presentation: navy `#0A1931`, restrained gold `#D4A017`, compact titles and tabs, aligned document fields, expanding tables and fixed totals. Existing navigation preferences, shortcuts and bilingual company data are preserved.
+- Sales and Purchases include the verified pilot layout fixes. Purchase payment fields share a row; the warehouse selector remains a default for all invoice lines. English Save remains English after reset/reopen.
+- Dashboard HTTP calculations run with a frozen company/year client in the existing background-worker framework. Loading is explicit; stale company results cannot replace the current view, and export waits for the displayed figures.
+- Includes reviewed pilot fixes for atomic payroll/onboarding updates, explicit taxable customer advances, report inverse-rate precision, expense classification portions and Arabic report output. Two invoice-identity indexes and two VAT-advance tables were separately owner-approved. No new schema or accounting-policy decision is introduced in this release.
+- **Release gates remain open:** fractional EUR carrying/FX differences require the accountant's retained-policy decision; professional VAT-form mapping, actual Windows 100%/125% acceptance and a matching installer must be verified. A green CI run alone is not sole-ledger approval. See `docs/RELEASE_2.9.141.md` for actual scope and acceptance evidence.
+
 ## Version 2.9.140
 
 Working-branch verification (26 November): the two owner-approved invoice-identity indexes retain the existing Python number/subtype/supplier matching rule. New-company opening import now rolls back every account, invoice and stock write when any step fails; a synthetic interruption and successful retry cover this. Expense account suggestions target the no-VAT account when that is the only entered amount. The income-tax addback report identifies both accounts of a split expense without changing its before-VAT total and excludes unposted expenses. No rate, accounting policy, historical entry or version number is changed.
@@ -273,7 +281,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.140. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.141. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 

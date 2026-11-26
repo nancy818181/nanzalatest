@@ -261,6 +261,8 @@ class PurchasesMixin:
         self.action_button(heading, "Import Excel", self.import_purchases_excel).pack(side="left", padx=(6, 3))
         self.action_button(heading, "Excel Template", lambda: self.save_invoice_template("purchases")).pack(side="left", padx=3)
         lookup_options = tk.Frame(header_parent, bg=LIGHT)
+        f["status_label"] = tk.Label(heading, text="DRAFT", bg=LIGHT, fg=NAVY, font=("Segoe UI",9,"bold"))
+        f["status_label"].pack(side="right",padx=(8,0))
         self.action_button(heading, "Upload PDF", self.choose_purchase_pdf).pack(side="left", padx=3)
         for button in heading.winfo_children():
             if isinstance(button, tk.Button): button._saber_compact = True
@@ -736,6 +738,7 @@ class PurchasesMixin:
         if "doc" in f: f["doc"].set("Invoice")
         if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set(""); f["paid_amount"].set("")
         f["pdf_label"].config(text="No PDF", fg=MUTED); f["selected_id"] = None
+        if "status_label" in f: f["status_label"].config(text="DRAFT")
         f["items_sheet"].clear(); f["find"].set("")
         self.purchase_amounts_changed("none")
 
@@ -1182,6 +1185,8 @@ class PurchasesMixin:
             return messagebox.showwarning("Purchases","Deleted or cancelled purchases cannot be edited")
         f["org"].set(row["org"])
         f["id"] = row["id"]; f["pdf"] = None; f["vat_typed"] = True
+        if "status_label" in f:
+            f["status_label"].config(text={"posted":"POSTED","review":"DRAFT","void":"VOID","cancelled":"REVERSED"}.get(row.get("status"),str(row.get("status") or "").upper()))
         if "not_deductible" in f: load_tax_flag(self.client, "invoice", row["id"], f["not_deductible"])
         discount=_num(row.get("invoice_discount_amount")) or 0
         net_taxable=float(row.get("deductible_subtotal") or 0)

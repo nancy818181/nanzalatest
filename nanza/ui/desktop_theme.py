@@ -12,6 +12,7 @@ from tkinter import ttk
 from desktop_common import GOLD, LIGHT, NAVY
 
 FONT = "Segoe UI"
+INTERFACE_NAME = "Classic"  # default Windows presentation; existing navigation preferences remain supported
 HEADING = NAVY
 HEADING_ACTIVE = "#142b50"
 HEADING_TEXT = "#FFFFFF"
@@ -27,7 +28,7 @@ def apply_theme(root: tk.Misc) -> ttk.Style:
     style = ttk.Style(root)
     style.theme_use("clam")
     style.configure("TNotebook", background=LIGHT, borderwidth=0, tabmargins=(8, 8, 8, 0))
-    style.configure("TNotebook.Tab", padding=(12, 7), font=(FONT, 9, "bold"), background=TAB_IDLE, foreground=NAVY, borderwidth=0)
+    style.configure("TNotebook.Tab", padding=(10, 5), font=(FONT, 9, "bold"), background=TAB_IDLE, foreground=NAVY, borderwidth=0)
     style.map("TNotebook.Tab", background=[("selected", "white"), ("active", TAB_HOVER)], foreground=[("selected", NAVY)],
               lightcolor=[("selected", GOLD)], expand=[("selected", (0, 2, 0, 0))])
     style.configure("Treeview", rowheight=29, font=(FONT, 10), background="white", fieldbackground="white", foreground=NAVY,
@@ -342,10 +343,10 @@ def polish(widget, fold=False):
 
 def page_title_bar(parent):
     """The bar above every screen: SECTION › Screen on the left (the currency filter goes on the right)."""
-    bar = tk.Frame(parent, bg="white", highlightthickness=1, highlightbackground=BORDER, padx=12, pady=8)
+    bar = tk.Frame(parent, bg="white", highlightthickness=1, highlightbackground=BORDER, padx=10, pady=5)
     section = tk.Label(bar, text="", bg="white", fg=GOLD, font=(FONT, 8, "bold"))
     section.pack(side="left", padx=(2, 8))
-    title = tk.Label(bar, text="", bg="white", fg=NAVY, font=(FONT, 14, "bold"))
+    title = tk.Label(bar, text="", bg="white", fg=NAVY, font=(FONT, 12, "bold"))
     title.pack(side="left")
     bar._section, bar._title = section, title
     return bar

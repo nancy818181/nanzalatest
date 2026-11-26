@@ -12,8 +12,8 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
-MENU_BG, MENU_HOVER, MENU_TEXT, MENU_MUTED = "#0B1F33", "#1B3A57", "#FFFFFF", "#9FB3C8"
+from desktop_common import NAVY, GOLD, LIGHT
+MENU_BG, MENU_HOVER, MENU_TEXT, MENU_MUTED = NAVY, "#1B3A57", "#FFFFFF", "#9FB3C8"
 RED, AMBER, GREEN = "#8B1E1E", "#B7791F", "#2E7D5B"
 
 # page attribute -> group. Pages not listed (added later) go to "More".
@@ -177,25 +177,39 @@ QUICK_ACTIONS = (
 )
 
 
-def attention_items(app, metrics=None):
+def fetch_attention(client, year, include_backups=True):
+    """Fetch slow checks off Tk's thread using a frozen company/year client."""
+    result = {}
+    for name, call in (("alerts", lambda: client.document_alerts(30)),
+                       ("unbalanced", client.unbalanced_entries),
+                       ("health", lambda: client.books_check(year, quick=True)),
+                       ("backups", client.backups)):
+        if name == "backups" and not include_backups: continue
+        try: result[name] = call()
+        except (RuntimeError, OSError, ValueError, KeyError, AttributeError):
+            log.debug("Dashboard check unavailable: %s", name, exc_info=True)
+    return result
+
+
+def attention_items(app, metrics=None, snapshot=None):
     """What needs a look today: [(level, text, action_label, callback)]. level: red / amber / green."""
     items = []; client = app.client
     overdue = sum(int(r.get("overdue") or 0) for r in (metrics or []))
     if overdue:
         items.append(("red", f"{overdue} overdue invoice(s) not paid yet", "Open invoices", lambda: app.select_main_tab(app.invoices_tab)))
     try:
-        alerts = client.document_alerts(30)
+        alerts = snapshot["alerts"] if snapshot is not None else client.document_alerts(30)
         if alerts.get("items"):
             level = "red" if alerts.get("expired") else "amber"
             items.append((level, f"{alerts.get('expired', 0)} legal document(s) expired, {alerts.get('expiring', 0)} expiring in 30 days", "Show", app.show_document_alerts))
     except Exception: log.debug("Document alerts not available", exc_info=True)
     try:
-        unbalanced = client.unbalanced_entries()
+        unbalanced = snapshot["unbalanced"] if snapshot is not None else client.unbalanced_entries()
         if unbalanced:
             items.append(("red", f"{len(unbalanced)} journal entr{'y is' if len(unbalanced) == 1 else 'ies are'} not balanced", "Check", app.check_unbalanced_entries))
     except Exception: log.debug("Balance check not available", exc_info=True)
     try:  # 2.9.119: Books Health Check (the quick points) - documents without entries, duplicates, gaps...
-        health = client.books_check(getattr(app, "current_fiscal_year", None), quick=True)
+        health = snapshot["health"] if snapshot is not None else client.books_check(getattr(app, "current_fiscal_year", None), quick=True)
         problems = [r for r in health.get("results", []) if r["status"] != "OK" and r["check"] not in ("Every entry balanced", "No lines on heading accounts")]
         if problems:
             level = "red" if any(r["status"] == "ERROR" for r in problems) else "amber"
@@ -208,7 +222,7 @@ def attention_items(app, metrics=None):
     role = (getattr(app, "current_user", None) or {}).get("role")
     if role != "viewer":
         try:
-            backups = client.backups()
+            backups = snapshot["backups"] if snapshot is not None else client.backups()
             if not backups:
                 items.append(("amber", "No backup of this company / year yet", "Back up now", app.create_backup))
             else:
@@ -216,7 +230,9 @@ def attention_items(app, metrics=None):
                 text = f"Last backup {last.strftime('%d-%m-%Y %H:%M')}" + (f" ({days} days ago)" if days >= 1 else "")
                 items.append(("amber" if days >= 3 else "green", text, "Back up now", app.create_backup))
         except Exception: log.debug("Backups not available", exc_info=True)
-    if not any(level != "green" for level, *_rest in items):
+    if snapshot is not None and not {"alerts", "unbalanced", "health"} <= snapshot.keys():
+        items.append(("amber", "Some checks are unavailable. Refresh before relying on this overview.", None, None))
+    elif not any(level != "green" for level, *_rest in items):
         items.insert(0, ("green", "Nothing waiting: no overdue invoice, no document alert, every entry balanced", None, None))
     return items
 
@@ -247,11 +263,11 @@ def build_today_panel(app, parent):
     return box
 
 
-def fill_today_panel(app, metrics=None):
+def fill_today_panel(app, metrics=None, snapshot=None):
     holder = getattr(app, "today_list", None)
     if holder is None or not holder.winfo_exists(): return []
     for child in holder.winfo_children(): child.destroy()
-    items = attention_items(app, metrics)
+    items = attention_items(app, metrics, snapshot)
     colours = {"red": RED, "amber": AMBER, "green": GREEN}
     for level, text, label, callback in items:
         line = tk.Frame(holder, bg="white"); line.pack(fill="x", pady=3)

@@ -944,16 +944,16 @@ class WorkbenchMixin:
                            tr(language, "ai_accountant_hint"))
         ai_button.configure(bg=GOLD, fg=NAVY, activebackground="#e3c178", activeforeground=NAVY)
         button(
-            actions, "Ageing / أعمار الذمم", self.open_ageing_workbench, "الذمم المتأخرة والتفاصيل بنقرتين"
+            actions, tr(language,"Ageing"), self.open_ageing_workbench, tr(language,"Review outstanding balances and invoice details")
         )
         button(
             actions,
-            "Explain P&L / تفسير الربح",
+            tr(language,"Explain P&L"),
             self.open_profit_explanation,
-            "تفسير تغيّر الربح من الحسابات الفعلية",
+            tr(language,"Explain profit changes from posted accounts"),
         )
         button(
-            actions, "Copy WhatsApp Summary", self.open_whatsapp_summary, "معاينة ونسخ ملخص اليوم — Ctrl+W"
+            actions, tr(language,"Copy WhatsApp Summary"), self.open_whatsapp_summary, tr(language,"Preview and copy the daily summary — Ctrl+W")
         )
         self._wb_badge = tk.Label(
             actions, text="Overdue…", bg="#ffe1e5", fg="#a32032", padx=10, pady=7, cursor="hand2"
@@ -1008,7 +1008,7 @@ class WorkbenchMixin:
     def fill_workbench(self, result):
         totals = result["ageing"]["totals"]
         self._wb_badge.configure(
-            text="Overdue / متأخر: "
+            text=tr(self.language.get(),"Overdue")+": "
             + ("; ".join(f"{code} {Decimal(str(r['overdue'])):,.2f}" for code, r in totals.items()) or "0")
         )
         self._wb_forecast = result["forecast"]
@@ -1025,7 +1025,7 @@ class WorkbenchMixin:
         width = max(400, canvas.winfo_width())
         if not points:
             canvas.create_text(
-                12, 32, anchor="w", text="Insufficient cash history / لا توجد حركة نقدية كافية", fill=NAVY
+                12, 32, anchor="w", text=tr(self.language.get(),"Insufficient cash history"), fill=NAVY
             )
             return
         values = [float(p["balance"]) for p in points]

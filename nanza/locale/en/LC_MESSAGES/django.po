@@ -1207,6 +1207,9 @@ msgstr "Class 4/5 account"
 msgid "Class-2 asset account"
 msgstr "Class-2 asset account"
 
+msgid "Classic"
+msgstr "Classic"
+
 msgid "Clear"
 msgstr "Clear"
 
@@ -1297,6 +1300,9 @@ msgstr "Commission"
 msgid "Commission A/C"
 msgstr "Commission A/C"
 
+msgid "Common tasks, one click away"
+msgstr "Common tasks, one click away"
+
 msgid "Companies"
 msgstr "Companies"
 
@@ -1329,6 +1335,9 @@ msgstr "Company name"
 
 msgid "Company overview"
 msgstr "Company overview"
+
+msgid "Company performance"
+msgstr "Company performance"
 
 msgid "Company-wide actuals; trailing 3 complete months estimate the future."
 msgstr "Company-wide actuals; trailing 3 complete months estimate the future."
@@ -1653,6 +1662,9 @@ msgstr "DOE date rates:"
 
 msgid "DOE posting date"
 msgstr "DOE posting date"
+
+msgid "DRAFT"
+msgstr "DRAFT"
 
 msgid "Daily Average"
 msgstr "Daily Average"
@@ -2437,6 +2449,12 @@ msgstr "Expiry Date"
 msgid "Expiry date"
 msgstr "Expiry date"
 
+msgid "Explain P&L"
+msgstr "Explain P&L"
+
+msgid "Explain profit changes from posted accounts"
+msgstr "Explain profit changes from posted accounts"
+
 msgid "Export Excel"
 msgstr "Export Excel"
 
@@ -2457,6 +2475,9 @@ msgstr "Extra cost per unit (labour, energy...)"
 
 msgid "Extra indemnity (phone) / month"
 msgstr "Extra indemnity (phone) / month"
+
+msgid "FINANCIAL OVERVIEW"
+msgstr "FINANCIAL OVERVIEW"
 
 msgid "Family %"
 msgstr "Family %"
@@ -2851,6 +2872,9 @@ msgstr "Install / Repair Free Handwriting Reader"
 msgid "Installation ID"
 msgstr "Installation ID"
 
+msgid "Insufficient cash history"
+msgstr "Insufficient cash history"
+
 msgid "Insurance"
 msgstr "Insurance"
 
@@ -2995,6 +3019,9 @@ msgstr "Items - F2"
 msgid "Items subject to customs"
 msgstr "Items subject to customs"
 
+msgid "Items that may need your review"
+msgstr "Items that may need your review"
+
 msgid "Jan"
 msgstr "Jan"
 
@@ -3021,6 +3048,9 @@ msgstr "Jul"
 
 msgid "Jun"
 msgstr "Jun"
+
+msgid "KEY FIGURES"
+msgstr "KEY FIGURES"
 
 msgid "Keep"
 msgstr "Keep"
@@ -3153,6 +3183,9 @@ msgstr "Load balances after changing the date or the books"
 
 msgid "Load the stock on hand first"
 msgstr "Load the stock on hand first"
+
+msgid "Loading dashboard. You can continue entering documents."
+msgstr "Loading dashboard. You can continue entering documents."
 
 msgid "Local PDF assistance"
 msgstr "Local PDF assistance"
@@ -3676,6 +3709,9 @@ msgstr "Notes"
 msgid "Nothing to print: apply the filters or the Find first"
 msgstr "Nothing to print: apply the filters or the Find first"
 
+msgid "Nothing waiting: no overdue invoice, no document alert, every entry balanced"
+msgstr "Nothing waiting: no overdue invoice, no document alert, every entry balanced"
+
 msgid "Nothing was deleted"
 msgstr "Nothing was deleted"
 
@@ -3930,6 +3966,9 @@ msgstr "PDF/photo readings require human review; use Review original document, t
 
 msgid "PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves."
 msgstr "PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves."
+
+msgid "POSTED"
+msgstr "POSTED"
 
 msgid "PREVIEW ONLY"
 msgstr "PREVIEW ONLY"
@@ -4231,6 +4270,9 @@ msgstr "Preview again after changing a rate"
 msgid "Preview again after changing the date or the books"
 msgstr "Preview again after changing the date or the books"
 
+msgid "Preview and copy the daily summary — Ctrl+W"
+msgstr "Preview and copy the daily summary — Ctrl+W"
+
 msgid "Preview the vouchers first"
 msgstr "Preview the vouchers first"
 
@@ -4476,6 +4518,9 @@ msgstr "R3 Registration"
 
 msgid "RETURN NOTE"
 msgstr "RETURN NOTE"
+
+msgid "REVERSED"
+msgstr "REVERSED"
 
 msgid "REVIEW REQUIRED"
 msgstr "REVIEW REQUIRED"
@@ -4810,6 +4855,9 @@ msgstr "Review invoice lines"
 msgid "Review original document"
 msgstr "Review original document"
 
+msgid "Review outstanding balances and invoice details"
+msgstr "Review outstanding balances and invoice details"
+
 msgid "Review required"
 msgstr "Review required"
 
@@ -4911,6 +4959,9 @@ msgstr "Sales invoices numbered without gaps"
 
 msgid "Sales of goods (items from stock)"
 msgstr "Sales of goods (items from stock)"
+
+msgid "Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today."
+msgstr "Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today."
 
 msgid "Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)"
 msgstr "Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)"
@@ -5437,6 +5488,9 @@ msgstr "Size"
 msgid "Slow-moving days"
 msgstr "Slow-moving days"
 
+msgid "Some checks are unavailable. Refresh before relying on this overview."
+msgstr "Some checks are unavailable. Refresh before relying on this overview."
+
 msgid "Sort By:"
 msgstr "Sort By:"
 
@@ -5682,6 +5736,9 @@ msgstr "The audit firm, partner, licence, address, city and logo are saved ONCE 
 
 msgid "The books are consistent"
 msgstr "The books are consistent"
+
+msgid "The dashboard is still loading. Export after the figures appear."
+msgstr "The dashboard is still loading. Export after the figures appear."
 
 msgid "The date of birth must be DD-MM-YYYY"
 msgstr "The date of birth must be DD-MM-YYYY"
@@ -6165,6 +6222,9 @@ msgstr "VAT use"
 
 msgid "VAT used for"
 msgstr "VAT used for"
+
+msgid "VIEW SETTINGS"
+msgstr "VIEW SETTINGS"
 
 msgid "Valid Until"
 msgstr "Valid Until"

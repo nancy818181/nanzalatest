@@ -374,8 +374,10 @@ class ReportsMixin:
         controls=tk.Frame(self.reports_tab,bg=LIGHT); controls.pack(fill="x",padx=10,pady=(6,3))
         heading=tk.Frame(controls,bg=NAVY,padx=10,pady=4); heading.pack(fill="x")
         tk.Label(heading,text="Financial Reports",bg=NAVY,fg="white",font=("Segoe UI",12,"bold")).pack(side="left")
-        tk.Label(heading,text="Choose a period and account range, then open a report.",
-                 bg=NAVY,fg="#DCE4EF",font=("Segoe UI",9)).pack(side="left",padx=(10,0))
+        self.financial_scope_label=tk.Label(heading,text="Choose a period and account range, then open a report.",
+                 bg=NAVY,fg="#DCE4EF",font=("Segoe UI",9),anchor="w",justify="left",wraplength=600)
+        self.financial_scope_label.pack(side="left",fill="x",expand=True,padx=(10,0))
+        self.financial_scope_label.bind("<Configure>",lambda event:self.financial_scope_label.configure(wraplength=max(150,event.width)))
         filter_card=tk.Frame(controls,bg="white",highlightbackground="#D7DEE8",highlightthickness=1,padx=9,pady=6)
         filter_card.pack(fill="x",pady=(3,0))
         ranges_row=tk.Frame(filter_card,bg="white"); ranges_row.pack(fill="x")
@@ -792,6 +794,10 @@ class ReportsMixin:
             self.refresh_financial_filter_choices(ledger["items"]); filters=self.financial_filter_sets()
             self._financial_loading=False
             self.financial_snapshot={**requested,"account_from":self.report_account_from.get(),"account_to":self.report_account_to.get(),"filters":filters}
+            if self.__dict__.get("financial_scope_label") is not None:
+                from i18n import tr
+                language=self.language.get()
+                self.financial_scope_label.configure(text=tr(language,"analytic_report_period").format(start=dates[0],end=dates[1])+" | "+tr(language,"analytic_report_currency").format(currency=requested["currency"]))
             self.ledger_rows=[row for row in ledger["items"] if in_account_range(row["account_code"]) and self.financial_filter_ok(row,filters)]; self.balance_rows=[row \
                 for row in balance if in_account_range(row["code"])]; self.vat_rows=vat["items"]; self.cash_rows=cash; self.comparative_rows=comparative["items"]
             self.ctb_rows=[row for row in ctb.get("items",[]) if in_account_range(row["code"])]; self.ctb_info=ctb

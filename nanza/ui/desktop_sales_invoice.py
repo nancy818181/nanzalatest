@@ -197,7 +197,7 @@ class SalesInvoiceMixin:
         detail_fields.sort(key=lambda pair:order.index(pair[0]._nanza_field_key))
         _responsive_invoice_details(form,detail_fields,None)
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
-        self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
+        self.sales_mode_label=tk.Label(nav,text="DRAFT",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
         self.sales_mode_label.pack(side="right",padx=(6,2))
         flow_toolbar(nav)
         # 2.9.113: income not subject to income tax (already taxed / exempt by law) - the legal reason is required; Settings switches it on
@@ -526,7 +526,7 @@ class SalesInvoiceMixin:
         finally:
             self._resetting_sales_invoice = False
         self.sales_category_changed()
-        self.sales_mode_label.config(text="NEW INVOICE",bg=GOLD); self.load_sales_customer_list(); self.refresh_sales_number()
+        self.sales_mode_label.config(text="DRAFT",bg=GOLD); self.load_sales_customer_list(); self.refresh_sales_number()
         self.add_sales_item()
 
     def sales_row_values(self,item):

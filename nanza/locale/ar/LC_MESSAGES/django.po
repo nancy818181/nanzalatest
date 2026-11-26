@@ -1207,6 +1207,9 @@ msgstr "حساب من الصنف 4/5"
 msgid "Class-2 asset account"
 msgstr "حساب أصل من الصنف 2"
 
+msgid "Classic"
+msgstr "كلاسيك"
+
 msgid "Clear"
 msgstr "مسح"
 
@@ -1297,6 +1300,9 @@ msgstr "العمولة"
 msgid "Commission A/C"
 msgstr "حساب العمولة"
 
+msgid "Common tasks, one click away"
+msgstr "المهام اليومية بنقرة واحدة"
+
 msgid "Companies"
 msgstr "الشركات"
 
@@ -1329,6 +1335,9 @@ msgstr "اسم الشركة"
 
 msgid "Company overview"
 msgstr "نظرة عامة على الشركة"
+
+msgid "Company performance"
+msgstr "أداء الشركة"
 
 msgid "Company-wide actuals; trailing 3 complete months estimate the future."
 msgstr "أرقام فعلية للشركة كلها؛ آخر 3 أشهر كاملة تقدّر المستقبل."
@@ -1653,6 +1662,9 @@ msgstr "أسعار تاريخ فروقات الصرف:"
 
 msgid "DOE posting date"
 msgstr "تاريخ قيد فروقات الصرف"
+
+msgid "DRAFT"
+msgstr "مسوّدة"
 
 msgid "Daily Average"
 msgstr "المتوسط اليومي"
@@ -2437,6 +2449,12 @@ msgstr "تاريخ الانتهاء"
 msgid "Expiry date"
 msgstr "تاريخ الانتهاء"
 
+msgid "Explain P&L"
+msgstr "تفسير الربح"
+
+msgid "Explain profit changes from posted accounts"
+msgstr "فسّر تغير الربح من الحسابات المرحلة"
+
 msgid "Export Excel"
 msgstr "تصدير Excel"
 
@@ -2457,6 +2475,9 @@ msgstr "كلفة إضافية للوحدة (يد عاملة، طاقة...)"
 
 msgid "Extra indemnity (phone) / month"
 msgstr "تعويض إضافي (هاتف) / شهر"
+
+msgid "FINANCIAL OVERVIEW"
+msgstr "نظرة مالية عامة"
 
 msgid "Family %"
 msgstr "العائلي %"
@@ -2851,6 +2872,9 @@ msgstr "تثبيت / إصلاح قارئ خط اليد المجاني"
 msgid "Installation ID"
 msgstr "رقم التثبيت"
 
+msgid "Insufficient cash history"
+msgstr "الحركة النقدية غير كافية"
+
 msgid "Insurance"
 msgstr "التأمين"
 
@@ -2995,6 +3019,9 @@ msgstr "الأصناف - F2"
 msgid "Items subject to customs"
 msgstr "الأصناف الخاضعة للجمارك"
 
+msgid "Items that may need your review"
+msgstr "بنود قد تحتاج إلى مراجعتك"
+
 msgid "Jan"
 msgstr "ك2"
 
@@ -3021,6 +3048,9 @@ msgstr "تموز"
 
 msgid "Jun"
 msgstr "حزيران"
+
+msgid "KEY FIGURES"
+msgstr "المؤشرات الرئيسية"
 
 msgid "Keep"
 msgstr "إبقاء"
@@ -3153,6 +3183,9 @@ msgstr "حمّل الأرصدة بعد تغيير التاريخ أو الدفا
 
 msgid "Load the stock on hand first"
 msgstr "حمّل المخزون الموجود أولاً"
+
+msgid "Loading dashboard. You can continue entering documents."
+msgstr "جارٍ تحميل لوحة المؤشرات. يمكنك متابعة إدخال المستندات."
 
 msgid "Local PDF assistance"
 msgstr "مساعدة PDF محلية"
@@ -3676,6 +3709,9 @@ msgstr "ملاحظات"
 msgid "Nothing to print: apply the filters or the Find first"
 msgstr "لا شيء للطباعة: طبّق المرشحات أو البحث أولاً"
 
+msgid "Nothing waiting: no overdue invoice, no document alert, every entry balanced"
+msgstr "لا توجد فواتير متأخرة أو تنبيهات مستندات، وجميع القيود متوازنة"
+
 msgid "Nothing was deleted"
 msgstr "لم يُحذف شيء"
 
@@ -3930,6 +3966,9 @@ msgstr "تحتاج قراءة PDF/الصور إلى مراجعة بشرية؛ ا
 
 msgid "PDF: review each row's Type (double-click to choose). Account cells: F2 / Down / right-click searches the chart; Tab saves."
 msgstr "PDF: راجع نوع كل سطر (نقر مزدوج للاختيار). خلايا الحسابات: F2 / سهم للأسفل / نقر يمين يبحث في الدليل؛ Tab يحفظ."
+
+msgid "POSTED"
+msgstr "مرحّل"
 
 msgid "PREVIEW ONLY"
 msgstr "للمعاينة فقط"
@@ -4231,6 +4270,9 @@ msgstr "عاين مجدداً بعد تغيير السعر"
 msgid "Preview again after changing the date or the books"
 msgstr "عاين مجدداً بعد تغيير التاريخ أو الدفاتر"
 
+msgid "Preview and copy the daily summary — Ctrl+W"
+msgstr "عاين ملخص اليوم وانسخه — Ctrl+W"
+
 msgid "Preview the vouchers first"
 msgstr "عاين القيود أولاً"
 
@@ -4476,6 +4518,9 @@ msgstr "تسجيل R3"
 
 msgid "RETURN NOTE"
 msgstr "إشعار مرتجع"
+
+msgid "REVERSED"
+msgstr "معكوس"
 
 msgid "REVIEW REQUIRED"
 msgstr "تلزم المراجعة"
@@ -4810,6 +4855,9 @@ msgstr "مراجعة أسطر الفاتورة"
 msgid "Review original document"
 msgstr "مراجعة المستند الأصلي"
 
+msgid "Review outstanding balances and invoice details"
+msgstr "راجع الأرصدة المفتوحة وتفاصيل الفواتير"
+
 msgid "Review required"
 msgstr "تتطلب مراجعة"
 
@@ -4911,6 +4959,9 @@ msgstr "تسلسل فواتير البيع بلا فجوات"
 
 msgid "Sales of goods (items from stock)"
 msgstr "مبيعات البضائع (أصناف من المخزون)"
+
+msgid "Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today."
+msgstr "المبيعات والمشتريات: المستندات المرحلة. المصاريف وصافي الربح: الأستاذ المرحل. التأخر: حتى اليوم."
 
 msgid "Sales: income not subject to income tax (already taxed / exempt by law, with the legal reason)"
 msgstr "المبيعات: إيراد غير خاضع لضريبة الدخل (خاضع سابقاً / معفى بالقانون، مع السبب القانوني)"
@@ -5437,6 +5488,9 @@ msgstr "الحجم"
 msgid "Slow-moving days"
 msgstr "أيام بطء الحركة"
 
+msgid "Some checks are unavailable. Refresh before relying on this overview."
+msgstr "بعض الفحوص غير متاحة. حدّث البيانات قبل الاعتماد على هذه اللوحة."
+
 msgid "Sort By:"
 msgstr "ترتيب حسب:"
 
@@ -5682,6 +5736,9 @@ msgstr "تُحفظ بيانات مكتب التدقيق والشريك والت�
 
 msgid "The books are consistent"
 msgstr "الدفاتر سليمة ومتطابقة"
+
+msgid "The dashboard is still loading. Export after the figures appear."
+msgstr "لا تزال لوحة المؤشرات قيد التحميل. صدّر بعد ظهور الأرقام."
 
 msgid "The date of birth must be DD-MM-YYYY"
 msgstr "يجب أن يكون تاريخ الولادة DD-MM-YYYY"
@@ -6165,6 +6222,9 @@ msgstr "استعمال الضريبة"
 
 msgid "VAT used for"
 msgstr "الضريبة مستعملة لـ"
+
+msgid "VIEW SETTINGS"
+msgstr "إعدادات العرض"
 
 msgid "Valid Until"
 msgstr "صالح حتى"

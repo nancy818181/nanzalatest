@@ -654,6 +654,49 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         for _ in range(4): app.update_idletasks(); app.update()
         self.check_layout(app, rtl=False)
 
+    def test_dashboard_loading_keeps_tk_responsive_and_rejects_stale_company_results(self):
+        import desktop_workbench
+        app=self.open('en')
+        def pump_until(predicate,seconds=10):
+            deadline=time.monotonic()+seconds
+            while not predicate() and time.monotonic()<deadline:
+                app.update();time.sleep(.01)
+            self.assertTrue(predicate())
+        pump_until(lambda:not app.__dict__.get('_dashboard_loading',False))
+        entered=threading.Event();release=threading.Event();finished=threading.Event();heartbeat=[]
+        real_clone=desktop_workbench.frozen_client
+        class Delayed:
+            def __init__(self,source):self.client=real_clone(source)
+            def __getattr__(self,name):return getattr(self.client,name)
+            def close(self):
+                self.client.close();finished.set()
+            def professional_dashboard(self):
+                entered.set()
+                if not release.wait(8):raise RuntimeError('Test worker was not released')
+                result=self.client.professional_dashboard()
+                result['metrics']=[dict(currency='USD',sales=987654, purchases=0,expenses=0,profit=987654,receivables=0,payables=0,overdue=0)]
+                return result
+        try:
+            with mock.patch.object(desktop_workbench,'frozen_client',side_effect=Delayed):
+                app.load_dashboard()
+            app.after(10,lambda:heartbeat.append(True))
+            pump_until(lambda:entered.is_set() and bool(heartbeat))
+            self.assertFalse(release.is_set())
+            self.assertTrue(app._dashboard_loading)
+            app.export_report('dashboard','xlsx')
+            self.assertTrue(any('still loading' in str(m) for m in self.messages))
+            year=app.client.fiscal_year
+            app.client.fiscal_year=int(year)+1
+            release.set()
+            pump_until(finished.is_set)
+            app.after(150,app.quit);app.mainloop()
+            self.assertEqual(app.dashboard_rows,[],'Old-company figures must never appear in the new context')
+            app.client.fiscal_year=year
+            app.load_dashboard()
+            pump_until(lambda:not app._dashboard_loading)
+            self.assertFalse(any(r.get('sales')==987654 for r in app.dashboard_rows))
+        finally:release.set()
+
     def test_three_pair_header_respects_wide_field_minimums(self):
         for language in ("en", "ar"):
             app = self.open(language)

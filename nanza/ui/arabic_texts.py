@@ -2,6 +2,28 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'FINANCIAL OVERVIEW': 'نظرة مالية عامة',
+    'Company performance': 'أداء الشركة',
+    'VIEW SETTINGS': 'إعدادات العرض',
+    'KEY FIGURES': 'المؤشرات الرئيسية',
+    'Common tasks, one click away': 'المهام اليومية بنقرة واحدة',
+    'Items that may need your review': 'بنود قد تحتاج إلى مراجعتك',
+    'Nothing waiting: no overdue invoice, no document alert, every entry balanced': 'لا توجد فواتير متأخرة أو تنبيهات مستندات، وجميع القيود متوازنة',
+    'Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today.': 'المبيعات والمشتريات: المستندات المرحلة. المصاريف وصافي الربح: الأستاذ المرحل. التأخر: حتى اليوم.',
+    'REVERSED': 'معكوس',
+    'POSTED': 'مرحّل',
+    'DRAFT': 'مسوّدة',
+
+    'Loading dashboard. You can continue entering documents.': 'جارٍ تحميل لوحة المؤشرات. يمكنك متابعة إدخال المستندات.',
+    'The dashboard is still loading. Export after the figures appear.': 'لا تزال لوحة المؤشرات قيد التحميل. صدّر بعد ظهور الأرقام.',
+    'Some checks are unavailable. Refresh before relying on this overview.': 'بعض الفحوص غير متاحة. حدّث البيانات قبل الاعتماد على هذه اللوحة.',
+    'Classic': 'كلاسيك',
+    'Review outstanding balances and invoice details': 'راجع الأرصدة المفتوحة وتفاصيل الفواتير',
+    'Explain profit changes from posted accounts': 'فسّر تغير الربح من الحسابات المرحلة',
+    'Preview and copy the daily summary — Ctrl+W': 'عاين ملخص اليوم وانسخه — Ctrl+W',
+    'Insufficient cash history': 'الحركة النقدية غير كافية',
+    'Explain P&L': 'تفسير الربح',
+
     'Taxable customer advance (VAT included)': 'سلفة عميل خاضعة (المبلغ شامل الضريبة)',
     'The company or fiscal year changed. Reopen Commercial Documents.':
         'تغيّرت الشركة أو السنة المالية. أعد فتح المستندات التجارية.',
