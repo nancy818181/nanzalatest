@@ -3868,3 +3868,5 @@ AR.update({'Fill in': 'لغة التعبئة', 'Stock below zero': 'مخزون �
 AR.update({"New Invoice": "فاتورة جديدة", "Item Description": "وصف الصنف", "Item Code (F2)": "رمز الصنف (F2)"})
 
 AR.update({"Update Rules": "تحديث القواعد"})
+
+AR.update({"Amount Paid (blank = full)": "المبلغ المدفوع (فارغ = كامل)", "Warehouse for all lines": "مستودع جميع السطور"})

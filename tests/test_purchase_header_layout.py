@@ -233,7 +233,8 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                     app.after(250,app.quit);app.mainloop()
                     tree=app.sales_sheet;tree.yview_moveto(0);app.update()
                     rows=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() and bool(app.sales_item_for(iid).get('description','').strip()) for iid in tree.get_children())
-                    observations.append({'language':language,'requested':[width,height],'actual':app.geometry(),'tk_scaling':float(app.tk.call('tk','scaling')),'rows':rows,'table_height':tree.winfo_height(),'blocks':[(w.winfo_class(),w.winfo_height(),w.winfo_reqheight()) for w in app.sales_tab.winfo_children()]})
+                    add_line=next(b for b in self.buttons(app.sales_tab) if self.english(b)=='Add Line')
+                    observations.append({'language':language,'requested':[width,height],'actual':app.geometry(),'tk_scaling':float(app.tk.call('tk','scaling')),'rows':rows,'add_line_y':add_line.winfo_rooty()-app.winfo_rooty(),'table_height':tree.winfo_height(),'blocks':[(w.winfo_class(),w.winfo_height(),w.winfo_reqheight()) for w in app.sales_tab.winfo_children()]})
                     if (width,height)==(1366,768):self.assertGreaterEqual(rows,4,observations[-1])
                     total=app.sales_total_labels['TOTAL'];self.assertLessEqual(total.winfo_rooty()+total.winfo_height(),app.winfo_rooty()+app.winfo_height())
             fifth=app.sales_items[-1]['_iid'];tree.see(fifth);tree.selection_set(fifth);tree.focus(fifth);app.update()
@@ -389,6 +390,30 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         rows = trial.get("items", trial) if isinstance(trial, dict) else trial
         debit = sum(float(r.get("debit") or 0) for r in rows); credit = sum(float(r.get("credit") or 0) for r in rows)
         self.assertAlmostEqual(debit, credit, places=2)
+
+    def test_purchase_on_account_partial_and_full_payment_survive_reopen(self):
+        from decimal import Decimal
+        app=self.open('en')
+        for suffix, method, amount, expected in (
+                ('credit', 'On Account (Not Cash)', '0', '0'),
+                ('partial', 'Cash', '20.00', '20.00'),
+                ('full', 'Cash', 'full', '111.00')):
+            with self.subTest(payment=suffix):
+                app.new_purchase(); form=app.purchase_form; v=form['vars']
+                v['supplier'].set('Synthetic payment supplier')
+                v['number'].set('PAYMENT-LAYOUT-'+suffix); v['currency'].set('USD')
+                v['taxable'].set('100'); app.purchase_amounts_changed('taxable')
+                form['paid_by'].set(method);form['paid_account'].set('531')
+                form['paid_amount'].set(amount)
+                app.save_purchase();app.update()
+                self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+                saved=next(i for i in app.client.invoices() if i['invoice_number']=='PAYMENT-LAYOUT-'+suffix)
+                self.assertEqual(Decimal(str(saved['amount_paid'])),Decimal(expected))
+                choice=next(label for label in form['find_map'] if label.startswith(saved['invoice_number']+' |'))
+                form['find'].set(choice); app.purchase_found(); app.update()
+                self.assertEqual(Decimal(form['paid_amount'].get()),Decimal(expected))
+                if Decimal(expected):self.assertEqual(form['paid_account'].get().split(' - ')[0],'531')
+                self.assertEqual(Decimal(str(saved['total']))-Decimal(str(saved['amount_paid'])),Decimal('111')-Decimal(expected))
 
     def test_purchase_item_edit_and_reopen(self):
         from tkinter import ttk

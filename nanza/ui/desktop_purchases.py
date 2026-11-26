@@ -277,6 +277,7 @@ class PurchasesMixin:
         actions = tk.Frame(totals_parent or box, bg=LIGHT); actions.pack(side="top" if totals_parent is not None else "bottom", fill="x", padx=6)
         fields = tk.Frame(box, bg=LIGHT); fields.pack(side="top", fill="x", expand=True)
         f["paid_by"]=tk.StringVar(value=PAID_BY[0]); f["paid_account"]=tk.StringVar()
+        f["paid_amount"]=tk.StringVar(value="")
         PurchasesMixin._purchase_header_grid(self, fields, [
             ("Supplier", lambda parent: ttk.Combobox(parent, textvariable=v["supplier"], width=12)),
             ("Supplier Invoice No.", lambda parent: tk.Entry(parent, textvariable=v["number"], width=10)),
@@ -309,6 +310,11 @@ class PurchasesMixin:
         totals_box = tk.Frame(totals_parent or page, bg=card_bg, padx=6, pady=2,
                               highlightthickness=1, highlightbackground="#DDE4EC")
         r2 = tk.Frame(header_parent, bg=card_bg)
+        payment_amount = tk.Frame(r2, bg=card_bg)
+        payment_amount.pack(side="left", padx=(0, 8))
+        tk.Label(payment_amount, text="Amount Paid (blank = full)", bg=card_bg, fg=MUTED).pack(side="left")
+        f["paid_amount_entry"] = tk.Entry(payment_amount, textvariable=f["paid_amount"], width=15)
+        f["paid_amount_entry"].pack(side="left", padx=3)
         # Amount overrides are advanced controls; keep the live summary fixed.
         for label, key, width in (("Taxable Amount", "taxable", 12), ("Exempt Amount", "exempt", 11),
                                   ("VAT %", "rate", 5), ("VAT", "vat", 11)):
@@ -376,7 +382,7 @@ class PurchasesMixin:
         warehouse = tk.Frame(wh, bg=card_bg)
         warehouse.pack(side="left", padx=(0, 4))
         f["warehouse"] = tk.StringVar()
-        tk.Label(warehouse, text="Warehouse", bg=card_bg).pack(side="left")
+        tk.Label(warehouse, text="Warehouse for all lines", bg=card_bg).pack(side="left")
         f["warehouse_box"] = ttk.Combobox(
             warehouse, textvariable=f["warehouse"], state="readonly", width=20
         )
@@ -728,7 +734,7 @@ class PurchasesMixin:
         f["use"].set("Mixed (partial deduction)"); f["reverse"].set(False)
         f["discount_mode"]="percent"; f["discount_percent"].set("0"); f["discount_amount"].set("0")
         if "doc" in f: f["doc"].set("Invoice")
-        if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set("")
+        if "paid_by" in f: f["paid_by"].set(PAID_BY[0]); f["paid_account"].set(""); f["paid_amount"].set("")
         f["pdf_label"].config(text="No PDF", fg=MUTED); f["selected_id"] = None
         f["items_sheet"].clear(); f["find"].set("")
         self.purchase_amounts_changed("none")
@@ -966,7 +972,11 @@ class PurchasesMixin:
         elif doc == "Debit Note": invoice["doc_subtype"] = "debit_note"
         paid_by = f["paid_by"].get() if "paid_by" in f else PAID_BY[0]
         if doc in ("Invoice", "Debit Note") and paid_by != PAID_BY[0]:
-            invoice.update(payment_method=paid_by, amount_paid="full",
+            raw_paid=f["paid_amount"].get().strip()
+            paid_amount="full" if raw_paid.lower() in ("", "full") else _cent(raw_paid)
+            if paid_amount != "full" and (not paid_amount.is_finite() or paid_amount < 0 or paid_amount > net_taxable + exempt + vat):
+                raise ValueError("Amount paid must be between zero and the invoice total")
+            invoice.update(payment_method=paid_by, amount_paid=str(paid_amount),
                            cash_account=f["paid_account"].get().split(" - ", 1)[0].strip())
         else: invoice.update(payment_method=PAID_BY[0], amount_paid="0")
         stock = [r for r in f["items_sheet"].ordered() if (r.get("item_code") or r.get("name")) and _num(r.get("quantity"))]
@@ -1203,6 +1213,7 @@ class PurchasesMixin:
         if "paid_by" in f:
             paid = float(row.get("amount_paid") or 0); method = row.get("payment_method") or ""
             f["paid_by"].set(method if paid and method in PAID_BY else PAID_BY[0]); f["paid_account"].set(row.get("payment_account") or "")
+            f["paid_amount"].set(str(row.get("amount_paid") or "0"))
         if "doc" in f: f["doc"].set("Return" if row.get("doc_subtype") == "credit_note" and row.get("is_return") else
                                     {"credit_note": "Credit Note", "debit_note": "Debit Note"}.get(row.get("doc_subtype") or "", "Invoice"))
         f["pdf_label"].config(text=f"Editing {row['invoice_number']} ({row.get('attachment_count') or 0} document(s) attached)", fg=NAVY); self.purchase_amounts_changed("none")

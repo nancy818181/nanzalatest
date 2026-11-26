@@ -98,6 +98,20 @@ class SalesInvoiceMixin:
         invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT); extra_details=tk.Frame(details,bg=LIGHT)
         details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
         details.add(extra_details,text="More")
+        # ttk otherwise reserves the height of its tallest, hidden page. Size
+        # the notebook to the selected content so Posting accounts/More do not
+        # leave an empty band between the daily fields and Add Line.
+        def fit_detail_tab(_event=None):
+            if not details.winfo_exists(): return
+            selected = details.select()
+            if selected:
+                required = details.nametowidget(selected).winfo_reqheight()
+                if required > 1 and int(details.cget("height") or 0) != required:
+                    details.configure(height=required)
+                if self.__dict__.get("_fit_sales_header"): self._fit_sales_header()
+        details.bind("<<NotebookTabChanged>>", fit_detail_tab, add="+")
+        for detail_page in (invoice_details, account_details, extra_details):
+            detail_page.bind("<Configure>", fit_detail_tab, add="+")
         nav=tk.Frame(invoice_details,bg=LIGHT); nav.pack(fill="x",pady=(0,1))
         self.sales_navigation=nav
         lookup_options=tk.Frame(extra_details,bg=LIGHT);lookup_options.pack(fill="x")
