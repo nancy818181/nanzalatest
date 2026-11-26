@@ -4,6 +4,7 @@ Python desktop accounting, company-scoped data service, and a Flutter mobile com
 
 ## Version 2.9.141 — Classic release candidate
 
+- The two palette-consistency regression expectations now use the owner-requested Classic navy/gold values; their consistency checks remain intact.
 - Classic is the default desktop presentation: navy `#0A1931`, restrained gold `#D4A017`, compact titles and tabs, aligned document fields, expanding tables and fixed totals. Existing navigation preferences, shortcuts and bilingual company data are preserved.
 - Sales and Purchases include the verified pilot layout fixes. Purchase payment fields share a row; the warehouse selector remains a default for all invoice lines. English Save remains English after reset/reopen.
 - Dashboard HTTP calculations run with a frozen company/year client in the existing background-worker framework. Loading is explicit; stale company results cannot replace the current view, and export waits for the displayed figures.

@@ -57,7 +57,7 @@ class PaletteTests(unittest.TestCase):
         for name in ("desktop_brains_common", "desktop_dimensions", "desktop_final", "desktop_inventory", "desktop_stage3_common", "desktop_v22"):
             text = (HERE / f"{name}.py").read_text(encoding="utf-8")
             match = re.search(r'NAVY\s*,\s*GOLD\s*,\s*LIGHT\s*=\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"', text)
-            if match: self.assertEqual(match.groups(), ("#102A43", "#B78B45", "#F4F7FA"), name)
+            if match: self.assertEqual(match.groups(), ("#0A1931", "#D4A017", "#F4F7FA"), name)
 
 
 if __name__ == "__main__":
