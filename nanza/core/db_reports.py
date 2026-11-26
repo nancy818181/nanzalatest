@@ -508,16 +508,14 @@ class ReportsStore:
         totals={}
         # 2.9.132 (performance): a day's ISO form and a (currency, day) rate are worked out once per report, not once per row;
         # the values are the same (same strptime rule, same _converted_amount factor, same Decimal products)
-        days={}; factors={}
+        days={}
         def iso_day(text):
             if text not in days:
                 try: days[text]=datetime.strptime(text,"%d-%m-%Y").strftime("%Y-%m-%d")
                 except ValueError: days[text]=text
             return days[text]
         def convert(amount,currency,target,day):
-            key=(currency,target,day)
-            if key not in factors: factors[key]=self._converted_amount(Decimal("1"),currency,target,day)
-            return amount if str(currency or "USD").upper()==target else amount*factors[key]
+            return self._converted_amount(amount,currency,target,day)
         for row in raw:
             key=(row["code"],row["name_en"],row["currency"])
             # 2.9.97: added as exact Decimals, turned into numbers once at the end (floats drifted: 600.0000000000002)

@@ -303,7 +303,15 @@ class SalesInvoiceMixin:
             # Keep the header scrollable and leave most of the viewport for lines.
             # A cap based on the fixed page avoids feedback between tree and header
             # heights when RTL toolbars or totals wrap during a language change.
-            height=min(header_outer.winfo_reqheight()+8,max(80,int(self.sales_tab.winfo_height()*.40)))
+            page_height = self.sales_tab.winfo_height()
+            row_height = int(ttk.Style(self.sales_sheet).lookup("Sales.Treeview", "rowheight") or 20)
+            # Translated toolbars and totals can occupy an extra row depending
+            # on the platform's fonts. Reserve five complete item rows first;
+            # the independently scrollable header receives the space left.
+            table_height = row_height * 5 + round(self.winfo_fpixels("0.32i")) + 4
+            available = page_height - bottom.winfo_height() - toolbar.winfo_height() - table_height - 24
+            height = min(header_outer.winfo_reqheight() + 8,
+                         max(80, min(int(page_height * .40), available)))
             if abs(content_outer.winfo_height()-height)>2:content_outer.configure(height=height)
         fit_state={'pending':False}
         def schedule_fit(_event=None):

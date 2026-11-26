@@ -32,12 +32,10 @@ def _period(options):
 class _Converter:
     """Amounts in one basis currency (USD or LBP) at the rate of each document date, or kept in their own currency."""
     def __init__(self, db, basis):
-        self.db = db; self.basis = (basis or "USD").upper(); self.cache = {}
+        self.db = db; self.basis = (basis or "USD").upper()
     def __call__(self, amount, currency, day):
         if self.basis == currency: return _d(amount)
-        key = (currency, day)
-        if key not in self.cache: self.cache[key] = self.db._converted_amount(Decimal("1"), currency, self.basis, day)
-        return _d(amount) * self.cache[key]
+        return self.db._converted_amount(_d(amount), currency, self.basis, day)
 
 
 def _documents(db, kind, start, end, options, lines=True):
