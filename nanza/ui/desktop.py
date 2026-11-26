@@ -591,8 +591,11 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             tk.Label(top,image=self.header_logo,bg=NAVY).pack(side="left",padx=(18,8),pady=2)
         except Exception:
             log.warning("Header logo could not be shown", exc_info=True)
-        tk.Label(top,text=tr(lang,"title"),bg=NAVY,fg="white",font=("Segoe UI",16,"bold")).pack(side="left",padx=8,pady=12)
-        tk.Label(top,text="11% VAT  |  " + " · ".join(self.currency_codes[:5]),bg=NAVY,fg=GOLD,font=("Segoe UI",10,"bold")).pack(side="right",padx=28)
+        tk.Label(top,text=tr(lang,"title"),bg=NAVY,fg="white",font=("Segoe UI",14,"bold")).pack(side="left",padx=6,pady=12)
+        currency_caption=tk.Label(top,text="11% VAT",bg=NAVY,fg=GOLD,font=("Segoe UI",9,"bold"))
+        currency_caption.pack(side="right",padx=10)
+        from desktop_workbench import tooltip
+        tooltip(currency_caption," · ".join(self.currency_codes))
         tk.Button(top,text="Help",command=self.open_user_guide,bg=NAVY,fg="white",activebackground=GOLD,border=0,padx=10).pack(side="right",padx=4)
         # 2.9.118: one click turns every screen to Arabic (right to left) or back to English
         language_button=tk.Button(top,text="AR | EN",command=lambda:self.switch_language("en" if lang=="ar" else "ar"),
@@ -607,7 +610,13 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         self.board_nav_button.pack(side="right",padx=5)
         self.alerts_button=tk.Button(top,text="Document Alerts",command=self.show_document_alerts,bg=NAVY,fg="white",border=1,padx=10,pady=5)
         self.alerts_button.pack(side="right",padx=5)
-        tk.Label(top,text=f'{getattr(self,"current_company",{}).get("name","")} · {getattr(self,"current_fiscal_year","")}',bg=NAVY,fg="white",font=("Segoe UI",9,"bold")).pack(side="right",padx=8)
+        company_name=str(getattr(self,"current_company",{}).get("name","") or "")
+        short_company=company_name if len(company_name)<=20 else company_name[:19]+"…"
+        company_caption=tk.Label(top,text=f'{short_company}\n{getattr(self,"current_fiscal_year","")}',bg=NAVY,fg="white",font=("Segoe UI",8),justify="center")
+        company_caption.pack(side="right",padx=6)
+        tooltip(company_caption,company_name)
+        for control in top.winfo_children():
+            if isinstance(control,tk.Button):control.configure(font=("Segoe UI",8,"bold"),padx=6)
         self.status_bar()
         import desktop_layout
         side_menu=desktop_layout.side_menu_on(); self.side_menu_mode=side_menu
@@ -1196,10 +1205,10 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def build_dashboard(self):
         # A clear executive landing area: one quiet hero, one compact control surface,
         # then the decision-support cards and charts. Existing commands and data stay unchanged.
-        hero=tk.Frame(self.dashboard_tab,bg=NAVY,padx=20,pady=14); hero.pack(fill="x",padx=12,pady=(12,8))
+        hero=tk.Frame(self.dashboard_tab,bg=NAVY,padx=14,pady=8); hero.pack(fill="x",padx=12,pady=(6,5))
         hero_copy=tk.Frame(hero,bg=NAVY); hero_copy.pack(side="left",fill="x",expand=True)
         tk.Label(hero_copy,text="FINANCIAL OVERVIEW",bg=NAVY,fg=GOLD,font=("Segoe UI",8,"bold")).pack(anchor="w")
-        tk.Label(hero_copy,text="Company performance",bg=NAVY,fg="white",font=("Segoe UI",18,"bold")).pack(anchor="w",pady=(2,0))
+        tk.Label(hero_copy,text="Company performance",bg=NAVY,fg="white",font=("Segoe UI",14,"bold")).pack(anchor="w",pady=(2,0))
         company_name=str(getattr(self,"current_company",{}).get("name","") or "Company")
         fiscal_year=str(getattr(self,"current_fiscal_year","") or "")
         tk.Label(hero_copy,text=f"{company_name}  ·  Fiscal year {fiscal_year}",bg=NAVY,fg="#DCE4EF",
@@ -1227,24 +1236,63 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
         tk.Label(self.dashboard_tab,text="KEY FIGURES",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold"),anchor="w").pack(fill="x",padx=14,pady=(2,0))
         tk.Label(self.dashboard_tab,text="Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today.",bg=LIGHT,fg="#506274",font=("Segoe UI",8),anchor="w",wraplength=900,justify='left').pack(fill='x',padx=14,pady=(0,2))
         self.dashboard_cards=tk.Frame(self.dashboard_tab,bg=LIGHT); self.dashboard_cards.pack(fill="x",padx=12)
+        self.dashboard_load_status=tk.Label(self.dashboard_tab,text="",bg=LIGHT,fg=NAVY,anchor="w",font=("Segoe UI",9))
+        self.dashboard_load_status.pack(fill="x",padx=14)
         self.dashboard_chart=tk.Canvas(self.dashboard_tab,height=105,bg="white",highlightthickness=0)
         # 2.9.60: the small monthly strip repeated the "by month" chart below; it is kept (exports use it) but not shown
         self.build_dashboard_charts(self.dashboard_tab)
         self.load_dashboard()
 
     def load_dashboard(self):
+        """Keep entry screens usable while the selected company's figures load."""
+        from desktop_workbench import async_call
+        import desktop_layout
         self.refresh_workbench()
-        try: data=self.client.professional_dashboard(); rows=data["metrics"]
-        except Exception as exc: return messagebox.showerror("Error",str(exc))
         selected=self.dashboard_base_currency.get()
-        rows=[r for r in rows if selected=="All Currencies" or r["currency"]==selected]
-        target=self.dashboard_display_currency.get(); display_rows=[]
+        target=self.dashboard_display_currency.get()
+        basis=self.dash_basis.get()
+        year=getattr(self,"current_fiscal_year",datetime.now().year)
+        include_backups=(self.current_user or {}).get("role")!="viewer"
         date=datetime.now().strftime("%d-%m-%Y")
+        self._dashboard_loading=True
+        self.dashboard_rows=[]
+        self.dashboard_load_status.configure(text="Loading dashboard. You can continue entering documents.",fg=NAVY)
+        for child in self.dashboard_cards.winfo_children(): child.destroy()
+        self.dashboard_chart.delete("all")
+        self.dash_data=None
+        for canvas in self.dash_canvases.values(): canvas.delete("all")
+        for child in self.today_list.winfo_children(): child.destroy()
+        def fetch(client):
+            data=client.professional_dashboard()
+            rates={}
+            if target!="Original":
+                for row in data.get("metrics",[])+data.get("monthly",[]):
+                    source=row["currency"]
+                    if source!=target and source not in rates:
+                        rates[source]=float(client.dashboard_conversion(source,target,date)["rate"])
+            charts=client.dashboard_charts(year,basis)
+            attention=desktop_layout.fetch_attention(client,year,include_backups)
+            return data,rates,charts,attention
+        def apply(result):
+            data,rates,charts,attention=result
+            self._apply_dashboard(data,selected,target,date,rates)
+            # A chart-currency change has its own request; never overwrite it.
+            if self.dash_basis.get()==basis:
+                self.dash_data=charts
+                self.draw_dashboard_charts()
+            desktop_layout.fill_today_panel(self,data.get("metrics",[]),attention)
+            self._dashboard_loading=False
+            self.dashboard_load_status.configure(text="",fg=NAVY)
+        async_call(self.dashboard_tab,self,fetch,apply,self.dashboard_load_status)
+
+    def _apply_dashboard(self,data,selected,target,date,rates):
+        rows=data["metrics"]
+        rows=[r for r in rows if selected=="All Currencies" or r["currency"]==selected]
+        display_rows=[]
         for row in rows:
             item=dict(row)
             if target!="Original" and target!=row["currency"]:
-                try: rate=float(self.client.dashboard_conversion(row["currency"],target,date)["rate"])
-                except Exception as exc: return messagebox.showerror("Dashboard Exchange Rate",str(exc))
+                rate=rates[row["currency"]]
                 for key in ("sales","purchases","expenses","profit","receivables","payables"): item[key]=float(item[key])*rate
                 item["currency"]=f'{row["currency"]} → {target} (1 = {rate:,.4f}; {date})'
             display_rows.append(item)
@@ -1260,19 +1308,15 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
             row=dict(source_row)
             if target!="Original" and target!=row["currency"]:
                 if row["currency"] not in chart_rates:
-                    chart_rates[row["currency"]]=float(self.client.dashboard_conversion(row["currency"],target,date)["rate"])
+                    chart_rates[row["currency"]]=rates[row["currency"]]
                 row["amount"]=float(row["amount"])*chart_rates[row["currency"]]
             chart_rows.append(row)
         self.draw_dashboard_chart(chart_rows)
-        self.load_dashboard_charts()
-        try:
-            import desktop_layout; desktop_layout.fill_today_panel(self,data.get("metrics",[]))
-        except Exception: log.warning("Needs attention list could not be filled",exc_info=True)
 
     # 2.9.116: the figures as KPI cards (as in Zoho): one row per currency, a large number per card with a colour
     # strip that says what it is. The same figures as before, only shown larger.
-    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#B78B45"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
-               ("receivables","Receivables","#102A43"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
+    KPI_CARDS=(("sales","Sales","#1F6E8C"),("purchases","Purchases","#D4A017"),("expenses","Expenses","#7A8794"),("profit","Net profit","#2E7D5B"),
+               ("receivables","Receivables","#0A1931"),("payables","Payables","#8B5E1E"),("overdue","Overdue invoices","#8B1E1E"))
 
     def draw_kpi_cards(self,rows):
         holder=self.dashboard_cards
@@ -1505,6 +1549,8 @@ class SaberApp(WorkbenchMixin, SetupWizardMixin, RenumberMixin, ReportsExtrasMix
     def export_report(self,report,format_name):
         ar=self.language.get()=='ar'
         if report == "dashboard":
+            if self.__dict__.get("_dashboard_loading",False):
+                return messagebox.showwarning("Dashboard","The dashboard is still loading. Export after the figures appear.")
             title="نانزا للمحاسبة - لوحة القيادة" if ar else "Nanza Accounting - Dashboard"; headers=["Currency","Sales","Purchases","Expenses","Net Profit","Receivables","Payables","Overdue"]
             rows=[[r["currency"],r["sales"],r["purchases"],r["expenses"],r["profit"],r["receivables"],r["payables"],r["overdue"]] for r in getattr(self,"dashboard_rows",[])]
         else:

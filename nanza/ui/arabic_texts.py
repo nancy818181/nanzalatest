@@ -2,6 +2,29 @@
 
 # English text -> Arabic text. Generated from the screens; edit freely.
 AR = {
+    'FINANCIAL OVERVIEW': 'نظرة مالية عامة',
+    'Company performance': 'أداء الشركة',
+    'VIEW SETTINGS': 'إعدادات العرض',
+    'KEY FIGURES': 'المؤشرات الرئيسية',
+    'Common tasks, one click away': 'المهام اليومية بنقرة واحدة',
+    'Items that may need your review': 'بنود قد تحتاج إلى مراجعتك',
+    'Nothing waiting: no overdue invoice, no document alert, every entry balanced': 'لا توجد فواتير متأخرة أو تنبيهات مستندات، وجميع القيود متوازنة',
+    'Sales/Purchases: posted documents. Expenses/Net profit: posted ledger. Overdue: today.': 'المبيعات والمشتريات: المستندات المرحلة. المصاريف وصافي الربح: الأستاذ المرحل. التأخر: حتى اليوم.',
+    'REVERSED': 'معكوس',
+    'POSTED': 'مرحّل',
+    'DRAFT': 'مسوّدة',
+
+    'Loading dashboard. You can continue entering documents.': 'جارٍ تحميل لوحة المؤشرات. يمكنك متابعة إدخال المستندات.',
+    'The dashboard is still loading. Export after the figures appear.': 'لا تزال لوحة المؤشرات قيد التحميل. صدّر بعد ظهور الأرقام.',
+    'Some checks are unavailable. Refresh before relying on this overview.': 'بعض الفحوص غير متاحة. حدّث البيانات قبل الاعتماد على هذه اللوحة.',
+    'Classic': 'كلاسيك',
+    'Review outstanding balances and invoice details': 'راجع الأرصدة المفتوحة وتفاصيل الفواتير',
+    'Explain profit changes from posted accounts': 'فسّر تغير الربح من الحسابات المرحلة',
+    'Preview and copy the daily summary — Ctrl+W': 'عاين ملخص اليوم وانسخه — Ctrl+W',
+    'Insufficient cash history': 'الحركة النقدية غير كافية',
+    'Explain P&L': 'تفسير الربح',
+
+    'Taxable customer advance (VAT included)': 'سلفة عميل خاضعة (المبلغ شامل الضريبة)',
     'The company or fiscal year changed. Reopen Commercial Documents.':
         'تغيّرت الشركة أو السنة المالية. أعد فتح المستندات التجارية.',
     'Search items (F2)': 'البحث عن الأصناف (F2)',
@@ -3868,3 +3891,19 @@ AR.update({'Fill in': 'لغة التعبئة', 'Stock below zero': 'مخزون �
 AR.update({"New Invoice": "فاتورة جديدة", "Item Description": "وصف الصنف", "Item Code (F2)": "رمز الصنف (F2)"})
 
 AR.update({"Update Rules": "تحديث القواعد"})
+
+AR.update({"Amount Paid (blank = full)": "المبلغ المدفوع (فارغ = كامل)", "Warehouse for all lines": "مستودع جميع السطور"})
+
+# Income-tax reconciliation report: preserve the year in translated headings.
+AR.update({
+    "Amount (before VAT)": "المبلغ (قبل الضريبة)",
+    "To add back to the taxable profit": "يضاف إلى الربح الخاضع للضريبة",
+    "To deduct from the taxable profit": "يحسم من الربح الخاضع للضريبة",
+    "No expense marked not deductible in this year": "لا توجد أعباء محددة كغير مقبولة ضريبياً في هذه السنة",
+    "These expenses stay in the books (profit and loss); they are added back to the accounting profit in the income tax computation.": "تبقى هذه الأعباء في الدفاتر وقائمة الدخل، وتضاف إلى الربح المحاسبي عند احتساب الربح الخاضع لضريبة الدخل.",
+})
+PATTERNS += (
+    (r"Fiscal year (\d{4})", "السنة المالية {1}"),
+    (r"Expenses not deductible for income tax - (\d{4})", "أعباء غير مقبولة ضريبياً - {1}"),
+    (r"Income not subject to income tax - (\d{4})", "إيرادات غير خاضعة لضريبة الدخل - {1}"),
+)

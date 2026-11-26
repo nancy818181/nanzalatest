@@ -14,7 +14,7 @@ from multi_select import MultiSelect, chosen_values
 from inventory import ANALYSIS_DIMENSIONS
 from desktop_common import flow_toolbars
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0A1931", "#D4A017", "#F4F7FA"
 RED, MUTED = "#8B1E1E", "#5f6b76"
 DOC_TYPES = {"Opening Stock": "opening", "Stock Receipt": "receipt", "Stock Issue": "issue", "Adjustment +": "adjustment_in", "Adjustment -": "adjustment_out", "Transfer": "transfer"}
 REPORTS = {"Inventory Summary": "summary", "Stock by Brand & Warehouse": "brands", "Stock Ageing": "ageing", "Inventory Analysis (3D)": "analysis3d",

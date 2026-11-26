@@ -20,19 +20,35 @@ class InvoiceNumbersStore:
         import re as _re
         key = self.invoice_number_key(number)
         if not key: return None
-        digits = max(_re.findall(r"[0-9]+", key), key=len, default="")
-        needle = digits or key  # SQL pre-filter only; the exact comparison is the key below
-        sql = (f"SELECT i.id,i.invoice_number,i.invoice_date,i.party_id,COALESCE(i.doc_subtype,'invoice') st FROM invoices i "
-               f"WHERE i.kind=? AND i.status NOT IN ('cancelled','deleted','void') AND {self._NUMBER_SQL} LIKE ?")
-        args = [kind, f"%{needle}%"]
-        if exclude_id is not None: sql += " AND i.id<>?"; args.append(int(exclude_id))
+        select = ("SELECT i.id,i.invoice_number,i.invoice_date,i.party_id,COALESCE(i.doc_subtype,'invoice') st "
+                  "FROM invoices i WHERE i.kind=? AND i.status NOT IN ('cancelled','deleted','void')")
+        numeric = _re.fullmatch(r"([A-Z]*)([0-9]{1,18})", key)
+        if numeric:
+            # These expressions match the two owner-approved indexes. SQLite's
+            # ASCII normalization is only a candidate filter: Python retains
+            # the identity rule, including Unicode expansion and punctuation.
+            prefix = f"RTRIM({self._NUMBER_SQL},'0123456789')"
+            suffix = f"CAST(SUBSTR({self._NUMBER_SQL},LENGTH({prefix})+1) AS INTEGER)"
+            queries = [(select + f" AND {prefix}=? AND {suffix}=?",
+                        [kind, numeric[1], int(numeric[2])]),
+                       (select + " AND i.invoice_number GLOB '*[^A-Za-z0-9 /._-]*'", [kind])]
+        else:
+            digits = max(_re.findall(r"[0-9]+", key), key=len, default="")
+            needle = digits or key
+            queries = [(select + f" AND {self._NUMBER_SQL} LIKE ?", [kind, f"%{needle}%"])]
         subtype = str(doc_subtype or "invoice").lower()
-        for row in db.execute(sql, args):
-            if str(row["st"] or "invoice").lower() != subtype: continue
-            if self.invoice_number_key(row["invoice_number"]) != key: continue
-            if kind == "purchase" and row["party_id"] != party_id: continue
-            return dict(row)
-        return None
+        found = None
+        for sql, args in queries:
+            if exclude_id is not None:
+                sql += " AND i.id<>?"
+                args.append(int(exclude_id))
+            for row in db.execute(sql, args):
+                if str(row["st"] or "invoice").lower() != subtype: continue
+                if self.invoice_number_key(row["invoice_number"]) != key: continue
+                if kind == "purchase" and row["party_id"] != party_id: continue
+                if found is None or row["id"] < found["id"]:
+                    found = dict(row)
+        return found
 
     def _assert_unique_invoice_number(self, db, item, kind, party_id, exclude_id=None):
         if item.get("allow_duplicate"): return  # only an administrator's request keeps this flag (server._approval_gate)

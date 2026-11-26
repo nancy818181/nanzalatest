@@ -508,16 +508,14 @@ class ReportsStore:
         totals={}
         # 2.9.132 (performance): a day's ISO form and a (currency, day) rate are worked out once per report, not once per row;
         # the values are the same (same strptime rule, same _converted_amount factor, same Decimal products)
-        days={}; factors={}
+        days={}
         def iso_day(text):
             if text not in days:
                 try: days[text]=datetime.strptime(text,"%d-%m-%Y").strftime("%Y-%m-%d")
                 except ValueError: days[text]=text
             return days[text]
         def convert(amount,currency,target,day):
-            key=(currency,target,day)
-            if key not in factors: factors[key]=self._converted_amount(Decimal("1"),currency,target,day)
-            return amount if str(currency or "USD").upper()==target else amount*factors[key]
+            return self._converted_amount(amount,currency,target,day)
         for row in raw:
             key=(row["code"],row["name_en"],row["currency"])
             # 2.9.97: added as exact Decimals, turned into numbers once at the end (floats drifted: 600.0000000000002)
@@ -640,7 +638,7 @@ class ReportsStore:
             rows=[dict(row) for row in db.execute(f"""SELECT i.id,i.party_id,i.invoice_number,i.invoice_date,i.due_date,i.kind,i.currency,i.doc_subtype,p.name party_name,p.account_number,
                 i.total,COALESCE(i.amount_paid,'0') amount_paid,
                 (SELECT COALESCE(DSUM_EXACT(a.amount),'0') FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
-                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql()}) allocated FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
+                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql(as_of=as_of.isoformat())}) allocated FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
                 WHERE {' AND '.join(conditions)} ORDER BY p.name,i.due_date,i.invoice_date""",parameters)]
         for row in rows:
             sign = Decimal("-1") if row.get("doc_subtype") == "credit_note" else Decimal("1")
@@ -664,14 +662,17 @@ class ReportsStore:
         so the ageing of each party agrees with its account balance (invoices and receipts / payments)."""
         payment_day="CASE WHEN x.payment_date GLOB '??-??-????' THEN substr(x.payment_date,7,4)||'-'||substr(x.payment_date,4,2)||'-'||substr(x.payment_date,1,2) ELSE x.payment_date END"
         with self.connect() as db:
-            payments=[dict(r) for r in db.execute(f"""SELECT x.party_id,x.kind,x.currency,x.party_account,p.kind party_kind,p.name party_name,p.account_number,
-                x.amount,COALESCE(x.exchange_difference,'0') exchange_difference,COALESCE((SELECT DSUM_EXACT(a.amount) FROM payment_allocations a WHERE a.payment_id=x.id),'0') allocated
-                FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=? AND {posted_payment_sql()}""",(as_of,))]
+            payments=[dict(r) for r in db.execute(f"""SELECT x.id,x.party_id,x.kind,x.currency,x.party_account,p.kind party_kind,p.name party_name,p.account_number,
+                x.amount,COALESCE(x.exchange_difference,'0') exchange_difference,COALESCE((SELECT DSUM_EXACT(a.amount) FROM payment_allocations a
+                JOIN invoices inv ON inv.id=a.invoice_id WHERE a.payment_id=x.id AND
+                (CASE WHEN inv.invoice_date GLOB '??-??-????' THEN substr(inv.invoice_date,7,4)||'-'||substr(inv.invoice_date,4,2)||'-'||substr(inv.invoice_date,1,2) ELSE inv.invoice_date END)<=?),'0') allocated
+                FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=? AND {posted_payment_sql(as_of=as_of)}""",(as_of,as_of))]
             party_of={r["id"]:r["party_id"] for r in rows}
         credits={}  # (party_id, kind, currency) -> amount that settles invoices
+        advance_vat=self.unapplied_advance_vat(as_of)
         for pay in payments:
             target_kind=payment_invoice_kind(pay)
-            free = Decimal(str(pay["amount"] or 0)) + Decimal(str(pay["exchange_difference"] or 0)) - Decimal(str(pay["allocated"] or 0))
+            free = Decimal(str(pay["amount"] or 0)) + Decimal(str(pay["exchange_difference"] or 0)) - Decimal(str(pay["allocated"] or 0)) - advance_vat.get(pay['id'],Decimal(0))
             if (kind and target_kind!=kind) or (currency and pay["currency"]!=currency) or abs(free)<Decimal("0.005"): continue
             key=(pay["party_id"],target_kind,pay["currency"])
             entry=credits.setdefault(key,{"amount":Decimal("0"),"party_name":pay["party_name"],"account_number":pay["account_number"]})

@@ -13,7 +13,7 @@ from desktop_common import account_label, account_code  # 2.9.79
 from report_export import export_sections_excel, export_sections_pdf
 import vat_return as vat_rules
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0A1931", "#D4A017", "#F4F7FA"
 RED, AMBER, MUTED = "#8B1E1E", "#8a5a00", "#5f6b76"
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 

@@ -9,7 +9,7 @@ from tkinter import messagebox, simpledialog, ttk
 import accounting_setup as rules
 from desktop_common import account_code, account_label, accounting_setup, flow_toolbars
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0A1931", "#D4A017", "#F4F7FA"
 RED, MUTED, GREEN, AMBER = "#8B1E1E", "#5f6b76", "#2E7D5B", "#8a5a00"
 
 

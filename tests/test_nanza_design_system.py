@@ -10,7 +10,7 @@ import desktop_theme
 
 class NanzaDesignSystemTest(unittest.TestCase):
     def test_shared_navy_gold_and_surface_palette_is_consistent(self):
-        expected = ("#102A43", "#B78B45", "#F4F7FA")
+        expected = ("#0A1931", "#D4A017", "#F4F7FA")
         self.assertEqual((desktop_common.NAVY, desktop_common.GOLD, desktop_common.LIGHT), expected)
         self.assertEqual((desktop_theme.NAVY, desktop_theme.GOLD, desktop_theme.LIGHT), expected)
         self.assertEqual((desktop_layout.NAVY, desktop_layout.GOLD, desktop_layout.LIGHT), expected)

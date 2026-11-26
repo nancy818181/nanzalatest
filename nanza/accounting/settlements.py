@@ -3,13 +3,18 @@
 from decimal import Decimal
 
 
-def posted_payment_sql(alias="x"):
+def posted_payment_sql(alias="x", as_of=None):
     if alias not in ("x", "pay"):
         raise ValueError("Unsupported payment alias")
+    active=f'{alias}.voided_at IS NULL'
+    if as_of is not None:
+        from datetime import date
+        day=date.fromisoformat(as_of).isoformat()  # validated ISO literal, never raw filter text
+        active=f"({active} OR EXISTS (SELECT 1 FROM journal_entries original JOIN journal_entries rev ON rev.reversal_of=original.id WHERE original.source_type='payment' AND original.source_id={alias}.id AND (CASE WHEN rev.entry_date GLOB '??-??-????' THEN substr(rev.entry_date,7,4)||'-'||substr(rev.entry_date,4,2)||'-'||substr(rev.entry_date,1,2) ELSE rev.entry_date END)>'{day}'))"
     return (
-        f"{alias}.voided_at IS NULL AND "  # 2.9.136: a voided / reversed payment settles nothing
+        f"{active} AND "
         f"EXISTS (SELECT 1 FROM journal_entries pe WHERE pe.source_type='payment' "
-        f"AND pe.source_id={alias}.id AND COALESCE(pe.approval_status,'')<>'review' "
+        f"AND pe.source_id={alias}.id AND COALESCE(pe.approval_status,'')<>'review' AND COALESCE(pe.posting_status,'posted')='posted' "
         "AND EXISTS (SELECT 1 FROM journal_lines pl WHERE pl.entry_id=pe.id))"
     )
 
