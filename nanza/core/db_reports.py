@@ -494,16 +494,16 @@ class ReportsStore:
                 CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END currency,e.entry_date,
                 DSUM_EXACT(CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.debit END) debit,
                 DSUM_EXACT(CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.credit END) credit,
-                e.source_type fx_type,
-                DSUM_EXACT(CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount_usd ELSE '0' END) fx_usd_debit,
-                DSUM_EXACT(CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount_usd ELSE '0' END) fx_usd_credit,
-                DSUM_EXACT(CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount_lbp ELSE '0' END) fx_lbp_debit,
-                DSUM_EXACT(CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount_lbp ELSE '0' END) fx_lbp_credit
+                CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type WHEN j.amount_usd IS NOT NULL AND j.amount_lbp IS NOT NULL THEN 'stored_equivalent' ELSE '' END fx_type,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_usd AS REAL)>0 THEN ltrim(j.amount_usd,'-+') ELSE '0' END) fx_usd_debit,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_usd AS REAL)<0 THEN ltrim(j.amount_usd,'-+') ELSE '0' END) fx_usd_credit,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_lbp AS REAL)>0 THEN ltrim(j.amount_lbp,'-+') ELSE '0' END) fx_lbp_debit,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_lbp AS REAL)<0 THEN ltrim(j.amount_lbp,'-+') ELSE '0' END) fx_lbp_credit
                 FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
                 LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
                 {where_clause} GROUP BY a.code,a.name_en,
                 CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END,
-                e.entry_date,CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type ELSE '' END
+                e.entry_date,CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type WHEN j.amount_usd IS NOT NULL AND j.amount_lbp IS NOT NULL THEN 'stored_equivalent' ELSE '' END
                 ORDER BY e.currency,a.code""",parameters)]
         totals={}
         # 2.9.132 (performance): a day's ISO form and a (currency, day) rate are worked out once per report, not once per row;
@@ -526,11 +526,12 @@ class ReportsStore:
                        "usd_balance","usd_closing_balance","lbp_opening","lbp_debit","lbp_credit","lbp_balance","lbp_closing_balance")}}
             date=iso_day(str(row["entry_date"] or ""))
             debit=Decimal(str(row["debit"] or 0)); credit=Decimal(str(row["credit"] or 0))
-            usd_d=convert(debit,row["currency"],"USD",date); usd_c=convert(credit,row["currency"],"USD",date)
-            lbp_d=convert(debit,row["currency"],"LBP",date); lbp_c=convert(credit,row["currency"],"LBP",date)
-            if row['fx_type'] in ('payment_fx','payment_fx_reversal'):
+            if row['fx_type'] in ('payment_fx','payment_fx_reversal','stored_equivalent'):
                 usd_d=Decimal(str(row['fx_usd_debit'] or 0)); usd_c=Decimal(str(row['fx_usd_credit'] or 0))
                 lbp_d=Decimal(str(row['fx_lbp_debit'] or 0)); lbp_c=Decimal(str(row['fx_lbp_credit'] or 0))
+            else:
+                usd_d=convert(debit,row["currency"],"USD",date); usd_c=convert(credit,row["currency"],"USD",date)
+                lbp_d=convert(debit,row["currency"],"LBP",date); lbp_c=convert(credit,row["currency"],"LBP",date)
             if from_date and date<from_date:
                 item["opening"]+=debit-credit; item["usd_opening"]+=usd_d-usd_c; item["lbp_opening"]+=lbp_d-lbp_c  # already exact Decimals
                 continue

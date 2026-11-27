@@ -207,6 +207,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             for code, debit, credit in lines:
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit) VALUES(?,?,?,?,?)", (entry.lastrowid, self._account_id(db,
                         code), party["id"], str(debit), str(credit)))
+            self._freeze_document_equivalents(db, entry.lastrowid)
             debit_total = sum(x[1] for x in lines); credit_total = sum(x[2] for x in lines)
             if debit_total != credit_total:
                 raise ValueError(f"Unbalanced journal entry for invoice {item['invoice_number']}")
@@ -253,6 +254,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
         for code, debit, credit in lines:
             db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,description,debit,credit) VALUES(?,?,?,?,?,?)",
                 (entry, self._account_id(db, code), invoice["party_id"], f"Payment {invoice['invoice_number']}", str(debit), str(credit)))
+        self._freeze_document_equivalents(db, entry)
         return entry
 
     @atomic  # 2.9.121
@@ -519,6 +521,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
                 for line in lines:
                     values = {name: line.get(name) for name in columns}
                     values["debit"], values["credit"] = line.get("credit"), line.get("debit")
+                    self._reverse_equivalent_values(values)
                     db.execute(f"INSERT INTO journal_lines(entry_id,{','.join(columns)}) VALUES(?,{','.join('?' for _ in columns)})",
                                [reversal_id] + [values.get(name) for name in columns])
                     reversal_lines.append({"entry": {**reversal, "id": reversal_id}, **values,
@@ -757,6 +760,7 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
             for code, debit, credit in lines:
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit) VALUES(?,?,?,?,?)",
                            (entry_id, self._account_id(db, code), party["id"], str(debit), str(credit)))
+            self._freeze_document_equivalents(db, entry_id)
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                        (user_id, "update", "invoice", invoice_id, json.dumps({"fields": sorted(item.keys())}), utcnow()))
             self._post_invoice_payment(db, invoice_id, user_id, item.get("cash_account"))
@@ -840,10 +844,12 @@ class InvoicesStore(InvoiceReturnsStore, InvoiceAttachmentsStore, InvoiceNumbers
                 VALUES(?,?,?,?,?,?,?,?)""", (f"REV-{invoice_id}", invoice["invoice_date"],
                 f"Cancellation of invoice {invoice['invoice_number']}", "invoice_reversal", invoice_id,
                 invoice["currency"], user_id, utcnow()))
-            lines = db.execute("SELECT account_id,party_id,debit,credit FROM journal_lines WHERE entry_id=?", (original["id"],)).fetchall()
+            lines = db.execute("SELECT * FROM journal_lines WHERE entry_id=?", (original["id"],)).fetchall()
             for line in lines:
-                db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit) VALUES(?,?,?,?,?)",
-                    (reverse.lastrowid, line["account_id"], line["party_id"], line["credit"], line["debit"]))
+                values={key:line[key] for key in line.keys() if key not in ('id','entry_id')}
+                values['debit'],values['credit']=line['credit'],line['debit']
+                self._reverse_equivalent_values(values)
+                db.execute(f"INSERT INTO journal_lines(entry_id,{','.join(values)}) VALUES(?,{','.join('?' for _ in values)})",(reverse.lastrowid,*values.values()))
             db.execute("UPDATE invoices SET status='cancelled',cancelled_at=?,cancellation_reason=? WHERE id=?",
                        (utcnow(), reason, invoice_id))
             db.execute("DELETE FROM journal_entries WHERE source_type='invoice_payment' AND source_id=?", (invoice_id,))  # a void invoice has no payment

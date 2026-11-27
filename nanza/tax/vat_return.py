@@ -995,7 +995,7 @@ def official_form(result, company):
     if result.get("currency_filter") != "All" or result.get("include_review"):
         raise ValueError("The official form requires All Currencies and excludes Review documents")
     D = lambda v: Decimal(str(v or 0)); ratio = D(result["deduction_ratio"]); totals = {k: D(v) for k, v in result["totals_lbp"].items()}
-    box = {code: [ZERO, ZERO, ZERO] for code in (100, 110, 120, 130, 140, 150, 160, 156, 170, 180, 190, 200, 210, 220, 230, 240, 250)}
+    box = {code: [ZERO, ZERO, ZERO] for code in (100, 110, 120, 130, 140, 150, 160, 165, 170, 180, 190, 200, 210, 220, 230, 240, 250)}
     annex = {code: [ZERO, ZERO] for code in (600, 610, 620, 630, 460, 560, 660, 670, 680, 690, 700, 710)}
     groups = {"purchases": (600, 610, 620), "customs": (600, 610, 620), "expenses": (460, 560, 660), "assets": (680, 690, 700)}
     suppliers = {}; customers = {}
@@ -1021,7 +1021,7 @@ def official_form(result, company):
     for total, parts in ((630, (600, 610, 620)), (670, (460, 560, 660)), (710, (680, 690, 700))):
         annex[total] = [sum((annex[p][i] for p in parts), ZERO) for i in (0, 1)]
     box[170][1] = totals.get("reverse_output", ZERO); box[180][1] = totals.get("adj_output", ZERO)
-    box[190] = [sum((box[c][i] for c in (100, 110, 120, 130, 140, 150, 160, 156, 170, 180)), ZERO) for i in (0, 1, 2)]
+    box[190] = [sum((box[c][i] for c in (100, 110, 120, 130, 140, 150, 160, 165, 170, 180)), ZERO) for i in (0, 1, 2)]
     box[200] = [annex[630][0], ZERO, annex[630][1]]; box[210] = [annex[670][0], ZERO, annex[670][1]]; box[230] = [annex[710][0], ZERO, annex[710][1]]
     box[250] = [sum((box[c][i] for c in (200, 210, 220, 230, 240)), ZERO) for i in (0, 1, 2)]
     m = lambda v: _lbp(v)
@@ -1030,7 +1030,7 @@ def official_form(result, company):
               (130, "صافي الإيرادات المعفاة مع حق الحسم", "Exempt revenues with right of deduction (zero-rated)"),
               (140, "صافي الإيرادات المعفاة دون حق الحسم", "Exempt revenues without right of deduction"),
               (150, "صافي الإيرادات الخارجة عن نطاق الضريبة", "Revenues outside the scope of VAT"), (160, "صافي مبيع أصول ثابتة خاضعة", "Sales of taxable fixed assets"),
-              (156, "صافي مبيع أصول ثابتة غير خاضعة", "Sales of non-taxable fixed assets"), (170, "ضريبة مستحقة للدفع عن مبالغ مستحقة لغير المقيمين", "VAT due on amounts owed to non-residents"),
+              (165, "صافي مبيع أصول ثابتة غير خاضعة", "Sales of non-taxable fixed assets"), (170, "ضريبة مستحقة للدفع عن مبالغ مستحقة لغير المقيمين", "VAT due on amounts owed to non-residents"),
               (180, "مختلف", "Other / adjustments"), (190, "المجموع", "Total"),
               (200, "صافي المشتريات (+/- التغيير في المخزون)", "Net purchases"), (210, "صافي الأعباء", "Net charges (expenses)"),
               (220, "سلفات مدفوعة عن عمليات خاضعة", "Advances paid on taxable operations"), (230, "صافي مشتريات أصول ثابتة", "Net purchases of fixed assets"),
@@ -1057,7 +1057,7 @@ def official_form(result, company):
     q11 = [[str(c), en, ar, m(annex[c][0]), m(annex[c][1]) if c not in (610, 560, 690) else ""] for c, en, ar in a_labels]
     turnover = result.get("ytd_turnover_lbp") or {}
     ratio_rows = [["Revenues giving the right of deduction (100+120+130+160+180)", "الإيرادات التي تتيح حق الحسم", m(D(turnover.get("taxable")))],
-                  ["Total revenues (100+120+130+140+150+160+156+180)", "إجمالي الإيرادات", m(D(turnover.get("taxable")) + D(turnover.get("exempt")))],
+                  ["Total revenues (100+120+130+140+150+160+165+180)", "إجمالي الإيرادات", m(D(turnover.get("taxable")) + D(turnover.get("exempt")))],
                   ["Deduction ratio applied (Art. 31)", "نسبة الحسم", f"{ratio * 100:.2f}% ({result.get('ratio_source', '')})"],
                   ["* Deductible VAT on 620 / 660 / 700 = VAT paid x ratio", "الضريبة القابلة للحسم = الضريبة المدفوعة x النسبة", ""]]
     def top(data):

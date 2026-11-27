@@ -2,6 +2,14 @@
 
 Python desktop accounting, company-scoped data service, and a Flutter mobile companion.
 
+## Version 2.9.142 — approved FX book cents and final-acceptance candidate
+
+- Owner approval27November2026: new foreign documents keep HALF_UP cent book equivalents in the existing journal columns. Native amounts and historical posted lines remain unchanged. Explicit zero-native rounding lines use the existing exchange gain/loss accounts and reverse with their document.
+- Allocation FX uses rounded carrying values and cumulative proportional shares; the final allocation receives the remaining cents. Repeated allocations append only changed valuations. Connected settlements are recalculated on reallocation; period locks remain enforced.
+- The approved100.15EUR example at1.10, settled50.08+50.07 at1.20, records110.17/60.10/60.08USD, gain10.01 and zero party balance. Historical residuals require a separately reviewed correction; no bulk rewrite or zeroing is performed.
+- VAT specimen row165 was transposed as156 in the preparation schedule; corrected against the official Ministry Q1-2 specimen/guide. Bassam confirmed Q1/Q2 2026 use and110 base100/VAT11 with net Q2 base200/VAT22. This approval does not cover every statutory classification or a different taxpayer/form period.
+- This replaces the unpublished2.9.141 candidate. Installer acceptance and accounting close results are recorded separately; build success is not sole-ledger approval. No schema change or new program module.
+
 ## Version 2.9.141 — Classic release candidate
 
 - The two palette-consistency regression expectations now use the owner-requested Classic navy/gold values; their consistency checks remain intact.
@@ -282,7 +290,7 @@ Optional external OCR exists in `azure_reader.py`; do not describe all available
 
 ## Contributing and releases
 
-Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.141. Confirm a complete installer/device acceptance before deployment.
+Read `AI_RULES.md`. Preserve existing features and tests. New financial calculations require regression tests and reviewed legal rules. Use staged migrations, verified backups and reconciliation; never mass-rewrite posted transactions. Application version markers (installer.iss, app_runtime.APP_VERSION) are 2.9.142. Confirm a complete installer/device acceptance before deployment.
 
 Historical version notes remain in `CHANGELOG_LEGACY.md`. The supplied source archive contained no project-wide LICENSE; obtain the owner's licensing terms before redistribution. Bundled third-party assets keep their own notices.
 
