@@ -301,9 +301,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Cannot obtain the previous supported installer for upgrade acceptance.' }
           $previousSource = Join-Path $qaRoot 'previous-source'
           $previousArchive = Join-Path $qaRoot 'previous-source.zip'
-          git fetch --depth=1 origin c7e8ad0e57ab4c3c0ec3fae6a273cc25c5ffac6d
+          git fetch --depth=1 origin 66064375db49359730ef6f72e8955990061f258d
           if ($LASTEXITCODE -ne 0) { throw 'Cannot obtain the exact previous source.' }
-          git archive --format=zip --output=$previousArchive c7e8ad0e57ab4c3c0ec3fae6a273cc25c5ffac6d
+          git archive --format=zip --output=$previousArchive 66064375db49359730ef6f72e8955990061f258d
           if ($LASTEXITCODE -ne 0) { throw 'Cannot archive the exact previous source.' }
           Expand-Archive -LiteralPath $previousArchive -DestinationPath $previousSource
           python tools/check_installer_acceptance.py --installer installer-output/NanzaAccountingSetup.exe --previous-installer (Join-Path $qaRoot 'NanzaAccountingSetup.exe') --previous-source $previousSource --output (Join-Path $qaRoot 'results')
