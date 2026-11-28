@@ -94,6 +94,11 @@ class PaymentsStore:
         try: amount=Decimal(str(item.get("amount") or 0))
         except (ArithmeticError, ValueError, TypeError, KeyError) as exc: raise ValueError("Invalid payment amount") from exc
         if amount<=0: raise ValueError("Payment amount must be above zero")
+        if item.get('taxable_advance') is True:
+            from decimal import ROUND_HALF_UP
+            amount=amount.quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            if amount <= 0:
+                raise ValueError("Payment amount must be above zero after rounding")
         currency=str(item.get("currency") or "USD").upper()
         defaults=self.default_accounts()  # 2.9.81: Settings > Accounting Settings
         cash_account=str(item.get("cash_account") or defaults["cash"]).strip()
@@ -158,12 +163,33 @@ class PaymentsStore:
             balance=sum(d for _c,d,_cr in lines)-sum(cr for _c,_d,cr in lines)
             if balance>0: lines.append((gain_account,Decimal("0"),balance))
             elif balance<0: lines.append((loss_account,-balance,Decimal("0")))
+            if item.get("taxable_advance") is True:
+                from decimal import ROUND_HALF_UP
+                if kind != 'customer_receipt': raise ValueError('Taxable advances require a customer receipt')
+                if currency != (self.settings().get('base_currency') or 'USD'):
+                    raise ValueError('Taxable advances currently require the book currency; foreign-currency advances require review')
+                if exchange_diff: raise ValueError('A taxable advance cannot include a manual exchange adjustment')
+                self._assert_vat_open(date)
+                rate=Decimal(str(self.vat_rate_percent()))
+                if not rate.is_finite() or rate<=0: raise ValueError('A positive configured VAT rate is required')
+                base=(amount/(1+rate/100)).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+                tax=amount-base
+                vat_account=str(item.get('advance_vat_account') or defaults['output_vat']).strip()
+                if not vat_account.startswith('4427') or not db.execute('SELECT 1 FROM accounts WHERE code=?',(vat_account,)).fetchone():
+                    raise ValueError('Choose an existing output VAT account under 4427')
+                import vat_ledgers
+                vat_account=vat_ledgers.party_vat_account(db,party_account,vat_account,'sale')
+                lines.extend([(party_account,tax,Decimal(0)),(vat_account,Decimal(0),tax)])
+                db.execute('INSERT INTO payment_vat_advances VALUES(?,?,?,?,?,?,?,?)',
+                    (payment_id,str(base),str(tax),str(rate),vat_account,entry.lastrowid,user_id,utcnow()))
             lines=[(code,debit,credit) for code,debit,credit in lines if Decimal(str(debit)) or Decimal(str(credit))]
             for code,debit,credit in lines:
                 db.execute("INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit,department_id,project_id) VALUES(?,?,?,?,?,?,?)",
                     (entry.lastrowid,self._account_id(db,code),party_id,str(debit),str(credit),department_id,project_id))
+            self._freeze_document_equivalents(db,entry.lastrowid)
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                 (user_id,"create","payment",payment_id,json.dumps({"kind":kind,"number":number,"amount":str(amount),"currency":currency}),utcnow()))
+            if 'allocations' in item: self.save_allocations(payment_id,item['allocations'],user_id)
             return payment_id
 
     def list_payments(self):
@@ -172,6 +198,8 @@ class PaymentsStore:
                 CAST(x.amount AS REAL) amount,x.cash_account,x.party_account,x.reference,x.description,x.payment_method,
                 CAST(x.bank_commission AS REAL) bank_commission,x.commission_account,CAST(x.exchange_difference AS REAL) exchange_difference,
                 x.exchange_gain_account,x.exchange_loss_account,
+                EXISTS(SELECT 1 FROM payment_vat_advances va WHERE va.payment_id=x.id) taxable_advance,
+                (SELECT vat_account FROM payment_vat_advances va WHERE va.payment_id=x.id) advance_vat_account,
                 x.voided_at,x.void_reason,x.reversal_entry_number,x.replaced_by,
                 CASE WHEN x.voided_at IS NULL THEN 'Active' WHEN x.reversal_entry_number IS NOT NULL THEN 'Reversed' ELSE 'Void' END status,
                 d.code department,pr.code project
@@ -292,9 +320,29 @@ class PaymentsStore:
     def non_deductible_expenses(self, year=None):
         """2.9.110: expenses marked not deductible for income tax (no official invoice ...), to add back to the taxable profit.
         2.9.113: with the expense lines (class 6) of the journal vouchers, purchases and payments ticked the same way."""
+        from db_reports import _report_number
         with self.connect() as db:
-            rows=[dict(row) for row in db.execute("""SELECT id,expense_number,expense_date,description,category,currency,CAST(subtotal AS REAL) subtotal,
-                CAST(vat AS REAL) vat,CAST(total AS REAL) total,expense_account,reference FROM expenses WHERE tax_deductible=0 ORDER BY expense_date,id""")]
+            raw=[dict(row) for row in db.execute("""SELECT id,expense_number,expense_date,description,category,currency,CAST(subtotal AS REAL) subtotal,
+                CAST(vat AS REAL) vat,CAST(total AS REAL) total,expense_account,reference,
+                with_vat_subtotal,without_vat_subtotal,expense_without_vat_account
+                FROM expenses WHERE tax_deductible=0 AND EXISTS(
+                    SELECT 1 FROM journal_entries e JOIN journal_lines l ON l.entry_id=e.id
+                    WHERE e.source_type='expense' AND e.source_id=expenses.id AND e.posting_status='posted')
+                ORDER BY expense_date,id""")]
+            rows=[]
+            for row in raw:
+                with_vat=Decimal(str(row.pop('with_vat_subtotal') or 0))
+                without=Decimal(str(row.pop('without_vat_subtotal') or 0))
+                without_account=row.pop('expense_without_vat_account')
+                # Preserve the before-VAT total while identifying the actual
+                # account of each portion; old unsplit rows keep their account.
+                if not with_vat and not without:
+                    rows.append(row)
+                else:
+                    parts={row['expense_account']:with_vat}
+                    parts[without_account]=parts.get(without_account,Decimal(0))+without
+                    for code,amount in parts.items():
+                        if amount: rows.append({**row,'expense_account':code,'subtotal':_report_number(amount)})
             for row in db.execute("""SELECT e.id,e.entry_number,e.entry_date,e.description,e.source_type,e.currency,a.code,
                     SUM(CAST(j.debit AS REAL)-CAST(j.credit AS REAL)) amount FROM journal_entries e JOIN journal_lines j ON j.entry_id=e.id
                     JOIN accounts a ON a.id=j.account_id JOIN tax_flags t ON t.source_type=e.source_type
@@ -364,23 +412,55 @@ class PaymentsStore:
             with self.connect() as db:
                 entry = self._payment_entry(db, payment_id)
                 snapshot = self._payment_snapshot(db, row, entry)
-                db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))  # released; kept in the audit log
+                if db.execute('SELECT 1 FROM payment_vat_advances WHERE payment_id=?',(payment_id,)).fetchone():
+                    day=display_date(datetime.now().date())
+                    reversal=self._reverse_payment_entry(db,row,user_id,day)
+                    db.execute('UPDATE payments SET reversal_entry_number=? WHERE id=?',(reversal,payment_id))
+                if not db.execute('SELECT 1 FROM payment_vat_advances WHERE payment_id=?',(payment_id,)).fetchone():
+                    db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))  # released; kept in the audit log
                 db.execute("UPDATE payments SET voided_at=?,voided_by=?,void_reason=? WHERE id=?", (utcnow(), user_id, reason, int(payment_id)))
                 db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                     (user_id, "void", "payment", int(payment_id), json.dumps({**snapshot, "reason": reason}, default=str), utcnow()))
             return {"voided": int(payment_id), "number": row["payment_number"]}
         with self.connect() as db:  # a draft: no posted entry - removed as before, with its full content in the audit log
             snapshot = self._payment_snapshot(db, row, self._payment_entry(db, payment_id))
+            db.execute('DELETE FROM payment_vat_advances WHERE payment_id=?',(payment_id,))
             self._remove_entries(db, "payment", payment_id); db.execute("DELETE FROM payments WHERE id=?", (int(payment_id),))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                 (user_id, "delete", "payment", int(payment_id), json.dumps(snapshot, default=str), utcnow()))
         return {"deleted": int(payment_id)}
 
     def update_payment(self, payment_id, item, user_id):
+        with self.connect() as db:
+            advance=db.execute('SELECT * FROM payment_vat_advances WHERE payment_id=?',(payment_id,)).fetchone()
+            if advance:
+                row=db.execute('SELECT * FROM payments WHERE id=?',(payment_id,)).fetchone()
+                if row['voided_at']: raise ValueError('A reversed taxable advance cannot be edited')
+                changed=[]
+                numeric={'amount','bank_commission','exchange_difference','party_id'}
+                fields={'kind','payment_number','payment_date','party_id','currency','amount','cash_account','reference',
+                    'description','payment_method','bank_commission','commission_account','exchange_difference',
+                    'exchange_gain_account','exchange_loss_account'}
+                for key in fields & item.keys():
+                    wanted,old=item[key],row[key]
+                    if key in numeric: equal=Decimal(str(wanted or 0))==Decimal(str(old or 0))
+                    elif key=='payment_date': equal=iso_date(wanted)==iso_date(old)
+                    else: equal=str(wanted or '').strip()==str(old or '').strip()
+                    if not equal: changed.append(key)
+                if item.get('taxable_advance',True) is not True: changed.append('taxable_advance')
+                if item.get('advance_vat_account',advance['vat_account']) != advance['vat_account']: changed.append('advance_vat_account')
+                if 'department' in item or 'project' in item:
+                    if self._dimension_ids(db,item)!=(row['department_id'],row['project_id']): changed.append('dimensions')
+                if changed:
+                    raise ValueError('Reverse the taxable advance and enter a corrected receipt; only allocations can be edited on a posted taxable advance')
+                if 'allocations' in item:self.save_allocations(payment_id,item['allocations'],user_id)
+                return payment_id
         return self._safe_replacement("payment", payment_id, item, user_id)
 
     def _reverse_payment_entry(self, db, row, user_id, reversal_date):
         """A balanced opposite entry of the payment's posted entry (debit <-> credit), linked with reversal_of."""
+        if db.execute('SELECT 1 FROM payment_vat_advances WHERE payment_id=?',(row['id'],)).fetchone():
+            self._assert_period_open(reversal_date);self._assert_books_unlocked(reversal_date);self._assert_vat_open(reversal_date)
         entry = self._payment_entry(db, row["id"])
         if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=? LIMIT 1", (entry["id"],)).fetchone():
             raise ValueError(f"{row['payment_number']} has already been reversed")
@@ -401,22 +481,25 @@ class PaymentsStore:
             total_debit += debit; total_credit += credit
             values = {column: line[column] for column in columns}
             values["debit"], values["credit"] = str(debit), str(credit)
+            self._reverse_equivalent_values(values)
             db.execute(insert_sql, (new, *(values[column] for column in columns)))
         if total_debit != total_credit: raise ValueError("Reversal does not balance - nothing was saved")
         # Realized exchange entries belong to the same settlement. Reverse their
         # original equivalent fields too, so the foreign amount remains zero.
-        for fx in db.execute("SELECT * FROM journal_entries WHERE source_type='payment_fx' AND source_id=?", (int(row['id']),)).fetchall():
+        for fx in db.execute("SELECT * FROM journal_entries WHERE source_type IN ('payment_fx','payment_vat_apply') AND source_id=?", (int(row['id']),)).fetchall():
             if db.execute("SELECT 1 FROM journal_entries WHERE reversal_of=?", (fx['id'],)).fetchone(): continue
             fx_id=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
                 created_by,created_at,posting_status,posted_at,posted_by,reversal_of)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",(f"REV-{fx['entry_number']}",reversal_date,f"Reversal of {fx['entry_number']}",
-                'payment_fx_reversal',int(row['id']),fx['currency'],user_id,utcnow(),'posted',utcnow(),user_id,fx['id'])).lastrowid
+                fx['source_type']+'_reversal',int(row['id']),fx['currency'],user_id,utcnow(),'posted',utcnow(),user_id,fx['id'])).lastrowid
             for line in db.execute("SELECT * FROM journal_lines WHERE entry_id=?",(fx['id'],)).fetchall():
                 values={column:line[column] for column in columns}
                 values['debit'],values['credit']=line['credit'],line['debit']
+                self._reverse_equivalent_values(values)
                 db.execute(insert_sql,(fx_id,*(values[column] for column in columns)))
         return number
 
+    @atomic
     def _replace_payment_on_stage(self, payment_id, item, user_id):
         with self.connect() as db:
             row = db.execute("SELECT * FROM payments WHERE id=?", (int(payment_id),)).fetchone()
@@ -431,12 +514,17 @@ class PaymentsStore:
         reversal_date = display_date(datetime.now().date())
         self._assert_period_open(reversal_date)
         item = {**item, "kind": row["kind"]}; item.pop("payment_number", None)  # the corrected document gets a NEW number
+        # Exclude the old settlement from the new allocation's capacity check;
+        # the outer transaction rolls this flag back on any failure.
+        with self.connect() as db:
+            db.execute('UPDATE payments SET voided_at=? WHERE id=?',(utcnow(),payment_id))
         new_id = self.add_payment(item, user_id)
         with self.connect() as db:
             entry = self._payment_entry(db, payment_id); snapshot = self._payment_snapshot(db, row, entry)
             reversal = self._reverse_payment_entry(db, row, user_id, reversal_date)
             new_number = db.execute("SELECT payment_number FROM payments WHERE id=?", (new_id,)).fetchone()[0]
-            db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))
+            if not db.execute('SELECT 1 FROM payment_vat_advances WHERE payment_id=?',(payment_id,)).fetchone():
+                db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))
             db.execute("UPDATE payments SET voided_at=?,voided_by=?,void_reason=?,reversal_entry_number=?,replaced_by=? WHERE id=?",
                        (utcnow(), user_id, f"Corrected by {new_number}", reversal, new_id, int(payment_id)))
             db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
@@ -539,6 +627,8 @@ class PaymentsStore:
         with self.connect() as db:
             payment = db.execute("SELECT * FROM payments WHERE id=?", (int(payment_id),)).fetchone()
             if not payment: raise KeyError("Payment not found")
+            self._assert_period_open(payment['payment_date']); self._assert_books_unlocked(payment['payment_date'])
+            affected={r[0] for r in db.execute('SELECT invoice_id FROM payment_allocations WHERE payment_id=?',(payment_id,))}
             db.execute("DELETE FROM payment_allocations WHERE payment_id=?", (int(payment_id),))
             total = Decimal("0")
             for entry in allocations or []:
@@ -554,9 +644,10 @@ class PaymentsStore:
                     action = "an outgoing payment/refund" if expected == "supplier_payment" else "an incoming receipt/refund"
                     raise ValueError(f"{invoice['invoice_number']} cannot be settled with this payment type; use {action}. To offset a credit note against an invoice, record a separate journal adjustment.")
                 total += amount
+                affected.add(invoice['id'])
                 db.execute("INSERT INTO payment_allocations(payment_id,invoice_id,amount,created_at) VALUES(?,?,?,?)", (int(payment_id), invoice["id"], str(amount), utcnow()))
                 # 2.9.121: never more than what is still open on the document (all payments together) - the rest stays unapplied
-                allocated = Decimal(str(db.execute("SELECT COALESCE(DSUM(amount),0) FROM payment_allocations WHERE invoice_id=?", (invoice["id"],)).fetchone()[0] or 0))
+                allocated = Decimal(str(db.execute("SELECT COALESCE(DSUM(a.amount),0) FROM payment_allocations a JOIN payments p ON p.id=a.payment_id WHERE a.invoice_id=? AND p.voided_at IS NULL", (invoice["id"],)).fetchone()[0] or 0))
                 open_amount = Decimal(str(invoice["total"] or 0)) - Decimal(str(invoice["amount_paid"] or 0))
                 if allocated > open_amount + Decimal("0.005"):
                     left = max(Decimal("0"), open_amount - (allocated - amount))
@@ -564,8 +655,123 @@ class PaymentsStore:
                                      "the rest of the payment stays unapplied (an advance) on the account")
             if total > settlement_amount(payment) + Decimal("0.005"):
                 raise ValueError(f"Allocated {total:,.2f} is more than the payment party settlement {settlement_amount(payment):,.2f}")
-            self._post_allocation_fx(db,payment,user_id)
+            self._settle_related_payment_fx(db, payment_id, affected, user_id)
+            self._post_advance_applications(db,payment,user_id)
         return self.payment_allocations(payment_id)
+
+    def _settle_related_payment_fx(self, db, payment_id, invoice_ids, user_id):
+        """Settle the payment and update cumulative shares on the same invoices."""
+        related = {payment_id}
+        if invoice_ids:
+            marks = ",".join("?" for _ in invoice_ids)
+            related.update(row[0] for row in db.execute(
+                f"SELECT DISTINCT payment_id FROM payment_allocations WHERE invoice_id IN ({marks})",
+                tuple(invoice_ids)))
+        for related_id in sorted(related):
+            payment = db.execute("SELECT * FROM payments WHERE id=? AND voided_at IS NULL",
+                                 (related_id,)).fetchone()
+            if payment:
+                self._post_allocation_fx(db, payment, user_id)
+
+    def _post_advance_applications(self, db, payment, user_id):
+        """Append only the VAT change on application. Repeated saves are inert."""
+        advance=db.execute('SELECT * FROM payment_vat_advances WHERE payment_id=?',(payment['id'],)).fetchone()
+        if not advance: return
+        if payment['voided_at']:
+            raise ValueError('Reversed or void taxable advances cannot be applied')
+        if not self._payment_is_posted(db,payment['id']):
+            if db.execute('SELECT 1 FROM payment_allocations WHERE payment_id=?',(payment['id'],)).fetchone():
+                raise ValueError('Save an unallocated advance draft first; apply it after approval')
+            return
+        from decimal import ROUND_HALF_UP
+        desired={int(r['invoice_id']):Decimal(str(r['amount'])) for r in db.execute(
+            'SELECT invoice_id,DSUM_EXACT(amount) amount FROM payment_allocations WHERE payment_id=? GROUP BY invoice_id',(payment['id'],))}
+        previous={}
+        for row in db.execute('SELECT * FROM payment_vat_advance_applications WHERE advance_payment_id=?',(payment['id'],)):
+            item=previous.setdefault(row['invoice_id'],[Decimal(0),Decimal(0)])
+            item[0]+=Decimal(row['gross_applied']);item[1]+=Decimal(row['vat_applied'])
+        for invoice_id in sorted(set(desired)|set(previous)):
+            gross=desired.get(invoice_id,Decimal(0));old_gross,old_tax=previous.get(invoice_id,[Decimal(0),Decimal(0)])
+            tax=(gross*Decimal(advance['vat_amount'])/Decimal(payment['amount'])).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            delta_gross,delta_tax=gross-old_gross,tax-old_tax
+            if not delta_gross and not delta_tax: continue
+            invoice=db.execute('SELECT * FROM invoices WHERE id=?',(invoice_id,)).fetchone()
+            if invoice['kind']!='sale' or invoice['doc_subtype']=='credit_note': raise ValueError('Apply taxable advances to final sales invoices only')
+            other_tax=Decimal(str(db.execute("""SELECT COALESCE(DSUM_EXACT(a.vat_applied),'0') FROM payment_vat_advance_applications a
+                JOIN payments p ON p.id=a.advance_payment_id WHERE a.invoice_id=? AND a.advance_payment_id<>? AND p.voided_at IS NULL""",
+                (invoice_id,payment['id'])).fetchone()[0]))
+            if Decimal(str(invoice['vat'] or 0)) < tax+other_tax: raise ValueError('Advance VAT exceeds VAT on the final invoice')
+            day=max(iso_date(invoice['invoice_date']),iso_date(payment['payment_date']))
+            self._assert_period_open(day);self._assert_books_unlocked(day);self._assert_vat_open(day)
+            sequence=db.execute('SELECT COUNT(*) FROM payment_vat_advance_applications WHERE advance_payment_id=?',(payment['id'],)).fetchone()[0]+1
+            entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
+                created_by,created_at,posting_status,posted_at,posted_by) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (f"VA-{payment['payment_number']}-{sequence}",day,f"VAT advance applied to {invoice['invoice_number']}",
+                 'payment_vat_apply',payment['id'],payment['currency'],user_id,utcnow(),'posted',utcnow(),user_id)).lastrowid
+            for account,debit,credit,party in ((advance['vat_account'],max(delta_tax,Decimal(0)),max(-delta_tax,Decimal(0)),None),
+                    (payment['party_account'],max(-delta_tax,Decimal(0)),max(delta_tax,Decimal(0)),payment['party_id'])):
+                db.execute('INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit) VALUES(?,?,?,?,?)',
+                    (entry,self._account_id(db,account),party,str(debit),str(credit)))
+            db.execute("""INSERT INTO payment_vat_advance_applications(advance_payment_id,invoice_id,gross_applied,
+                base_applied,vat_applied,application_date,settlement_entry_id,created_by) VALUES(?,?,?,?,?,?,?,?)""",
+                (payment['id'],invoice_id,str(delta_gross),str(delta_gross-delta_tax),str(delta_tax),day,entry,user_id))
+            db.execute('INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)',
+                (user_id,'apply','vat_advance',payment['id'],json.dumps({'invoice_id':invoice_id,'gross':str(delta_gross),'vat':str(delta_tax),'entry_id':entry}),utcnow()))
+
+    def unapplied_advance_vat(self, as_of):
+        """One bulk read for historical ageing, never one query per payment."""
+        with self.connect() as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advances'").fetchone(): return {}
+            remaining={}
+            for row in db.execute("""SELECT a.payment_id,a.vat_amount,e.entry_date FROM payment_vat_advances a
+                    JOIN journal_entries e ON e.id=a.recognition_entry_id WHERE e.posting_status='posted'"""):
+                if iso_date(row['entry_date'])<=iso_date(as_of): remaining[row['payment_id']]=Decimal(row['vat_amount'])
+            for row in db.execute("""SELECT a.advance_payment_id,a.vat_applied,e.entry_date,e.reversal_of
+                    FROM payment_vat_advance_applications a JOIN journal_entries e
+                    ON (e.id=a.settlement_entry_id OR e.reversal_of=a.settlement_entry_id) WHERE e.posting_status='posted'"""):
+                if row['advance_payment_id'] in remaining and iso_date(row['entry_date'])<=iso_date(as_of):
+                    remaining[row['advance_payment_id']]-=Decimal(row['vat_applied'])*(-1 if row['reversal_of'] else 1)
+            return remaining
+
+    def _allocated_book_values(self, db, payment):
+        """Approved cents policy for documents with frozen equivalents.
+
+        Cumulative shares give the final allocation the remaining book cents.
+        Payment IDs define a stable allocation order, including retries/edits.
+        Historical documents without stored equivalents keep their old policy.
+        """
+        from decimal import ROUND_HALF_UP
+        cent=lambda value:value.quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+        targets=('USD','LBP')
+        control=db.execute('''SELECT j.amount_usd,j.amount_lbp FROM journal_entries e
+            JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
+            WHERE e.source_type='payment' AND e.source_id=? AND a.code=? ORDER BY j.id LIMIT 1''',
+            (payment['id'],payment['party_account'])).fetchone()
+        if not control or any(control['amount_'+c.lower()] is None for c in targets):return None
+        allocations=db.execute('''SELECT DSUM_EXACT(a.amount) allocated_amount,i.*
+            FROM payment_allocations a JOIN invoices i ON i.id=a.invoice_id
+            WHERE a.payment_id=? GROUP BY i.id ORDER BY i.id''',(payment['id'],)).fetchall()
+        invoice_shares={c:Decimal(0) for c in targets};native_total=Decimal(0)
+        for row in allocations:
+            native=Decimal(str(row['allocated_amount']));native_total+=native
+            invoice_control=db.execute('''SELECT j.amount_usd,j.amount_lbp FROM journal_entries e
+                JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
+                WHERE e.source_type='invoice' AND e.source_id=? AND a.code=? ORDER BY j.id LIMIT 1''',
+                (row['id'],row['supplier_account'])).fetchone()
+            if not invoice_control or any(invoice_control['amount_'+c.lower()] is None for c in targets):return None
+            prior=Decimal(str(row['amount_paid'] or 0))
+            for other in db.execute('''SELECT a.amount FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
+                WHERE a.invoice_id=? AND x.id<? AND x.voided_at IS NULL
+                AND EXISTS (SELECT 1 FROM journal_entries e WHERE e.source_type='payment'
+                            AND e.source_id=x.id AND e.posting_status='posted')''',(row['id'],payment['id'])):
+                prior+=Decimal(str(other['amount']))
+            total=Decimal(str(row['total']))
+            for c in targets:
+                book=Decimal(str(invoice_control['amount_'+c.lower()]))
+                invoice_shares[c]+=cent(book*(prior+native)/total)-cent(book*prior/total)
+        direction=Decimal(1) if payment['kind']=='customer_receipt' else Decimal(-1)
+        paid=settlement_amount(payment)
+        return {c:cent(direction*(cent(Decimal(str(control['amount_'+c.lower()]))*native_total/paid)-invoice_shares[c])) for c in targets}
 
     def _post_allocation_fx(self, db, payment, user_id):
         """Owner-approved realized FX: only allocated cash, no native-amount movement.
@@ -577,29 +783,46 @@ class PaymentsStore:
         if Decimal(str(payment['exchange_difference'] or 0)) or not self._payment_is_posted(db,payment['id']): return
         basis=self.settings().get('base_currency','USD') or 'USD'
         if payment['currency']==basis: return
-        self._assert_period_open(payment['payment_date']); self._assert_books_unlocked(payment['payment_date'])
         from decimal import ROUND_HALF_UP
-        desired=Decimal('0')
-        direction=Decimal('1') if payment['kind']=='customer_receipt' else Decimal('-1')
-        for row in db.execute("""SELECT a.amount,i.invoice_date FROM payment_allocations a
-                JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=?""",(payment['id'],)):
-            native=Decimal(str(row['amount']))
-            desired+=direction*(self._converted_amount(native,payment['currency'],basis,payment['payment_date'])-
-                self._converted_amount(native,payment['currency'],basis,row['invoice_date']))
-        desired=desired.quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
         previous=Decimal(str(db.execute("""SELECT COALESCE(DSUM_EXACT(j.debit),0) FROM journal_entries e
             JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
             WHERE e.source_type='payment_fx' AND e.source_id=? AND a.code=?""",(payment['id'],payment['party_account'])).fetchone()[0]))
         previous-=Decimal(str(db.execute("""SELECT COALESCE(DSUM_EXACT(j.credit),0) FROM journal_entries e
             JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
             WHERE e.source_type='payment_fx' AND e.source_id=? AND a.code=?""",(payment['id'],payment['party_account'])).fetchone()[0]))
+        book_values=self._allocated_book_values(db,payment) if basis in ('USD','LBP') else None
+        deltas=None
+        if book_values is not None:
+            prior_values={c:Decimal(0) for c in book_values}
+            for old in db.execute('''SELECT j.debit,j.credit,j.amount_usd,j.amount_lbp FROM journal_entries e
+                JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
+                WHERE e.source_type='payment_fx' AND e.source_id=? AND a.code=?''',(payment['id'],payment['party_account'])):
+                sign=Decimal(-1) if Decimal(str(old['credit']))>0 else Decimal(1)
+                for c in prior_values:prior_values[c]+=sign*Decimal(str(old['amount_'+c.lower()] or 0))
+            deltas={c:book_values[c]-prior_values[c] for c in book_values}
+            desired=book_values[basis]
+        else:
+            desired=Decimal('0')
+            direction=Decimal('1') if payment['kind']=='customer_receipt' else Decimal('-1')
+            for row in db.execute("""SELECT a.amount,i.invoice_date FROM payment_allocations a
+                    JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=?""",(payment['id'],)):
+                native=Decimal(str(row['amount']))
+                desired+=direction*(self._converted_amount(native,payment['currency'],basis,payment['payment_date'])-
+                    self._converted_amount(native,payment['currency'],basis,row['invoice_date']))
+            desired=desired.quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
         difference=(desired-previous).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
-        if not difference: return
+        if not difference and not (deltas and any(deltas.values())): return
+        self._assert_period_open(payment['payment_date']); self._assert_books_unlocked(payment['payment_date'])
         defaults=self.default_accounts()
-        offset=(payment['exchange_gain_account'] or defaults['exchange_gain']) if difference>0 else (payment['exchange_loss_account'] or defaults['exchange_loss'])
+        direction=difference or next(v for v in deltas.values() if v)
+        offset=(payment['exchange_gain_account'] or defaults['exchange_gain']) if direction>0 else (payment['exchange_loss_account'] or defaults['exchange_loss'])
         value=abs(difference); zero=Decimal('0')
-        usd=self._converted_amount(value,basis,'USD',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
-        lbp=self._converted_amount(value,basis,'LBP',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+        if deltas:
+            factor=Decimal(1) if difference>=0 else Decimal(-1)
+            usd=deltas['USD']*factor;lbp=deltas['LBP']*factor
+        else:
+            usd=self._converted_amount(value,basis,'USD',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            lbp=self._converted_amount(value,basis,'LBP',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
         sequence=db.execute("SELECT COUNT(*) FROM journal_entries WHERE source_type='payment_fx' AND source_id=?",(payment['id'],)).fetchone()[0]+1
         number=f"FX-{payment['payment_number']}-{sequence}"
         entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,
@@ -608,10 +831,12 @@ class PaymentsStore:
                 user_id,utcnow(),'posted',utcnow(),user_id)).lastrowid
         for account,debit,credit,native,currency in [(payment['party_account'],value if difference>0 else zero,value if difference<0 else zero,zero,payment['currency']),
                 (offset,value if difference<0 else zero,value if difference>0 else zero,value,basis)]:
+            line_usd,line_lbp=usd,lbp
+            if not difference and account==offset:line_usd,line_lbp=-usd,-lbp
             db.execute("""INSERT INTO journal_lines(entry_id,account_id,party_id,debit,credit,line_currency,amount,amount_usd,amount_lbp,
                 revalue_currency,revalue_amount,reference) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (entry,self._account_id(db,account),payment['party_id'] if account==payment['party_account'] else None,str(debit),str(credit),currency,str(native),
-                str(usd),str(lbp),basis if basis not in ('USD','LBP') and not native else None,
+                str(line_usd),str(line_lbp),basis if basis not in ('USD','LBP') and not native else None,
                 str(value) if basis not in ('USD','LBP') and not native else None,payment['payment_number']))
         db.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
             (user_id,'realized_fx','payment',payment['id'],json.dumps({'entry':number,'currency':basis,'difference':str(difference)}),utcnow()))

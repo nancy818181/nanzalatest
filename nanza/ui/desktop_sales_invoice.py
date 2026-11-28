@@ -9,7 +9,7 @@ from desktop_common import (  # 2.9.102: the names this module uses (no more 'im
     parse_user_date, print_rows, safe_display_date, SALE_TREATMENTS, sortable_date, TAXABLE_LABEL, tk, ttk
 )
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
-from desktop_common import main_currency  # 2.9.71
+from desktop_common import invoice_discount_editor, main_currency  # 2.9.71
 
 
 def _responsive_invoice_details(form, fields, dimensions):
@@ -98,10 +98,24 @@ class SalesInvoiceMixin:
         invoice_details=tk.Frame(details,bg=LIGHT); account_details=tk.Frame(details,bg=LIGHT); extra_details=tk.Frame(details,bg=LIGHT)
         details.add(invoice_details,text="Invoice details"); details.add(account_details,text="Posting accounts")
         details.add(extra_details,text="More")
+        # ttk otherwise reserves the height of its tallest, hidden page. Size
+        # the notebook to the selected content so Posting accounts/More do not
+        # leave an empty band between the daily fields and Add Line.
+        def fit_detail_tab(_event=None):
+            if not details.winfo_exists(): return
+            selected = details.select()
+            if selected:
+                required = details.nametowidget(selected).winfo_reqheight()
+                if required > 1 and int(details.cget("height") or 0) != required:
+                    details.configure(height=required)
+                if self.__dict__.get("_fit_sales_header"): self._fit_sales_header()
+        details.bind("<<NotebookTabChanged>>", fit_detail_tab, add="+")
+        for detail_page in (invoice_details, account_details, extra_details):
+            detail_page.bind("<Configure>", fit_detail_tab, add="+")
         nav=tk.Frame(invoice_details,bg=LIGHT); nav.pack(fill="x",pady=(0,1))
         self.sales_navigation=nav
         lookup_options=tk.Frame(extra_details,bg=LIGHT);lookup_options.pack(fill="x")
-        tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",9,"bold")).pack(side="left",padx=(0,4))
+        tk.Label(nav,text="Find invoice",bg=LIGHT,fg=NAVY,font=("Segoe UI",8,"bold")).pack(side="left",padx=(0,4))
         self.sales_org = tk.StringVar(value="Yes")
         tk.Label(lookup_options, text="Org", bg=LIGHT).pack(side="left")
         ttk.Combobox(lookup_options, textvariable=self.sales_org, values=("Yes", "No"), state="readonly", width=4).pack(side="left")
@@ -131,14 +145,16 @@ class SalesInvoiceMixin:
         detail_fields=[]
         def put(row,column,label,widget,bold=False):
             if label:
-                caption=tk.Label(widget.master,text=label,bg=LIGHT,font=("Segoe UI",9,"bold") if bold else None)
+                caption=tk.Label(widget.master,text=label,bg=LIGHT,font=("Segoe UI",8,"bold") if bold else ("Segoe UI",8))
                 caption.grid(row=row,column=2*column,sticky="w",padx=(0 if column==0 else 28,8),pady=1)
                 if widget.master==form:detail_fields.append((caption,widget))
                 caption._nanza_field_key=label
+            if widget.master == form and isinstance(widget, (tk.Entry, ttk.Combobox)):
+                widget.configure(font=("Segoe UI",9))
             widget.grid(row=row,column=2*column+1,sticky="w",pady=1)
             return widget
-        doc_box=ttk.Combobox(form,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
-        put(0,0,"Document",doc_box); doc_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_doc_type_changed())
+        doc_box=ttk.Combobox(extras,textvariable=self.sales_doc_type,values=["Invoice","Return","Credit Note","Debit Note"],state="readonly",width=11)
+        put(3,0,"Document",doc_box); doc_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_doc_type_changed())
         put(0,1,"Invoice No.",tk.Entry(form,textvariable=self.sales_no,width=18,font=("Segoe UI",10,"bold"),state="readonly",readonlybackground="white"),True)
         self.sales_party_box=put(1,0,"Customer",ttk.Combobox(form,textvariable=self.sales_party,width=28))
         self.sales_party_box.bind("<KeyRelease>",self.search_sales_customers); self.sales_party_box.bind("<<ComboboxSelected>>",lambda _event:self.sales_customer_chosen())
@@ -181,7 +197,7 @@ class SalesInvoiceMixin:
         detail_fields.sort(key=lambda pair:order.index(pair[0]._nanza_field_key))
         _responsive_invoice_details(form,detail_fields,None)
         # the NEW INVOICE / EDITING badge sits at the end of the Find invoice row, as a status in Zoho
-        self.sales_mode_label=tk.Label(nav,text="NEW INVOICE",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
+        self.sales_mode_label=tk.Label(nav,text="DRAFT",bg=GOLD,fg=NAVY,font=("Segoe UI",8,"bold"),padx=8)
         self.sales_mode_label.pack(side="right",padx=(6,2))
         flow_toolbar(nav)
         # 2.9.113: income not subject to income tax (already taxed / exempt by law) - the legal reason is required; Settings switches it on
@@ -256,7 +272,6 @@ class SalesInvoiceMixin:
         totals=tk.Frame(bottom,bg=LIGHT); totals.pack(fill="x")
         box=tk.Frame(totals,bg=card_bg,padx=12,pady=6,highlightthickness=1,highlightbackground=line); box.pack(side="top",fill="x")
         self.sales_total_labels={}
-        discount=tk.Frame(extra_details,bg=card_bg); discount.pack(fill="x",padx=4,pady=3)
         summary=tk.Frame(box,bg=card_bg); summary.pack(fill="x")
         import arabic_ui
         short_ar={'Total':'قبل الخصم','Discount':'الخصم','Total HT':'قبل الضريبة','VAT':'الضريبة','TOTAL':'الإجمالي'}
@@ -271,12 +286,11 @@ class SalesInvoiceMixin:
             if key=="VAT": self.sales_vat_caption=label
             value=tk.Label(pair,text="0.00",bg=pair_bg,fg=NAVY,anchor="e",font=("Segoe UI",15 if key=="TOTAL" else 11,"bold"))
             value.pack(side="left"); self.sales_total_labels[key]=value
+        discount, self.select_sales_discount = invoice_discount_editor(
+            summary, self.sales_discount_percent, self.sales_discount_amount,
+            lambda _mode: self.update_sales_totals())
+        discount.pack(side="left", padx=3)
         flow_toolbar(summary)
-        tk.Label(discount,text="Discount %",bg=card_bg,fg="#5F6B76",font=("Segoe UI",8)).pack(side="left")
-        e1=tk.Entry(discount,textvariable=self.sales_discount_percent,width=5); e1.pack(side="left",padx=2)
-        tk.Label(discount,text="or amount",bg=card_bg,fg="#5F6B76",font=("Segoe UI",8)).pack(side="left")
-        e2=tk.Entry(discount,textvariable=self.sales_discount_amount,width=9); e2.pack(side="left",padx=2)
-        for entry in (e1,e2): entry.bind("<KeyRelease>",lambda _event:self.update_sales_totals())
         self.sales_totals=tk.Label(bottom,text="",bg=LIGHT,fg=NAVY); self.sales_totals.pack(side="right",padx=8)
         self.sales_words=tk.Label(bottom,text="",bg=LIGHT,fg="#5f6b76",anchor="w",justify="left",wraplength=380,font=("Segoe UI",8))
         self.sales_words.pack(side="left",fill="x",expand=True,padx=4,pady=(1,0))
@@ -287,7 +301,15 @@ class SalesInvoiceMixin:
             # Keep the header scrollable and leave most of the viewport for lines.
             # A cap based on the fixed page avoids feedback between tree and header
             # heights when RTL toolbars or totals wrap during a language change.
-            height=min(header_outer.winfo_reqheight()+8,max(80,int(self.sales_tab.winfo_height()*.32)))
+            page_height = self.sales_tab.winfo_height()
+            row_height = int(ttk.Style(self.sales_sheet).lookup("Sales.Treeview", "rowheight") or 20)
+            # Translated toolbars and totals can occupy an extra row depending
+            # on the platform's fonts. Reserve five complete item rows first;
+            # the independently scrollable header receives the space left.
+            table_height = row_height * 5 + round(self.winfo_fpixels("0.32i")) + 4
+            available = page_height - bottom.winfo_height() - toolbar.winfo_height() - table_height - 24
+            height = min(header_outer.winfo_reqheight() + 8,
+                         max(80, min(int(page_height * .40), available)))
             if abs(content_outer.winfo_height()-height)>2:content_outer.configure(height=height)
         fit_state={'pending':False}
         def schedule_fit(_event=None):
@@ -499,10 +521,11 @@ class SalesInvoiceMixin:
             self.sales_payment_method.set("On Account (Not Cash)"); self.sales_date.set(self.fiscal_today())
             self.sales_department.set("(none)"); self.sales_project.set("(none)"); self.sales_treatment.set(TAXABLE_LABEL)
             self.sales_discount_percent.set("0"); self.sales_discount_amount.set("0")
+            self.select_sales_discount("percent")
         finally:
             self._resetting_sales_invoice = False
         self.sales_category_changed()
-        self.sales_mode_label.config(text="NEW INVOICE",bg=GOLD); self.load_sales_customer_list(); self.refresh_sales_number()
+        self.sales_mode_label.config(text="DRAFT",bg=GOLD); self.load_sales_customer_list(); self.refresh_sales_number()
         self.add_sales_item()
 
     def sales_row_values(self,item):
@@ -716,6 +739,7 @@ class SalesInvoiceMixin:
         try: result=invoice_calc.calculate(lines,self.sales_discount_percent.get() if hasattr(self,"sales_discount_percent") else 0,
                                            self.sales_discount_amount.get() if hasattr(self,"sales_discount_amount") else 0,export)
         except ValueError as exc:
+            self.sales_calculation = None
             if hasattr(self,"sales_total_labels"): self.sales_total_labels["TOTAL"].config(text=str(exc),fg="#8B1E1E")
             return
         for item,calculated in zip(lines,result["lines"]):
@@ -899,6 +923,7 @@ class SalesInvoiceMixin:
             self.sales_category_box["values"]=["Goods","Products","Services"]
         self.sales_category.set(category)
         self.sales_discount_percent.set(f'{float(detail.get("invoice_discount_percent") or 0):g}'); self.sales_discount_amount.set(f'{float(detail.get("invoice_discount_amount") or 0):g}')
+        self.select_sales_discount("amount" if Decimal(self.sales_discount_amount.get()) else "percent")
         for line in items or [{"description":"Invoice total","quantity":1,"unit_price":float(detail["subtotal"] or 0),"vat_rate":11}]:
             item={"item_code":line.get("item_code") or "","description":line["description"],"quantity":float(line["quantity"]),"unit":line.get("unit") or "",
                   "unit_price":float(line["unit_price"]),"discount_percent":float(line.get("discount_percent") or 0),"vat_rate":float(line["vat_rate"])}
@@ -941,9 +966,11 @@ class SalesInvoiceMixin:
             except (RuntimeError, OSError, ValueError) as exc:
                 return messagebox.showerror("Sales Invoice", str(exc))
             self.open_sales_invoice(invoice_id=self.sales_edit_id)
-            self.load_dashboard(); self.load_invoices(); self.load_journal(); self.load_trial()
+            self.load_dashboard(); self._refresh_loaded_invoice_reports()
             return
         self.update_sales_totals()
+        if self.sales_calculation is None:
+            return messagebox.showwarning("Sales Invoice", self.sales_total_labels["TOTAL"].cget("text"))
         lines=[{k:v for k,v in item.items() if not k.startswith("_") and k!="net"} for item in self.sales_items if str(item.get("description") or "").strip()]
         if not self.sales_party.get().strip(): return messagebox.showwarning("Sales Invoice","Choose or type the customer")
         orphan=[item for item in self.sales_items if not str(item.get("description") or "").strip() and float(item.get("quantity") or 0)*float(item.get("unit_price") or 0)]
@@ -996,7 +1023,7 @@ class SalesInvoiceMixin:
         waiting=bool(locals().get("created") and isinstance(locals().get("created"),dict) and locals()["created"].get("approval"))  # 2.9.93
         messagebox.showinfo("Sales Invoice",f'Invoice {number} saved as a draft: it waits for approval by another user.' if waiting else f'Invoice {number} saved as {"Posted" if post else "Draft"}.')
         self.new_sales_invoice(confirm=False)
-        self.load_dashboard(); self.load_invoices(); self.load_journal(); self.load_trial()
+        self.load_dashboard(); self._refresh_loaded_invoice_reports()
 
     def delete_sales_invoice(self):
         if not self.sales_edit_id: return messagebox.showwarning("Sales Invoice","Open a saved invoice first")

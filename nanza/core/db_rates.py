@@ -7,6 +7,7 @@ from database_common import (  # 2.9.102: the names this module uses (no more 'i
     datetime, Decimal, iso_date, json, logging, timedelta, urllib, utcnow
 )
 from database_common import _soft_iso  # noqa: F401
+from fractions import Fraction
 
 
 
@@ -14,6 +15,46 @@ from database_common import _soft_iso  # noqa: F401
 BAD_EURO_RATE = "(to_currency='USD' AND CAST(rate AS REAL)=1) OR (to_currency='LBP' AND CAST(rate AS REAL)=89500)"
 
 class RatesStore:
+    @staticmethod
+    def _reverse_equivalent_values(values):
+        """Reverse signed equivalents on a zero-native valuation line."""
+        if not Decimal(str(values.get('debit') or 0)) and not Decimal(str(values.get('credit') or 0)):
+            for key in ('amount_usd', 'amount_lbp'):
+                if values.get(key) is not None: values[key] = str(-Decimal(str(values[key])))
+        return values
+
+    def _freeze_document_equivalents(self, db, entry_id):
+        """Freeze cents on a newly created foreign-document entry only.
+
+        Original native debits/credits remain intact. A zero-native line records
+        the signed rounding residual in the existing FX account, so each set of
+        stored book equivalents balances without changing VAT or revenue lines.
+        No migration invokes this method on historical entries.
+        """
+        from decimal import ROUND_HALF_UP
+        entry = db.execute('SELECT * FROM journal_entries WHERE id=?', (entry_id,)).fetchone()
+        basis = self.settings().get('base_currency', 'USD') or 'USD'
+        if not entry or basis not in ('USD', 'LBP') or entry['currency'] == basis: return
+        rows = db.execute('SELECT * FROM journal_lines WHERE entry_id=? ORDER BY id', (entry_id,)).fetchall()
+        if not rows or any(r['amount_usd'] is not None for r in rows): return
+        totals = {'USD': Decimal(0), 'LBP': Decimal(0)}
+        usd_rate=self._converted_amount(1,'USD','LBP',entry['entry_date']) if entry['currency']=='LBP' else self._converted_amount(1,entry['currency'],'USD',entry['entry_date'])
+        lbp_rate=self._converted_amount(1,entry['currency'],'LBP',entry['entry_date'])
+        for row in rows:
+            signed = Decimal(str(row['debit'])) - Decimal(str(row['credit']))
+            equivalents = {c: self._converted_amount(abs(signed), entry['currency'], c, entry['entry_date']).quantize(Decimal('.01'), rounding=ROUND_HALF_UP) for c in totals}
+            for c, value in equivalents.items(): totals[c] += value if signed >= 0 else -value
+            db.execute('UPDATE journal_lines SET line_currency=?,amount=?,amount_usd=?,amount_lbp=?,rate_usd=?,rate_lbp=? WHERE id=?',
+                       (entry['currency'], str(abs(signed)), str(equivalents['USD']), str(equivalents['LBP']),str(usd_rate),str(lbp_rate),row['id']))
+        if any(totals.values()):
+            direction = totals[basis] or next(v for v in totals.values() if v)
+            account = self.default_accounts()['exchange_gain' if direction > 0 else 'exchange_loss']
+            # For a zero-native line, equivalent fields carry their own sign.
+            # This is explicit valuation, not a fictitious native-currency amount.
+            db.execute('''INSERT INTO journal_lines(entry_id,account_id,description,debit,credit,line_currency,amount,amount_usd,amount_lbp)
+                          VALUES(?,?,?,'0','0',?,'0',?,?)''',
+                       (entry_id, self._account_id(db, account), 'Document book-currency rounding', entry['currency'], str(-totals['USD']), str(-totals['LBP'])))
+
     def save_exchange_rate(self, item, user_id):
         self.__dict__.pop("_rate_state", None)  # 2.9.58: rates change - forget the cached ones
         date_from=str(item.get("date_from") or item.get("rate_date") or "").strip(); date_to=str(item.get("date_to") or date_from).strip()
@@ -231,7 +272,11 @@ class RatesStore:
         except ValueError: target_key=datetime.now().strftime("%Y%m%d")
         cache=self._rate_cache(); key=(source,target,target_key)
         if key not in cache: cache[key]=self._rate_factor(source,target,rate_date,target_key)
-        return amount*cache[key]
+        # Cache the exact ratio, not an already rounded reciprocal such as
+        # 1/89500. Multiply before the final Decimal division so exact half-cent
+        # results keep their tie and the caller's rounding policy can apply.
+        converted = Fraction(amount) * cache[key]
+        return Decimal(converted.numerator) / Decimal(converted.denominator)
 
     def _rate_cache(self):
         import time as _time
@@ -276,7 +321,7 @@ class RatesStore:
                              "(Settings > Exchange Rates)") from exc
 
     def _rate_factor(self, source, target, rate_date, target_key):
-        amount=Decimal("1")
+        amount=Fraction(1)
         import bisect
         table=self._rate_table()
         def latest(frm,to):  # same as: WHERE day<=target ORDER BY day DESC,id DESC LIMIT 1
@@ -289,17 +334,17 @@ class RatesStore:
             if row:
                 value=Decimal(str(row[2]))
                 if not value.is_finite() or value<=0: raise ValueError(f"Invalid exchange rate for {frm} to {to} on {rate_date}")
-                return value
+                return Fraction(value)
             row=latest(to,frm)
             if row:
                 value=Decimal(str(row[2]))
                 if not value.is_finite() or value<=0: raise ValueError(f"Invalid exchange rate for {to} to {frm} on {rate_date}")
-                return Decimal("1")/value
+                return Fraction(1)/Fraction(value)
             return None
         direct=find_rate(source,target)
         if direct is not None: return amount*direct
-        usd_rates={"USD":Decimal("1"),"LBP":Decimal("1")/Decimal("89500"),
-                   **{code: Decimal("1")/Decimal(value) for code,value in self.PEGGED_TO_USD.items()}}
+        usd_rates={"USD":Fraction(1),"LBP":Fraction(1,89500),
+                   **{code: Fraction(1)/Fraction(Decimal(value)) for code,value in self.PEGGED_TO_USD.items()}}
         if "EUR" in (source,target):
             eur=find_rate("EUR","USD")
             if eur is None:
@@ -310,12 +355,12 @@ class RatesStore:
         if source in usd_rates and target in usd_rates:
             to_usd=find_rate(source,"USD") or usd_rates[source]
             from_usd=find_rate("USD",target)
-            if from_usd is None: from_usd=Decimal("1")/usd_rates[target]
+            if from_usd is None: from_usd=Fraction(1)/usd_rates[target]
             return amount*to_usd*from_usd
         # any other currency goes through USD (for example LBP -> USD -> SAR for payroll paid in SAR)
-        first=find_rate(source,"USD") if source!="USD" else Decimal("1")
+        first=find_rate(source,"USD") if source!="USD" else Fraction(1)
         if first is None and source in usd_rates: first=usd_rates[source]
-        second=find_rate("USD",target) if target!="USD" else Decimal("1")
-        if second is None and target in usd_rates: second=Decimal("1")/usd_rates[target]
+        second=find_rate("USD",target) if target!="USD" else Fraction(1)
+        if second is None and target in usd_rates: second=Fraction(1)/usd_rates[target]
         if first is not None and second is not None: return amount*first*second
         raise ValueError(f"No exchange rate available for {source} to {target} on {rate_date}")

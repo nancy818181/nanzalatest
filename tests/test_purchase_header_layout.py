@@ -212,6 +212,66 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
             app.new_sales_invoice(confirm=False);app.update()
             self.assertEqual(app.sales_save_button.cget('text'),caption)
 
+    def test_invoice_discount_editor_reconciles_mixed_lines_on_reopen(self):
+        from decimal import Decimal
+        app = self.open("en")
+
+        def editor(parent, variable):
+            for widget in parent.winfo_children():
+                if isinstance(widget, tk.Entry) and str(widget.cget("textvariable")) == str(variable):
+                    return widget
+                found = editor(widget, variable)
+                if found is not None:
+                    return found
+
+        def check_units(parent, variable, recalculate, total):
+            field = editor(parent, variable)
+            self.assertTrue(field.winfo_ismapped())
+            field.delete(0, "end")
+            field.insert(0, "10")
+            recalculate()
+            self.assertEqual(total.cget("text"), "143.91 USD")
+            amount = next(w for w in field.master.winfo_children()
+                          if isinstance(w, tk.Radiobutton) and w.cget("value") == "amount")
+            amount.invoke()
+            field.delete(0, "end")
+            field.insert(0, "30")
+            recalculate()
+            self.assertEqual(total.cget("text"), "127.92 USD")
+
+        form = app.purchase_form
+        form["vars"]["supplier"].set("Invoice discount test supplier")
+        form["vars"]["number"].set("DISC-P")
+        form["vars"]["currency"].set("USD")
+        for sku, price, percent, flag in (("DISC-T", "100", "10", "Yes"), ("DISC-E", "60", "0", "No")):
+            app.client.save_inventory_item({"sku": sku, "name": sku, "unit": "unit"})
+            app.purchase_item_line({"item_code": sku, "name": sku, "quantity": 1,
+                                    "unit_cost": price, "discount_percent": percent, "vat_flag": flag})
+        check_units(app.purchase_invoice_page, form["discount_percent"], app.purchase_items_changed, form["total"])
+        app.save_purchase()
+        choice = next(label for label in form["find_map"] if label.startswith("DISC-P |"))
+        form["find"].set(choice)
+        app.purchase_found()
+        self.assertEqual(form["total"].cget("text"), "127.92 USD")
+        self.assertEqual(form["discount_mode"], "amount")
+        self.assertEqual([line["vat_flag"] for line in form["items_sheet"].ordered()], ["Yes", "No"])
+
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index("sales_tab")])
+        app.sales_party.set("Invoice discount test customer")
+        app.sales_currency.set("USD")
+        for name, price, percent, rate in (("Taxed", "100", "10", 11), ("Exempt", "60", "0", 0)):
+            app.add_sales_item({"description": name, "quantity": 1, "unit_price": price,
+                                "discount_percent": percent, "vat_rate": rate})
+        app.update()
+        check_units(app.sales_tab, app.sales_discount_percent, app.update_sales_totals, app.sales_total_labels["TOTAL"])
+        number = app.sales_no.get()
+        app.sales_save_button.invoke()
+        invoice = next(row for row in app.client.invoices() if row["invoice_number"] == number)
+        app.open_sales_invoice(invoice_id=invoice["id"])
+        self.assertEqual(app.sales_total_labels["TOTAL"].cget("text"), "127.92 USD")
+        self.assertEqual(Decimal(app.sales_discount_amount.get()), Decimal("30"))
+        self.assertFalse([m for m in self.messages if m[0] in ("showerror", "showwarning")], self.messages)
+
     def test_sales_five_line_edit_save_reopen_and_resize_matrix(self):
         import arabic_ui,json
         import traceback
@@ -233,7 +293,8 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
                     app.after(250,app.quit);app.mainloop()
                     tree=app.sales_sheet;tree.yview_moveto(0);app.update()
                     rows=sum(bool(box:=tree.bbox(iid)) and box[1]+box[3]<=tree.winfo_height() and bool(app.sales_item_for(iid).get('description','').strip()) for iid in tree.get_children())
-                    observations.append({'language':language,'requested':[width,height],'actual':app.geometry(),'tk_scaling':float(app.tk.call('tk','scaling')),'rows':rows,'table_height':tree.winfo_height(),'blocks':[(w.winfo_class(),w.winfo_height(),w.winfo_reqheight()) for w in app.sales_tab.winfo_children()]})
+                    add_line=next(b for b in self.buttons(app.sales_tab) if self.english(b)=='Add Line')
+                    observations.append({'language':language,'requested':[width,height],'actual':app.geometry(),'tk_scaling':float(app.tk.call('tk','scaling')),'rows':rows,'add_line_y':add_line.winfo_rooty()-app.winfo_rooty(),'table_height':tree.winfo_height(),'blocks':[(w.winfo_class(),w.winfo_height(),w.winfo_reqheight()) for w in app.sales_tab.winfo_children()]})
                     if (width,height)==(1366,768):self.assertGreaterEqual(rows,4,observations[-1])
                     total=app.sales_total_labels['TOTAL'];self.assertLessEqual(total.winfo_rooty()+total.winfo_height(),app.winfo_rooty()+app.winfo_height())
             fifth=app.sales_items[-1]['_iid'];tree.see(fifth);tree.selection_set(fifth);tree.focus(fifth);app.update()
@@ -389,6 +450,70 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         rows = trial.get("items", trial) if isinstance(trial, dict) else trial
         debit = sum(float(r.get("debit") or 0) for r in rows); credit = sum(float(r.get("credit") or 0) for r in rows)
         self.assertAlmostEqual(debit, credit, places=2)
+
+    def test_purchase_on_account_partial_and_full_payment_survive_reopen(self):
+        from decimal import Decimal
+        app=self.open('en')
+        def signed_account(code):
+            report=app.client.trial_balance()
+            rows=report.get('items', report) if isinstance(report, dict) else report
+            return sum((Decimal(str(r.get('debit') or 0))-Decimal(str(r.get('credit') or 0))
+                        for r in rows if r['code']==code and r['currency']=='USD'),Decimal(0))
+        cash_before=signed_account('531')
+        for suffix, method, amount, expected in (
+                ('credit', 'On Account (Not Cash)', '0', '0'),
+                ('partial', 'Cash', '20.00', '20.00'),
+                ('full', 'Cash', 'full', '111.00')):
+            with self.subTest(payment=suffix):
+                app.new_purchase(); form=app.purchase_form; v=form['vars']
+                v['supplier'].set('Synthetic payment supplier')
+                v['number'].set('PAYMENT-LAYOUT-'+suffix); v['currency'].set('USD')
+                v['taxable'].set('100'); app.purchase_amounts_changed('taxable')
+                form['paid_by'].set(method);form['paid_account'].set('531')
+                form['paid_amount'].set(amount)
+                app.save_purchase();app.update()
+                self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+                saved=next(i for i in app.client.invoices() if i['invoice_number']=='PAYMENT-LAYOUT-'+suffix)
+                self.assertEqual(Decimal(str(saved['amount_paid'])),Decimal(expected))
+                choice=next(label for label in form['find_map'] if label.startswith(saved['invoice_number']+' |'))
+                form['find'].set(choice); app.purchase_found(); app.update()
+                self.assertEqual(Decimal(form['paid_amount'].get()),Decimal(expected))
+                if Decimal(expected):self.assertEqual(form['paid_account'].get().split(' - ')[0],'531')
+                self.assertEqual(Decimal(str(saved['total']))-Decimal(str(saved['amount_paid'])),Decimal('111')-Decimal(expected))
+        self.assertEqual(signed_account('531')-cash_before,Decimal('-131.00'))
+
+    def test_taxable_advance_receipt_ui_and_allocation_preserve_one_receipt(self):
+        from decimal import Decimal
+        import arabic_ui
+        app=self.open('en')
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index('transactions_tab')]);app.update()
+        for language in ('en','ar'):
+            if app.language.get()!=language:
+                app.switch_language(language);app.update()
+                app.select_main_tab(app.main_tab_pages[app._page_attributes.index('transactions_tab')]);app.update()
+            name='VAT advance UI '+language
+            party=app.client.save_party({'name':name,'kind':'customer','currency':'USD'})
+            app.load_transactions();form=app.payment_forms['customer_receipt'];app.new_payment(form)
+            v=form['vars'];v['party'].set(next(k for k,p in form['party_map'].items() if p['id']==party['id']))
+            v['date'].set('20-03-2026');v['currency'].set('USD');v['amount'].set('111');v['cash_account'].set('531')
+            v['reference'].set('VAT-UI-'+language);form['taxable_advance'].set(True)
+            preview=app.payment_journal_preview(form)
+            self.assertEqual(sum(Decimal(str(d)) for _c,d,_cr in preview),Decimal('122'))
+            app.save_payment(form);app.update()
+            self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
+            saved=next(p for p in app.client.payments() if p['reference']=='VAT-UI-'+language)
+            self.assertTrue(saved['taxable_advance'])
+            invoice=app.client.create_manual_invoice({'invoice_number':'VAT-UI-FINAL-'+language,'invoice_date':'10-04-2026',
+                'party_name':name,'kind':'sale','currency':'USD'},[{'description':'UI final service','quantity':'1','unit_price':'300','vat_rate':'11'}])
+            form['tree'].selection_set(str(saved['id']));app.edit_payment(form);app.update()
+            self.assertTrue(form['taxable_advance'].get())
+            line=next(iid for iid,row in form['alloc_sheet'].rows.items() if row['invoice_id']==invoice['invoice_id'])
+            app.allocation_changed(form,line,'111')
+            # Allocation-only saving must not reverse/recreate the receipt.
+            app.save_payment(form);app.update()
+            self.assertEqual(len([p for p in app.client.payments() if p['reference']=='VAT-UI-'+language]),1)
+            self.assertEqual(Decimal(str(app.client.payment_allocations(saved['id'])[0]['amount'])),Decimal('111'))
+            self.assertFalse([m for m in self.messages if m[0] in ('showerror','showwarning')],self.messages)
 
     def test_purchase_item_edit_and_reopen(self):
         from tkinter import ttk
@@ -588,6 +713,49 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
         app.geometry("1024x700")
         for _ in range(4): app.update_idletasks(); app.update()
         self.check_layout(app, rtl=False)
+
+    def test_dashboard_loading_keeps_tk_responsive_and_rejects_stale_company_results(self):
+        import desktop_workbench
+        app=self.open('en')
+        def pump_until(predicate,seconds=10):
+            deadline=time.monotonic()+seconds
+            while not predicate() and time.monotonic()<deadline:
+                app.update();time.sleep(.01)
+            self.assertTrue(predicate())
+        pump_until(lambda:not app.__dict__.get('_dashboard_loading',False))
+        entered=threading.Event();release=threading.Event();finished=threading.Event();heartbeat=[]
+        real_clone=desktop_workbench.frozen_client
+        class Delayed:
+            def __init__(self,source):self.client=real_clone(source)
+            def __getattr__(self,name):return getattr(self.client,name)
+            def close(self):
+                self.client.close();finished.set()
+            def professional_dashboard(self):
+                entered.set()
+                if not release.wait(8):raise RuntimeError('Test worker was not released')
+                result=self.client.professional_dashboard()
+                result['metrics']=[dict(currency='USD',sales=987654, purchases=0,expenses=0,profit=987654,receivables=0,payables=0,overdue=0)]
+                return result
+        try:
+            with mock.patch.object(desktop_workbench,'frozen_client',side_effect=Delayed):
+                app.load_dashboard()
+            app.after(10,lambda:heartbeat.append(True))
+            pump_until(lambda:entered.is_set() and bool(heartbeat))
+            self.assertFalse(release.is_set())
+            self.assertTrue(app._dashboard_loading)
+            app.export_report('dashboard','xlsx')
+            self.assertTrue(any('still loading' in str(m) for m in self.messages))
+            year=app.client.fiscal_year
+            app.client.fiscal_year=int(year)+1
+            release.set()
+            pump_until(finished.is_set)
+            app.after(150,app.quit);app.mainloop()
+            self.assertEqual(app.dashboard_rows,[],'Old-company figures must never appear in the new context')
+            app.client.fiscal_year=year
+            app.load_dashboard()
+            pump_until(lambda:not app._dashboard_loading)
+            self.assertFalse(any(r.get('sales')==987654 for r in app.dashboard_rows))
+        finally:release.set()
 
     def test_three_pair_header_respects_wide_field_minimums(self):
         for language in ("en", "ar"):

@@ -12,7 +12,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from desktop_common import vat_rate, vat_rate_text, vat_currency  # 2.9.72
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0A1931", "#D4A017", "#F4F7FA"
 TREATMENTS = {"Taxable": "standard", "Taxable 11%": "standard", "Taxable (standard rate)": "standard", "Zero-rated": "zero_rated",
         "Zero-rated (export)": "zero_rated", "Exempt": "exempt", "Exempt (Art. 16-17)": "exempt", "Out of scope": "out_of_scope"}
 
@@ -489,9 +489,16 @@ class V22Mixin:
 
     def load_dashboard_charts(self):
         if not getattr(self, "dash_canvases", None): return
-        try: self.dash_data = self.client.dashboard_charts(getattr(self, "current_fiscal_year", datetime.now().year), self.dash_basis.get())
-        except Exception: self.dash_data = None
-        self.draw_dashboard_charts()
+        from desktop_workbench import async_call
+        year=getattr(self,"current_fiscal_year",datetime.now().year)
+        basis=self.dash_basis.get()
+        self.dash_data=None
+        for canvas in self.dash_canvases.values(): canvas.delete("all")
+        def apply(data):
+            self.dash_data=data
+            self.draw_dashboard_charts()
+        async_call(self.dash_canvases["months"],self,
+                   lambda client:client.dashboard_charts(year,basis),apply)
 
     def draw_dashboard_charts(self):
         data = getattr(self, "dash_data", None)

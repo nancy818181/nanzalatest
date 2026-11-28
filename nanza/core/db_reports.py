@@ -494,30 +494,28 @@ class ReportsStore:
                 CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END currency,e.entry_date,
                 DSUM_EXACT(CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.debit END) debit,
                 DSUM_EXACT(CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount ELSE '0' END ELSE j.credit END) credit,
-                e.source_type fx_type,
-                DSUM_EXACT(CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount_usd ELSE '0' END) fx_usd_debit,
-                DSUM_EXACT(CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount_usd ELSE '0' END) fx_usd_credit,
-                DSUM_EXACT(CASE WHEN CAST(j.debit AS REAL)>0 THEN j.amount_lbp ELSE '0' END) fx_lbp_debit,
-                DSUM_EXACT(CASE WHEN CAST(j.credit AS REAL)>0 THEN j.amount_lbp ELSE '0' END) fx_lbp_credit
+                CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type WHEN j.amount_usd IS NOT NULL AND j.amount_lbp IS NOT NULL THEN 'stored_equivalent' ELSE '' END fx_type,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_usd AS REAL)>0 THEN ltrim(j.amount_usd,'-+') ELSE '0' END) fx_usd_debit,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_usd AS REAL)<0 THEN ltrim(j.amount_usd,'-+') ELSE '0' END) fx_usd_credit,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_lbp AS REAL)>0 THEN ltrim(j.amount_lbp,'-+') ELSE '0' END) fx_lbp_debit,
+                DSUM_EXACT(CASE WHEN (CASE WHEN CAST(j.credit AS REAL)>0 THEN -1 ELSE 1 END)*CAST(j.amount_lbp AS REAL)<0 THEN ltrim(j.amount_lbp,'-+') ELSE '0' END) fx_lbp_credit
                 FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
                 LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
                 {where_clause} GROUP BY a.code,a.name_en,
                 CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN COALESCE(j.line_currency,e.currency) ELSE e.currency END,
-                e.entry_date,CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type ELSE '' END
+                e.entry_date,CASE WHEN e.source_type IN ('payment_fx','payment_fx_reversal') THEN e.source_type WHEN j.amount_usd IS NOT NULL AND j.amount_lbp IS NOT NULL THEN 'stored_equivalent' ELSE '' END
                 ORDER BY e.currency,a.code""",parameters)]
         totals={}
         # 2.9.132 (performance): a day's ISO form and a (currency, day) rate are worked out once per report, not once per row;
         # the values are the same (same strptime rule, same _converted_amount factor, same Decimal products)
-        days={}; factors={}
+        days={}
         def iso_day(text):
             if text not in days:
                 try: days[text]=datetime.strptime(text,"%d-%m-%Y").strftime("%Y-%m-%d")
                 except ValueError: days[text]=text
             return days[text]
         def convert(amount,currency,target,day):
-            key=(currency,target,day)
-            if key not in factors: factors[key]=self._converted_amount(Decimal("1"),currency,target,day)
-            return amount if str(currency or "USD").upper()==target else amount*factors[key]
+            return self._converted_amount(amount,currency,target,day)
         for row in raw:
             key=(row["code"],row["name_en"],row["currency"])
             # 2.9.97: added as exact Decimals, turned into numbers once at the end (floats drifted: 600.0000000000002)
@@ -528,11 +526,12 @@ class ReportsStore:
                        "usd_balance","usd_closing_balance","lbp_opening","lbp_debit","lbp_credit","lbp_balance","lbp_closing_balance")}}
             date=iso_day(str(row["entry_date"] or ""))
             debit=Decimal(str(row["debit"] or 0)); credit=Decimal(str(row["credit"] or 0))
-            usd_d=convert(debit,row["currency"],"USD",date); usd_c=convert(credit,row["currency"],"USD",date)
-            lbp_d=convert(debit,row["currency"],"LBP",date); lbp_c=convert(credit,row["currency"],"LBP",date)
-            if row['fx_type'] in ('payment_fx','payment_fx_reversal'):
+            if row['fx_type'] in ('payment_fx','payment_fx_reversal','stored_equivalent'):
                 usd_d=Decimal(str(row['fx_usd_debit'] or 0)); usd_c=Decimal(str(row['fx_usd_credit'] or 0))
                 lbp_d=Decimal(str(row['fx_lbp_debit'] or 0)); lbp_c=Decimal(str(row['fx_lbp_credit'] or 0))
+            else:
+                usd_d=convert(debit,row["currency"],"USD",date); usd_c=convert(credit,row["currency"],"USD",date)
+                lbp_d=convert(debit,row["currency"],"LBP",date); lbp_c=convert(credit,row["currency"],"LBP",date)
             if from_date and date<from_date:
                 item["opening"]+=debit-credit; item["usd_opening"]+=usd_d-usd_c; item["lbp_opening"]+=lbp_d-lbp_c  # already exact Decimals
                 continue
@@ -640,7 +639,7 @@ class ReportsStore:
             rows=[dict(row) for row in db.execute(f"""SELECT i.id,i.party_id,i.invoice_number,i.invoice_date,i.due_date,i.kind,i.currency,i.doc_subtype,p.name party_name,p.account_number,
                 i.total,COALESCE(i.amount_paid,'0') amount_paid,
                 (SELECT COALESCE(DSUM_EXACT(a.amount),'0') FROM payment_allocations a JOIN payments x ON x.id=a.payment_id
-                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql()}) allocated FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
+                 WHERE a.invoice_id=i.id AND {payment_day}<=? AND {posted_payment_sql(as_of=as_of.isoformat())}) allocated FROM invoices i LEFT JOIN parties p ON p.id=i.party_id
                 WHERE {' AND '.join(conditions)} ORDER BY p.name,i.due_date,i.invoice_date""",parameters)]
         for row in rows:
             sign = Decimal("-1") if row.get("doc_subtype") == "credit_note" else Decimal("1")
@@ -664,14 +663,17 @@ class ReportsStore:
         so the ageing of each party agrees with its account balance (invoices and receipts / payments)."""
         payment_day="CASE WHEN x.payment_date GLOB '??-??-????' THEN substr(x.payment_date,7,4)||'-'||substr(x.payment_date,4,2)||'-'||substr(x.payment_date,1,2) ELSE x.payment_date END"
         with self.connect() as db:
-            payments=[dict(r) for r in db.execute(f"""SELECT x.party_id,x.kind,x.currency,x.party_account,p.kind party_kind,p.name party_name,p.account_number,
-                x.amount,COALESCE(x.exchange_difference,'0') exchange_difference,COALESCE((SELECT DSUM_EXACT(a.amount) FROM payment_allocations a WHERE a.payment_id=x.id),'0') allocated
-                FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=? AND {posted_payment_sql()}""",(as_of,))]
+            payments=[dict(r) for r in db.execute(f"""SELECT x.id,x.party_id,x.kind,x.currency,x.party_account,p.kind party_kind,p.name party_name,p.account_number,
+                x.amount,COALESCE(x.exchange_difference,'0') exchange_difference,COALESCE((SELECT DSUM_EXACT(a.amount) FROM payment_allocations a
+                JOIN invoices inv ON inv.id=a.invoice_id WHERE a.payment_id=x.id AND
+                (CASE WHEN inv.invoice_date GLOB '??-??-????' THEN substr(inv.invoice_date,7,4)||'-'||substr(inv.invoice_date,4,2)||'-'||substr(inv.invoice_date,1,2) ELSE inv.invoice_date END)<=?),'0') allocated
+                FROM payments x LEFT JOIN parties p ON p.id=x.party_id WHERE {payment_day}<=? AND {posted_payment_sql(as_of=as_of)}""",(as_of,as_of))]
             party_of={r["id"]:r["party_id"] for r in rows}
         credits={}  # (party_id, kind, currency) -> amount that settles invoices
+        advance_vat=self.unapplied_advance_vat(as_of)
         for pay in payments:
             target_kind=payment_invoice_kind(pay)
-            free = Decimal(str(pay["amount"] or 0)) + Decimal(str(pay["exchange_difference"] or 0)) - Decimal(str(pay["allocated"] or 0))
+            free = Decimal(str(pay["amount"] or 0)) + Decimal(str(pay["exchange_difference"] or 0)) - Decimal(str(pay["allocated"] or 0)) - advance_vat.get(pay['id'],Decimal(0))
             if (kind and target_kind!=kind) or (currency and pay["currency"]!=currency) or abs(free)<Decimal("0.005"): continue
             key=(pay["party_id"],target_kind,pay["currency"])
             entry=credits.setdefault(key,{"amount":Decimal("0"),"party_name":pay["party_name"],"account_number":pay["account_number"]})

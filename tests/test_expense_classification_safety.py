@@ -7,6 +7,25 @@ import posting_rules
 
 
 class ExpenseClassificationSafetyTest(unittest.TestCase):
+    def test_accepted_suggestion_updates_the_no_vat_account_used_by_the_amount(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from desktop_expenses import ExpensesMixin
+        class Value:
+            def __init__(self,value):self.value=value
+            def get(self):return self.value
+            def set(self,value):self.value=value
+        fields={key:Value(value) for key,value in {'description':'Electricity','with_vat':'0',
+            'without_vat':'100','account':'626310001','no_vat_account':'601100001'}.items()}
+        app=SimpleNamespace(expense_form={'vars':fields},language=Value('en'),
+            client=SimpleNamespace(accounts=Mock(return_value=[])))
+        suggestion={'account_code':'626340001','account_name':'Generator','abstain':False}
+        with patch('nanza.ai_accountant.classifier.suggest_account',return_value=suggestion), \
+             patch('desktop_expenses.messagebox.askyesno',return_value=True):
+            ExpensesMixin.suggest_expense_account(app)
+        self.assertEqual(fields['no_vat_account'].get(),'626340001')
+        self.assertEqual(fields['account'].get(),'626310001')
+
     def test_supplier_memory_does_not_override_a_different_current_expense(self):
         rule = {"data": {"expense_account": "6263.1"}, "label": "Example", "times": 2, "last_reference": "OLD"}
         with patch.object(posting_rules, "find_rule", return_value=rule):

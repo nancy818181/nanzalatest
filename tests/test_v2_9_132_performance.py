@@ -12,15 +12,15 @@ from database import Database
 
 
 def reference_trial_balance(db, from_date, to_date):
-    """The 2.9.131 loop: strptime and _converted_amount for every row."""
+    """Independent line-by-line sum, using posted book amounts when present."""
     from_date = datetime.strptime(from_date, "%d-%m-%Y").strftime("%Y-%m-%d"); to_date = datetime.strptime(to_date, "%d-%m-%Y").strftime("%Y-%m-%d")
     normalized = "CASE WHEN e.entry_date GLOB '??-??-????' THEN substr(e.entry_date,7,4)||'-'||substr(e.entry_date,4,2)||'-'||substr(e.entry_date,1,2) ELSE e.entry_date END"
     with db.connect() as connection:
-        raw = [dict(r) for r in connection.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_date,DSUM_EXACT(j.debit) debit,DSUM_EXACT(j.credit) credit
+        raw = [dict(r) for r in connection.execute(f"""SELECT a.code,a.name_en,e.currency,e.entry_date,j.debit,j.credit,j.amount_usd,j.amount_lbp
             FROM journal_lines j JOIN accounts a ON a.id=j.account_id JOIN journal_entries e ON e.id=j.entry_id
             LEFT JOIN invoices i ON e.source_type='invoice' AND i.id=e.source_id
             WHERE {normalized}<=? AND (e.posting_status='posted' AND (e.source_type!='invoice' OR i.status IN ('posted','cancelled')))
-            GROUP BY a.code,a.name_en,e.currency,e.entry_date ORDER BY e.currency,a.code""", (to_date,))]
+            ORDER BY j.id""", (to_date,))]
     totals = {}
     for row in raw:
         key = (row["code"], row["currency"])
@@ -29,12 +29,20 @@ def reference_trial_balance(db, from_date, to_date):
         try: date = datetime.strptime(date, "%d-%m-%Y").strftime("%Y-%m-%d")
         except ValueError: pass
         debit = Decimal(str(row["debit"] or 0)); credit = Decimal(str(row["credit"] or 0))
-        conv = lambda v, t: db._converted_amount(v, row["currency"], t, date)
-        if date < from_date:
-            item["opening"] += debit - credit; item["usd_opening"] += conv(debit, "USD") - conv(credit, "USD"); item["lbp_opening"] += conv(debit, "LBP") - conv(credit, "LBP")
-            continue
-        for f, v in (("debit", debit), ("credit", credit), ("usd_debit", conv(debit, "USD")), ("usd_credit", conv(credit, "USD")),
-                     ("lbp_debit", conv(debit, "LBP")), ("lbp_credit", conv(credit, "LBP"))): item[f] += v
+        for prefix, currency in (("", row["currency"]), ("usd_", "USD"), ("lbp_", "LBP")):
+            if prefix and row["amount_usd"] is not None and row["amount_lbp"] is not None:
+                signed = Decimal(row["amount_" + currency.lower()])
+                if credit:
+                    signed = -signed
+                dr, cr = max(signed, 0), max(-signed, 0)
+            else:
+                dr = db._converted_amount(debit, row["currency"], currency, date)
+                cr = db._converted_amount(credit, row["currency"], currency, date)
+            if date < from_date:
+                item[prefix + "opening"] += dr - cr
+            else:
+                item[prefix + "debit"] += dr
+                item[prefix + "credit"] += cr
     return totals
 
 

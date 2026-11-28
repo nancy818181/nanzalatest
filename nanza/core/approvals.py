@@ -114,15 +114,24 @@ def approve_entries(db, entry_ids, user, require_other=True):
     with db.connect() as connection:
         columns = ",".join(_line_columns(connection))
         for entry_id in entry_ids or []:
-            row = connection.execute("SELECT id,entry_number,created_by,approval_status FROM journal_entries WHERE id=?", (int(entry_id),)).fetchone()
+            row = connection.execute("SELECT id,entry_number,entry_date,source_type,source_id,created_by,approval_status FROM journal_entries WHERE id=?", (int(entry_id),)).fetchone()
             if not row or row["approval_status"] != "review": skipped.append(f"{entry_id}: not waiting for approval"); continue
             if require_other and row["created_by"] == user["id"]: skipped.append(f"{row['entry_number']}: prepared by you - another user approves it"); continue
+            if row['source_type']=='payment' and connection.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advances'").fetchone():
+                if connection.execute('SELECT 1 FROM payment_vat_advances WHERE payment_id=?',(row['source_id'],)).fetchone():
+                    db._assert_period_open(row['entry_date']);db._assert_books_unlocked(row['entry_date']);db._assert_vat_open(row['entry_date'])
             back = ",".join(c for c in columns.split(",") if c != "id")  # new line numbers (the old ones may be used again meanwhile)
             connection.execute(f"INSERT INTO journal_lines({back}) SELECT {back} FROM held_journal_lines WHERE entry_id=? ORDER BY id", (int(entry_id),))
             connection.execute("DELETE FROM held_journal_lines WHERE entry_id=?", (int(entry_id),))
             connection.execute("""UPDATE journal_entries SET approval_status=NULL,posting_status='posted',
                 posted_at=?,posted_by=?,rejection_reason=NULL WHERE id=?""",
                 (utcnow(),user["id"],int(entry_id)))
+            if row["source_type"] == "payment":
+                invoices = [r[0] for r in connection.execute(
+                    "SELECT DISTINCT invoice_id FROM payment_allocations WHERE payment_id=?",
+                    (row["source_id"],))]
+                if invoices:
+                    db._settle_related_payment_fx(connection, row["source_id"], invoices, user["id"])
             connection.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                                (user["id"], "approve", "journal_entry", int(entry_id), json.dumps({"entry": row["entry_number"], "prepared_by": row["created_by"]}), utcnow()))
             approved.append(row["entry_number"])

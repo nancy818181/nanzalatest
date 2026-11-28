@@ -24,7 +24,7 @@ from report_export import export_excel, export_invoice_pdf, export_pdf, print_ro
 from party_similarity import similar_parties
 from multi_select import MultiSelect, chosen_values  # 2.9.50: pick any combination in filters
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0A1931", "#D4A017", "#F4F7FA"
 TAXABLE_LABEL="Taxable (standard rate)"  # 2.9.72: the rate is the company's (Settings > General)
 SALE_TREATMENTS={TAXABLE_LABEL:"standard","Zero-rated (export)":"zero_rated","Exempt (Art. 16-17)":"exempt","Out of scope":"out_of_scope"}
 PURCHASE_USES={"Mixed (partial deduction)":"mixed","Taxable sales only (100%)":"taxable","Exempt sales only (0%)":"exempt"}
@@ -351,6 +351,39 @@ def _install_column_fit():
 
 
 _install_column_fit()
+
+
+def invoice_discount_editor(parent, percent, amount, changed):
+    """One invoice discount input with an explicit unit and one active value."""
+    frame = tk.Frame(parent, bg="white")
+    tk.Label(frame, text="Discount", bg="white").pack(side="left")
+    mode = tk.StringVar(frame, value="percent")
+    entry = tk.Entry(frame, textvariable=percent, width=8, justify="right")
+    entry.pack(side="left", padx=3)
+    values = {"percent": percent, "amount": amount}
+
+    def select(unit):
+        mode.set(unit)
+        entry.configure(textvariable=values[unit])
+
+    def switch():
+        unit = mode.get()
+        if str(entry.cget("textvariable")) == str(values[unit]):
+            return
+        previous = amount if unit == "percent" else percent
+        value = previous.get()
+        previous.set("0")
+        select(unit)
+        values[unit].set(value)
+        changed(unit)
+
+    for unit, label in (("percent", "%"), ("amount", "Amount")):
+        tk.Radiobutton(frame, text=label, variable=mode, value=unit, command=switch,
+                       bg="white", padx=1).pack(side="left")
+    entry.bind("<KeyRelease>", lambda _event: changed(mode.get()))
+    for event in ("<<Paste>>", "<<Cut>>"):
+        entry.bind(event, lambda _event: entry.after_idle(lambda: changed(mode.get())))
+    return frame, select
 
 
 def flow_toolbar(frame, gap=4):

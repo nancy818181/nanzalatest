@@ -9,7 +9,7 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 from desktop_common import flow_toolbars
 
-NAVY, GOLD, LIGHT = "#102A43", "#B78B45", "#F4F7FA"
+NAVY, GOLD, LIGHT = "#0A1931", "#D4A017", "#F4F7FA"
 RED, MUTED = "#8B1E1E", "#5f6b76"
 LEAVE_TYPES = {"Annual leave": "annual", "Sick leave": "sick", "Unpaid leave": "unpaid", "Other": "other"}
 

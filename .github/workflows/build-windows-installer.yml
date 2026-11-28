@@ -289,6 +289,38 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Signing the installer failed." }
           Remove-Item $env:SIGN_PFX -Force
 
+      - name: Accept actual installer and upgrade on disposable Windows runner
+        timeout-minutes: 15
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $qaRoot = Join-Path $env:RUNNER_TEMP 'nanza-installer-acceptance'
+          New-Item -ItemType Directory -Force -Path $qaRoot | Out-Null
+          gh release download v2.9.140 --repo nancy818181/nanzalatest --pattern NanzaAccountingSetup.exe --dir $qaRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot obtain the previous supported installer for upgrade acceptance.' }
+          $previousSource = Join-Path $qaRoot 'previous-source'
+          $previousArchive = Join-Path $qaRoot 'previous-source.zip'
+          git fetch --depth=1 origin 66064375db49359730ef6f72e8955990061f258d
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot obtain the exact previous source.' }
+          git archive --format=zip --output=$previousArchive 66064375db49359730ef6f72e8955990061f258d
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot archive the exact previous source.' }
+          Expand-Archive -LiteralPath $previousArchive -DestinationPath $previousSource
+          python tools/check_installer_acceptance.py --installer installer-output/NanzaAccountingSetup.exe --previous-installer (Join-Path $qaRoot 'NanzaAccountingSetup.exe') --previous-source $previousSource --output (Join-Path $qaRoot 'results')
+          if ($LASTEXITCODE -ne 0) { throw 'Actual installer acceptance failed.' }
+          Copy-Item -LiteralPath (Join-Path $qaRoot 'results/installer-acceptance.json') -Destination installer-output/installer-acceptance.json
+
+      - name: Upload installer acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: installer-acceptance-${{ steps.version.outputs.version }}
+          path: |
+            ${{ runner.temp }}/nanza-installer-acceptance/results/*.json
+            ${{ runner.temp }}/nanza-installer-acceptance/results/*.log
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload installer
         # 2.9.106: GitHub's artifact storage can fill up; the Release below carries the installer anyway, so a full
         # storage must not stop the release. Kept 3 days only (was 30), so old copies do not fill the storage again.
@@ -317,10 +349,10 @@ jobs:
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
             if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-              gh release upload $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --clobber
+              gh release upload $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" "installer-output/installer-acceptance.json" --clobber
             } else {
               Write-Host "Release $tag already exists; keep published assets unchanged."
             }
           } else {
-            gh release create $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" --target "$env:GITHUB_SHA" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash"
+            gh release create $tag $installer "installer-output/NanzaAccountingSetup.exe.sha256" "installer-output/installer-acceptance.json" --target "$env:GITHUB_SHA" --title "Nanza Accounting $version" --notes "See README.md, section Version $version. SHA-256: $hash. Installer startup and upgrade evidence is attached; interactive accounting acceptance remains separate."
           }

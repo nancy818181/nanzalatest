@@ -176,6 +176,36 @@ def _documents(db, start, end, currency, include_review, memo=None):
             "base": _money(_given(row, "with_vat_subtotal", "subtotal")), "exempt": _money(row.get("without_vat_subtotal")),
             "vat": _money(row.get("vat")), "status": "posted", "recoverable": bool(int(row.get("vat_recoverable") if row.get("vat_recoverable") is not None else 1)),
             "treatment": "standard", "use": row.get("vat_use") or "mixed", "std_rate": std_rate})
+    # Owner-approved explicit taxable receipts. Generic historical receipts remain
+    # untouched. Recognition belongs to 110; final invoice revenues are reduced
+    # by the linked amount already recognised, so combined VAT is never doubled.
+    with db.connect() as connection:
+        has_advances=connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='payment_vat_advances'").fetchone()
+        advance_rows=[]
+        if has_advances:
+            advance_rows=[dict(r) for r in connection.execute("""SELECT e.id entry_id,e.entry_number,e.entry_date,e.reversal_of,
+                p.id payment_id,p.currency,p.party_id,t.name party_name,t.mof_number party_mof,
+                a.taxable_base base,a.vat_amount vat,110 declaration_box,'payment_vat_advance' source
+                FROM payment_vat_advances a JOIN payments p ON p.id=a.payment_id JOIN parties t ON t.id=p.party_id
+                JOIN journal_entries e ON (e.id=a.recognition_entry_id OR e.reversal_of=a.recognition_entry_id)
+                WHERE e.posting_status='posted'
+                UNION ALL
+                SELECT e.id,e.entry_number,e.entry_date,e.reversal_of,p.id,p.currency,p.party_id,t.name,t.mof_number,
+                a.base_applied,a.vat_applied,100,'payment_vat_apply'
+                FROM payment_vat_advance_applications a JOIN payments p ON p.id=a.advance_payment_id JOIN parties t ON t.id=p.party_id
+                JOIN journal_entries e ON (e.id=a.settlement_entry_id OR e.reversal_of=a.settlement_entry_id)
+                WHERE e.posting_status='posted'""")]
+    for row in advance_rows:
+        day=iso_date(row['entry_date'])
+        if not start<=day<=end or (currency and row['currency']!=currency): continue
+        base,tax=Decimal(str(row['base'])),Decimal(str(row['vat']))
+        sign=Decimal(-1) if row['reversal_of'] else Decimal(1)
+        if row['source']=='payment_vat_apply': sign=-sign
+        documents.append({'source':row['source'],'id':row['entry_id'],
+            'date':day,'number':row['entry_number'],'party':row['party_name'],'party_id':row['party_id'],
+            'party_mof':row['party_mof'] or '', 'category':'sales','currency':row['currency'],
+            'base':sign*base,'exempt':ZERO,'vat':sign*tax,'status':'posted','recoverable':True,
+            'treatment':'standard','use':'taxable','std_rate':std_rate,'declaration_box':row['declaration_box']})
     documents.sort(key=lambda item: (item["date"], item["category"], str(item["number"])))
     if memo is not None:
         memo.setdefault("unreadable_documents", set()).update(skipped)
@@ -494,6 +524,12 @@ def _earliest_vat_document(db, memo=None):
                     try: day = iso_date(item["d"])
                     except ValueError: unreadable = True; continue
                     if earliest is None or day < earliest: earliest = day
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advances'").fetchone():
+            for item in connection.execute("""SELECT e.entry_date d FROM payment_vat_advances a JOIN journal_entries e
+                    ON (e.id=a.recognition_entry_id OR e.reversal_of=a.recognition_entry_id) WHERE e.posting_status='posted'"""):
+                try: day=iso_date(item['d'])
+                except ValueError: unreadable=True;continue
+                if earliest is None or day<earliest: earliest=day
     result = (earliest, unreadable)
     if memo is not None: memo[key] = result
     return result
@@ -608,6 +644,12 @@ def _quarter_vat_lines(db, result):
     rows = _load_lines(db, {"first_column": vc, "second_column": "none", "posting_status": "posted"})
     with db.connect() as connection:
         sources = {row["id"]: (row["source_type"], row["source_id"]) for row in connection.execute("SELECT id,source_type,source_id FROM journal_entries")}
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE name='payment_vat_advances'").fetchone():
+            for row in connection.execute("""SELECT e.id FROM journal_entries e JOIN payment_vat_advances a
+                    ON (e.id=a.recognition_entry_id OR e.reversal_of=a.recognition_entry_id)"""):
+                sources[row['id']]=('payment_vat_advance',row['id'])
+        for key,(kind,source_id) in list(sources.items()):
+            if kind in ('payment_vat_apply','payment_vat_apply_reversal'): sources[key]=('payment_vat_apply',key)
     lines = []
     for row in rows:
         role = vat_account_role(row["code"])
@@ -647,7 +689,7 @@ def ledger_check(db, result):
     posted = {}
     for line in lines:
         source_type, source_id = line["source"]
-        if source_type in ("invoice", "expense") and source_id is not None:
+        if source_type in ("invoice", "expense", "payment_vat_advance", "payment_vat_apply") and source_id is not None:
             sign = -1 if line["role"] == "output" else 1
             posted[(source_type, int(source_id))] = posted.get((source_type, int(source_id)), ZERO) + line["value"] * sign
     differences = []
@@ -664,7 +706,7 @@ def ledger_check(db, result):
         if abs(booked) < tolerance: continue
         number, day = numbers.get((source_type, source_id), (f"{source_type} {source_id}", ""))
         differences.append([display_date(day) if day else "", number, "(not on the return: status, date or currency filter)", "", ZERO, rnd(booked), rnd(-booked)])
-    other = rnd(sum((line["value"] if line["role"] == "input" else -line["value"] for line in lines if line["source"][0] not in ("invoice", "expense")), ZERO))
+    other = rnd(sum((line["value"] if line["role"] == "input" else -line["value"] for line in lines if line["source"][0] not in ("invoice", "expense", "payment_vat_advance", "payment_vat_apply")), ZERO))
     sections = [{"heading": f"VAT accounts in the books - Q{result['quarter']} {result['year']} ({vc})", "headers": ["Account", "Kind", "Debit", "Credit", "Net (Dr + / Cr -)"],
                  "rows": account_rows or [["No VAT account movement in the quarter", "", "", "", ""]], "total_rows": []},
                 {"heading": "Return against the books", "headers": ["Item", f"Return ({vc})", f"Books ({vc})", "Difference"], "rows": compare, "total_rows": []},
@@ -947,12 +989,13 @@ def filing_worksheet(result, company):
 def official_form(result, company):
     """The return in the layout of the Ministry's periodic declaration Q1-2, with its annexes Q11-2 (partial right of
     deduction, Art. 31: deductible VAT on mixed purchases = VAT x ratio) and Q13-2 (ten largest suppliers and customers).
-    Amounts in LBP. Boxes that Nanza does not record separately (advances, tax withheld at source, sales of fixed assets,
-    penalties) show 0 and are filled by hand when they apply."""
+    Amounts in LBP. Explicit taxable advances use owner-configured box110 (base and VAT columns);
+    linked applications reduce final taxable revenues in100. This configuration still requires review against
+    the applicable Ministry form. Unrecorded withholding, asset-sale classifications and penalties need review."""
     if result.get("currency_filter") != "All" or result.get("include_review"):
         raise ValueError("The official form requires All Currencies and excludes Review documents")
     D = lambda v: Decimal(str(v or 0)); ratio = D(result["deduction_ratio"]); totals = {k: D(v) for k, v in result["totals_lbp"].items()}
-    box = {code: [ZERO, ZERO, ZERO] for code in (100, 110, 120, 130, 140, 150, 160, 156, 170, 180, 190, 200, 210, 220, 230, 240, 250)}
+    box = {code: [ZERO, ZERO, ZERO] for code in (100, 110, 120, 130, 140, 150, 160, 165, 170, 180, 190, 200, 210, 220, 230, 240, 250)}
     annex = {code: [ZERO, ZERO] for code in (600, 610, 620, 630, 460, 560, 660, 670, 680, 690, 700, 710)}
     groups = {"purchases": (600, 610, 620), "customs": (600, 610, 620), "expenses": (460, 560, 660), "assets": (680, 690, 700)}
     suppliers = {}; customers = {}
@@ -963,7 +1006,9 @@ def official_form(result, company):
             if treatment == "zero_rated": box[130][0] += base + exempt
             elif treatment == "exempt": box[140][0] += base + exempt
             elif treatment == "out_of_scope": box[150][0] += base + exempt
-            else: box[100][0] += base; box[100][1] += vat; box[140][0] += exempt
+            else:
+                target=110 if doc.get('declaration_box')==110 else 100
+                box[target][0] += base; box[target][1] += vat; box[140][0] += exempt
             key = (doc.get("party") or "-", doc.get("party_mof") or ""); customers[key] = customers.get(key, ZERO) + base + exempt
             continue
         only, never, mixed = groups.get(doc["category"], groups["purchases"])
@@ -976,7 +1021,7 @@ def official_form(result, company):
     for total, parts in ((630, (600, 610, 620)), (670, (460, 560, 660)), (710, (680, 690, 700))):
         annex[total] = [sum((annex[p][i] for p in parts), ZERO) for i in (0, 1)]
     box[170][1] = totals.get("reverse_output", ZERO); box[180][1] = totals.get("adj_output", ZERO)
-    box[190] = [sum((box[c][i] for c in (100, 110, 120, 130, 140, 150, 160, 156, 170, 180)), ZERO) for i in (0, 1, 2)]
+    box[190] = [sum((box[c][i] for c in (100, 110, 120, 130, 140, 150, 160, 165, 170, 180)), ZERO) for i in (0, 1, 2)]
     box[200] = [annex[630][0], ZERO, annex[630][1]]; box[210] = [annex[670][0], ZERO, annex[670][1]]; box[230] = [annex[710][0], ZERO, annex[710][1]]
     box[250] = [sum((box[c][i] for c in (200, 210, 220, 230, 240)), ZERO) for i in (0, 1, 2)]
     m = lambda v: _lbp(v)
@@ -985,7 +1030,7 @@ def official_form(result, company):
               (130, "صافي الإيرادات المعفاة مع حق الحسم", "Exempt revenues with right of deduction (zero-rated)"),
               (140, "صافي الإيرادات المعفاة دون حق الحسم", "Exempt revenues without right of deduction"),
               (150, "صافي الإيرادات الخارجة عن نطاق الضريبة", "Revenues outside the scope of VAT"), (160, "صافي مبيع أصول ثابتة خاضعة", "Sales of taxable fixed assets"),
-              (156, "صافي مبيع أصول ثابتة غير خاضعة", "Sales of non-taxable fixed assets"), (170, "ضريبة مستحقة للدفع عن مبالغ مستحقة لغير المقيمين", "VAT due on amounts owed to non-residents"),
+              (165, "صافي مبيع أصول ثابتة غير خاضعة", "Sales of non-taxable fixed assets"), (170, "ضريبة مستحقة للدفع عن مبالغ مستحقة لغير المقيمين", "VAT due on amounts owed to non-residents"),
               (180, "مختلف", "Other / adjustments"), (190, "المجموع", "Total"),
               (200, "صافي المشتريات (+/- التغيير في المخزون)", "Net purchases"), (210, "صافي الأعباء", "Net charges (expenses)"),
               (220, "سلفات مدفوعة عن عمليات خاضعة", "Advances paid on taxable operations"), (230, "صافي مشتريات أصول ثابتة", "Net purchases of fixed assets"),
@@ -1012,7 +1057,7 @@ def official_form(result, company):
     q11 = [[str(c), en, ar, m(annex[c][0]), m(annex[c][1]) if c not in (610, 560, 690) else ""] for c, en, ar in a_labels]
     turnover = result.get("ytd_turnover_lbp") or {}
     ratio_rows = [["Revenues giving the right of deduction (100+120+130+160+180)", "الإيرادات التي تتيح حق الحسم", m(D(turnover.get("taxable")))],
-                  ["Total revenues (100+120+130+140+150+160+156+180)", "إجمالي الإيرادات", m(D(turnover.get("taxable")) + D(turnover.get("exempt")))],
+                  ["Total revenues (100+120+130+140+150+160+165+180)", "إجمالي الإيرادات", m(D(turnover.get("taxable")) + D(turnover.get("exempt")))],
                   ["Deduction ratio applied (Art. 31)", "نسبة الحسم", f"{ratio * 100:.2f}% ({result.get('ratio_source', '')})"],
                   ["* Deductible VAT on 620 / 660 / 700 = VAT paid x ratio", "الضريبة القابلة للحسم = الضريبة المدفوعة x النسبة", ""]]
     def top(data):
