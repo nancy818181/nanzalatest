@@ -353,6 +353,39 @@ def _install_column_fit():
 _install_column_fit()
 
 
+def invoice_discount_editor(parent, percent, amount, changed):
+    """One invoice discount input with an explicit unit and one active value."""
+    frame = tk.Frame(parent, bg="white")
+    tk.Label(frame, text="Discount", bg="white").pack(side="left")
+    mode = tk.StringVar(frame, value="percent")
+    entry = tk.Entry(frame, textvariable=percent, width=8, justify="right")
+    entry.pack(side="left", padx=3)
+    values = {"percent": percent, "amount": amount}
+
+    def select(unit):
+        mode.set(unit)
+        entry.configure(textvariable=values[unit])
+
+    def switch():
+        unit = mode.get()
+        if str(entry.cget("textvariable")) == str(values[unit]):
+            return
+        previous = amount if unit == "percent" else percent
+        value = previous.get()
+        previous.set("0")
+        select(unit)
+        values[unit].set(value)
+        changed(unit)
+
+    for unit, label in (("percent", "%"), ("amount", "Amount")):
+        tk.Radiobutton(frame, text=label, variable=mode, value=unit, command=switch,
+                       bg="white", padx=1).pack(side="left")
+    entry.bind("<KeyRelease>", lambda _event: changed(mode.get()))
+    for event in ("<<Paste>>", "<<Cut>>"):
+        entry.bind(event, lambda _event: entry.after_idle(lambda: changed(mode.get())))
+    return frame, select
+
+
 def flow_toolbar(frame, gap=4):
     """A row of buttons that wraps onto a second line when the window is narrow, instead of being cut off on the
     right. Works on a frame already filled with pack(side=left / right): the same widgets, same order.

@@ -178,7 +178,7 @@ class InvoicesMixin(SalesInvoiceMixin):
         from multi_select import chosen_values, matches
         branches=chosen_values(self.invoice_branch.get()) if self.invoice_branch.get()!="All Branches" else []
         if branches: rows=[r for r in rows if matches(r.get("branch_name") or "Head Office",self.invoice_branch.get())]
-        if hasattr(self,"invoice_type_box"):  # 2.9.68: Type tick list, D / C ticks
+        if "invoice_type_box" in self.__dict__:  # 2.9.68: Type tick list, D / C ticks
             self.invoice_type_box["values"]=sorted({self.invoice_entry_label(r) for r in rows})
             if chosen_values(self.invoice_type_filter.get()): rows=[r for r in rows if matches(self.invoice_entry_label(r),self.invoice_type_filter.get())]
             show_debit,show_credit=self.invoice_show_debit.get(),self.invoice_show_credit.get()

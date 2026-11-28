@@ -212,6 +212,66 @@ class PurchaseHeaderLayoutTest(unittest.TestCase):
             app.new_sales_invoice(confirm=False);app.update()
             self.assertEqual(app.sales_save_button.cget('text'),caption)
 
+    def test_invoice_discount_editor_reconciles_mixed_lines_on_reopen(self):
+        from decimal import Decimal
+        app = self.open("en")
+
+        def editor(parent, variable):
+            for widget in parent.winfo_children():
+                if isinstance(widget, tk.Entry) and str(widget.cget("textvariable")) == str(variable):
+                    return widget
+                found = editor(widget, variable)
+                if found is not None:
+                    return found
+
+        def check_units(parent, variable, recalculate, total):
+            field = editor(parent, variable)
+            self.assertTrue(field.winfo_ismapped())
+            field.delete(0, "end")
+            field.insert(0, "10")
+            recalculate()
+            self.assertEqual(total.cget("text"), "143.91 USD")
+            amount = next(w for w in field.master.winfo_children()
+                          if isinstance(w, tk.Radiobutton) and w.cget("value") == "amount")
+            amount.invoke()
+            field.delete(0, "end")
+            field.insert(0, "30")
+            recalculate()
+            self.assertEqual(total.cget("text"), "127.92 USD")
+
+        form = app.purchase_form
+        form["vars"]["supplier"].set("Invoice discount test supplier")
+        form["vars"]["number"].set("DISC-P")
+        form["vars"]["currency"].set("USD")
+        for sku, price, percent, flag in (("DISC-T", "100", "10", "Yes"), ("DISC-E", "60", "0", "No")):
+            app.client.save_inventory_item({"sku": sku, "name": sku, "unit": "unit"})
+            app.purchase_item_line({"item_code": sku, "name": sku, "quantity": 1,
+                                    "unit_cost": price, "discount_percent": percent, "vat_flag": flag})
+        check_units(app.purchase_invoice_page, form["discount_percent"], app.purchase_items_changed, form["total"])
+        app.save_purchase()
+        choice = next(label for label in form["find_map"] if label.startswith("DISC-P |"))
+        form["find"].set(choice)
+        app.purchase_found()
+        self.assertEqual(form["total"].cget("text"), "127.92 USD")
+        self.assertEqual(form["discount_mode"], "amount")
+        self.assertEqual([line["vat_flag"] for line in form["items_sheet"].ordered()], ["Yes", "No"])
+
+        app.select_main_tab(app.main_tab_pages[app._page_attributes.index("sales_tab")])
+        app.sales_party.set("Invoice discount test customer")
+        app.sales_currency.set("USD")
+        for name, price, percent, rate in (("Taxed", "100", "10", 11), ("Exempt", "60", "0", 0)):
+            app.add_sales_item({"description": name, "quantity": 1, "unit_price": price,
+                                "discount_percent": percent, "vat_rate": rate})
+        app.update()
+        check_units(app.sales_tab, app.sales_discount_percent, app.update_sales_totals, app.sales_total_labels["TOTAL"])
+        number = app.sales_no.get()
+        app.sales_save_button.invoke()
+        invoice = next(row for row in app.client.invoices() if row["invoice_number"] == number)
+        app.open_sales_invoice(invoice_id=invoice["id"])
+        self.assertEqual(app.sales_total_labels["TOTAL"].cget("text"), "127.92 USD")
+        self.assertEqual(Decimal(app.sales_discount_amount.get()), Decimal("30"))
+        self.assertFalse([m for m in self.messages if m[0] in ("showerror", "showwarning")], self.messages)
+
     def test_sales_five_line_edit_save_reopen_and_resize_matrix(self):
         import arabic_ui,json
         import traceback
