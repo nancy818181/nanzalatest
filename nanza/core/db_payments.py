@@ -655,16 +655,23 @@ class PaymentsStore:
                                      "the rest of the payment stays unapplied (an advance) on the account")
             if total > settlement_amount(payment) + Decimal("0.005"):
                 raise ValueError(f"Allocated {total:,.2f} is more than the payment party settlement {settlement_amount(payment):,.2f}")
-            related={int(payment_id)}
-            if affected:
-                marks=','.join('?' for _ in affected)
-                related.update(r[0] for r in db.execute(f'SELECT DISTINCT payment_id FROM payment_allocations WHERE invoice_id IN ({marks})',tuple(affected)))
-            for related_id in sorted(related):
-                related_payment=db.execute('SELECT * FROM payments WHERE id=?',(related_id,)).fetchone()
-                if related_payment and not related_payment['voided_at']:
-                    self._post_allocation_fx(db,related_payment,user_id)
+            self._settle_related_payment_fx(db, payment_id, affected, user_id)
             self._post_advance_applications(db,payment,user_id)
         return self.payment_allocations(payment_id)
+
+    def _settle_related_payment_fx(self, db, payment_id, invoice_ids, user_id):
+        """Settle the payment and update cumulative shares on the same invoices."""
+        related = {payment_id}
+        if invoice_ids:
+            marks = ",".join("?" for _ in invoice_ids)
+            related.update(row[0] for row in db.execute(
+                f"SELECT DISTINCT payment_id FROM payment_allocations WHERE invoice_id IN ({marks})",
+                tuple(invoice_ids)))
+        for related_id in sorted(related):
+            payment = db.execute("SELECT * FROM payments WHERE id=? AND voided_at IS NULL",
+                                 (related_id,)).fetchone()
+            if payment:
+                self._post_allocation_fx(db, payment, user_id)
 
     def _post_advance_applications(self, db, payment, user_id):
         """Append only the VAT change on application. Repeated saves are inert."""
@@ -777,14 +784,6 @@ class PaymentsStore:
         basis=self.settings().get('base_currency','USD') or 'USD'
         if payment['currency']==basis: return
         from decimal import ROUND_HALF_UP
-        desired=Decimal('0')
-        direction=Decimal('1') if payment['kind']=='customer_receipt' else Decimal('-1')
-        for row in db.execute("""SELECT a.amount,i.invoice_date FROM payment_allocations a
-                JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=?""",(payment['id'],)):
-            native=Decimal(str(row['amount']))
-            desired+=direction*(self._converted_amount(native,payment['currency'],basis,payment['payment_date'])-
-                self._converted_amount(native,payment['currency'],basis,row['invoice_date']))
-        desired=desired.quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
         previous=Decimal(str(db.execute("""SELECT COALESCE(DSUM_EXACT(j.debit),0) FROM journal_entries e
             JOIN journal_lines j ON j.entry_id=e.id JOIN accounts a ON a.id=j.account_id
             WHERE e.source_type='payment_fx' AND e.source_id=? AND a.code=?""",(payment['id'],payment['party_account'])).fetchone()[0]))
@@ -802,6 +801,15 @@ class PaymentsStore:
                 for c in prior_values:prior_values[c]+=sign*Decimal(str(old['amount_'+c.lower()] or 0))
             deltas={c:book_values[c]-prior_values[c] for c in book_values}
             desired=book_values[basis]
+        else:
+            desired=Decimal('0')
+            direction=Decimal('1') if payment['kind']=='customer_receipt' else Decimal('-1')
+            for row in db.execute("""SELECT a.amount,i.invoice_date FROM payment_allocations a
+                    JOIN invoices i ON i.id=a.invoice_id WHERE a.payment_id=?""",(payment['id'],)):
+                native=Decimal(str(row['amount']))
+                desired+=direction*(self._converted_amount(native,payment['currency'],basis,payment['payment_date'])-
+                    self._converted_amount(native,payment['currency'],basis,row['invoice_date']))
+            desired=desired.quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
         difference=(desired-previous).quantize(Decimal('0.01'),rounding=ROUND_HALF_UP)
         if not difference and not (deltas and any(deltas.values())): return
         self._assert_period_open(payment['payment_date']); self._assert_books_unlocked(payment['payment_date'])
@@ -809,11 +817,12 @@ class PaymentsStore:
         direction=difference or next(v for v in deltas.values() if v)
         offset=(payment['exchange_gain_account'] or defaults['exchange_gain']) if direction>0 else (payment['exchange_loss_account'] or defaults['exchange_loss'])
         value=abs(difference); zero=Decimal('0')
-        usd=self._converted_amount(value,basis,'USD',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
-        lbp=self._converted_amount(value,basis,'LBP',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
         if deltas:
             factor=Decimal(1) if difference>=0 else Decimal(-1)
             usd=deltas['USD']*factor;lbp=deltas['LBP']*factor
+        else:
+            usd=self._converted_amount(value,basis,'USD',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
+            lbp=self._converted_amount(value,basis,'LBP',payment['payment_date']).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
         sequence=db.execute("SELECT COUNT(*) FROM journal_entries WHERE source_type='payment_fx' AND source_id=?",(payment['id'],)).fetchone()[0]+1
         number=f"FX-{payment['payment_number']}-{sequence}"
         entry=db.execute("""INSERT INTO journal_entries(entry_number,entry_date,description,source_type,source_id,currency,

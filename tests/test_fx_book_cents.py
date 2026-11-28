@@ -115,3 +115,22 @@ class FxBookCentsTest(unittest.TestCase):
    self.assertEqual(before,[tuple(r) for r in c.execute('SELECT * FROM payment_allocations')])
    self.assertEqual(count,c.execute('SELECT COUNT(*) FROM journal_entries').fetchone()[0])
   self.assertEqual(self.balances(p['account_number']),(D(0),D(0),D(0)))
+
+ def test_approving_first_receipt_after_final_receipt_settles_book_cents(self):
+  import approvals
+  party, invoice = self.fixture()
+  draft = self.db.add_payment({
+      "kind": "customer_receipt", "payment_date": "15-02-2026", "party_id": party["id"],
+      "currency": "EUR", "amount": "50.08",
+      "allocations": [{"invoice_id": invoice, "amount": "50.08"}],
+  }, 1, defer_posting=True)
+  entry = approvals.entry_of(self.db, "payments", draft)
+  approvals.hold(self.db, entry, 1)
+  self.pay(party, invoice, "50.07", date="16-02-2026")
+  self.assertEqual(self.balances(party["account_number"])[0], D("50.08"))
+  with mock.patch.object(self.db, "_converted_amount", side_effect=AssertionError("Use posted values")):
+   result = approvals.approve_entries(self.db, [entry], {"id": 1}, require_other=False)
+  self.assertEqual(len(result["approved"]), 1)
+  self.assertEqual(self.balances(party["account_number"]), (D(0), D(0), D(0)))
+  self.assertEqual(self.balances("775100000")[1], D("-10.01"))
+  self.assertFalse(self.db.unbalanced_entries())

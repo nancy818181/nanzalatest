@@ -104,7 +104,7 @@ def test_multicurrency_payment_reversal_preserves_lbp_and_usd_amounts(synthetic_
         entry = c.execute("SELECT id FROM journal_entries WHERE source_type='payment' AND source_id=?", (payment_id,)).fetchone()
         lines = c.execute("SELECT id,debit,credit FROM journal_lines WHERE entry_id=? ORDER BY id", (entry["id"],)).fetchall()
         for line in lines:
-            amount = Decimal(str(line["debit"] or line["credit"]))
+            amount = abs(Decimal(str(line["debit"])) - Decimal(str(line["credit"])))
             c.execute("""UPDATE journal_lines SET line_currency='USD',amount=?,amount_lbp=?,amount_usd=?,rate_lbp='1500',rate_usd='1'
                          WHERE id=?""", (str(amount), str(amount * Decimal("1500")), str(amount), line["id"]))
     new_id = db.update_payment(payment_id, {"party_id": party["id"], "payment_date": DAY, "currency": "USD", "amount": "60.00"}, 1)

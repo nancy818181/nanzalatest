@@ -126,6 +126,12 @@ def approve_entries(db, entry_ids, user, require_other=True):
             connection.execute("""UPDATE journal_entries SET approval_status=NULL,posting_status='posted',
                 posted_at=?,posted_by=?,rejection_reason=NULL WHERE id=?""",
                 (utcnow(),user["id"],int(entry_id)))
+            if row["source_type"] == "payment":
+                invoices = [r[0] for r in connection.execute(
+                    "SELECT DISTINCT invoice_id FROM payment_allocations WHERE payment_id=?",
+                    (row["source_id"],))]
+                if invoices:
+                    db._settle_related_payment_fx(connection, row["source_id"], invoices, user["id"])
             connection.execute("INSERT INTO audit_log(user_id,action,entity,entity_id,details,created_at) VALUES(?,?,?,?,?,?)",
                                (user["id"], "approve", "journal_entry", int(entry_id), json.dumps({"entry": row["entry_number"], "prepared_by": row["created_by"]}), utcnow()))
             approved.append(row["entry_number"])
